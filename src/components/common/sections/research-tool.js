@@ -13,7 +13,7 @@ const ResearchTool = () => {
       
       <div className="text-center relative z-10 max-w-4xl">
         <h1 className="text-5xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-purple-300 via-purple-100 to-indigo-200 animate-gradient">
-          Build Your Tool Here
+          The Best SaaS Alternative Research Tool
         </h1>
         <p className="text-purple-100 text-xl mb-8 leading-relaxed">
           A powerful space ready for your next-generation solution

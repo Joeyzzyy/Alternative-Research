@@ -1,68 +1,14 @@
 "use client";
-import { useState, useEffect, useMemo, useRef } from "react";
-import Link from "next/link";
+import { useState } from "react";
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
 export default function Header() {
-  const isMounted = useRef(false);
-  const renderCount = useRef(0);
-  const prevDataRef = useRef(null);
-  const debugEnabled = process.env.NODE_ENV === 'development';
 
   const [state, setState] = useState({
     isOpen: false,
     activeDropdown: null
   });
-  
-  const router = useRouter();
-  
-  const handleRedirect = (url, e) => {
-    e.preventDefault();
-    const cleanUrl = url.endsWith('/') ? url.slice(0, -1) : url;
-    window.open(cleanUrl, '_blank');
-  };
-
-  const renderActionItem = (item) => {
-    if (!item?.key || !item?.label) return null;
-
-    const buttonStyles = item.variant === 'button' 
-      ? 'px-4 py-2 rounded-lg hover:opacity-90 cursor-pointer' 
-      : 'hover:text-[#3374FF] cursor-pointer';
-
-    const inlineStyles = item.variant === 'button' 
-      ? {
-          backgroundColor: item.backgroundColor,
-          color: item.textColor
-        }
-      : {};
-
-    if (item.isExternal) {
-      return (
-        <a
-          key={item.key}
-          href={item.href}
-          className={`text-[15px] font-medium ${buttonStyles} transition-all duration-300`}
-          style={inlineStyles}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          {item.label}
-        </a>
-      );
-    }
-
-    return (
-      <a
-        key={item.key}
-        onClick={(e) => handleRedirect(item.href, e)}
-        className={`text-[15px] font-medium ${buttonStyles} transition-all duration-300`}
-        style={inlineStyles}
-      >
-        {item.label}
-      </a>
-    );
-  };
 
   const renderMenuItem = (item) => {
     if (!item?.label) return null;
@@ -172,7 +118,7 @@ export default function Header() {
           <div className="hidden md:flex items-center gap-4">
             <button
               onClick={() => window.open('https://accounts.google.com/o/oauth2/v2/auth', '_blank')}
-              className="px-4 py-2 rounded-lg bg-[#4285F4] text-white hover:opacity-90 cursor-pointer text-[15px] font-medium transition-all duration-300 flex items-center gap-2"
+              className="px-4 py-2 rounded-lg bg-white text-[#DD33FF] hover:opacity-90 border border-[#DD33FF] cursor-pointer text-[15px] font-medium transition-all duration-300 flex items-center gap-2"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -229,20 +175,6 @@ export default function Header() {
                     )}
                   </div>
                 ))}
-              </div>
-              
-              <div className="my-4 border-t border-gray-100"></div>
-              
-              <div className="space-y-3">
-                {renderActionItem({
-                  key: 'google-login',
-                  label: 'Sign in with Google',
-                  variant: 'button',
-                  backgroundColor: 'white',
-                  textColor: 'DD33FF',
-                  isExternal: true,
-                  href: 'https://accounts.google.com/o/oauth2/v2/auth'
-                })}
               </div>
             </div>
           </div>
