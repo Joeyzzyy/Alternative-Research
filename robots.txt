@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Disallow: /en/  # 禁止爬虫访问 /en/ 路径，会统一重定向到根路径
