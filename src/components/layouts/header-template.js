@@ -73,13 +73,13 @@ export default function Header() {
       label: "Pricing",
       color: "#000000",
       fontWeight: "600",
-      link: "https://websitelm.com/pricing"
+      link: "https://alternatively.websitelm.com/pricing"
     },
     {
       label: "FAQ",
       color: "#000000", 
       fontWeight: "600",
-      link: "https://websitelm.com/faq"
+      link: "https://alternatively.websitelm.com/faq"
     }
   ];
 

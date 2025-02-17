@@ -180,7 +180,7 @@ async function getPageBySlug() {
             "actionItems": [
                 {
                     "backgroundColor": "#9333ea",
-                    "href": "https://app.websitelm.com",
+                    "href": "https://app.alternatively.websitelm.com",
                     "isExternal": false,
                     "key": "action-1737701586749-0.06931562237067479",
                     "label": "Get Started Now",
@@ -202,7 +202,7 @@ async function getPageBySlug() {
                     "isExternal": true,
                     "key": "menu-1738596569837-0.12142226513369181",
                     "label": "Pricing",
-                    "link": "https://websitelm.com/pricing"
+                    "link": "https://alternatively.websitelm.com/pricing"
                 },
                 {
                     "children": [],
@@ -211,7 +211,7 @@ async function getPageBySlug() {
                     "isExternal": true,
                     "key": "menu-1738747749126-0.9226220998292718",
                     "label": "FAQ",
-                    "link": "https://websitelm.com/faq"
+                    "link": "https://alternatively.websitelm.com/faq"
                 },
             ],
             "styles": {
@@ -248,11 +248,11 @@ async function getPageBySlug() {
                     "links": [
                         {
                             "label": "Pricing",
-                            "url": "https://websitelm.com/pricing"
+                            "url": "https://alternatively.websitelm.com/pricing"
                         },
                         {
                             "label": "FAQ",
-                            "url": "https://websitelm.com/faq"
+                            "url": "https://alternatively.websitelm.com/faq"
                         }
                     ],
                     "title": "Features"
@@ -265,7 +265,7 @@ async function getPageBySlug() {
                     "links": [
                         {
                             "label": "Terms and conditions",
-                            "url": "https://websitelm.com/terms-and-conditions"
+                            "url": "https://alternatively.websitelm.com/terms-and-conditions"
                         }
                     ],
                     "title": "Resources"
@@ -299,7 +299,7 @@ async function getPageBySlug() {
           componentName: "ProductBenefitsWithBlocks",
           sectionId: "benefits-1",
           leftContent: {
-              buttonLink: "https://websitelm.com/features",
+              buttonLink: "https://alternatively.websitelm.com/features",
               buttonText: "Explore Features",
               description: "Make informed decisions with comprehensive AI tool comparisons and insights",
               title: "Why Choose Our AI Research Platform"
@@ -351,7 +351,7 @@ async function getPageBySlug() {
           bottomContent: {
             showButton: true,
             buttonText: "View All FAQs",
-            buttonLink: "https://websitelm.com/faq"
+            buttonLink: "https://alternatively.websitelm.com/faq"
           }
         },
         {
