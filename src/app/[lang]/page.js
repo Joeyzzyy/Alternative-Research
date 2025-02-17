@@ -169,7 +169,7 @@ export async function generateMetadata({ params }) {
 async function getPageBySlug() {
   const mockData = {
     data: {
-      title: "AI SaaS Alternative Research Tool",
+      title: "Alternatively",
       description: "Comprehensive AI tool comparison platform",
       author: "AI Research Team",
       updatedAt: "2024-03-20T08:00:00.000Z",
