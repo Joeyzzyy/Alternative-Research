@@ -1,11 +1,9 @@
 'use client';
 import React, { useState, useRef } from 'react';
-import themeConfig from '../../../styles/themeConfig';
 
-const HeroSectionWithVideo = ({ data, theme = 'normal', buttonLink = '#' }) => {
+const HeroSectionWithVideo = ({ data, buttonLink = '#' }) => {
   const videoRef = useRef(null);
   const topContent = data.topContent;
-  const currentTheme = themeConfig[theme];
 
   // 组件加载时设置音量和处理视频加载
   React.useEffect(() => {
@@ -24,7 +22,7 @@ const HeroSectionWithVideo = ({ data, theme = 'normal', buttonLink = '#' }) => {
   }, []);
 
   return (
-    <div className={`relative w-full ${currentTheme.section.background.primary}`}>
+    <div className="relative w-full bg-gray-900">
       <div className="w-[95%] mx-auto relative">
         <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
           <video
@@ -48,7 +46,7 @@ const HeroSectionWithVideo = ({ data, theme = 'normal', buttonLink = '#' }) => {
               href={topContent.buttonLink?.startsWith('http') 
                 ? topContent.buttonLink 
                 : `https://${topContent.buttonLink}` || buttonLink}
-              className={`${currentTheme.button.base} ${currentTheme.button.variants.primary}`}
+              className="inline-block px-6 py-3 text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors duration-200"
             >
               {topContent.buttonText}
             </a>
