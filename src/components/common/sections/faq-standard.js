@@ -12,7 +12,8 @@ const FAQTwoColumnsWithSmallTitle = ({ data, theme = 'normal' }) => {
     `}>
       <div className="max-w-6xl mx-auto px-4">
         <div className="text-center mb-12">
-          <h2 className={`${styles.typography.h3.fontSize} ${styles.typography.h2.fontWeight} ${styles.typography.h2.color}`}>
+          <h2 className="text-3xl font-bold mb-4 bg-gradient-to-r from-blue-600 
+            to-purple-600 bg-clip-text text-transparent">
             Frequently asked questions
           </h2>
         </div>
@@ -43,15 +44,9 @@ const FAQTwoColumnsWithSmallTitle = ({ data, theme = 'normal' }) => {
           <div className="flex justify-center mt-12">
             <a 
               href={data.bottomContent.buttonLink}
-              className={`
-                ${styles.typography.paragraph.fontSize}
-                text-[#0066FF]
-                inline-flex 
-                items-center 
-                gap-1 
-                cursor-pointer
-                hover:opacity-80
-              `}
+              className="text-base bg-gradient-to-r from-blue-600 to-purple-600 
+                bg-clip-text text-transparent inline-flex items-center gap-1 
+                cursor-pointer hover:opacity-80"
             >
               {data.bottomContent.buttonText} {'>'}
             </a>

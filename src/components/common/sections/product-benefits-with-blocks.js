@@ -19,8 +19,9 @@ const ProductBenefitsWithFourBlocks = ({ data }) => {
             href={data.leftContent.buttonLink?.startsWith('http') 
             ? data.leftContent.buttonLink 
             : `https://${data.leftContent.buttonLink}` || '#'}
-            className="px-6 py-3 rounded-full bg-[#3374FF] text-white font-medium
-              hover:bg-blue-700 transition-colors duration-300 inline-block"
+            className="px-6 py-3 rounded-full bg-gradient-to-r from-blue-600 to-purple-600 
+              text-white font-medium hover:from-blue-700 hover:to-purple-700 
+              transition-all duration-300 inline-block"
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -35,12 +36,13 @@ const ProductBenefitsWithFourBlocks = ({ data }) => {
               className="bg-white rounded-lg p-6 border border-gray-200"
             >
               {module.icon && (
-                <div className="w-8 h-8 flex-shrink-0 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+                <div className="w-8 h-8 flex-shrink-0 rounded-full bg-gradient-to-r 
+                  from-blue-100 to-purple-100 flex items-center justify-center mb-4">
                   <Icon 
                     icon={module.icon}
                     width="16"
                     height="16"
-                    className="text-gray-600"
+                    className="text-gradient-to-r from-blue-600 to-purple-600"
                   />
                 </div>
               )}

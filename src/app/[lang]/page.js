@@ -175,12 +175,11 @@ async function getPageBySlug() {
       updatedAt: "2024-03-20T08:00:00.000Z",
       createdAt: "2024-03-20T08:00:00.000Z",
       publishStatus: "publish",
-      // 添加 pageLayout 数据
       pageLayout: {
         "pageHeaders": {
             "actionItems": [
                 {
-                    "backgroundColor": "#1890FF",
+                    "backgroundColor": "#9333ea",
                     "href": "https://app.websitelm.com",
                     "isExternal": false,
                     "key": "action-1737701586749-0.06931562237067479",
@@ -192,7 +191,7 @@ async function getPageBySlug() {
             "logo": {
                 "alt": "Logo",
                 "height": 40,
-                "src": "https://websitelm-us-east-2.s3.us-west-2.amazonaws.com/67a9fabf538eb88a2247b5be/2025-02-12/yyigd21c58_20250208-171307.png?X-Amz-Algorithm=AWS4-HMAC-SHA256\u0026X-Amz-Credential=AKIA5VJ4LTRLHCNJWTFT%2F20250212%2Fus-west-2%2Fs3%2Faws4_request\u0026X-Amz-Date=20250212T061303Z\u0026X-Amz-Expires=604800\u0026X-Amz-SignedHeaders=host\u0026X-Amz-Signature=5bc9c83f3f9735b71a8d071829b760ba3fb48c88bb7636e1523638b4cd428d21",
+                "src": "/images/alternatively-logo-tem.png",
                 "width": 160
             },
             "mainMenuItems": [
@@ -225,7 +224,7 @@ async function getPageBySlug() {
         },
         "pageFooters": {
             "colors": {
-                "buttonBackground": "#006eff",
+                "buttonBackground": "bg-gradient-to-r from-blue-600 to-purple-600",
                 "buttonText": "#FFFFFF",
                 "companyName": "#111827",
                 "copyright": "#111827",
@@ -237,9 +236,9 @@ async function getPageBySlug() {
                 "newsletterText": "#FFFFFF",
                 "newsletterTitle": "#FFFFFF"
             },
-            "companyName": "WebsiteLM",
-            "copyright": "© 2025 WebsiteLM. All rights reserved.",
-            "description": "AI Website Generator \n- AI-crafted Content That Delivers Results.",
+            "companyName": "Alternatively",
+            "copyright": "© 2025 Alternatively. All rights reserved.",
+            "description": "The Best AI Alternative Research Tool.",
             "sections": [
                 {
                     "colors": {
@@ -284,10 +283,10 @@ async function getPageBySlug() {
             },
             "styles": {
                 "backgroundColor": "#FFFFFF",
-                "backgroundType": "solid",
-                "gradientAngle": 135,
-                "gradientEnd": "#1F2937",
-                "gradientStart": "#000000"
+                "backgroundType": "gradient",
+                "gradientAngle": 45,
+                "gradientStart": "#3B82F6",
+                "gradientEnd": "#9333EA"
             }
         }
       },

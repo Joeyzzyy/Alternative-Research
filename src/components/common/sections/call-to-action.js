@@ -21,7 +21,8 @@ const CallToAction = ({ data, theme = 'normal' }) => {
       ${themeConfig[theme].section.padding.wide}
     `}>
       <div className="max-w-3xl mx-auto px-4 text-center">
-        <h2 className={`${themeConfig[theme].typography.h2.fontSize} ${themeConfig[theme].typography.h2.fontWeight} ${themeConfig[theme].typography.h2.color} mb-4`}>
+        <h2 className="text-3xl font-bold mb-4 bg-gradient-to-r from-blue-600 
+          to-purple-600 bg-clip-text text-transparent">
           {data.title}
         </h2>
         <p className={`${themeConfig[theme].typography.paragraph.fontSize} ${themeConfig[theme].typography.paragraph.color} mb-6`}>
@@ -29,7 +30,9 @@ const CallToAction = ({ data, theme = 'normal' }) => {
         </p>
         <a 
           href={data.bottomContent.buttonLink}
-          className={getButtonStyle()}
+          className="px-6 py-3 rounded-full bg-gradient-to-r from-blue-600 
+            to-purple-600 text-white font-medium hover:from-blue-700 
+            hover:to-purple-700 transition-all duration-300 inline-block"
         >
           {data.bottomContent.buttonText}
         </a>
