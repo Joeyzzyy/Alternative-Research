@@ -34,20 +34,18 @@ export default function Footer({ data }) {
 
   const footerStyles = {
     container: {
-      width: '80%',
+      width: '90%',
       margin: '0 auto',
-      padding: '3rem 0'
+      padding: '2rem 0'
     },
     grid: {
       display: 'grid',
-      gridTemplateColumns: data?.sections 
-        ? `1fr ${data.sections.map(() => '0.8fr').join(' ')}`
-        : '1fr',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
       gap: '2rem',
       marginBottom: '2rem'
     },
     section: {
-      padding: '0 1rem'
+      padding: '0.5rem'
     }
   };
 
@@ -62,7 +60,7 @@ export default function Footer({ data }) {
         : data.styles.backgroundColor
     }}>
       <div style={footerStyles.container}>
-        <div style={footerStyles.grid}>
+        <div style={footerStyles.grid} className="md:grid-cols-[1fr_repeat(auto-fit,0.8fr)]">
           <div style={footerStyles.section}>
             <h3 style={{ color: data.colors.companyName }} className="text-xl font-semibold mb-4">
               {data.companyName}
@@ -99,8 +97,8 @@ export default function Footer({ data }) {
           ))}
         </div>
 
-        <div className="mt-20 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex gap-6">
+        <div className="mt-10 md:mt-20 flex flex-col md:flex-row justify-between items-center gap-4 md:gap-6">
+          <div className="flex flex-wrap justify-center md:justify-start gap-4 md:gap-6">
             {data.socialMedia?.links && Object.entries(data.socialMedia.links).map(([key, link]) => {
               if (link && link.platform && link.url) {
                 return (
@@ -120,7 +118,7 @@ export default function Footer({ data }) {
             })}
           </div>
           
-          <p style={{ color: data.colors.copyright }} className="text-sm">
+          <p style={{ color: data.colors.copyright }} className="text-sm text-center md:text-left">
             {data.copyright || `© ${new Date().getFullYear()} ${data.companyName}. All rights reserved.`}
           </p>
         </div>

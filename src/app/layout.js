@@ -49,8 +49,9 @@ export default async function RootLayout({ children, keywords, robots }) {
   }
 
   return (
-    <html lang="en">
+    <html lang="en" className="w-full">
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
         <meta name="keywords" content={keywords} />
         <link 
           rel="icon" 
@@ -63,7 +64,7 @@ export default async function RootLayout({ children, keywords, robots }) {
           type="image/x-icon"
         />
       </head>
-      <body suppressHydrationWarning={true} style={{ overflowX: 'hidden' }}>
+      <body suppressHydrationWarning={true} className="w-full min-w-full overflow-x-hidden">
         {children}
       </body>
     </html>
