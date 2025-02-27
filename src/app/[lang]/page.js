@@ -1,6 +1,5 @@
 import { notFound } from 'next/navigation';
 import { ClientWrapper } from '../../components/layouts/client-wrapper';
-import { headers } from 'next/headers';
 import CommonLayout from '../../components/layouts/layout';
 import Script from 'next/script'
 
@@ -13,7 +12,7 @@ export const fetchCache = 'force-no-store'
 // 4. 设置零秒缓存
 export const revalidate = 0
 // 添加支持的语言列表
-const SUPPORTED_LANGUAGES = ['en', 'zh'];
+const SUPPORTED_LANGUAGES = ['en'];
 
 // 主页面组件
 export default async function ArticlePage({ params }) {
