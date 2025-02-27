@@ -395,11 +395,11 @@ The results are displayed on the right panel. You can view detailed information 
                   <div className="text-sm text-purple-300 mb-1">Key Features</div>
                   <div className="flex flex-wrap gap-1 min-h-[60px]">
                     {result.features.slice(0, 3).map((feature, i) => (
-                      <Tag key={i} color="blue">{feature}</Tag>
+                      <Tag key={i} color="blue" className="h-7 flex items-center">{feature}</Tag>
                     ))}
                     {result.features.length > 3 && (
                       <Tooltip title={result.features.slice(3).join(', ')}>
-                        <Tag color="processing">+{result.features.length - 3} more</Tag>
+                        <Tag color="processing" className="h-7 flex items-center">+{result.features.length - 3} more</Tag>
                       </Tooltip>
                     )}
                   </div>
@@ -409,7 +409,7 @@ The results are displayed on the right panel. You can view detailed information 
                   <div className="text-sm text-purple-300 mb-1">Strengths</div>
                   <div className="flex flex-wrap gap-1 min-h-[60px]">
                     {result.strengths.map((strength, i) => (
-                      <Tag key={i} color="green">{strength}</Tag>
+                      <Tag key={i} color="green" className="h-7 flex items-center">{strength}</Tag>
                     ))}
                   </div>
                 </div>
@@ -418,7 +418,7 @@ The results are displayed on the right panel. You can view detailed information 
                   <div className="text-sm text-purple-300 mb-1">Weaknesses</div>
                   <div className="flex flex-wrap gap-1 min-h-[40px]">
                     {result.weaknesses.map((weakness, i) => (
-                      <Tag key={i} color="orange">{weakness}</Tag>
+                      <Tag key={i} color="orange" className="h-7 flex items-center">{weakness}</Tag>
                     ))}
                   </div>
                 </div>
