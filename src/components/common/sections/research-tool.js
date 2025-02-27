@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
-import { Input, Button, Card, Spin, message, Tag, Tooltip } from 'antd';
-import { SearchOutlined, ClearOutlined, ArrowRightOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import { Input, Button, Card, Spin, message, Tag, Tooltip, Avatar } from 'antd';
+import { SearchOutlined, ClearOutlined, ArrowRightOutlined, InfoCircleOutlined, SendOutlined, UserOutlined, RobotOutlined } from '@ant-design/icons';
 
 const ResearchTool = () => {
   const [domain, setDomain] = useState('');
@@ -10,8 +10,16 @@ const ResearchTool = () => {
   const [workflowProgress, setWorkflowProgress] = useState(0);
   const [competitors, setCompetitors] = useState([]);
   const [comparisonResults, setComparisonResults] = useState([]);
+  const [messages, setMessages] = useState([
+    { 
+      type: 'system', 
+      content: 'Welcome to the SaaS Alternative Research Tool. Enter a product domain to discover alternatives and generate a comprehensive analysis.'
+    }
+  ]);
+  const [userInput, setUserInput] = useState('');
   
   const inputRef = useRef(null);
+  const chatEndRef = useRef(null);
 
   // 验证域名格式
   const validateDomain = (domain) => {
@@ -20,24 +28,40 @@ const ResearchTool = () => {
     return domainRegex.test(domain);
   };
 
-  const handleSearch = () => {
-    if (!domain) {
-      message.warning('Please enter a product domain');
+  const handleUserInput = () => {
+    if (!userInput.trim()) return;
+    
+    // Add user message to chat
+    const newMessages = [...messages, { type: 'user', content: userInput }];
+    setMessages(newMessages);
+    
+    // Process the input as domain
+    const cleanDomain = userInput.replace(/^https?:\/\//, '');
+    setDomain(cleanDomain);
+    
+    // Clear input field
+    setUserInput('');
+    
+    // Validate domain and start analysis
+    if (!validateDomain(cleanDomain)) {
+      setTimeout(() => {
+        setMessages([...newMessages, { 
+          type: 'system', 
+          content: 'Please enter a valid domain format (e.g., example.com)' 
+        }]);
+      }, 500);
       return;
     }
     
-    // 清除之前的结果
+    // Start analysis process
+    startAnalysis(cleanDomain);
+  };
+  
+  const startAnalysis = (cleanDomain) => {
+    // Clear previous results
     setWorkflowStage(null);
     setCompetitors([]);
     setComparisonResults([]);
-    
-    // 构建完整URL并验证
-    const cleanDomain = domain.replace(/^https?:\/\//, '');
-    
-    if (!validateDomain(cleanDomain)) {
-      message.error('Please enter a valid domain format (e.g., example.com)');
-      return;
-    }
     
     const fullUrl = formatUrl(cleanDomain);
     
@@ -45,27 +69,71 @@ const ResearchTool = () => {
     setWorkflowStage('collecting');
     setWorkflowProgress(0);
     
-    // 模拟工作流程
+    // Add system thinking message
+    setMessages(prev => [...prev, { 
+      type: 'system', 
+      content: `Starting analysis for ${cleanDomain}...`,
+      isThinking: true
+    }]);
+    
+    // Start the workflow simulation
     simulateWorkflow(fullUrl);
   };
   
   // 模拟整个工作流程
   const simulateWorkflow = (url) => {
+    const cleanDomain = domain.replace(/^https?:\/\//, '');
+    
     // 第一阶段：收集站点信息
     setTimeout(() => {
       setWorkflowProgress(10);
       setWorkflowStage('analyzing');
+      
+      setMessages(prev => [...prev.slice(0, -1), { 
+        type: 'system', 
+        content: `Collecting information from ${cleanDomain}...
+        
+Crawling homepage and product pages...
+Extracting metadata and keywords...
+Identifying product category...`,
+        isThinking: true
+      }]);
       
       // 第二阶段：分析关键词
       setTimeout(() => {
         setWorkflowProgress(20);
         setWorkflowStage('searching');
         
+        setMessages(prev => [...prev.slice(0, -1), { 
+          type: 'system', 
+          content: `Analyzing ${cleanDomain}...
+          
+Product category identified: Customer Support Software
+Target audience: B2B, SaaS companies, e-commerce
+Core features: live chat, ticketing, knowledge base, automation
+Price range: $15-$99/month/user
+
+Now searching for alternatives...`,
+          isThinking: true
+        }]);
+        
         // 第三阶段：搜索竞品
         let progress = 20;
         const searchInterval = setInterval(() => {
           progress += 2;
           setWorkflowProgress(progress);
+          
+          if (progress % 10 === 0) {
+            setMessages(prev => [...prev.slice(0, -1), { 
+              type: 'system', 
+              content: `Searching for alternatives...
+              
+Scanned ${Math.min(Math.floor(progress - 20), 48)} of 48 websites
+Analyzed content from ${Math.min(Math.floor((progress - 20) * 0.7), 32)} websites
+Found ${Math.min(Math.floor((progress - 40) / 2) + 1, 12)} potential alternatives so far`,
+              isThinking: true
+            }]);
+          }
           
           if (progress >= 60) {
             clearInterval(searchInterval);
@@ -74,6 +142,14 @@ const ResearchTool = () => {
             const fakeCompetitors = generateFakeCompetitors();
             setCompetitors(fakeCompetitors);
             setWorkflowStage('comparing');
+            
+            setMessages(prev => [...prev.slice(0, -1), { 
+              type: 'system', 
+              content: `Found ${fakeCompetitors.length} relevant alternatives for ${cleanDomain}.
+              
+Now performing detailed comparison with each alternative...`,
+              isThinking: true
+            }]);
             
             // 第四阶段：1v1对比
             let comparisonIndex = 0;
@@ -92,10 +168,37 @@ const ResearchTool = () => {
                 setComparisonResults([...comparisonResults]);
                 comparisonIndex++;
                 setWorkflowProgress(60 + (comparisonIndex / fakeCompetitors.length) * 40);
+                
+                setMessages(prev => [...prev.slice(0, -1), { 
+                  type: 'system', 
+                  content: `Comparing alternatives: ${comparisonIndex} of ${fakeCompetitors.length} completed
+                  
+Currently analyzing: ${fakeCompetitors[comparisonIndex-1].name} (${fakeCompetitors[comparisonIndex-1].domain})
+• Crawling website and product pages
+• Extracting feature list
+• Analyzing pricing structure
+• Collecting user reviews
+• Comparing with ${cleanDomain}
+• Generating strengths and weaknesses analysis
+
+Overall progress: ${Math.round(60 + (comparisonIndex / fakeCompetitors.length) * 40)}%`,
+                  isThinking: true
+                }]);
               } else {
                 clearInterval(comparisonInterval);
                 setWorkflowStage('completed');
                 setLoading(false);
+                
+                setMessages(prev => [...prev.slice(0, -1), { 
+                  type: 'system', 
+                  content: `Analysis completed successfully!
+                  
+I've analyzed ${comparisonResults.length} alternatives for ${cleanDomain}:
+${comparisonResults.map(r => `• ${r.name} (${r.comparisonScore}% match)`).join('\n')}
+
+The results are displayed on the right panel. You can view detailed information about each alternative, including features, strengths, weaknesses, and pricing.`,
+                  isThinking: false
+                }]);
               }
             }, 1500);
           }
@@ -205,184 +308,56 @@ const ResearchTool = () => {
     return `https://${cleanDomain}`;
   };
 
-  // 渲染工作流程状态
-  const renderWorkflowStatus = () => {
-    if (!workflowStage) return null;
-    
-    const stages = {
-      collecting: {
-        title: 'Collecting Site Information',
-        description: `Crawling ${domain} to gather product information...`
-      },
-      analyzing: {
-        title: 'Analyzing Content',
-        description: 'Extracting keywords and identifying product category...'
-      },
-      searching: {
-        title: 'Searching for Alternatives',
-        description: 'Scanning 48 potential competitors across the web...'
-      },
-      comparing: {
-        title: 'Comparing Alternatives',
-        description: 'Performing 1-on-1 comparisons with identified competitors...'
-      },
-      completed: {
-        title: 'Analysis Complete',
-        description: 'Alternative page preview is ready! Scroll down to view the results.'
-      }
-    };
-    
+  // Render chat message
+  const renderChatMessage = (message, index) => {
     return (
-      <div className="mt-8 bg-white/5 backdrop-blur-sm p-6 rounded-xl border border-purple-300/20">
-        <h3 className="text-xl font-semibold text-purple-100 mb-2">{stages[workflowStage].title}</h3>
-        <p className="text-purple-200 mb-4">{stages[workflowStage].description}</p>
-        
-        <div className="w-full bg-white/10 rounded-full h-4 mb-4">
+      <div 
+        key={index} 
+        className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} mb-4`}
+      >
+        <div className={`flex max-w-[80%] ${message.type === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+          <div className={`flex-shrink-0 ${message.type === 'user' ? 'ml-3' : 'mr-3'}`}>
+            <Avatar 
+              icon={message.type === 'user' ? <UserOutlined /> : <RobotOutlined />} 
+              className={message.type === 'user' ? 'bg-indigo-500' : 'bg-purple-600'}
+            />
+          </div>
           <div 
-            className="bg-gradient-to-r from-purple-500 to-indigo-500 h-4 rounded-full transition-all duration-500"
-            style={{ width: `${workflowProgress}%` }}
-          ></div>
+            className={`p-3 rounded-lg ${
+              message.type === 'user' 
+                ? 'bg-indigo-600 text-white rounded-tr-none' 
+                : 'bg-white/10 backdrop-blur-sm text-purple-100 rounded-tl-none'
+            } ${message.isThinking ? 'border border-purple-400/30 animate-pulse' : ''}`}
+          >
+            {message.content.split('\n').map((line, i) => (
+              <React.Fragment key={i}>
+                {line}
+                {i < message.content.split('\n').length - 1 && <br />}
+              </React.Fragment>
+            ))}
+            {message.isThinking && (
+              <div className="flex space-x-1 mt-2 justify-center">
+                <div className="w-2 h-2 bg-purple-300 rounded-full animate-bounce"></div>
+                <div className="w-2 h-2 bg-purple-300 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                <div className="w-2 h-2 bg-purple-300 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+              </div>
+            )}
+          </div>
         </div>
-        
-        <div className="text-right text-purple-300 text-sm">{Math.round(workflowProgress)}% Complete</div>
-        
-        {workflowStage === 'searching' && workflowProgress >= 40 && (
-          <div className="mt-4">
-            <p className="text-green-300 font-medium">Found {Math.min(Math.floor((workflowProgress - 40) / 2) + 1, 12)} potential alternatives so far...</p>
-            <p className="text-purple-200 text-sm mt-2">
-              Scanned {Math.min(Math.floor(workflowProgress - 20), 48)} of 48 websites
-              <br />
-              Analyzed content from {Math.min(Math.floor((workflowProgress - 20) * 0.7), 32)} websites
-              <br />
-              Filtered {Math.min(Math.floor((workflowProgress - 40) / 2) + 1, 12)} relevant competitors
-            </p>
-          </div>
-        )}
-        
-        {workflowStage === 'completed' && (
-          <div className="mt-4">
-            <p className="text-green-300 font-medium">Alternative page preview has been generated successfully!</p>
-            <Button 
-              type="primary" 
-              size="middle"
-              icon={<ArrowRightOutlined />} 
-              className="mt-3 bg-gradient-to-r from-green-500 to-teal-500 border-none"
-              onClick={() => {
-                // 滚动到结果部分
-                window.scrollTo({
-                  top: document.body.scrollHeight,
-                  behavior: 'smooth'
-                });
-              }}
-            >
-              View Alternative Page Preview
-            </Button>
-          </div>
-        )}
-        
-        {workflowStage === 'comparing' && competitors.length > 0 && (
-          <div className="mt-4">
-            <p className="text-indigo-300 font-medium mb-2">Identified {competitors.length} alternatives for detailed comparison:</p>
-            <div className="flex flex-wrap gap-2 mb-4">
-              {competitors.map((competitor, index) => (
-                <Tag key={index} color={index < comparisonResults.length ? "success" : "processing"}>
-                  {competitor.name}
-                </Tag>
-              ))}
-            </div>
-            
-            {comparisonResults.length > 0 && comparisonResults.length <= competitors.length && (
-              <div className="bg-white/5 p-3 rounded-lg mb-4 border border-indigo-300/20">
-                <p className="text-indigo-200 font-medium">
-                  Currently analyzing: <span className="text-white">{competitors[comparisonResults.length - 1].name}</span>
-                </p>
-                <div className="text-purple-200 text-sm mt-2">
-                  <p>• Crawling homepage and product pages</p>
-                  <p>• Extracting feature list from {competitors[comparisonResults.length - 1].domain}/features</p>
-                  <p>• Analyzing pricing structure from {competitors[comparisonResults.length - 1].domain}/pricing</p>
-                  <p>• Collecting user reviews from G2, Capterra, and TrustPilot</p>
-                  <p>• Comparing feature set with {domain.replace(/^https?:\/\//, '')}</p>
-                  <p>• Generating strengths and weaknesses analysis</p>
-                </div>
-                <div className="w-full bg-white/10 rounded-full h-2 mt-3">
-                  <div 
-                    className="bg-indigo-500 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.min(100, (workflowProgress - 60) * 2.5)}%` }}
-                  ></div>
-                </div>
-              </div>
-            )}
-            
-            {comparisonResults.length > 0 && (
-              <div className="mt-3">
-                <p className="text-green-300 text-sm font-medium mb-2">Completed analyses:</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {comparisonResults.slice(0, -1).map((result, index) => (
-                    <div key={index} className="bg-green-900/20 p-2 rounded border border-green-500/20 text-xs">
-                      <p className="text-white font-medium">{result.name}</p>
-                      <p className="text-green-200">Match score: {result.comparisonScore}%</p>
-                      <p className="text-green-200">Key features: {result.features.slice(0, 2).join(', ')}{result.features.length > 2 ? '...' : ''}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            <p className="text-purple-200 text-sm mt-3">
-              Scanned 48 websites • Analyzed 32 websites • Selected 12 competitors
-            </p>
-          </div>
-        )}
       </div>
     );
   };
   
-  // 渲染竞品对比结果
+  // Render comparison results
   const renderComparisonResults = () => {
     if (comparisonResults.length === 0) return null;
     
     return (
-      <div className="mt-8">
+      <div id="comparison-results">
         <h3 className="text-2xl font-bold text-purple-100 mb-6">Alternative Products Analysis Results</h3>
         
-        {/* 保留分析过程摘要 */}
-        <div className="bg-white/5 backdrop-blur-sm p-4 rounded-xl border border-purple-300/20 mb-6">
-          <h4 className="text-lg font-semibold text-purple-100 mb-3">Analysis Process Summary</h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div className="bg-indigo-900/30 p-3 rounded border border-indigo-300/20">
-              <p className="text-indigo-200 font-medium mb-2">Site Information</p>
-              <p className="text-purple-200 text-sm">• Analyzed {domain.replace(/^https?:\/\//, '')}</p>
-              <p className="text-purple-200 text-sm">• Extracted product category and keywords</p>
-              <p className="text-purple-200 text-sm">• Identified target audience and use cases</p>
-            </div>
-            <div className="bg-indigo-900/30 p-3 rounded border border-indigo-300/20">
-              <p className="text-indigo-200 font-medium mb-2">Competitor Research</p>
-              <p className="text-purple-200 text-sm">• Scanned 48 potential competitors</p>
-              <p className="text-purple-200 text-sm">• Analyzed content from 32 websites</p>
-              <p className="text-purple-200 text-sm">• Selected {comparisonResults.length} relevant alternatives</p>
-            </div>
-          </div>
-          
-          <h4 className="text-lg font-semibold text-purple-100 mb-3">Analyzed Competitors</h4>
-          <div className="flex flex-wrap gap-2 mb-4">
-            {comparisonResults.map((result, index) => (
-              <Tag key={index} color="success">
-                {result.name} ({result.comparisonScore}% match)
-              </Tag>
-            ))}
-          </div>
-          
-          <div className="bg-green-900/20 p-3 rounded border border-green-500/20 mt-4">
-            <p className="text-green-300 font-medium">Analysis completed successfully</p>
-            <p className="text-purple-200 text-sm mt-1">
-              The following alternatives have been analyzed and compared to {domain.replace(/^https?:\/\//, '')}. 
-              Each competitor has been evaluated based on features, pricing, and market position.
-            </p>
-          </div>
-        </div>
-        
-        {/* 竞品卡片展示 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Competitor cards display */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {comparisonResults.map((result, index) => (
             <Card 
               key={index}
@@ -467,54 +442,84 @@ const ResearchTool = () => {
   };
 
   return (
-    <div className="w-full min-h-screen bg-gradient-to-b from-purple-900 via-purple-800 to-indigo-900 text-white flex items-center justify-center p-8 relative overflow-hidden">
-      <div className="absolute inset-0">
+    <div className="w-full pt-24 min-h-screen bg-gradient-to-b from-purple-900 via-purple-800 to-indigo-900 text-white flex items-center justify-center p-4 relative overflow-hidden">
+      <div className="absolute inset-0 pt-24">
         <div className="absolute w-96 h-96 bg-purple-500/20 rounded-full blur-3xl -top-20 -left-20 animate-pulse"></div>
         <div className="absolute w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl -bottom-20 -right-20 animate-pulse delay-1000"></div>
       </div>
       
-      <div className="text-center relative z-10 max-w-6xl w-full">
-        <h1 className="text-5xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-purple-300 via-purple-100 to-indigo-200 animate-gradient">
-          The Best SaaS Alternative Research Tool
-        </h1>
-        <p className="text-purple-100 text-xl mb-8 leading-relaxed">
-          A powerful space ready for your next-generation solution
-        </p>
-        <div className="w-32 h-1 bg-gradient-to-r from-purple-400 to-indigo-400 mx-auto rounded-full mb-8"></div>
+      <div className="relative z-10 w-[95%] flex flex-col md:flex-row gap-6 h-[calc(100vh-140px)]">
+        <div className="text-center md:text-left mb-6 md:mb-0 md:hidden">
+          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-300 via-purple-100 to-indigo-200 animate-gradient">
+            SaaS Alternative Research Tool
+          </h1>
+        </div>
         
-        <div className="bg-white/10 backdrop-blur-lg p-8 rounded-2xl border border-purple-300/20 shadow-xl">
-          <p className="text-purple-100 mb-6">
-            Enter your product domain to discover alternatives, analyze competitors, and generate a comprehensive alternative page
-          </p>
-          
-          <div className="flex items-center space-x-2 max-w-2xl mx-auto">
-            <div className="flex-1 flex items-center bg-white/5 border border-purple-300/30 rounded-lg overflow-hidden">
-              <span className="text-purple-300 px-3 border-r border-purple-300/30">https://</span>
-              <Input
-                ref={inputRef}
-                placeholder="yourproduct.com"
-                value={domain}
-                onChange={(e) => setDomain(e.target.value)}
-                size="large"
-                variant="borderless"
-                className="bg-transparent text-white flex-1"
-                onPressEnter={handleSearch}
-              />
-            </div>
-            <Button 
-              type="primary" 
-              size="large" 
-              icon={<ArrowRightOutlined />} 
-              onClick={handleSearch}
-              loading={loading}
-              className="bg-gradient-to-r from-purple-500 to-indigo-500 border-none hover:from-purple-600 hover:to-indigo-600"
-            >
-              Getting Alternative Page
-            </Button>
+        {/* Left side - Chat interface */}
+        <div className="w-full md:w-2/5 bg-white/5 backdrop-blur-lg rounded-2xl border border-purple-300/20 shadow-xl flex flex-col h-full">
+          <div className="p-4 border-b border-purple-300/20 flex items-center flex-shrink-0">
+            <RobotOutlined className="text-purple-300 mr-2 text-xl" />
+            <h2 className="text-xl font-semibold text-purple-100">Research Assistant</h2>
           </div>
           
-          {loading && renderWorkflowStatus()}
-          {!loading && comparisonResults.length > 0 && renderComparisonResults()}
+          <div className="flex-grow overflow-y-auto" style={{ height: "calc(100% - 140px)" }}>
+            <div className="p-4 pb-6">
+              {messages.map((message, index) => renderChatMessage(message, index))}
+              <div ref={chatEndRef} />
+            </div>
+          </div>
+          
+          <div className="p-4 border-t border-purple-300/20 flex-shrink-0">
+            <div className="flex items-center space-x-2">
+              <Input
+                placeholder="Enter a product domain (e.g., zendesk.com)"
+                value={userInput}
+                onChange={(e) => setUserInput(e.target.value)}
+                onPressEnter={handleUserInput}
+                disabled={loading}
+                className="bg-white/10 border border-purple-300/30 rounded-lg text-black placeholder:text-purple-300/70"
+                style={{ color: 'black' }}
+              />
+              <Button 
+                type="primary" 
+                icon={<SendOutlined />} 
+                onClick={handleUserInput}
+                loading={loading}
+                disabled={loading}
+                className="bg-gradient-to-r from-purple-500 to-indigo-500 border-none"
+              />
+            </div>
+            <div className="text-xs text-purple-300 mt-2">
+              Enter a product domain to discover alternatives and generate a comprehensive analysis
+            </div>
+          </div>
+        </div>
+        
+        {/* Right side - Results display */}
+        <div className="w-full md:w-3/5 bg-white/5 backdrop-blur-lg rounded-2xl border border-purple-300/20 shadow-xl p-6 overflow-y-auto h-full">
+          <div className="hidden md:block mb-6">
+            <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-300 via-purple-100 to-indigo-200 animate-gradient">
+              SaaS Alternative Research Tool
+            </h1>
+            <p className="text-purple-200 mt-2">
+              Discover alternatives and generate comprehensive analysis for any SaaS product
+            </p>
+          </div>
+          
+          {comparisonResults.length > 0 ? (
+            renderComparisonResults()
+          ) : (
+            <div className="h-full flex flex-col items-center justify-center text-center">
+              <div className="w-24 h-24 bg-purple-500/20 rounded-full flex items-center justify-center mb-6">
+                <SearchOutlined className="text-4xl text-purple-300" />
+              </div>
+              <h3 className="text-xl font-semibold text-purple-100 mb-2">No Results Yet</h3>
+              <p className="text-purple-200 max-w-md">
+                Enter a product domain in the chat to start the analysis process. 
+                Results will appear here once the analysis is complete.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
