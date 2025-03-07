@@ -21,6 +21,33 @@ const ResearchTool = () => {
   const inputRef = useRef(null);
   const chatEndRef = useRef(null);
 
+  // 添加 tabs 状态
+  const [tabs, setTabs] = useState([
+    {
+      id: 1,
+      title: 'websitelm.com',
+      url: 'https://websitelm.com',
+      active: true
+    },
+    {
+      id: 2,
+      title: 'EASYFin.ai',
+      url: 'https://easyfin.ai/',
+      active: false
+    }
+  ]);
+
+  // 切换 tab 的函数
+  const switchTab = (tabId) => {
+    setTabs(tabs.map(tab => ({
+      ...tab,
+      active: tab.id === tabId
+    })));
+  };
+
+  // 获取当前激活的 tab
+  const activeTab = tabs.find(tab => tab.active);
+
   // 验证域名格式
   const validateDomain = (domain) => {
     // 简单验证域名格式 (xx.xx)
@@ -448,15 +475,9 @@ The results are displayed on the right panel. You can view detailed information 
         <div className="absolute w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl -bottom-20 -right-20 animate-pulse delay-1000"></div>
       </div>
       
-      <div className="relative z-10 w-[95%] flex flex-col md:flex-row gap-6 h-[calc(100vh-140px)]">
-        <div className="text-center md:text-left mb-6 md:mb-0 md:hidden">
-          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-300 via-purple-100 to-indigo-200 animate-gradient">
-            SaaS Alternative Research Tool
-          </h1>
-        </div>
-        
-        {/* Left side - Chat interface */}
-        <div className="w-full md:w-2/5 bg-white/5 backdrop-blur-lg rounded-2xl border border-purple-300/20 shadow-xl flex flex-col h-full">
+      <div className="relative z-10 w-[100%] flex flex-row gap-6 h-[calc(100vh-140px)]">
+        {/* 左侧对话栏 - 缩窄宽度 */}
+        <div className="w-1/5 bg-white/5 backdrop-blur-lg rounded-2xl border border-purple-300/20 shadow-xl flex flex-col h-full">
           <div className="p-4 border-b border-purple-300/20 flex items-center flex-shrink-0">
             <RobotOutlined className="text-purple-300 mr-2 text-xl" />
             <h2 className="text-xl font-semibold text-purple-100">Research Assistant</h2>
@@ -495,31 +516,74 @@ The results are displayed on the right panel. You can view detailed information 
           </div>
         </div>
         
-        {/* Right side - Results display */}
-        <div className="w-full md:w-3/5 bg-white/5 backdrop-blur-lg rounded-2xl border border-purple-300/20 shadow-xl p-6 overflow-y-auto h-full">
-          <div className="hidden md:block mb-6">
-            <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-300 via-purple-100 to-indigo-200 animate-gradient">
-              SaaS Alternative Research Tool
-            </h1>
-            <p className="text-purple-200 mt-2">
-              Discover alternatives and generate comprehensive analysis for any SaaS product
-            </p>
+        {/* 中间 Chrome 浏览器模拟区 */}
+        <div className="w-[50%] bg-gray-800 backdrop-blur-lg rounded-2xl border border-purple-300/20 shadow-xl flex flex-col h-full">
+          {/* 控制按钮区 */}
+          <div className="h-8 flex items-center px-4 gap-2">
+            <div className="flex gap-2">
+              <div className="w-3 h-3 rounded-full bg-red-500"></div>
+              <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+              <div className="w-3 h-3 rounded-full bg-green-500"></div>
+            </div>
           </div>
           
-          {comparisonResults.length > 0 ? (
-            renderComparisonResults()
-          ) : (
-            <div className="h-full flex flex-col items-center justify-center text-center">
-              <div className="w-24 h-24 bg-purple-500/20 rounded-full flex items-center justify-center mb-6">
-                <SearchOutlined className="text-4xl text-purple-300" />
+          {/* 标签页区域 */}
+          <div className="flex items-center px-2 border-b border-gray-700">
+            {tabs.map((tab) => (
+              <div
+                key={tab.id}
+                onClick={() => switchTab(tab.id)}
+                className={`
+                  flex items-center gap-2 px-4 h-9 text-sm cursor-pointer
+                  border-t border-x rounded-t-md transition-colors
+                  ${tab.active 
+                    ? 'bg-white text-gray-800 border-gray-300' 
+                    : 'bg-gray-700 text-gray-300 border-gray-600 hover:bg-gray-600'
+                  }
+                  mx-1
+                `}
+              >
+                <span className="truncate">{tab.title}</span>
               </div>
-              <h3 className="text-xl font-semibold text-purple-100 mb-2">No Results Yet</h3>
-              <p className="text-purple-200 max-w-md">
-                Enter a product domain in the chat to start the analysis process. 
-                Results will appear here once the analysis is complete.
-              </p>
+            ))}
+          </div>
+          
+          {/* 地址栏 */}
+          <div className="flex items-center h-10 px-4 py-1">
+            <div className="flex-1 bg-gray-700 rounded-md h-8 flex items-center px-3">
+              <span className="text-gray-400 text-sm truncate">
+                {activeTab?.url || 'about:blank'}
+              </span>
             </div>
-          )}
+          </div>
+          
+          {/* iframe 内容区 */}
+          <div className="flex-1 bg-white">
+            <iframe
+              key={activeTab?.id} // 添加 key 以确保切换时重新加载
+              src={activeTab?.url}
+              className="w-full h-full border-none"
+              title={`Tab ${activeTab?.id}`}
+              sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+              referrerPolicy="no-referrer"
+            />
+          </div>
+        </div>
+        
+        {/* 右侧分析结果栏 */}
+        <div className="w-1/5 bg-white/5 backdrop-blur-lg rounded-2xl border border-purple-300/20 shadow-xl flex flex-col h-full">
+          <div className="p-4 border-b border-purple-300/20">
+            <h2 className="text-xl font-semibold text-purple-100">Analysis Results</h2>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4">
+            {comparisonResults.length > 0 ? (
+              renderComparisonResults()
+            ) : (
+              <div className="h-full flex items-center justify-center text-center">
+                <p className="text-purple-200">Results will appear here</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
