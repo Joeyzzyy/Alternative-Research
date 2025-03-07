@@ -615,7 +615,6 @@ The results are displayed on the right panel. You can view detailed information 
           <div className="flex-1 overflow-y-auto">
             {rightPanelTab === 'agents' && (
               <div className="p-3">
-                <h3 className="text-base font-semibold text-purple-100 mb-3">Agents</h3>
                 {comparisonResults.length > 0 ? (
                   renderComparisonResults()
                 ) : (
@@ -628,7 +627,6 @@ The results are displayed on the right panel. You can view detailed information 
 
             {rightPanelTab === 'details' && (
               <div className="p-3">
-                <h3 className="text-base font-semibold text-purple-100 mb-3">Details</h3>
                 <div className="space-y-3">
                   <div className="bg-white/5 rounded-lg p-3">
                     <h4 className="text-xs font-medium text-purple-200 mb-2">Meta Information</h4>
@@ -652,7 +650,6 @@ The results are displayed on the right panel. You can view detailed information 
 
             {rightPanelTab === 'sources' && (
               <div className="p-3">
-                <h3 className="text-base font-semibold text-purple-100 mb-3">Sources</h3>
                 <div className="space-y-3">
                   <div className="bg-white/5 rounded-lg p-3">
                     <h4 className="text-xs font-medium text-purple-200 mb-2">External Links</h4>
