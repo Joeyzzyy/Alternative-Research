@@ -482,50 +482,41 @@ The results are displayed on the right panel. You can view detailed information 
         
         {/* 中间浏览器区域 */}
         {showBrowser && (
-          <div className="w-[60%] bg-gray-800 backdrop-blur-lg rounded-2xl border border-purple-300/20 shadow-xl flex flex-col h-full relative">
-            {/* 控制按钮区 */}
-            <div className="h-8 flex items-center px-4 gap-2">
-              <div className="flex gap-2">
+          <div className="w-[60%] bg-gray-800 backdrop-blur-lg rounded-2xl border border-purple-300/20 shadow-xl flex flex-col h-full">
+            {/* 浏览器顶部栏 - 调整为单行 */}
+            <div className="h-10 flex items-center px-4 border-b border-gray-700">
+              {/* 控制按钮区 */}
+              <div className="flex gap-2 mr-4">
                 <div className="w-3 h-3 rounded-full bg-red-500"></div>
                 <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
                 <div className="w-3 h-3 rounded-full bg-green-500"></div>
               </div>
-            </div>
-            
-            {/* 标签页区域 */}
-            <div className="flex items-center px-2 border-b border-gray-700">
-              {tabs.map((tab) => (
-                <div
-                  key={tab.id}
-                  onClick={() => switchTab(tab.id)}
-                  className={`
-                    flex items-center gap-2 px-4 h-9 text-sm cursor-pointer
-                    border-t border-x rounded-t-md transition-colors
-                    ${tab.active 
-                      ? 'bg-white text-gray-800 border-gray-300' 
-                      : 'bg-gray-700 text-gray-300 border-gray-600 hover:bg-gray-600'
-                    }
-                    mx-1
-                  `}
-                >
-                  <span className="truncate">{tab.title}</span>
-                </div>
-              ))}
-            </div>
-            
-            {/* 地址栏 */}
-            <div className="flex items-center h-10 px-4 py-1">
-              <div className="flex-1 bg-gray-700 rounded-md h-8 flex items-center px-3">
-                <span className="text-gray-400 text-sm truncate">
-                  {activeTab?.url || 'about:blank'}
-                </span>
+              
+              {/* 标签页区域 - 直接跟在控制按钮后面 */}
+              <div className="flex items-center flex-1">
+                {tabs.map((tab) => (
+                  <div
+                    key={tab.id}
+                    onClick={() => switchTab(tab.id)}
+                    className={`
+                      flex items-center h-7 px-4 text-xs cursor-pointer
+                      rounded-t-md transition-colors mr-1
+                      ${tab.active 
+                        ? 'bg-white text-gray-800' 
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      }
+                    `}
+                  >
+                    <span className="truncate">{tab.title}</span>
+                  </div>
+                ))}
               </div>
             </div>
             
             {/* iframe 内容区 */}
             <div className="flex-1 bg-white">
               <iframe
-                key={activeTab?.id} // 添加 key 以确保切换时重新加载
+                key={activeTab?.id}
                 src={activeTab?.url}
                 className="w-full h-full border-none"
                 title={`Tab ${activeTab?.id}`}
