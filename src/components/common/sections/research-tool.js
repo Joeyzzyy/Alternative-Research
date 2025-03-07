@@ -440,8 +440,9 @@ The results are displayed on the right panel. You can view detailed information 
       
       <div className="relative z-10 w-full flex flex-row gap-6 h-[calc(100vh-140px)] px-4 text-sm">
         {/* 左侧对话栏 */}
-        <div className="w-1/5 bg-white/5 backdrop-blur-lg rounded-2xl border border-purple-300/20 shadow-xl flex flex-col h-full">
-          <div className="p-2 border-b border-purple-300/20 flex items-center flex-shrink-0">
+        <div className={`${showBrowser ? 'w-1/5' : 'w-4/5'} transition-all duration-300 ease-in-out 
+                         bg-white/5 backdrop-blur-lg rounded-2xl border border-purple-300/20 shadow-xl flex flex-col h-full`}>
+          <div className="h-10 px-4 border-b border-purple-300/20 flex items-center flex-shrink-0">
             <RobotOutlined className="text-purple-300 mr-1.5 text-sm" />
             <h2 className="text-sm font-semibold text-purple-100">Copilot</h2>
           </div>
@@ -482,17 +483,13 @@ The results are displayed on the right panel. You can view detailed information 
         
         {/* 中间浏览器区域 */}
         {showBrowser && (
-          <div className="w-[60%] bg-gray-800 backdrop-blur-lg rounded-2xl border border-purple-300/20 shadow-xl flex flex-col h-full">
-            {/* 浏览器顶部栏 - 调整为单行 */}
-            <div className="h-10 flex items-center px-4 border-b border-gray-700">
-              {/* 控制按钮区 */}
+          <div className="w-3/5 bg-gray-800 backdrop-blur-lg rounded-2xl border border-purple-300/20 shadow-xl flex flex-col h-full">
+            <div className="h-10 flex items-center px-4 border-b border-purple-300/20">
               <div className="flex gap-2 mr-4">
                 <div className="w-3 h-3 rounded-full bg-red-500"></div>
                 <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
                 <div className="w-3 h-3 rounded-full bg-green-500"></div>
               </div>
-              
-              {/* 标签页区域 - 直接跟在控制按钮后面 */}
               <div className="flex items-center flex-1">
                 {tabs.map((tab) => (
                   <div
@@ -537,9 +534,8 @@ The results are displayed on the right panel. You can view detailed information 
         )}
         
         {/* 右侧分析结果栏 */}
-        <div className={`${showBrowser ? 'w-1/5' : 'w-[75%]'} transition-all duration-300 ease-in-out 
-                        bg-white/5 backdrop-blur-lg rounded-2xl border border-purple-300/20 shadow-xl 
-                        flex flex-col h-full relative`}
+        <div className="w-1/5 bg-white/5 backdrop-blur-lg rounded-2xl border border-purple-300/20 shadow-xl 
+                        flex flex-col h-full relative"
         >
           {/* 简化的显示按钮 */}
           {!showBrowser && (
@@ -556,7 +552,7 @@ The results are displayed on the right panel. You can view detailed information 
           <div className="flex border-b border-purple-300/20">
             <button
               onClick={() => setRightPanelTab('agents')}
-              className={`flex-1 px-3 py-2 text-xs font-medium transition-colors
+              className={`flex-1 h-10 flex items-center justify-center text-xs font-medium transition-colors
                 ${rightPanelTab === 'agents'
                   ? 'text-white border-b-2 border-purple-500'
                   : 'text-purple-300 hover:text-purple-200'
@@ -566,7 +562,7 @@ The results are displayed on the right panel. You can view detailed information 
             </button>
             <button
               onClick={() => setRightPanelTab('details')}
-              className={`flex-1 px-3 py-2 text-xs font-medium transition-colors
+              className={`flex-1 h-10 flex items-center justify-center text-xs font-medium transition-colors
                 ${rightPanelTab === 'details'
                   ? 'text-white border-b-2 border-purple-500'
                   : 'text-purple-300 hover:text-purple-200'
@@ -576,7 +572,7 @@ The results are displayed on the right panel. You can view detailed information 
             </button>
             <button
               onClick={() => setRightPanelTab('sources')}
-              className={`flex-1 px-3 py-2 text-xs font-medium transition-colors
+              className={`flex-1 h-10 flex items-center justify-center text-xs font-medium transition-colors
                 ${rightPanelTab === 'sources'
                   ? 'text-white border-b-2 border-purple-500'
                   : 'text-purple-300 hover:text-purple-200'
