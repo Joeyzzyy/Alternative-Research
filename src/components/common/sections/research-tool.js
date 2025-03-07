@@ -8,8 +8,6 @@ const ResearchTool = () => {
   const [loading, setLoading] = useState(false);
   const [workflowStage, setWorkflowStage] = useState(null);
   const [workflowProgress, setWorkflowProgress] = useState(0);
-  const [competitors, setCompetitors] = useState([]);
-  const [comparisonResults, setComparisonResults] = useState([]);
   const [messages, setMessages] = useState([
     { 
       type: 'system', 
@@ -90,8 +88,6 @@ const ResearchTool = () => {
   const startAnalysis = (cleanDomain) => {
     // Clear previous results
     setWorkflowStage(null);
-    setCompetitors([]);
-    setComparisonResults([]);
     
     const fullUrl = formatUrl(cleanDomain);
     
@@ -168,14 +164,11 @@ Found ${Math.min(Math.floor((progress - 40) / 2) + 1, 12)} potential alternative
           if (progress >= 60) {
             clearInterval(searchInterval);
             
-            // 生成假的竞品数据
-            const fakeCompetitors = generateFakeCompetitors();
-            setCompetitors(fakeCompetitors);
             setWorkflowStage('comparing');
             
             setMessages(prev => [...prev.slice(0, -1), { 
               type: 'system', 
-              content: `Found ${fakeCompetitors.length} relevant alternatives for ${cleanDomain}.
+              content: `Found ${Math.min(Math.floor((progress - 40) / 2) + 1, 12)} potential alternatives for ${cleanDomain}.
               
 Now performing detailed comparison with each alternative...`,
               isThinking: true
@@ -186,24 +179,22 @@ Now performing detailed comparison with each alternative...`,
             const comparisonResults = [];
             
             const comparisonInterval = setInterval(() => {
-              if (comparisonIndex < fakeCompetitors.length) {
+              if (comparisonIndex < Math.min(Math.floor((progress - 40) / 2) + 1, 12)) {
                 const newResult = {
-                  ...fakeCompetitors[comparisonIndex],
+                  ...comparisonResults[comparisonIndex],
                   comparisonScore: Math.floor(Math.random() * 40) + 60,
                   strengths: generateRandomStrengths(),
                   weaknesses: generateRandomWeaknesses()
                 };
                 
                 comparisonResults.push(newResult);
-                setComparisonResults([...comparisonResults]);
-                comparisonIndex++;
-                setWorkflowProgress(60 + (comparisonIndex / fakeCompetitors.length) * 40);
+                setWorkflowProgress(60 + (comparisonIndex / Math.min(Math.floor((progress - 40) / 2) + 1, 12)) * 40);
                 
                 setMessages(prev => [...prev.slice(0, -1), { 
                   type: 'system', 
-                  content: `Comparing alternatives: ${comparisonIndex} of ${fakeCompetitors.length} completed
+                  content: `Comparing alternatives: ${comparisonIndex + 1} of ${Math.min(Math.floor((progress - 40) / 2) + 1, 12)} completed
                   
-Currently analyzing: ${fakeCompetitors[comparisonIndex-1].name} (${fakeCompetitors[comparisonIndex-1].domain})
+Currently analyzing: ${comparisonResults[comparisonIndex].name} (${comparisonResults[comparisonIndex].domain})
 • Crawling website and product pages
 • Extracting feature list
 • Analyzing pricing structure
@@ -211,7 +202,7 @@ Currently analyzing: ${fakeCompetitors[comparisonIndex-1].name} (${fakeCompetito
 • Comparing with ${cleanDomain}
 • Generating strengths and weaknesses analysis
 
-Overall progress: ${Math.round(60 + (comparisonIndex / fakeCompetitors.length) * 40)}%`,
+Overall progress: ${Math.round(60 + (comparisonIndex / Math.min(Math.floor((progress - 40) / 2) + 1, 12)) * 40)}%`,
                   isThinking: true
                 }]);
               } else {
@@ -237,108 +228,16 @@ The results are displayed on the right panel. You can view detailed information 
     }, 1500);
   };
   
-  // 生成假的竞品数据
-  const generateFakeCompetitors = () => {
-    const competitors = [];
-    const realCompetitorNames = [
-      { name: 'Zendesk', domain: 'zendesk.com' },
-      { name: 'Intercom', domain: 'intercom.com' },
-      { name: 'Freshdesk', domain: 'freshdesk.com' },
-      { name: 'HelpScout', domain: 'helpscout.com' },
-      { name: 'Drift', domain: 'drift.com' },
-      { name: 'Crisp', domain: 'crisp.chat' },
-      { name: 'Olark', domain: 'olark.com' },
-      { name: 'LiveChat', domain: 'livechat.com' },
-      { name: 'Tidio', domain: 'tidio.com' },
-      { name: 'Tawk.to', domain: 'tawk.to' },
-      { name: 'HubSpot Service Hub', domain: 'hubspot.com/service' },
-      { name: 'Front', domain: 'front.com' }
-    ];
-    
-    const cleanDomain = domain.replace(/^https?:\/\//, '');
-    
-    for (let i = 0; i < Math.min(12, realCompetitorNames.length); i++) {
-      competitors.push({
-        id: i + 1,
-        name: realCompetitorNames[i].name,
-        domain: realCompetitorNames[i].domain,
-        description: `A powerful alternative solution for ${cleanDomain} with unique features and capabilities.`,
-        features: generateRandomFeatures(),
-        pricing: generateRandomPricing()
-      });
-    }
-    
-    return competitors;
-  };
-  
-  // 生成随机功能列表
-  const generateRandomFeatures = () => {
-    const allFeatures = [
-      'Analytics Dashboard', 'User Management', 'API Integration', 
-      'Custom Reports', 'Automation', 'Mobile App',
-      'Team Collaboration', 'Data Export', 'Third-party Integrations',
-      'White Labeling', 'Multi-language Support', 'Advanced Security'
-    ];
-    
-    const shuffled = [...allFeatures].sort(() => 0.5 - Math.random());
-    return shuffled.slice(0, Math.floor(Math.random() * 5) + 3);
-  };
-  
-  // 生成随机价格
-  const generateRandomPricing = () => {
-    const plans = ['Free', 'Basic', 'Pro', 'Enterprise'];
-    const pricing = {};
-    
-    plans.forEach(plan => {
-      if (Math.random() > 0.3) {
-        pricing[plan] = plan === 'Free' ? 
-          '$0/month' : 
-          `$${Math.floor(Math.random() * 100) + 10}/month`;
-      }
-    });
-    
-    return pricing;
-  };
-  
-  // 生成随机优势
-  const generateRandomStrengths = () => {
-    const allStrengths = [
-      'Better UI/UX', 'More affordable', 'Advanced features', 
-      'Better customer support', 'More integrations', 'Open API',
-      'Better documentation', 'Active community', 'Regular updates'
-    ];
-    
-    const shuffled = [...allStrengths].sort(() => 0.5 - Math.random());
-    return shuffled.slice(0, Math.floor(Math.random() * 3) + 2);
-  };
-  
-  // 生成随机劣势
-  const generateRandomWeaknesses = () => {
-    const allWeaknesses = [
-      'Limited free plan', 'Steeper learning curve', 'Fewer integrations', 
-      'Less customization', 'Newer in market', 'Smaller community',
-      'Limited support hours', 'Missing key features', 'Higher enterprise pricing'
-    ];
-    
-    const shuffled = [...allWeaknesses].sort(() => 0.5 - Math.random());
-    return shuffled.slice(0, Math.floor(Math.random() * 3) + 1);
-  };
-  
-  // 格式化URL，确保以https://开头
   const formatUrl = (input) => {
-    // 移除可能存在的协议前缀
     let cleanDomain = input.trim();
     if (cleanDomain.startsWith('http://')) {
       cleanDomain = cleanDomain.substring(7);
     } else if (cleanDomain.startsWith('https://')) {
       cleanDomain = cleanDomain.substring(8);
     }
-    
-    // 添加https://前缀
     return `https://${cleanDomain}`;
   };
 
-  // Render chat message
   const renderChatMessage = (message, index) => {
     return (
       <div 
@@ -379,98 +278,155 @@ The results are displayed on the right panel. You can view detailed information 
     );
   };
   
-  // Render comparison results
-  const renderComparisonResults = () => {
-    if (comparisonResults.length === 0) return null;
-    
-    return (
-      <div id="comparison-results">
-        <h3 className="text-2xl font-bold text-purple-100 mb-6">Alternative Products Analysis Results</h3>
-        
-        {/* Competitor cards display */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {comparisonResults.map((result, index) => (
-            <Card 
-              key={index}
-              className="bg-white/10 backdrop-blur-sm border border-purple-300/20 hover:border-purple-300/40 transition-all h-full"
-              hoverable
-            >
-              <div className="flex flex-col h-full">
-                <div className="mb-4">
-                  <h4 className="text-xl font-semibold text-white mb-2">{result.name}</h4>
-                  <p className="text-purple-200 text-sm">{result.domain}</p>
-                </div>
-                
-                <p className="text-purple-100 mb-4 flex-grow">{result.description}</p>
-                
-                <div className="mb-4">
-                  <div className="text-sm text-purple-300 mb-1 flex items-center">
-                    <span>Alternative Match Score</span>
-                    <Tooltip title="Higher score indicates better match as an alternative based on features, pricing, and market position">
-                      <InfoCircleOutlined className="ml-1" />
-                    </Tooltip>
-                  </div>
-                  <div className="w-full bg-white/10 rounded-full h-3">
-                    <div 
-                      className={`h-3 rounded-full ${
-                        result.comparisonScore > 80 ? 'bg-green-500' : 
-                        result.comparisonScore > 70 ? 'bg-blue-500' : 'bg-yellow-500'
-                      }`}
-                      style={{ width: `${result.comparisonScore}%` }}
-                    ></div>
-                  </div>
-                  <div className="text-right text-purple-300 text-xs mt-1">{result.comparisonScore}% match</div>
-                </div>
-                
-                <div className="mb-3">
-                  <div className="text-sm text-purple-300 mb-1">Key Features</div>
-                  <div className="flex flex-wrap gap-1 min-h-[60px]">
-                    {result.features.slice(0, 3).map((feature, i) => (
-                      <Tag key={i} color="blue" className="h-7 flex items-center">{feature}</Tag>
-                    ))}
-                    {result.features.length > 3 && (
-                      <Tooltip title={result.features.slice(3).join(', ')}>
-                        <Tag color="processing" className="h-7 flex items-center">+{result.features.length - 3} more</Tag>
-                      </Tooltip>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="mb-3">
-                  <div className="text-sm text-purple-300 mb-1">Strengths</div>
-                  <div className="flex flex-wrap gap-1 min-h-[60px]">
-                    {result.strengths.map((strength, i) => (
-                      <Tag key={i} color="green" className="h-7 flex items-center">{strength}</Tag>
-                    ))}
-                  </div>
-                </div>
-                
-                <div className="mb-4">
-                  <div className="text-sm text-purple-300 mb-1">Weaknesses</div>
-                  <div className="flex flex-wrap gap-1 min-h-[40px]">
-                    {result.weaknesses.map((weakness, i) => (
-                      <Tag key={i} color="orange" className="h-7 flex items-center">{weakness}</Tag>
-                    ))}
-                  </div>
-                </div>
-                
-                <div className="flex justify-between items-center mt-auto pt-2 border-t border-purple-300/20">
-                  <Button type="primary" size="small" className="bg-indigo-600 border-none">
-                    View Comparison
-                  </Button>
-                  <div className="text-purple-300 text-sm">
-                    {Object.keys(result.pricing).length > 0 ? 
-                      `From ${Object.values(result.pricing)[0]}` : 
-                      'Pricing unavailable'}
-                  </div>
-                </div>
-              </div>
-            </Card>
-          ))}
+  // 新增 agents 数据
+  const agents = [
+    {
+      id: 1,
+      name: 'Atlas',
+      avatar: '🦊',  // 可以替换为实际的图片路径
+      role: 'Research Specialist',
+      description: 'Specialized in comprehensive competitor research and market analysis. I help identify and analyze alternative products in your market space.'
+    },
+    {
+      id: 2,
+      name: 'Nova',
+      avatar: '🦉',  // 可以替换为实际的图片路径
+      role: 'Detail Analyst',
+      description: 'Focus on deep-diving into competitor features, pricing strategies, and unique selling propositions. I provide detailed comparative analysis.'
+    },
+    {
+      id: 3,
+      name: 'Sage',
+      avatar: '🐢',  // 可以替换为实际的图片路径
+      role: 'Verification Expert',
+      description: 'Responsible for fact-checking and verifying information accuracy. I ensure all analyses are based on reliable and up-to-date data.'
+    }
+  ];
+
+  // 示例 details 数据 - 重构为处理过程
+  const detailsData = [
+    {
+      id: 1,
+      agentName: 'Atlas',
+      agentAvatar: '🦊',
+      step: 'Initial Research',
+      status: 'Completed',
+      timestamp: '2024-03-20 14:23',
+      description: 'Analyzing main product features and market positioning'
+    },
+    {
+      id: 2,
+      agentName: 'Nova',
+      agentAvatar: '🦉',
+      step: 'Competitor Analysis',
+      status: 'In Progress',
+      timestamp: '2024-03-20 14:25',
+      description: 'Deep diving into competitor pricing strategies and feature sets'
+    },
+    {
+      id: 3,
+      agentName: 'Sage',
+      agentAvatar: '🐢',
+      step: 'Data Verification',
+      status: 'Queued',
+      timestamp: '2024-03-20 14:26',
+      description: 'Waiting to verify gathered information and sources'
+    }
+  ];
+
+  // 示例 sources 数据 - 简化为URL列表
+  const sourcesData = [
+    {
+      id: 1,
+      url: 'https://example.com/pricing',
+      title: 'Product Pricing Page',
+      timestamp: '2024-03-20 14:23'
+    },
+    {
+      id: 2,
+      url: 'https://example.com/features',
+      title: 'Product Features Overview',
+      timestamp: '2024-03-20 14:24'
+    },
+    {
+      id: 3,
+      url: 'https://example.com/api-docs',
+      title: 'API Documentation',
+      timestamp: '2024-03-20 14:25'
+    }
+  ];
+
+  // 渲染 agents 卡片
+  const renderAgents = () => (
+    <div className="space-y-3">
+      {agents.map(agent => (
+        <div key={agent.id} className="bg-white/5 rounded-lg p-3 hover:bg-white/10 transition-colors">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="text-2xl">{agent.avatar}</div>
+            <div>
+              <h4 className="text-sm font-medium text-purple-100">{agent.name}</h4>
+              <p className="text-xs text-purple-300">{agent.role}</p>
+            </div>
+          </div>
+          <p className="text-xs text-purple-200 leading-relaxed">{agent.description}</p>
         </div>
-      </div>
-    );
-  };
+      ))}
+    </div>
+  );
+
+  // 渲染 details 内容
+  const renderDetails = () => (
+    <div className="space-y-3">
+      {detailsData.map(detail => (
+        <div key={detail.id} className="bg-white/5 rounded-lg p-3">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="text-xl">{detail.agentAvatar}</div>
+            <div className="flex-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-purple-100">{detail.agentName}</span>
+                <span className="text-xs text-purple-300">{detail.timestamp}</span>
+              </div>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-xs text-purple-200">{detail.step}</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                  detail.status === 'Completed' ? 'bg-green-500/20 text-green-300' :
+                  detail.status === 'In Progress' ? 'bg-blue-500/20 text-blue-300' :
+                  'bg-gray-500/20 text-gray-300'
+                }`}>
+                  {detail.status}
+                </span>
+              </div>
+            </div>
+          </div>
+          <p className="text-xs text-purple-200 leading-relaxed">{detail.description}</p>
+        </div>
+      ))}
+    </div>
+  );
+
+  // 渲染 sources 内容
+  const renderSources = () => (
+    <div className="space-y-2">
+      {sourcesData.map(source => (
+        <div key={source.id} className="bg-white/5 rounded-lg p-3">
+          <div className="flex items-center justify-between mb-1">
+            <a 
+              href={source.url} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="text-xs text-purple-100 hover:text-purple-300 transition-colors truncate flex-1"
+            >
+              {source.title}
+            </a>
+            <span className="text-xs text-purple-400 ml-3">{source.timestamp}</span>
+          </div>
+          <div className="text-xs text-purple-400 truncate">
+            {source.url}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 
   return (
     <div className="w-full pt-24 min-h-screen bg-gradient-to-b from-purple-900 via-purple-800 to-indigo-900 text-white flex items-center justify-center p-4 relative overflow-hidden">
@@ -615,58 +571,19 @@ The results are displayed on the right panel. You can view detailed information 
           <div className="flex-1 overflow-y-auto">
             {rightPanelTab === 'agents' && (
               <div className="p-3">
-                {comparisonResults.length > 0 ? (
-                  renderComparisonResults()
-                ) : (
-                  <div className="text-center text-purple-200 mt-8">
-                  </div>
-                )}
+                {renderAgents()}
               </div>
             )}
 
             {rightPanelTab === 'details' && (
               <div className="p-3">
-                <div className="space-y-3">
-                  <div className="bg-white/5 rounded-lg p-3">
-                    <h4 className="text-xs font-medium text-purple-200 mb-2">Meta Information</h4>
-                    <div className="text-xs text-purple-300">
-                      <p>Title: Example Page</p>
-                      <p>Description: Page description here</p>
-                      <p>Keywords: example, page, keywords</p>
-                    </div>
-                  </div>
-                  <div className="bg-white/5 rounded-lg p-3">
-                    <h4 className="text-xs font-medium text-purple-200 mb-2">Content Analysis</h4>
-                    <div className="text-xs text-purple-300">
-                      <p>Word count: 1,234</p>
-                      <p>Reading time: 5 mins</p>
-                      <p>Last updated: 2024-03-20</p>
-                    </div>
-                  </div>
-                </div>
+                {renderDetails()}
               </div>
             )}
 
             {rightPanelTab === 'sources' && (
               <div className="p-3">
-                <div className="space-y-3">
-                  <div className="bg-white/5 rounded-lg p-3">
-                    <h4 className="text-xs font-medium text-purple-200 mb-2">External Links</h4>
-                    <div className="text-xs text-purple-300">
-                      <p className="mb-2">• example.com/reference1</p>
-                      <p className="mb-2">• example.com/reference2</p>
-                      <p className="mb-2">• example.com/reference3</p>
-                    </div>
-                  </div>
-                  <div className="bg-white/5 rounded-lg p-3">
-                    <h4 className="text-xs font-medium text-purple-200 mb-2">Citations</h4>
-                    <div className="text-xs text-purple-300">
-                      <p className="mb-2">1. Citation example one</p>
-                      <p className="mb-2">2. Citation example two</p>
-                      <p className="mb-2">3. Citation example three</p>
-                    </div>
-                  </div>
-                </div>
+                {renderSources()}
               </div>
             )}
           </div>
