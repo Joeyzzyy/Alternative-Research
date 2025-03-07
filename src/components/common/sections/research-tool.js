@@ -37,6 +37,9 @@ const ResearchTool = () => {
     }
   ]);
 
+  // 修改右侧面板的 tab 状态
+  const [rightPanelTab, setRightPanelTab] = useState('agents'); // 'agents', 'details', 或 'sources'
+
   // 切换 tab 的函数
   const switchTab = (tabId) => {
     setTabs(tabs.map(tab => ({
@@ -340,17 +343,18 @@ The results are displayed on the right panel. You can view detailed information 
     return (
       <div 
         key={index} 
-        className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} mb-4`}
+        className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} mb-3`}
       >
         <div className={`flex max-w-[80%] ${message.type === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-          <div className={`flex-shrink-0 ${message.type === 'user' ? 'ml-3' : 'mr-3'}`}>
+          <div className={`flex-shrink-0 ${message.type === 'user' ? 'ml-2' : 'mr-2'}`}>
             <Avatar 
+              size="small"
               icon={message.type === 'user' ? <UserOutlined /> : <RobotOutlined />} 
               className={message.type === 'user' ? 'bg-indigo-500' : 'bg-purple-600'}
             />
           </div>
           <div 
-            className={`p-3 rounded-lg ${
+            className={`p-2 rounded-lg text-xs ${
               message.type === 'user' 
                 ? 'bg-indigo-600 text-white rounded-tr-none' 
                 : 'bg-white/10 backdrop-blur-sm text-purple-100 rounded-tl-none'
@@ -363,10 +367,10 @@ The results are displayed on the right panel. You can view detailed information 
               </React.Fragment>
             ))}
             {message.isThinking && (
-              <div className="flex space-x-1 mt-2 justify-center">
-                <div className="w-2 h-2 bg-purple-300 rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-purple-300 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                <div className="w-2 h-2 bg-purple-300 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+              <div className="flex space-x-1 mt-1.5 justify-center">
+                <div className="w-1.5 h-1.5 bg-purple-300 rounded-full animate-bounce"></div>
+                <div className="w-1.5 h-1.5 bg-purple-300 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                <div className="w-1.5 h-1.5 bg-purple-300 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
               </div>
             )}
           </div>
@@ -475,12 +479,12 @@ The results are displayed on the right panel. You can view detailed information 
         <div className="absolute w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl -bottom-20 -right-20 animate-pulse delay-1000"></div>
       </div>
       
-      <div className="relative z-10 w-[100%] flex flex-row gap-6 h-[calc(100vh-140px)]">
-        {/* 左侧对话栏 - 缩窄宽度 */}
+      <div className="relative z-10 w-full flex flex-row gap-6 h-[calc(100vh-140px)] px-4 text-sm">
+        {/* 左侧对话栏 */}
         <div className="w-1/5 bg-white/5 backdrop-blur-lg rounded-2xl border border-purple-300/20 shadow-xl flex flex-col h-full">
-          <div className="p-4 border-b border-purple-300/20 flex items-center flex-shrink-0">
-            <RobotOutlined className="text-purple-300 mr-2 text-xl" />
-            <h2 className="text-xl font-semibold text-purple-100">Research Assistant</h2>
+          <div className="p-2 border-b border-purple-300/20 flex items-center flex-shrink-0">
+            <RobotOutlined className="text-purple-300 mr-1.5 text-sm" />
+            <h2 className="text-sm font-semibold text-purple-100">Copilot</h2>
           </div>
           
           <div className="flex-grow overflow-y-auto" style={{ height: "calc(100% - 140px)" }}>
@@ -490,7 +494,7 @@ The results are displayed on the right panel. You can view detailed information 
             </div>
           </div>
           
-          <div className="p-4 border-t border-purple-300/20 flex-shrink-0">
+          <div className="p-3 border-t border-purple-300/20 flex-shrink-0">
             <div className="flex items-center space-x-2">
               <Input
                 placeholder="Enter a product domain (e.g., zendesk.com)"
@@ -498,26 +502,27 @@ The results are displayed on the right panel. You can view detailed information 
                 onChange={(e) => setUserInput(e.target.value)}
                 onPressEnter={handleUserInput}
                 disabled={loading}
-                className="bg-white/10 border border-purple-300/30 rounded-lg text-black placeholder:text-purple-300/70"
-                style={{ color: 'black' }}
+                className="bg-white/10 border border-purple-300/30 rounded-lg text-xs placeholder:text-purple-300/70"
+                style={{ color: 'white' }}
               />
               <Button 
                 type="primary" 
-                icon={<SendOutlined />} 
+                icon={<SendOutlined className="text-xs" />} 
                 onClick={handleUserInput}
                 loading={loading}
                 disabled={loading}
                 className="bg-gradient-to-r from-purple-500 to-indigo-500 border-none"
+                size="small"
               />
             </div>
-            <div className="text-xs text-purple-300 mt-2">
+            <div className="text-xs text-purple-300 mt-1.5">
               Enter a product domain to discover alternatives and generate a comprehensive analysis
             </div>
           </div>
         </div>
         
         {/* 中间 Chrome 浏览器模拟区 */}
-        <div className="w-[50%] bg-gray-800 backdrop-blur-lg rounded-2xl border border-purple-300/20 shadow-xl flex flex-col h-full">
+        <div className="w-[60%] bg-gray-800 backdrop-blur-lg rounded-2xl border border-purple-300/20 shadow-xl flex flex-col h-full text-xs">
           {/* 控制按钮区 */}
           <div className="h-8 flex items-center px-4 gap-2">
             <div className="flex gap-2">
@@ -572,15 +577,100 @@ The results are displayed on the right panel. You can view detailed information 
         
         {/* 右侧分析结果栏 */}
         <div className="w-1/5 bg-white/5 backdrop-blur-lg rounded-2xl border border-purple-300/20 shadow-xl flex flex-col h-full">
-          <div className="p-4 border-b border-purple-300/20">
-            <h2 className="text-xl font-semibold text-purple-100">Analysis Results</h2>
+          {/* Tab 切换区域 */}
+          <div className="flex border-b border-purple-300/20">
+            <button
+              onClick={() => setRightPanelTab('agents')}
+              className={`flex-1 px-3 py-2 text-xs font-medium transition-colors
+                ${rightPanelTab === 'agents'
+                  ? 'text-white border-b-2 border-purple-500'
+                  : 'text-purple-300 hover:text-purple-200'
+                }`}
+            >
+              Agents
+            </button>
+            <button
+              onClick={() => setRightPanelTab('details')}
+              className={`flex-1 px-3 py-2 text-xs font-medium transition-colors
+                ${rightPanelTab === 'details'
+                  ? 'text-white border-b-2 border-purple-500'
+                  : 'text-purple-300 hover:text-purple-200'
+                }`}
+            >
+              Details
+            </button>
+            <button
+              onClick={() => setRightPanelTab('sources')}
+              className={`flex-1 px-3 py-2 text-xs font-medium transition-colors
+                ${rightPanelTab === 'sources'
+                  ? 'text-white border-b-2 border-purple-500'
+                  : 'text-purple-300 hover:text-purple-200'
+                }`}
+            >
+              Sources
+            </button>
           </div>
-          <div className="flex-1 overflow-y-auto p-4">
-            {comparisonResults.length > 0 ? (
-              renderComparisonResults()
-            ) : (
-              <div className="h-full flex items-center justify-center text-center">
-                <p className="text-purple-200">Results will appear here</p>
+
+          {/* Tab 内容区域 */}
+          <div className="flex-1 overflow-y-auto">
+            {rightPanelTab === 'agents' && (
+              <div className="p-3">
+                <h3 className="text-base font-semibold text-purple-100 mb-3">Agents</h3>
+                {comparisonResults.length > 0 ? (
+                  renderComparisonResults()
+                ) : (
+                  <div className="text-center text-purple-200 mt-8">
+                    <p>Page outline will appear here</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {rightPanelTab === 'details' && (
+              <div className="p-3">
+                <h3 className="text-base font-semibold text-purple-100 mb-3">Details</h3>
+                <div className="space-y-3">
+                  <div className="bg-white/5 rounded-lg p-3">
+                    <h4 className="text-xs font-medium text-purple-200 mb-2">Meta Information</h4>
+                    <div className="text-xs text-purple-300">
+                      <p>Title: Example Page</p>
+                      <p>Description: Page description here</p>
+                      <p>Keywords: example, page, keywords</p>
+                    </div>
+                  </div>
+                  <div className="bg-white/5 rounded-lg p-3">
+                    <h4 className="text-xs font-medium text-purple-200 mb-2">Content Analysis</h4>
+                    <div className="text-xs text-purple-300">
+                      <p>Word count: 1,234</p>
+                      <p>Reading time: 5 mins</p>
+                      <p>Last updated: 2024-03-20</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {rightPanelTab === 'sources' && (
+              <div className="p-3">
+                <h3 className="text-base font-semibold text-purple-100 mb-3">Sources</h3>
+                <div className="space-y-3">
+                  <div className="bg-white/5 rounded-lg p-3">
+                    <h4 className="text-xs font-medium text-purple-200 mb-2">External Links</h4>
+                    <div className="text-xs text-purple-300">
+                      <p className="mb-2">• example.com/reference1</p>
+                      <p className="mb-2">• example.com/reference2</p>
+                      <p className="mb-2">• example.com/reference3</p>
+                    </div>
+                  </div>
+                  <div className="bg-white/5 rounded-lg p-3">
+                    <h4 className="text-xs font-medium text-purple-200 mb-2">Citations</h4>
+                    <div className="text-xs text-purple-300">
+                      <p className="mb-2">1. Citation example one</p>
+                      <p className="mb-2">2. Citation example two</p>
+                      <p className="mb-2">3. Citation example three</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
