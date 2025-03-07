@@ -619,7 +619,6 @@ The results are displayed on the right panel. You can view detailed information 
                   renderComparisonResults()
                 ) : (
                   <div className="text-center text-purple-200 mt-8">
-                    <p>Page outline will appear here</p>
                   </div>
                 )}
               </div>
