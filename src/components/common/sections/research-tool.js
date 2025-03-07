@@ -38,6 +38,9 @@ const ResearchTool = () => {
   // 修改右侧面板的 tab 状态
   const [rightPanelTab, setRightPanelTab] = useState('agents'); // 'agents', 'details', 或 'sources'
 
+  // 添加浏览器显示状态
+  const [showBrowser, setShowBrowser] = useState(false);
+
   // 切换 tab 的函数
   const switchTab = (tabId) => {
     setTabs(tabs.map(tab => ({
@@ -477,62 +480,87 @@ The results are displayed on the right panel. You can view detailed information 
           </div>
         </div>
         
-        {/* 中间 Chrome 浏览器模拟区 */}
-        <div className="w-[60%] bg-gray-800 backdrop-blur-lg rounded-2xl border border-purple-300/20 shadow-xl flex flex-col h-full text-xs">
-          {/* 控制按钮区 */}
-          <div className="h-8 flex items-center px-4 gap-2">
-            <div className="flex gap-2">
-              <div className="w-3 h-3 rounded-full bg-red-500"></div>
-              <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-              <div className="w-3 h-3 rounded-full bg-green-500"></div>
-            </div>
-          </div>
-          
-          {/* 标签页区域 */}
-          <div className="flex items-center px-2 border-b border-gray-700">
-            {tabs.map((tab) => (
-              <div
-                key={tab.id}
-                onClick={() => switchTab(tab.id)}
-                className={`
-                  flex items-center gap-2 px-4 h-9 text-sm cursor-pointer
-                  border-t border-x rounded-t-md transition-colors
-                  ${tab.active 
-                    ? 'bg-white text-gray-800 border-gray-300' 
-                    : 'bg-gray-700 text-gray-300 border-gray-600 hover:bg-gray-600'
-                  }
-                  mx-1
-                `}
-              >
-                <span className="truncate">{tab.title}</span>
+        {/* 中间浏览器区域 */}
+        {showBrowser && (
+          <div className="w-[60%] bg-gray-800 backdrop-blur-lg rounded-2xl border border-purple-300/20 shadow-xl flex flex-col h-full relative">
+            {/* 控制按钮区 */}
+            <div className="h-8 flex items-center px-4 gap-2">
+              <div className="flex gap-2">
+                <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                <div className="w-3 h-3 rounded-full bg-green-500"></div>
               </div>
-            ))}
-          </div>
-          
-          {/* 地址栏 */}
-          <div className="flex items-center h-10 px-4 py-1">
-            <div className="flex-1 bg-gray-700 rounded-md h-8 flex items-center px-3">
-              <span className="text-gray-400 text-sm truncate">
-                {activeTab?.url || 'about:blank'}
-              </span>
             </div>
+            
+            {/* 标签页区域 */}
+            <div className="flex items-center px-2 border-b border-gray-700">
+              {tabs.map((tab) => (
+                <div
+                  key={tab.id}
+                  onClick={() => switchTab(tab.id)}
+                  className={`
+                    flex items-center gap-2 px-4 h-9 text-sm cursor-pointer
+                    border-t border-x rounded-t-md transition-colors
+                    ${tab.active 
+                      ? 'bg-white text-gray-800 border-gray-300' 
+                      : 'bg-gray-700 text-gray-300 border-gray-600 hover:bg-gray-600'
+                    }
+                    mx-1
+                  `}
+                >
+                  <span className="truncate">{tab.title}</span>
+                </div>
+              ))}
+            </div>
+            
+            {/* 地址栏 */}
+            <div className="flex items-center h-10 px-4 py-1">
+              <div className="flex-1 bg-gray-700 rounded-md h-8 flex items-center px-3">
+                <span className="text-gray-400 text-sm truncate">
+                  {activeTab?.url || 'about:blank'}
+                </span>
+              </div>
+            </div>
+            
+            {/* iframe 内容区 */}
+            <div className="flex-1 bg-white">
+              <iframe
+                key={activeTab?.id} // 添加 key 以确保切换时重新加载
+                src={activeTab?.url}
+                className="w-full h-full border-none"
+                title={`Tab ${activeTab?.id}`}
+                sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+            
+            {/* 简化的隐藏按钮 */}
+            <button
+              onClick={() => setShowBrowser(false)}
+              className="absolute left-4 bottom-4 bg-white/10 text-purple-100 
+                        rounded-md px-2 py-1 text-xs"
+            >
+              Hide
+            </button>
           </div>
-          
-          {/* iframe 内容区 */}
-          <div className="flex-1 bg-white">
-            <iframe
-              key={activeTab?.id} // 添加 key 以确保切换时重新加载
-              src={activeTab?.url}
-              className="w-full h-full border-none"
-              title={`Tab ${activeTab?.id}`}
-              sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-              referrerPolicy="no-referrer"
-            />
-          </div>
-        </div>
+        )}
         
         {/* 右侧分析结果栏 */}
-        <div className="w-1/5 bg-white/5 backdrop-blur-lg rounded-2xl border border-purple-300/20 shadow-xl flex flex-col h-full">
+        <div className={`${showBrowser ? 'w-1/5' : 'w-[75%]'} transition-all duration-300 ease-in-out 
+                        bg-white/5 backdrop-blur-lg rounded-2xl border border-purple-300/20 shadow-xl 
+                        flex flex-col h-full relative`}
+        >
+          {/* 简化的显示按钮 */}
+          {!showBrowser && (
+            <button
+              onClick={() => setShowBrowser(true)}
+              className="absolute left-4 bottom-4 bg-white/10 text-purple-100 
+                        rounded-md px-2 py-1 text-xs"
+            >
+              Show
+            </button>
+          )}
+          
           {/* Tab 切换区域 */}
           <div className="flex border-b border-purple-300/20">
             <button
@@ -566,21 +594,21 @@ The results are displayed on the right panel. You can view detailed information 
               Sources
             </button>
           </div>
-
-          {/* Tab 内容区域 */}
+          
+          {/* Tab 内容区域 - 移除网格布局，使用单列布局 */}
           <div className="flex-1 overflow-y-auto">
             {rightPanelTab === 'agents' && (
               <div className="p-3">
                 {renderAgents()}
               </div>
             )}
-
+            
             {rightPanelTab === 'details' && (
               <div className="p-3">
                 {renderDetails()}
               </div>
             )}
-
+            
             {rightPanelTab === 'sources' && (
               <div className="p-3">
                 {renderSources()}
