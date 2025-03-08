@@ -255,7 +255,7 @@ const ResearchTool = () => {
             ) : (
               <Avatar 
                 size="small"
-                src="/images/alternatively-favicon.png"
+                src="/images/alternatively-logo.png"
                 className="bg-transparent"
               />
             )}
@@ -495,7 +495,7 @@ const ResearchTool = () => {
                       flex items-center justify-center" style={{ paddingTop: "80px" }}>
         <div className="text-center">
           <img 
-            src="/images/alternatively-favicon.png" 
+            src="/images/alternatively-logo.png" 
             alt="Alternatively" 
             className="w-16 h-16 mx-auto mb-4 animate-pulse" 
           />
@@ -526,7 +526,7 @@ const ResearchTool = () => {
         <div className={`${showBrowser ? 'w-1/5' : 'w-4/5'} transition-all duration-300 ease-in-out 
                          bg-white/5 backdrop-blur-lg rounded-2xl border border-gray-300/20 shadow-xl flex flex-col h-full`}>
           <div className="h-10 px-4 border-b border-gray-300/20 flex items-center flex-shrink-0">
-            <img src="/images/alternatively-favicon.png" alt="Alternatively" className="w-5 h-5 mr-1.5" />
+            <img src="/images/alternatively-logo.png" alt="Alternatively" className="w-5 h-5 mr-1.5" />
             <h2 className="text-sm font-semibold text-gray-100">Copilot</h2>
           </div>
           
