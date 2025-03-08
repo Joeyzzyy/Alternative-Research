@@ -60,7 +60,13 @@ const ResearchTool = () => {
     return domainRegex.test(domain);
   };
 
-  const handleUserInput = () => {
+  const handleUserInput = (e) => {
+    // 阻止任何可能的默认行为
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
     if (!userInput.trim()) return;
     
     // Add user message to chat
@@ -181,18 +187,26 @@ const ResearchTool = () => {
       >
         <div className={`flex max-w-[80%] ${message.type === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
           <div className={`flex-shrink-0 ${message.type === 'user' ? 'ml-2' : 'mr-2'}`}>
-            <Avatar 
-              size="small"
-              icon={message.type === 'user' ? <UserOutlined /> : <RobotOutlined />} 
-              className={message.type === 'user' ? 'bg-indigo-500' : 'bg-purple-600'}
-            />
+            {message.type === 'user' ? (
+              <Avatar 
+                size="small"
+                icon={<UserOutlined />} 
+                className="bg-blue-500"
+              />
+            ) : (
+              <Avatar 
+                size="small"
+                src="/images/alternatively-favicon.png"
+                className="bg-transparent"
+              />
+            )}
           </div>
           <div 
             className={`p-2 rounded-lg text-xs ${
               message.type === 'user' 
-                ? 'bg-indigo-600 text-white rounded-tr-none' 
-                : 'bg-white/10 backdrop-blur-sm text-purple-100 rounded-tl-none'
-            } ${message.isThinking ? 'border border-purple-400/30 animate-pulse' : ''}`}
+                ? 'bg-blue-600 text-white rounded-tr-none' 
+                : 'bg-white/10 backdrop-blur-sm text-gray-100 rounded-tl-none'
+            } ${message.isThinking ? 'border border-gray-400/30 animate-pulse' : ''}`}
           >
             {message.content.split('\n').map((line, i) => (
               <React.Fragment key={i}>
@@ -202,9 +216,9 @@ const ResearchTool = () => {
             ))}
             {message.isThinking && (
               <div className="flex space-x-1 mt-1.5 justify-center">
-                <div className="w-1.5 h-1.5 bg-purple-300 rounded-full animate-bounce"></div>
-                <div className="w-1.5 h-1.5 bg-purple-300 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                <div className="w-1.5 h-1.5 bg-purple-300 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce"></div>
+                <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
               </div>
             )}
           </div>
@@ -344,52 +358,50 @@ const ResearchTool = () => {
     </div>
   );
 
+  // 修改 useEffect，防止任何自动滚动
   useEffect(() => {
-    // 只有当消息列表发生变化且不是初始加载时才滚动到底部
+    // 完全禁用自动滚动到底部的行为
+    // 只在聊天区域内部滚动，不影响整个页面
     if (chatEndRef.current && messages.length > 1) {
-      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      const chatContainer = document.querySelector('.chat-messages-container');
+      if (chatContainer) {
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }
     }
   }, [messages]);
 
-  // 添加一个新的 useEffect 来处理初始加载
-  useEffect(() => {
-    // 页面加载时，确保滚动到顶部
-    window.scrollTo(0, 0);
-  }, []);
-
   return (
-    <div className="w-full pt-24 min-h-screen bg-gradient-to-b from-purple-900 via-purple-800 to-indigo-900 text-white flex items-center justify-center p-4 relative overflow-hidden">
-      <div className="absolute inset-0 pt-24">
-        <div className="absolute w-96 h-96 bg-purple-500/20 rounded-full blur-3xl -top-20 -left-20 animate-pulse"></div>
-        <div className="absolute w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl -bottom-20 -right-20 animate-pulse delay-1000"></div>
+    <div className="w-full min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 text-white flex items-center justify-center p-4 relative overflow-hidden" style={{ paddingTop: "80px" }}>
+      <div className="absolute inset-0" style={{ paddingTop: "80px" }}>
+        <div className="absolute w-96 h-96 bg-blue-500/10 rounded-full blur-3xl -top-20 -left-20 animate-pulse"></div>
+        <div className="absolute w-96 h-96 bg-gray-500/10 rounded-full blur-3xl -bottom-20 -right-20 animate-pulse delay-1000"></div>
       </div>
       
       <div className="relative z-10 w-full flex flex-row gap-6 h-[calc(100vh-140px)] px-4 text-sm">
         {/* 左侧对话栏 */}
         <div className={`${showBrowser ? 'w-1/5' : 'w-4/5'} transition-all duration-300 ease-in-out 
-                         bg-white/5 backdrop-blur-lg rounded-2xl border border-purple-300/20 shadow-xl flex flex-col h-full`}>
-          <div className="h-10 px-4 border-b border-purple-300/20 flex items-center flex-shrink-0">
-            <RobotOutlined className="text-purple-300 mr-1.5 text-sm" />
-            <h2 className="text-sm font-semibold text-purple-100">Copilot</h2>
+                         bg-white/5 backdrop-blur-lg rounded-2xl border border-gray-300/20 shadow-xl flex flex-col h-full`}>
+          <div className="h-10 px-4 border-b border-gray-300/20 flex items-center flex-shrink-0">
+            <img src="/images/alternatively-favicon.png" alt="Alternatively" className="w-5 h-5 mr-1.5" />
+            <h2 className="text-sm font-semibold text-gray-100">Copilot</h2>
           </div>
           
-          <div className="flex-grow overflow-y-auto" style={{ height: "calc(100% - 140px)" }}>
+          <div className="flex-grow overflow-y-auto chat-messages-container" style={{ height: "calc(100% - 140px)" }}>
             <div className="p-4 pb-6">
               {messages.map((message, index) => renderChatMessage(message, index))}
               <div ref={chatEndRef} />
             </div>
           </div>
           
-          <div className="p-3 border-t border-purple-300/20 flex-shrink-0">
-            <div className="flex items-center space-x-2">
+          <div className="p-3 border-t border-gray-300/20 flex-shrink-0">
+            <form onSubmit={handleUserInput} className="flex items-center space-x-2">
               <Input
                 ref={inputRef}
-                placeholder="Enter your product's website URL (e.g., zendesk.com) to find alternatives"
+                placeholder="Enter your product's website URL (e.g., websitelm.com) to find alternatives"
                 value={userInput}
                 onChange={(e) => setUserInput(e.target.value)}
-                onPressEnter={handleUserInput}
                 disabled={loading}
-                className="bg-white/10 border border-purple-300/30 rounded-lg text-xs"
+                className="bg-white/10 border border-gray-300/30 rounded-lg text-xs"
                 style={{ 
                   color: 'black', 
                   backgroundColor: 'rgba(255, 255, 255, 0.8)',
@@ -397,15 +409,19 @@ const ResearchTool = () => {
                 }}
               />
               <Button 
-                type="primary" 
-                icon={<SendOutlined className="text-xs" />} 
-                onClick={handleUserInput}
+                htmlType="submit" 
+                icon={<SendOutlined className="text-xs" />}
                 loading={loading}
                 disabled={loading}
                 className="bg-gradient-to-r from-purple-500 to-indigo-500 border-none"
                 size="small"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleUserInput(e);
+                }}
               />
-            </div>
+            </form>
             <div className="text-xs text-purple-300 mt-1.5">
               Enter your product's website to discover alternatives and generate a comprehensive analysis
             </div>
@@ -414,8 +430,8 @@ const ResearchTool = () => {
         
         {/* 中间浏览器区域 */}
         {showBrowser && (
-          <div className="w-3/5 bg-gray-800 backdrop-blur-lg rounded-2xl border border-purple-300/20 shadow-xl flex flex-col h-full">
-            <div className="h-10 flex items-center px-4 border-b border-purple-300/20">
+          <div className="w-3/5 bg-gray-800 backdrop-blur-lg rounded-2xl border border-gray-300/20 shadow-xl flex flex-col h-full">
+            <div className="h-10 flex items-center px-4 border-b border-gray-300/20">
               <div className="flex gap-2 mr-4">
                 <div className="w-3 h-3 rounded-full bg-red-500"></div>
                 <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
@@ -465,7 +481,7 @@ const ResearchTool = () => {
         )}
         
         {/* 右侧分析结果栏 */}
-        <div className="w-1/5 bg-white/5 backdrop-blur-lg rounded-2xl border border-purple-300/20 shadow-xl 
+        <div className="w-1/5 bg-white/5 backdrop-blur-lg rounded-2xl border border-gray-300/20 shadow-xl 
                         flex flex-col h-full relative"
         >
           {/* 简化的显示按钮 */}
@@ -480,13 +496,13 @@ const ResearchTool = () => {
           )}
           
           {/* Tab 切换区域 */}
-          <div className="flex border-b border-purple-300/20">
+          <div className="flex border-b border-gray-300/20">
             <button
               onClick={() => setRightPanelTab('agents')}
               className={`flex-1 h-10 flex items-center justify-center text-xs font-medium transition-colors
                 ${rightPanelTab === 'agents'
-                  ? 'text-white border-b-2 border-purple-500'
-                  : 'text-purple-300 hover:text-purple-200'
+                  ? 'text-white border-b-2 border-blue-500'
+                  : 'text-gray-300 hover:text-gray-200'
                 }`}
             >
               Agents
@@ -495,8 +511,8 @@ const ResearchTool = () => {
               onClick={() => setRightPanelTab('details')}
               className={`flex-1 h-10 flex items-center justify-center text-xs font-medium transition-colors
                 ${rightPanelTab === 'details'
-                  ? 'text-white border-b-2 border-purple-500'
-                  : 'text-purple-300 hover:text-purple-200'
+                  ? 'text-white border-b-2 border-blue-500'
+                  : 'text-gray-300 hover:text-gray-200'
                 }`}
             >
               Details
@@ -505,8 +521,8 @@ const ResearchTool = () => {
               onClick={() => setRightPanelTab('sources')}
               className={`flex-1 h-10 flex items-center justify-center text-xs font-medium transition-colors
                 ${rightPanelTab === 'sources'
-                  ? 'text-white border-b-2 border-purple-500'
-                  : 'text-purple-300 hover:text-purple-200'
+                  ? 'text-white border-b-2 border-blue-500'
+                  : 'text-gray-300 hover:text-gray-200'
                 }`}
             >
               Sources
