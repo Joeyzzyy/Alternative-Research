@@ -13,6 +13,8 @@ const ResearchTool = () => {
   const [messages, setMessages] = useState([]);
   const [userInput, setUserInput] = useState('');
   const [isMessageSending, setIsMessageSending] = useState(false);
+  // 添加Deep Research模式状态
+  const [deepResearchMode, setDeepResearchMode] = useState(false);
   
   const inputRef = useRef(null);
   const chatEndRef = useRef(null);
@@ -20,20 +22,22 @@ const ResearchTool = () => {
   // 添加初始消息的状态控制
   const [initialMessagesShown, setInitialMessagesShown] = useState(0);
   
-  // 初始消息数组
+  // 修改初始消息数组，添加Deep Research提示
   const initialMessages = [
     { 
-      type: 'system', 
+      type: 'agent', 
+      agentId: 1,
       content: 'Welcome to Alternatively! Our research team is ready to help you discover and analyze SaaS alternatives.'
-    },
-    {
-      type: 'system',
-      content: 'First, our competitor research specialist will help you find alternatives to your product.'
     },
     {
       type: 'agent',
       agentId: 1,
-      content: '👋 Hello there! I\'m Alexis, your dedicated Research Specialist! I\'m excited to help you discover the perfect alternatives for your product!\n\nJust enter a product domain (e.g., websitelm.com) and I\'ll immediately get to work finding the best alternatives and generating a comprehensive analysis tailored just for you. Let\'s get started! 🚀'
+      content: 'I\'m Joey, your dedicated Research Specialist. I\'ll help you find alternatives to your product.'
+    },
+    {
+      type: 'agent',
+      agentId: 1,
+      content: '👋 Hello there! I\'m excited to help you discover the perfect alternatives for your product!\n\nJust enter a product domain (e.g., websitelm.com) and I\'ll immediately get to work finding the best alternatives and generating a comprehensive analysis tailored just for you.\n\nPro tip: You can enable Deep Research mode for more comprehensive analysis and detailed insights! Let\'s get started! 🚀'
     }
   ];
   
@@ -104,8 +108,9 @@ const ResearchTool = () => {
     if (!validateDomain(cleanDomain)) {
       setTimeout(() => {
         setMessages([...newMessages, { 
-          type: 'system', 
-          content: 'Please enter a valid domain format (e.g., example.com)' 
+          type: 'agent', 
+          agentId: 1, // 使用Joey来提示错误
+          content: 'Please enter a valid domain format (e.g., example.com). I need to verify a proper website address to proceed with our analysis.' 
         }]);
         // 消息发送完毕，重置状态
         setIsMessageSending(false);
@@ -129,16 +134,18 @@ const ResearchTool = () => {
     setWorkflowStage('collecting');
     setWorkflowProgress(0);
     
-    // 添加Alexis的热情响应消息，追加到现有消息中
+    // 添加Joey的热情响应消息，追加到现有消息中，并根据模式调整内容
     setMessages(prev => [...prev, { 
       type: 'agent', 
       agentId: 1,
-      content: `🔍 Fantastic! I'm on it! Analyzing ${cleanDomain} right now! I'll find the best alternatives and create a detailed comparison for you. This will only take a moment... 💫`,
+      content: deepResearchMode 
+        ? `🔍 Fantastic! I'm launching a deep analysis of ${cleanDomain}! This comprehensive research will explore multiple data sources and provide detailed insights on alternatives, features, pricing, and market positioning. This might take a little longer, but the depth of analysis will be worth it! 💫`
+        : `🔍 Fantastic! I'm on it! Analyzing ${cleanDomain} right now! I'll find the best alternatives and create a detailed comparison for you. This will only take a moment... 💫`,
       isThinking: true
     }]);
     
-    // 使用apiClient调用竞争对手研究方法
-    apiClient.getCompetitorResearch(fullUrl)
+    // 使用apiClient调用竞争对手研究方法，传递deepResearchMode参数
+    apiClient.getCompetitorResearch(fullUrl, deepResearchMode)
       .then(data => {
         if (data) {
           // Process API response data
@@ -233,9 +240,10 @@ const ResearchTool = () => {
     
     // 延迟0.5秒后添加结果消息，显得更真实
     setTimeout(() => {
-      // 直接使用API返回的数据追加消息，而不是替换
+      // 使用Xavier作为详细分析专家来提供结果
       setMessages(prev => [...prev, { 
-        type: 'system', 
+        type: 'agent', 
+        agentId: 2, // Xavier作为Detail Analyst
         content: data.message,
         isThinking: false
       }]);
@@ -269,8 +277,8 @@ const ResearchTool = () => {
   };
 
   const renderChatMessage = (message, index) => {
-    // 为agent类型消息添加特殊处理
-    if (message.type === 'agent') {
+    // 所有非用户消息都作为agent类型处理
+    if (message.type !== 'user') {
       const agent = agents.find(a => a.id === message.agentId) || agents[0];
       return (
         <div key={index} className="flex justify-start mb-3" style={{animation: 'fadeIn 0.5s ease-out forwards'}}>
@@ -310,37 +318,23 @@ const ResearchTool = () => {
       );
     }
     
+    // 用户消息保持不变
     return (
       <div 
         key={index} 
-        className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} mb-3`}
-        style={{animation: message.type === 'system' ? 'fadeIn 0.5s ease-out forwards' : ''}}
+        className="flex justify-end mb-3"
       >
-        <div className={`flex max-w-[80%] ${message.type === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-          <div className={`flex-shrink-0 ${message.type === 'user' ? 'ml-2' : 'mr-2'}`}
-               style={{animation: message.type === 'system' ? 'bounceIn 0.6s ease-out forwards' : ''}}>
-            {message.type === 'user' ? (
-              <Avatar 
-                size="small"
-                icon={<UserOutlined />} 
-                className="bg-blue-500"
-              />
-            ) : (
-              <Avatar 
-                size="small"
-                src="/images/alternatively-logo.png"
-                className="bg-transparent"
-              />
-            )}
+        <div className="flex max-w-[80%] flex-row-reverse">
+          <div className="flex-shrink-0 ml-2">
+            <Avatar 
+              size="small"
+              icon={<UserOutlined />} 
+              className="bg-blue-500"
+            />
           </div>
           <div 
-            className={`p-2 rounded-lg text-xs ${
-              message.type === 'user' 
-                ? 'bg-blue-600 text-white rounded-tr-none' 
-                : 'bg-white/10 backdrop-blur-sm text-gray-100 rounded-tl-none'
-            } ${message.isThinking ? 'border border-gray-400/30 animate-pulse' : ''} 
-            transform transition-all duration-300`}
-            style={{animation: message.type === 'user' ? 'slideInLeft 0.4s ease-out forwards' : 'slideInRight 0.4s ease-out forwards'}}
+            className="p-2 rounded-lg text-xs bg-blue-600 text-white rounded-tr-none transform transition-all duration-300"
+            style={{animation: 'slideInLeft 0.4s ease-out forwards'}}
           >
             {message.content.split('\n').map((line, i) => (
               <React.Fragment key={i}>
@@ -348,25 +342,18 @@ const ResearchTool = () => {
                 {i < message.content.split('\n').length - 1 && <br />}
               </React.Fragment>
             ))}
-            {message.isThinking && (
-              <div className="flex space-x-1 mt-1.5 justify-center">
-                <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce"></div>
-                <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-              </div>
-            )}
           </div>
         </div>
       </div>
     );
   };
   
-  // 新增 agents 数据 - 互换Joey和Alexis.L的顺序和身份
+  // 新增 agents 数据 - 将Joey提升为主要研究专家，移除Alexis
   const agents = [
     {
       id: 1,
-      name: 'Alexis.L',
-      avatar: '/images/by.jpg',  // 使用指定的图片路径
+      name: 'Joey.Z',
+      avatar: '/images/zy.jpg',  // 使用指定的图片路径
       role: 'Research Specialist',
       description: 'Specialized in comprehensive competitor research and market analysis. I help identify and analyze alternative products in your market space.'
     },
@@ -379,13 +366,6 @@ const ResearchTool = () => {
     },
     {
       id: 3,
-      name: 'Joey.Z',
-      avatar: '/images/zy.jpg',  // 使用指定的图片路径
-      role: 'Verification Expert',
-      description: 'Responsible for fact-checking and verifying information accuracy. I ensure all analyses are based on reliable and up-to-date data.'
-    },
-    {
-      id: 4,
       name: 'Youssef',
       avatar: '/images/youssef.jpg',  // 使用指定的图片路径
       role: 'Integration Specialist',
@@ -590,6 +570,30 @@ const ResearchTool = () => {
     );
   }
 
+  // 切换Deep Research模式
+  const toggleDeepResearchMode = () => {
+    setDeepResearchMode(!deepResearchMode);
+    
+    // 当用户切换模式时，添加相应的代理消息提示
+    if (!deepResearchMode) {
+      // 如果当前是关闭状态，切换到开启状态
+      setMessages(prev => [...prev, { 
+        type: 'agent', 
+        agentId: 1, // 使用Joey来解释深度研究模式
+        content: '🔬 Deep Research mode activated! I\'ll now perform a more comprehensive analysis, exploring additional data sources and providing more detailed insights. This may take a bit longer, but the results will be much more thorough.',
+        isThinking: false
+      }]);
+    } else {
+      // 如果当前是开启状态，切换到关闭状态
+      setMessages(prev => [...prev, { 
+        type: 'agent', 
+        agentId: 1,
+        content: '📊 Standard Research mode activated. I\'ll focus on providing quick, essential insights about alternatives. This is perfect for getting a rapid overview of your options.',
+        isThinking: false
+      }]);
+    }
+  };
+
   return (
     <div className="w-full min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 text-white flex items-center justify-center p-4 relative overflow-hidden" style={{ paddingTop: "80px" }}>
       {/* 添加内联样式 */}
@@ -604,15 +608,52 @@ const ResearchTool = () => {
         {/* 左侧对话栏 */}
         <div className={`${showBrowser ? 'w-1/5' : 'w-4/5'} transition-all duration-300 ease-in-out 
                          bg-white/5 backdrop-blur-lg rounded-2xl border border-gray-300/20 shadow-xl flex flex-col h-full`}>
-          <div className="h-10 px-4 border-b border-gray-300/20 flex items-center flex-shrink-0">
-            <img src="/images/alternatively-logo.png" alt="Alternatively" className="w-5 h-5 mr-1.5" />
-            <h2 className="text-sm font-semibold text-gray-100">Copilot</h2>
+          <div className="h-10 px-4 border-b border-gray-300/20 flex items-center justify-between flex-shrink-0">
+            <div className="flex items-center">
+              <img src="/images/alternatively-logo.png" alt="Alternatively" className="w-5 h-5 mr-1.5" />
+              <h2 className="text-sm font-semibold text-gray-100">Copilot</h2>
+            </div>
           </div>
           
-          <div className="flex-grow overflow-y-auto chat-messages-container" style={{ height: "calc(100% - 140px)" }}>
-            <div className="p-4 pb-6">
-              {messages.map((message, index) => renderChatMessage(message, index))}
-              <div ref={chatEndRef} />
+          {/* 聊天消息容器 */}
+          <div className="flex-1 overflow-y-auto p-4 chat-messages-container">
+            {initialLoading ? (
+              <div className="flex items-center justify-center h-full">
+                <Spin size="large" />
+              </div>
+            ) : (
+              <>
+                {messages.map((message, index) => renderChatMessage(message, index))}
+                <div ref={chatEndRef} />
+              </>
+            )}
+          </div>
+          
+          {/* Deep Research 开关 - 移到输入框上方 */}
+          <div className="px-3 pt-2 flex items-center justify-between">
+            <div 
+              className={`flex items-center cursor-pointer px-2 py-1 rounded-full text-xs transition-colors ${
+                deepResearchMode 
+                  ? 'bg-purple-500/30 text-purple-200' 
+                  : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
+              }`}
+              onClick={toggleDeepResearchMode}
+            >
+              <span className={`w-3 h-3 rounded-full mr-1.5 transition-colors ${
+                deepResearchMode ? 'bg-purple-400' : 'bg-gray-500'
+              }`}></span>
+              Deep Research
+            </div>
+            
+            <div className="text-xs text-purple-300">
+              {deepResearchMode ? (
+                <span className="flex items-center">
+                  <span className="inline-block w-2 h-2 bg-purple-400 rounded-full mr-1.5 animate-pulse"></span>
+                  Comprehensive mode
+                </span>
+              ) : (
+                <span>Standard mode</span>
+              )}
             </div>
           </div>
           
@@ -620,7 +661,9 @@ const ResearchTool = () => {
             <form onSubmit={handleUserInput} className="flex items-center space-x-2">
               <Input
                 ref={inputRef}
-                placeholder="Enter your product's website URL (e.g., websitelm.com) to find alternatives"
+                placeholder={deepResearchMode 
+                  ? "Enter website for comprehensive analysis..." 
+                  : "Enter your product's website URL (e.g., websitelm.com) to find alternatives"}
                 value={userInput}
                 onChange={(e) => setUserInput(e.target.value)}
                 disabled={loading || isMessageSending}
@@ -636,7 +679,11 @@ const ResearchTool = () => {
                 icon={<SendOutlined className="text-xs" />}
                 loading={loading}
                 disabled={loading || isMessageSending}
-                className="bg-gradient-to-r from-purple-500 to-indigo-500 border-none"
+                className={`border-none ${
+                  deepResearchMode 
+                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600' 
+                    : 'bg-gradient-to-r from-purple-500 to-indigo-500'
+                }`}
                 size="small"
                 onClick={(e) => {
                   e.preventDefault();
