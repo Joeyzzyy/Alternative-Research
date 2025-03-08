@@ -7,12 +7,18 @@ import apiClient from '../../../lib/api/index.js';
 const ResearchTool = () => {
   const [domain, setDomain] = useState('');
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [workflowStage, setWorkflowStage] = useState(null);
   const [workflowProgress, setWorkflowProgress] = useState(0);
   const [messages, setMessages] = useState([
     { 
       type: 'system', 
-      content: 'Welcome to the SaaS Alternative Research Tool. Enter a product domain to discover alternatives and generate a comprehensive analysis.'
+      content: 'Welcome to Alternatively! Our research team is ready to help you discover and analyze SaaS alternatives.'
+    },
+    {
+      type: 'agent',
+      agentId: 1,
+      content: 'Hi, I\'m Joey, your Research Specialist. Please enter a product domain (e.g., websitelm.com) to discover alternatives and generate a comprehensive analysis.'
     }
   ]);
   const [userInput, setUserInput] = useState('');
@@ -180,6 +186,40 @@ const ResearchTool = () => {
   };
 
   const renderChatMessage = (message, index) => {
+    // 为agent类型消息添加特殊处理
+    if (message.type === 'agent') {
+      const agent = agents.find(a => a.id === message.agentId) || agents[0];
+      return (
+        <div key={index} className="flex justify-start mb-3">
+          <div className="flex max-w-[80%] flex-row">
+            <div className="flex-shrink-0 mr-2">
+              <Avatar 
+                size="small"
+                src={agent.avatar}
+                className="bg-transparent"
+              />
+            </div>
+            <div className="p-2 rounded-lg text-xs bg-white/10 backdrop-blur-sm text-gray-100 rounded-tl-none">
+              <div className="text-xs font-medium text-blue-300 mb-1">{agent.name}</div>
+              {message.content.split('\n').map((line, i) => (
+                <React.Fragment key={i}>
+                  {line}
+                  {i < message.content.split('\n').length - 1 && <br />}
+                </React.Fragment>
+              ))}
+              {message.isThinking && (
+                <div className="flex space-x-1 mt-1.5 justify-center">
+                  <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce"></div>
+                  <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
     return (
       <div 
         key={index} 
@@ -369,6 +409,39 @@ const ResearchTool = () => {
       }
     }
   }, [messages]);
+
+  // 添加初始化加载效果
+  useEffect(() => {
+    // 模拟初始化加载
+    const timer = setTimeout(() => {
+      setInitialLoading(false);
+    }, 1500);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
+  // 如果正在初始化加载，显示加载界面
+  if (initialLoading) {
+    return (
+      <div className="w-full min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 
+                      flex items-center justify-center" style={{ paddingTop: "80px" }}>
+        <div className="text-center">
+          <img 
+            src="/images/alternatively-favicon.png" 
+            alt="Alternatively" 
+            className="w-16 h-16 mx-auto mb-4 animate-pulse" 
+          />
+          <h2 className="text-xl font-semibold text-white mb-2">Loading Alternatively</h2>
+          <p className="text-gray-300">Preparing your research environment...</p>
+          <div className="mt-4 flex justify-center space-x-2">
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 text-white flex items-center justify-center p-4 relative overflow-hidden" style={{ paddingTop: "80px" }}>
