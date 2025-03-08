@@ -12,6 +12,7 @@ const ResearchTool = () => {
   const [workflowProgress, setWorkflowProgress] = useState(0);
   const [messages, setMessages] = useState([]);
   const [userInput, setUserInput] = useState('');
+  const [isMessageSending, setIsMessageSending] = useState(false);
   
   const inputRef = useRef(null);
   const chatEndRef = useRef(null);
@@ -96,6 +97,9 @@ const ResearchTool = () => {
     // Clear input field
     setUserInput('');
     
+    // 设置消息发送状态为true
+    setIsMessageSending(true);
+    
     // Validate domain and start analysis
     if (!validateDomain(cleanDomain)) {
       setTimeout(() => {
@@ -103,12 +107,16 @@ const ResearchTool = () => {
           type: 'system', 
           content: 'Please enter a valid domain format (e.g., example.com)' 
         }]);
+        // 消息发送完毕，重置状态
+        setIsMessageSending(false);
       }, 500);
       return;
     }
     
-    // Start analysis process
-    startAnalysis(cleanDomain);
+    // 延迟0.5秒后开始分析过程，显得更真实
+    setTimeout(() => {
+      startAnalysis(cleanDomain);
+    }, 500);
   };
   
   const startAnalysis = (cleanDomain) => {
@@ -121,10 +129,11 @@ const ResearchTool = () => {
     setWorkflowStage('collecting');
     setWorkflowProgress(0);
     
-    // Add system thinking message
+    // 添加Joey的热情响应消息，追加到现有消息中
     setMessages(prev => [...prev, { 
-      type: 'system', 
-      content: `Starting analysis for ${cleanDomain}...`,
+      type: 'agent', 
+      agentId: 1,
+      content: `🔍 Fantastic! I'm on it! Analyzing ${cleanDomain} right now! I'll find the best alternatives and create a detailed comparison for you. This will only take a moment... 💫`,
       isThinking: true
     }]);
     
@@ -136,24 +145,30 @@ const ResearchTool = () => {
           handleResearchResults(data, cleanDomain);
         } else {
           // API call failed, show error message
-          setMessages(prev => [...prev.slice(0, -1), { 
-            type: 'system', 
-            content: `Error analyzing ${cleanDomain}. Please try again later.`,
+          setMessages(prev => [...prev, { 
+            type: 'agent', 
+            agentId: 1,
+            content: `😕 I'm sorry, but I encountered an issue while analyzing ${cleanDomain}. Could we try again? Sometimes these things happen with complex websites.`,
             isThinking: false
           }]);
           setLoading(false);
           setWorkflowStage(null);
+          // 消息发送完毕，重置状态
+          setIsMessageSending(false);
         }
       })
       .catch(error => {
         console.error('Competitor research API call failed:', error);
-        setMessages(prev => [...prev.slice(0, -1), { 
-          type: 'system', 
-          content: `Error analyzing ${cleanDomain}: ${error.message}`,
+        setMessages(prev => [...prev, { 
+          type: 'agent', 
+          agentId: 1,
+          content: `😓 Oh no! I ran into a technical problem while analyzing ${cleanDomain}: ${error.message}. Let's try again in a moment - I'm eager to help you find those alternatives!`,
           isThinking: false
         }]);
         setLoading(false);
         setWorkflowStage(null);
+        // 消息发送完毕，重置状态
+        setIsMessageSending(false);
       });
   };
   
@@ -164,25 +179,31 @@ const ResearchTool = () => {
     setWorkflowProgress(100);
     setLoading(false);
     
-    // 直接使用API返回的数据更新消息
-    setMessages(prev => [...prev.slice(0, -1), { 
-      type: 'system', 
-      content: data.message,
-      isThinking: false
-    }]);
-    
-    // 如果API返回了替代产品数据，则更新浏览器标签
-    if (data.alternatives && data.alternatives.length > 0) {
-      const newTabs = data.alternatives.slice(0, 5).map((alt, index) => ({
-        id: index + 1,
-        title: alt.name || `Alternative ${index + 1}`,
-        url: alt.website || `https://${alt.domain}`,
-        active: index === 0
-      }));
+    // 延迟0.5秒后添加结果消息，显得更真实
+    setTimeout(() => {
+      // 直接使用API返回的数据追加消息，而不是替换
+      setMessages(prev => [...prev, { 
+        type: 'system', 
+        content: data.message,
+        isThinking: false
+      }]);
       
-      setTabs(newTabs);
-      setShowBrowser(true);
-    }
+      // 如果API返回了替代产品数据，则更新浏览器标签
+      if (data.alternatives && data.alternatives.length > 0) {
+        const newTabs = data.alternatives.slice(0, 5).map((alt, index) => ({
+          id: index + 1,
+          title: alt.name || `Alternative ${index + 1}`,
+          url: alt.website || `https://${alt.domain}`,
+          active: index === 0
+        }));
+        
+        setTabs(newTabs);
+        setShowBrowser(true);
+      }
+      
+      // 消息发送完毕，重置状态
+      setIsMessageSending(false);
+    }, 500);
   };
   
   const formatUrl = (input) => {
@@ -437,6 +458,9 @@ const ResearchTool = () => {
     const timer = setTimeout(() => {
       setInitialLoading(false);
       
+      // 开始显示初始消息时，设置消息发送状态为true
+      setIsMessageSending(true);
+      
       // 开始逐步显示初始消息
       showInitialMessagesSequentially();
     }, 1500);
@@ -444,7 +468,7 @@ const ResearchTool = () => {
     return () => clearTimeout(timer);
   }, []);
   
-  // 添加逐步显示初始消息的函数
+  // 修改逐步显示初始消息的函数，在完成后重置消息发送状态
   const showInitialMessagesSequentially = () => {
     // 设置第一条消息
     setMessages([initialMessages[0]]);
@@ -459,6 +483,9 @@ const ResearchTool = () => {
       setTimeout(() => {
         setMessages(prev => [...prev, initialMessages[2]]);
         setInitialMessagesShown(3);
+        
+        // 所有初始消息显示完毕，重置消息发送状态
+        setIsMessageSending(false);
       }, 1000);
     }, 1000);
   };
@@ -544,7 +571,7 @@ const ResearchTool = () => {
                 placeholder="Enter your product's website URL (e.g., websitelm.com) to find alternatives"
                 value={userInput}
                 onChange={(e) => setUserInput(e.target.value)}
-                disabled={loading}
+                disabled={loading || isMessageSending}
                 className="bg-white/10 border border-gray-300/30 rounded-lg text-xs"
                 style={{ 
                   color: 'black', 
@@ -556,7 +583,7 @@ const ResearchTool = () => {
                 htmlType="submit" 
                 icon={<SendOutlined className="text-xs" />}
                 loading={loading}
-                disabled={loading}
+                disabled={loading || isMessageSending}
                 className="bg-gradient-to-r from-purple-500 to-indigo-500 border-none"
                 size="small"
                 onClick={(e) => {
