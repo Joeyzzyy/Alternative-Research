@@ -15,6 +15,10 @@ const ResearchTool = () => {
   const [isMessageSending, setIsMessageSending] = useState(false);
   // 添加Deep Research模式状态
   const [deepResearchMode, setDeepResearchMode] = useState(false);
+  // 添加credits状态
+  const [credits, setCredits] = useState(100);
+  // 修改credits弹窗显示状态
+  const [showCreditsTooltip, setShowCreditsTooltip] = useState(false);
   
   const inputRef = useRef(null);
   const chatEndRef = useRef(null);
@@ -612,6 +616,52 @@ const ResearchTool = () => {
             <div className="flex items-center">
               <img src="/images/alternatively-logo.png" alt="Alternatively" className="w-5 h-5 mr-1.5" />
               <h2 className="text-sm font-semibold text-gray-100">Copilot</h2>
+            </div>
+            
+            {/* 修改Credits图标和弹窗 */}
+            <div className="relative">
+              <div 
+                className="flex items-center cursor-pointer text-gray-300 hover:text-white transition-colors"
+                onClick={() => setShowCreditsTooltip(!showCreditsTooltip)}
+              >
+                <div className="w-6 h-6 rounded-full bg-purple-500/30 flex items-center justify-center">
+                  <span className="text-xs font-medium">💎</span>
+                </div>
+              </div>
+              
+              {showCreditsTooltip && (
+                <div 
+                  className="absolute right-0 top-8 w-56 bg-gray-800 border border-gray-700 rounded-lg shadow-xl p-4 z-50 text-xs"
+                  style={{animation: 'fadeIn 0.2s ease-out forwards'}}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="font-medium text-purple-300">Account Balance</span>
+                    <button 
+                      onClick={() => setShowCreditsTooltip(false)}
+                      className="text-gray-400 hover:text-white transition-colors"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-white font-bold text-lg">{credits} Credits</span>
+                  </div>
+                  
+                  <div className="h-2 bg-gray-700 rounded-full overflow-hidden mb-3">
+                    <div 
+                      className="h-full bg-gradient-to-r from-purple-500 to-blue-500" 
+                      style={{width: `${Math.min(100, (credits/200)*100)}%`}}
+                    ></div>
+                  </div>
+                  
+                  <p className="mb-3 text-gray-300">Each research consumes 10-20 Credits</p>
+                  
+                  <button className="w-full py-1.5 bg-purple-600 hover:bg-purple-700 rounded text-white text-xs transition-colors">
+                    Recharge Credits
+                  </button>
+                </div>
+              )}
             </div>
           </div>
           
