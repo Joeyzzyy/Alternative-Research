@@ -33,7 +33,7 @@ const ResearchTool = () => {
     {
       type: 'agent',
       agentId: 1,
-      content: '👋 Hello there! I\'m Joey, your dedicated Research Specialist! I\'m excited to help you discover the perfect alternatives for your product!\n\nJust enter a product domain (e.g., websitelm.com) and I\'ll immediately get to work finding the best alternatives and generating a comprehensive analysis tailored just for you. Let\'s get started! 🚀'
+      content: '👋 Hello there! I\'m Alexis, your dedicated Research Specialist! I\'m excited to help you discover the perfect alternatives for your product!\n\nJust enter a product domain (e.g., websitelm.com) and I\'ll immediately get to work finding the best alternatives and generating a comprehensive analysis tailored just for you. Let\'s get started! 🚀'
     }
   ];
   
@@ -129,7 +129,7 @@ const ResearchTool = () => {
     setWorkflowStage('collecting');
     setWorkflowProgress(0);
     
-    // 添加Joey的热情响应消息，追加到现有消息中
+    // 添加Alexis的热情响应消息，追加到现有消息中
     setMessages(prev => [...prev, { 
       type: 'agent', 
       agentId: 1,
@@ -361,12 +361,12 @@ const ResearchTool = () => {
     );
   };
   
-  // 新增 agents 数据
+  // 新增 agents 数据 - 互换Joey和Alexis.L的顺序和身份
   const agents = [
     {
       id: 1,
-      name: 'Joey.Z',
-      avatar: '/images/zy.jpg',  // 使用指定的图片路径
+      name: 'Alexis.L',
+      avatar: '/images/by.jpg',  // 使用指定的图片路径
       role: 'Research Specialist',
       description: 'Specialized in comprehensive competitor research and market analysis. I help identify and analyze alternative products in your market space.'
     },
@@ -379,8 +379,8 @@ const ResearchTool = () => {
     },
     {
       id: 3,
-      name: 'Alexis.L',
-      avatar: '/images/by.jpg',  // 使用指定的图片路径
+      name: 'Joey.Z',
+      avatar: '/images/zy.jpg',  // 使用指定的图片路径
       role: 'Verification Expert',
       description: 'Responsible for fact-checking and verifying information accuracy. I ensure all analyses are based on reliable and up-to-date data.'
     },
