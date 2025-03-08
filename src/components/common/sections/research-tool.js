@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Input, Button, Card, Spin, message, Tag, Tooltip, Avatar } from 'antd';
 import { SearchOutlined, ClearOutlined, ArrowRightOutlined, InfoCircleOutlined, SendOutlined, UserOutlined, RobotOutlined } from '@ant-design/icons';
+import apiClient from '../../../lib/api/index.js';
 
 const ResearchTool = () => {
   const [domain, setDomain] = useState('');
@@ -105,130 +106,61 @@ const ResearchTool = () => {
       isThinking: true
     }]);
     
-    // Start the workflow simulation
-    simulateWorkflow(fullUrl);
-  };
-  
-  // 模拟整个工作流程
-  const simulateWorkflow = (url) => {
-    const cleanDomain = domain.replace(/^https?:\/\//, '');
-    
-    // 第一阶段：收集站点信息
-    setTimeout(() => {
-      setWorkflowProgress(10);
-      setWorkflowStage('analyzing');
-      
-      setMessages(prev => [...prev.slice(0, -1), { 
-        type: 'system', 
-        content: `Collecting information from ${cleanDomain}...
-        
-Crawling homepage and product pages...
-Extracting metadata and keywords...
-Identifying product category...`,
-        isThinking: true
-      }]);
-      
-      // 第二阶段：分析关键词
-      setTimeout(() => {
-        setWorkflowProgress(20);
-        setWorkflowStage('searching');
-        
+    // 使用apiClient调用竞争对手研究方法
+    apiClient.getCompetitorResearch(fullUrl)
+      .then(data => {
+        if (data) {
+          // Process API response data
+          handleResearchResults(data, cleanDomain);
+        } else {
+          // API call failed, show error message
+          setMessages(prev => [...prev.slice(0, -1), { 
+            type: 'system', 
+            content: `Error analyzing ${cleanDomain}. Please try again later.`,
+            isThinking: false
+          }]);
+          setLoading(false);
+          setWorkflowStage(null);
+        }
+      })
+      .catch(error => {
+        console.error('Competitor research API call failed:', error);
         setMessages(prev => [...prev.slice(0, -1), { 
           type: 'system', 
-          content: `Analyzing ${cleanDomain}...
-          
-Product category identified: Customer Support Software
-Target audience: B2B, SaaS companies, e-commerce
-Core features: live chat, ticketing, knowledge base, automation
-Price range: $15-$99/month/user
-
-Now searching for alternatives...`,
-          isThinking: true
+          content: `Error analyzing ${cleanDomain}: ${error.message}`,
+          isThinking: false
         }]);
-        
-        // 第三阶段：搜索竞品
-        let progress = 20;
-        const searchInterval = setInterval(() => {
-          progress += 2;
-          setWorkflowProgress(progress);
-          
-          if (progress % 10 === 0) {
-            setMessages(prev => [...prev.slice(0, -1), { 
-              type: 'system', 
-              content: `Searching for alternatives...
-              
-Scanned ${Math.min(Math.floor(progress - 20), 48)} of 48 websites
-Analyzed content from ${Math.min(Math.floor((progress - 20) * 0.7), 32)} websites
-Found ${Math.min(Math.floor((progress - 40) / 2) + 1, 12)} potential alternatives so far`,
-              isThinking: true
-            }]);
-          }
-          
-          if (progress >= 60) {
-            clearInterval(searchInterval);
-            
-            setWorkflowStage('comparing');
-            
-            setMessages(prev => [...prev.slice(0, -1), { 
-              type: 'system', 
-              content: `Found ${Math.min(Math.floor((progress - 40) / 2) + 1, 12)} potential alternatives for ${cleanDomain}.
-              
-Now performing detailed comparison with each alternative...`,
-              isThinking: true
-            }]);
-            
-            // 第四阶段：1v1对比
-            let comparisonIndex = 0;
-            const comparisonResults = [];
-            
-            const comparisonInterval = setInterval(() => {
-              if (comparisonIndex < Math.min(Math.floor((progress - 40) / 2) + 1, 12)) {
-                const newResult = {
-                  ...comparisonResults[comparisonIndex],
-                  comparisonScore: Math.floor(Math.random() * 40) + 60,
-                  strengths: generateRandomStrengths(),
-                  weaknesses: generateRandomWeaknesses()
-                };
-                
-                comparisonResults.push(newResult);
-                setWorkflowProgress(60 + (comparisonIndex / Math.min(Math.floor((progress - 40) / 2) + 1, 12)) * 40);
-                
-                setMessages(prev => [...prev.slice(0, -1), { 
-                  type: 'system', 
-                  content: `Comparing alternatives: ${comparisonIndex + 1} of ${Math.min(Math.floor((progress - 40) / 2) + 1, 12)} completed
-                  
-Currently analyzing: ${comparisonResults[comparisonIndex].name} (${comparisonResults[comparisonIndex].domain})
-• Crawling website and product pages
-• Extracting feature list
-• Analyzing pricing structure
-• Collecting user reviews
-• Comparing with ${cleanDomain}
-• Generating strengths and weaknesses analysis
-
-Overall progress: ${Math.round(60 + (comparisonIndex / Math.min(Math.floor((progress - 40) / 2) + 1, 12)) * 40)}%`,
-                  isThinking: true
-                }]);
-              } else {
-                clearInterval(comparisonInterval);
-                setWorkflowStage('completed');
-                setLoading(false);
-                
-                setMessages(prev => [...prev.slice(0, -1), { 
-                  type: 'system', 
-                  content: `Analysis completed successfully!
-                  
-I've analyzed ${comparisonResults.length} alternatives for ${cleanDomain}:
-${comparisonResults.map(r => `• ${r.name} (${r.comparisonScore}% match)`).join('\n')}
-
-The results are displayed on the right panel. You can view detailed information about each alternative, including features, strengths, weaknesses, and pricing.`,
-                  isThinking: false
-                }]);
-              }
-            }, 1500);
-          }
-        }, 300);
-      }, 2000);
-    }, 1500);
+        setLoading(false);
+        setWorkflowStage(null);
+      });
+  };
+  
+  // New function to handle research results
+  const handleResearchResults = (data, cleanDomain) => {
+    // Update workflow state
+    setWorkflowStage('completed');
+    setWorkflowProgress(100);
+    setLoading(false);
+    
+    // 直接使用API返回的数据更新消息
+    setMessages(prev => [...prev.slice(0, -1), { 
+      type: 'system', 
+      content: data.message,
+      isThinking: false
+    }]);
+    
+    // 如果API返回了替代产品数据，则更新浏览器标签
+    if (data.alternatives && data.alternatives.length > 0) {
+      const newTabs = data.alternatives.slice(0, 5).map((alt, index) => ({
+        id: index + 1,
+        title: alt.name || `Alternative ${index + 1}`,
+        url: alt.website || `https://${alt.domain}`,
+        active: index === 0
+      }));
+      
+      setTabs(newTabs);
+      setShowBrowser(true);
+    }
   };
   
   const formatUrl = (input) => {
@@ -285,24 +217,31 @@ The results are displayed on the right panel. You can view detailed information 
   const agents = [
     {
       id: 1,
-      name: 'Atlas',
-      avatar: '🦊',  // 可以替换为实际的图片路径
+      name: 'Joey.Z',
+      avatar: '/images/zy.jpg',  // 使用指定的图片路径
       role: 'Research Specialist',
       description: 'Specialized in comprehensive competitor research and market analysis. I help identify and analyze alternative products in your market space.'
     },
     {
       id: 2,
-      name: 'Nova',
-      avatar: '🦉',  // 可以替换为实际的图片路径
+      name: 'Xavier.S',
+      avatar: '/images/hy.jpg',  // 使用指定的图片路径
       role: 'Detail Analyst',
       description: 'Focus on deep-diving into competitor features, pricing strategies, and unique selling propositions. I provide detailed comparative analysis.'
     },
     {
       id: 3,
-      name: 'Sage',
-      avatar: '🐢',  // 可以替换为实际的图片路径
+      name: 'Alexis.L',
+      avatar: '/images/by.jpg',  // 使用指定的图片路径
       role: 'Verification Expert',
       description: 'Responsible for fact-checking and verifying information accuracy. I ensure all analyses are based on reliable and up-to-date data.'
+    },
+    {
+      id: 4,
+      name: 'Youssef',
+      avatar: '/images/youssef.jpg',  // 使用指定的图片路径
+      role: 'Integration Specialist',
+      description: 'Expert in connecting research findings with actionable insights. I help translate competitor analysis into strategic recommendations for your business.'
     }
   ];
 
@@ -365,7 +304,9 @@ The results are displayed on the right panel. You can view detailed information 
       {agents.map(agent => (
         <div key={agent.id} className="bg-white/5 rounded-lg p-3 hover:bg-white/10 transition-colors">
           <div className="flex items-center gap-3 mb-2">
-            <div className="text-2xl">{agent.avatar}</div>
+            <div className="w-8 h-8 rounded-full overflow-hidden">
+              <img src={agent.avatar} alt={agent.name} className="w-full h-full object-cover" />
+            </div>
             <div>
               <h4 className="text-sm font-medium text-purple-100">{agent.name}</h4>
               <p className="text-xs text-purple-300">{agent.role}</p>
@@ -457,13 +398,17 @@ The results are displayed on the right panel. You can view detailed information 
           <div className="p-3 border-t border-purple-300/20 flex-shrink-0">
             <div className="flex items-center space-x-2">
               <Input
-                placeholder="Enter a product domain (e.g., zendesk.com)"
+                placeholder="Enter your product's website URL (e.g., zendesk.com) to find alternatives"
                 value={userInput}
                 onChange={(e) => setUserInput(e.target.value)}
                 onPressEnter={handleUserInput}
                 disabled={loading}
-                className="bg-white/10 border border-purple-300/30 rounded-lg text-xs placeholder:text-purple-300/70"
-                style={{ color: 'white' }}
+                className="bg-white/10 border border-purple-300/30 rounded-lg text-xs"
+                style={{ 
+                  color: 'black', 
+                  backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                  height: '40px'
+                }}
               />
               <Button 
                 type="primary" 
@@ -476,7 +421,7 @@ The results are displayed on the right panel. You can view detailed information 
               />
             </div>
             <div className="text-xs text-purple-300 mt-1.5">
-              Enter a product domain to discover alternatives and generate a comprehensive analysis
+              Enter your product's website to discover alternatives and generate a comprehensive analysis
             </div>
           </div>
         </div>
