@@ -10,22 +10,32 @@ const ResearchTool = () => {
   const [initialLoading, setInitialLoading] = useState(true);
   const [workflowStage, setWorkflowStage] = useState(null);
   const [workflowProgress, setWorkflowProgress] = useState(0);
-  const [messages, setMessages] = useState([
+  const [messages, setMessages] = useState([]);
+  const [userInput, setUserInput] = useState('');
+  
+  const inputRef = useRef(null);
+  const chatEndRef = useRef(null);
+  
+  // 添加初始消息的状态控制
+  const [initialMessagesShown, setInitialMessagesShown] = useState(0);
+  
+  // 初始消息数组
+  const initialMessages = [
     { 
       type: 'system', 
       content: 'Welcome to Alternatively! Our research team is ready to help you discover and analyze SaaS alternatives.'
     },
     {
+      type: 'system',
+      content: 'First, our competitor research specialist will help you find alternatives to your product.'
+    },
+    {
       type: 'agent',
       agentId: 1,
-      content: 'Hi, I\'m Joey, your Research Specialist. Please enter a product domain (e.g., websitelm.com) to discover alternatives and generate a comprehensive analysis.'
+      content: '👋 Hello there! I\'m Joey, your dedicated Research Specialist! I\'m excited to help you discover the perfect alternatives for your product!\n\nJust enter a product domain (e.g., websitelm.com) and I\'ll immediately get to work finding the best alternatives and generating a comprehensive analysis tailored just for you. Let\'s get started! 🚀'
     }
-  ]);
-  const [userInput, setUserInput] = useState('');
+  ];
   
-  const inputRef = useRef(null);
-  const chatEndRef = useRef(null);
-
   // 添加 tabs 状态
   const [tabs, setTabs] = useState([
     {
@@ -190,17 +200,24 @@ const ResearchTool = () => {
     if (message.type === 'agent') {
       const agent = agents.find(a => a.id === message.agentId) || agents[0];
       return (
-        <div key={index} className="flex justify-start mb-3">
+        <div key={index} className="flex justify-start mb-3" style={{animation: 'fadeIn 0.5s ease-out forwards'}}>
           <div className="flex max-w-[80%] flex-row">
-            <div className="flex-shrink-0 mr-2">
+            <div className="flex-shrink-0 mr-2" style={{animation: 'bounceIn 0.6s ease-out forwards'}}>
               <Avatar 
                 size="small"
                 src={agent.avatar}
                 className="bg-transparent"
               />
             </div>
-            <div className="p-2 rounded-lg text-xs bg-white/10 backdrop-blur-sm text-gray-100 rounded-tl-none">
-              <div className="text-xs font-medium text-blue-300 mb-1">{agent.name}</div>
+            <div className="p-2 rounded-lg text-xs bg-white/10 backdrop-blur-sm text-gray-100 rounded-tl-none 
+                            transform transition-all duration-300" 
+                 style={{animation: 'slideInRight 0.4s ease-out forwards'}}>
+              <div className="text-xs font-medium text-blue-300 mb-1 flex items-center">
+                <span className="mr-1">{agent.name}</span>
+                <span className="text-xs px-1.5 py-0.5 bg-blue-500/20 text-blue-300 rounded-full animate-pulse">
+                  {agent.role}
+                </span>
+              </div>
               {message.content.split('\n').map((line, i) => (
                 <React.Fragment key={i}>
                   {line}
@@ -224,9 +241,11 @@ const ResearchTool = () => {
       <div 
         key={index} 
         className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} mb-3`}
+        style={{animation: message.type === 'system' ? 'fadeIn 0.5s ease-out forwards' : ''}}
       >
         <div className={`flex max-w-[80%] ${message.type === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
-          <div className={`flex-shrink-0 ${message.type === 'user' ? 'ml-2' : 'mr-2'}`}>
+          <div className={`flex-shrink-0 ${message.type === 'user' ? 'ml-2' : 'mr-2'}`}
+               style={{animation: message.type === 'system' ? 'bounceIn 0.6s ease-out forwards' : ''}}>
             {message.type === 'user' ? (
               <Avatar 
                 size="small"
@@ -246,7 +265,9 @@ const ResearchTool = () => {
               message.type === 'user' 
                 ? 'bg-blue-600 text-white rounded-tr-none' 
                 : 'bg-white/10 backdrop-blur-sm text-gray-100 rounded-tl-none'
-            } ${message.isThinking ? 'border border-gray-400/30 animate-pulse' : ''}`}
+            } ${message.isThinking ? 'border border-gray-400/30 animate-pulse' : ''} 
+            transform transition-all duration-300`}
+            style={{animation: message.type === 'user' ? 'slideInLeft 0.4s ease-out forwards' : 'slideInRight 0.4s ease-out forwards'}}
           >
             {message.content.split('\n').map((line, i) => (
               <React.Fragment key={i}>
@@ -415,10 +436,57 @@ const ResearchTool = () => {
     // 模拟初始化加载
     const timer = setTimeout(() => {
       setInitialLoading(false);
+      
+      // 开始逐步显示初始消息
+      showInitialMessagesSequentially();
     }, 1500);
     
     return () => clearTimeout(timer);
   }, []);
+  
+  // 添加逐步显示初始消息的函数
+  const showInitialMessagesSequentially = () => {
+    // 设置第一条消息
+    setMessages([initialMessages[0]]);
+    setInitialMessagesShown(1);
+    
+    // 设置第二条消息
+    setTimeout(() => {
+      setMessages(prev => [...prev, initialMessages[1]]);
+      setInitialMessagesShown(2);
+      
+      // 设置第三条消息
+      setTimeout(() => {
+        setMessages(prev => [...prev, initialMessages[2]]);
+        setInitialMessagesShown(3);
+      }, 1000);
+    }, 1000);
+  };
+
+  // 在组件内部添加样式定义
+  const animationStyles = `
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes bounceIn {
+      0% { transform: scale(0.3); opacity: 0; }
+      50% { transform: scale(1.05); }
+      70% { transform: scale(0.9); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    @keyframes slideInRight {
+      from { transform: translateX(-20px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    @keyframes slideInLeft {
+      from { transform: translateX(20px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+  `;
 
   // 如果正在初始化加载，显示加载界面
   if (initialLoading) {
@@ -445,6 +513,9 @@ const ResearchTool = () => {
 
   return (
     <div className="w-full min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 text-white flex items-center justify-center p-4 relative overflow-hidden" style={{ paddingTop: "80px" }}>
+      {/* 添加内联样式 */}
+      <style>{animationStyles}</style>
+      
       <div className="absolute inset-0" style={{ paddingTop: "80px" }}>
         <div className="absolute w-96 h-96 bg-blue-500/10 rounded-full blur-3xl -top-20 -left-20 animate-pulse"></div>
         <div className="absolute w-96 h-96 bg-gray-500/10 rounded-full blur-3xl -bottom-20 -right-20 animate-pulse delay-1000"></div>
