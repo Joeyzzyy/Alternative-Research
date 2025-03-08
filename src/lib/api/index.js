@@ -36,6 +36,35 @@ const getCompetitorResearch = async (website, apiKey) => {
   }
 };
 
+const googleLogin = async () => {
+  try {
+    const response = await apiClient.get('/customer/google');
+    return response.data;
+  } catch (error) {
+    console.error('Failed to login with Google:', error);
+    return null;
+  }
+};
+
+// Google登录回调
+const googleCallback = async (code, state) => {
+  try {
+    const response = await apiClient.get('/customer/google/callback', {
+      params: { 
+        code,
+        state 
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Failed to handle Google callback:', error);
+    throw error;
+  }
+};
+
+
 apiClient.getCompetitorResearch = getCompetitorResearch;
+apiClient.googleLogin = googleLogin;
+apiClient.googleCallback = googleCallback;
 
 export default apiClient;
