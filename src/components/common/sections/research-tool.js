@@ -145,30 +145,67 @@ const ResearchTool = () => {
           handleResearchResults(data, cleanDomain);
         } else {
           // API call failed, show error message
+          // 先更新前一条消息，结束思考状态
+          setMessages(prev => {
+            const updatedMessages = [...prev];
+            if (updatedMessages.length > 0) {
+              const lastMessage = updatedMessages[updatedMessages.length - 1];
+              if (lastMessage.isThinking) {
+                updatedMessages[updatedMessages.length - 1] = {
+                  ...lastMessage,
+                  isThinking: false
+                };
+              }
+            }
+            return updatedMessages;
+          });
+          
+          // 然后添加新的错误消息
+          setTimeout(() => {
+            setMessages(prev => [...prev, { 
+              type: 'agent', 
+              agentId: 1,
+              content: `😕 I'm sorry, but I encountered an issue while analyzing ${cleanDomain}. Could we try again? Sometimes these things happen with complex websites.`,
+              isThinking: false
+            }]);
+            setLoading(false);
+            setWorkflowStage(null);
+            // 消息发送完毕，重置状态
+            setIsMessageSending(false);
+          }, 500);
+        }
+      })
+      .catch(error => {
+        console.error('Competitor research API call failed:', error);
+        
+        // 先更新前一条消息，结束思考状态
+        setMessages(prev => {
+          const updatedMessages = [...prev];
+          if (updatedMessages.length > 0) {
+            const lastMessage = updatedMessages[updatedMessages.length - 1];
+            if (lastMessage.isThinking) {
+              updatedMessages[updatedMessages.length - 1] = {
+                ...lastMessage,
+                isThinking: false
+              };
+            }
+          }
+          return updatedMessages;
+        });
+        
+        // 然后添加新的错误消息
+        setTimeout(() => {
           setMessages(prev => [...prev, { 
             type: 'agent', 
             agentId: 1,
-            content: `😕 I'm sorry, but I encountered an issue while analyzing ${cleanDomain}. Could we try again? Sometimes these things happen with complex websites.`,
+            content: `😓 Oh no! I ran into a technical problem while analyzing ${cleanDomain}: ${error.message}. Let's try again in a moment - I'm eager to help you find those alternatives!`,
             isThinking: false
           }]);
           setLoading(false);
           setWorkflowStage(null);
           // 消息发送完毕，重置状态
           setIsMessageSending(false);
-        }
-      })
-      .catch(error => {
-        console.error('Competitor research API call failed:', error);
-        setMessages(prev => [...prev, { 
-          type: 'agent', 
-          agentId: 1,
-          content: `😓 Oh no! I ran into a technical problem while analyzing ${cleanDomain}: ${error.message}. Let's try again in a moment - I'm eager to help you find those alternatives!`,
-          isThinking: false
-        }]);
-        setLoading(false);
-        setWorkflowStage(null);
-        // 消息发送完毕，重置状态
-        setIsMessageSending(false);
+        }, 500);
       });
   };
   
@@ -178,6 +215,21 @@ const ResearchTool = () => {
     setWorkflowStage('completed');
     setWorkflowProgress(100);
     setLoading(false);
+    
+    // 先更新前一条消息，结束思考状态
+    setMessages(prev => {
+      const updatedMessages = [...prev];
+      if (updatedMessages.length > 0) {
+        const lastMessage = updatedMessages[updatedMessages.length - 1];
+        if (lastMessage.isThinking) {
+          updatedMessages[updatedMessages.length - 1] = {
+            ...lastMessage,
+            isThinking: false
+          };
+        }
+      }
+      return updatedMessages;
+    });
     
     // 延迟0.5秒后添加结果消息，显得更真实
     setTimeout(() => {
