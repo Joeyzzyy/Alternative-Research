@@ -246,35 +246,7 @@ const ResearchTool = () => {
   ];
 
   // 示例 details 数据 - 重构为处理过程
-  const detailsData = [
-    {
-      id: 1,
-      agentName: 'Atlas',
-      agentAvatar: '🦊',
-      step: 'Initial Research',
-      status: 'Completed',
-      timestamp: '2024-03-20 14:23',
-      description: 'Analyzing main product features and market positioning'
-    },
-    {
-      id: 2,
-      agentName: 'Nova',
-      agentAvatar: '🦉',
-      step: 'Competitor Analysis',
-      status: 'In Progress',
-      timestamp: '2024-03-20 14:25',
-      description: 'Deep diving into competitor pricing strategies and feature sets'
-    },
-    {
-      id: 3,
-      agentName: 'Sage',
-      agentAvatar: '🐢',
-      step: 'Data Verification',
-      status: 'Queued',
-      timestamp: '2024-03-20 14:26',
-      description: 'Waiting to verify gathered information and sources'
-    }
-  ];
+  const detailsData = [];
 
   // 示例 sources 数据 - 简化为URL列表
   const sourcesData = [
@@ -372,6 +344,19 @@ const ResearchTool = () => {
     </div>
   );
 
+  useEffect(() => {
+    // 只有当消息列表发生变化且不是初始加载时才滚动到底部
+    if (chatEndRef.current && messages.length > 1) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
+
+  // 添加一个新的 useEffect 来处理初始加载
+  useEffect(() => {
+    // 页面加载时，确保滚动到顶部
+    window.scrollTo(0, 0);
+  }, []);
+
   return (
     <div className="w-full pt-24 min-h-screen bg-gradient-to-b from-purple-900 via-purple-800 to-indigo-900 text-white flex items-center justify-center p-4 relative overflow-hidden">
       <div className="absolute inset-0 pt-24">
@@ -398,6 +383,7 @@ const ResearchTool = () => {
           <div className="p-3 border-t border-purple-300/20 flex-shrink-0">
             <div className="flex items-center space-x-2">
               <Input
+                ref={inputRef}
                 placeholder="Enter your product's website URL (e.g., zendesk.com) to find alternatives"
                 value={userInput}
                 onChange={(e) => setUserInput(e.target.value)}

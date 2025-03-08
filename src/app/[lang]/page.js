@@ -17,10 +17,11 @@ const SUPPORTED_LANGUAGES = ['en'];
 // 主页面组件
 export default async function ArticlePage({ params }) {
   try {
-    const articleData = await getPageBySlug();
+    const { lang } = params;
+    const articleData = await getPageData();
 
     if (!articleData?.data || articleData.data.publishStatus !== 'publish') {
-      console.error(`Article not found or not published for slug: ${slug}`);
+      console.error(`Article not found or not published`);
       return notFound();
     }
     
@@ -76,10 +77,9 @@ function joinArrayWithComma(arr) {
 export async function generateMetadata({ params }) {
   try {
     const resolvedParams = await Promise.resolve(params);
-    const { lang, slug } = resolvedParams;
+    const { lang } = resolvedParams;
     const currentLang = SUPPORTED_LANGUAGES.includes(lang) ? lang : 'en';
-    const fullSlug = Array.isArray(slug) ? slug[slug.length - 1] : slug;
-    const articleData = await getPageBySlug(fullSlug, currentLang);
+    const articleData = await getPageData();
     
     if (!articleData?.data || articleData.data.publishStatus !== 'publish') {
       return {
@@ -95,7 +95,7 @@ export async function generateMetadata({ params }) {
     return {
       title: article.title, 
       description: article.description,
-      keywords: joinArrayWithComma(article.pageStats?.genKeywords) ,
+      keywords: joinArrayWithComma(article.pageStats?.genKeywords),
       robots: article.publishStatus === 'publish' ? 'index, follow' : 'noindex, nofollow',
       openGraph: { 
         title: article.title,
@@ -127,20 +127,20 @@ export async function generateMetadata({ params }) {
       alternates: {
         canonical: "",
         languages: {
-          'en': `${host}/${fullSlug}`,          // 英文版本不带语言标识符
-          'zh': `${host}/zh/${fullSlug}`,       // 其他语言带语言标识符
+          'en': `${host}`,          // 英文版本不带语言标识符
+          'zh': `${host}/zh`,       // 其他语言带语言标识符
         },
         hreflang: [
           {
-            href: `${host}/${fullSlug}`,
+            href: `${host}`,
             hrefLang: 'en'
           },
           {
-            href: `${host}/zh/${fullSlug}`,
+            href: `${host}/zh`,
             hrefLang: 'zh'
           },
           {
-            href: `${host}/${fullSlug}`,        // x-default 指向英文版本
+            href: `${host}`,        // x-default 指向英文版本
             hrefLang: 'x-default'
           }
         ]
@@ -164,8 +164,8 @@ export async function generateMetadata({ params }) {
   }
 }
 
-// 模拟数据获取函数
-async function getPageBySlug() {
+// 修改数据获取函数，完全移除参数
+async function getPageData() {
   const mockData = {
     data: {
       title: "Alternatively",
