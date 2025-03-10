@@ -26,22 +26,17 @@ const ResearchTool = () => {
   // 添加初始消息的状态控制
   const [initialMessagesShown, setInitialMessagesShown] = useState(0);
   
-  // 修改初始消息数组，添加Deep Research提示
+  // 修改初始消息数组，只保留两条消息
   const initialMessages = [
     { 
       type: 'agent', 
       agentId: 1,
-      content: 'Welcome to Alternatively! Our research team is ready to help you discover and analyze SaaS alternatives.'
+      content: '👋 Welcome to Alternatively! I\'m Joey, your dedicated Research Specialist, ready to help you discover and analyze SaaS alternatives.'
     },
     {
       type: 'agent',
       agentId: 1,
-      content: 'I\'m Joey, your dedicated Research Specialist. I\'ll help you find alternatives to your product.'
-    },
-    {
-      type: 'agent',
-      agentId: 1,
-      content: '👋 Hello there! I\'m excited to help you discover the perfect alternatives for your product!\n\nJust enter a product domain (e.g., websitelm.com) and I\'ll immediately get to work finding the best alternatives and generating a comprehensive analysis tailored just for you.\n\nPro tip: You can enable Deep Research mode for more comprehensive analysis and detailed insights! Let\'s get started! 🚀'
+      content: 'To get started, simply enter a product domain (e.g., websitelm.com) and I\'ll immediately begin finding the best alternatives and generate a comprehensive analysis tailored just for you.\n\nPro tip: Enable Deep Research mode for even more detailed insights and comprehensive analysis! Let\'s begin! 🚀'
     }
   ];
   
@@ -78,11 +73,20 @@ const ResearchTool = () => {
   // 获取当前激活的 tab
   const activeTab = tabs.find(tab => tab.active);
 
-  // 验证域名格式
+  // 修改域名验证函数，使其更严格
   const validateDomain = (domain) => {
-    // 简单验证域名格式 (xx.xx)
-    const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9](?:\.[a-zA-Z]{2,})+$/;
-    return domainRegex.test(domain);
+    // 移除 http:// 或 https:// 前缀
+    const cleanDomain = domain.replace(/^https?:\/\//i, '');
+    // 移除末尾的斜杠
+    const trimmedDomain = cleanDomain.replace(/\/+$/, '');
+    
+    // 验证域名格式：
+    // - 允许字母、数字、连字符
+    // - 必须包含至少一个点
+    // - 顶级域名至少2个字符
+    // - 不允许连续的点或连字符
+    const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9](?:\.[a-zA-Z]{2,})+$/;
+    return domainRegex.test(trimmedDomain);
   };
 
   const handleUserInput = (e) => {
@@ -99,7 +103,7 @@ const ResearchTool = () => {
     setMessages(newMessages);
     
     // Process the input as domain
-    const cleanDomain = userInput.replace(/^https?:\/\//, '');
+    const cleanDomain = userInput.trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '');
     setDomain(cleanDomain);
     
     // Clear input field
@@ -113,8 +117,14 @@ const ResearchTool = () => {
       setTimeout(() => {
         setMessages([...newMessages, { 
           type: 'agent', 
-          agentId: 1, // 使用Joey来提示错误
-          content: 'Please enter a valid domain format (e.g., example.com). I need to verify a proper website address to proceed with our analysis.' 
+          agentId: 1,
+          content: `I notice that "${cleanDomain}" doesn't seem to be a valid domain name. Here's what I'm looking for:
+
+• A proper domain name (e.g., "example.com", "my-site.co.uk")
+• No special characters (except hyphens between words)
+• Must include a valid top-level domain (.com, .org, etc.)
+
+Could you please provide a valid domain name? For example: "websitelm.com"`
         }]);
         // 消息发送完毕，重置状态
         setIsMessageSending(false);
@@ -227,7 +237,7 @@ const ResearchTool = () => {
     setWorkflowProgress(100);
     setLoading(false);
     
-    // 先更新前一条消息，结束思考状态
+    // Update previous message to end thinking state
     setMessages(prev => {
       const updatedMessages = [...prev];
       if (updatedMessages.length > 0) {
@@ -242,30 +252,36 @@ const ResearchTool = () => {
       return updatedMessages;
     });
     
-    // 延迟0.5秒后添加结果消息，显得更真实
+    // Add results message after 0.5s delay for natural flow
     setTimeout(() => {
-      // 使用Xavier作为详细分析专家来提供结果
+      // Use JoeyZ to provide analysis results
+      const competitors = data.data.result.filter(url => url !== null);
+      const message = `🎉 Great news! I've found some excellent alternatives! Here are the main competitors to ${cleanDomain}:
+
+${competitors.slice(0, 5).map((url, index) => `${index + 1}. ${url}`).join('\n')}
+
+I've loaded these websites for you to explore in the browser panel. Would you like to know more specific details about any of them?`;
+
       setMessages(prev => [...prev, { 
         type: 'agent', 
-        agentId: 2, // Xavier作为Detail Analyst
-        content: data.message,
+        agentId: 1, // Using JoeyZ
+        content: message,
         isThinking: false
       }]);
       
-      // 如果API返回了替代产品数据，则更新浏览器标签
-      if (data.alternatives && data.alternatives.length > 0) {
-        const newTabs = data.alternatives.slice(0, 5).map((alt, index) => ({
+      // Update browser tabs if API returned alternative products
+      if (competitors.length > 0) {
+        const newTabs = competitors.slice(0, 5).map((url, index) => ({
           id: index + 1,
-          title: alt.name || `Alternative ${index + 1}`,
-          url: alt.website || `https://${alt.domain}`,
+          title: new URL(url).hostname.replace('www.', ''),
+          url: url,
           active: index === 0
         }));
         
         setTabs(newTabs);
-        setShowBrowser(true);
       }
       
-      // 消息发送完毕，重置状态
+      // Reset message sending state
       setIsMessageSending(false);
     }, 500);
   };
@@ -504,7 +520,7 @@ const ResearchTool = () => {
     return () => clearTimeout(timer);
   }, []);
   
-  // 修改逐步显示初始消息的函数，在完成后重置消息发送状态
+  // 修改逐步显示初始消息的函数
   const showInitialMessagesSequentially = () => {
     // 设置第一条消息
     setMessages([initialMessages[0]]);
@@ -514,15 +530,7 @@ const ResearchTool = () => {
     setTimeout(() => {
       setMessages(prev => [...prev, initialMessages[1]]);
       setInitialMessagesShown(2);
-      
-      // 设置第三条消息
-      setTimeout(() => {
-        setMessages(prev => [...prev, initialMessages[2]]);
-        setInitialMessagesShown(3);
-        
-        // 所有初始消息显示完毕，重置消息发送状态
-        setIsMessageSending(false);
-      }, 1000);
+      setIsMessageSending(false);
     }, 1000);
   };
 

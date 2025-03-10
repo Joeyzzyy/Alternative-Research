@@ -5,7 +5,7 @@ const API_URL = 'https://api.websitelm.com/v1';
 // 创建 axios 实例，更新配置
 const apiClient = axios.create({
   baseURL: API_URL,
-  timeout: 20000,
+  timeout: 300000,
   headers: {
     'Content-Type': 'application/json',
   },
