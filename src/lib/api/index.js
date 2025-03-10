@@ -36,6 +36,56 @@ const getCompetitorResearch = async (website, apiKey) => {
   }
 };
 
+// Add regular login method
+const login = async (email, password) => {
+  try {
+    const response = await apiClient.post('/login', {
+      email,
+      password
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Failed to login:', error);
+    throw error;
+  }
+};
+
+// Add register method
+const register = async (registerData) => {
+  try {
+    const response = await apiClient.post('/customer/register', registerData);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to register:', error);
+    throw error;
+  }
+};
+
+// Add send verification code method
+const sendEmailCode = async (email, codeType) => {
+  try {
+    const response = await apiClient.post('/customer/send-email', {
+      email,
+      codeType // Available values: forgot_password, change_email, register
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Failed to send email verification code:', error);
+    throw error;
+  }
+};
+
+// Add reset password method
+const resetPassword = async (resetData) => {
+  try {
+    const response = await apiClient.post('/customer/reset-password', resetData);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to reset password:', error);
+    throw error;
+  }
+};
+
 const googleLogin = async () => {
   try {
     const response = await apiClient.get('/customer/google');
@@ -62,8 +112,11 @@ const googleCallback = async (code, state) => {
   }
 };
 
-
 apiClient.getCompetitorResearch = getCompetitorResearch;
+apiClient.login = login;
+apiClient.register = register;
+apiClient.sendEmailCode = sendEmailCode;
+apiClient.resetPassword = resetPassword;
 apiClient.googleLogin = googleLogin;
 apiClient.googleCallback = googleCallback;
 
