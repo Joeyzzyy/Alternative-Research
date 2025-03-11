@@ -4,6 +4,165 @@ import { Input, Button, Card, Spin, message, Tag, Tooltip, Avatar } from 'antd';
 import { SearchOutlined, ClearOutlined, ArrowRightOutlined, InfoCircleOutlined, SendOutlined, UserOutlined, RobotOutlined } from '@ant-design/icons';
 import apiClient from '../../../lib/api/index.js';
 
+// 添加任务状态常量
+const TASK_STATUS = {
+  PENDING: 'PENDING',
+  RUNNING: 'RUNNING',
+  COMPLETED: 'COMPLETED',
+  FAILED: 'FAILED'
+};
+
+// 添加任务类型常量
+const TASK_TYPES = {
+  COMPETITOR_SEARCH: 'COMPETITOR_SEARCH',
+  COMPETITOR_SCORING: 'COMPETITOR_SCORING',
+  PRODUCT_COMPARISON: 'PRODUCT_COMPARISON'
+};
+
+// 添加轮询间隔常量
+const POLLING_INTERVALS = {
+  TASK_STATUS: 3000,    // 3秒
+  TASK_DETAILS: 5000,   // 5秒
+  SOURCES: 10000        // 10秒
+};
+
+// 任务管理器类
+class TaskManager {
+  constructor(apiClient) {
+    this.apiClient = apiClient;
+    this.tasks = new Map();
+    this.activePolling = new Set();
+    this.onTaskUpdate = null;
+    this.onDetailsUpdate = null;
+    this.onSourcesUpdate = null;
+  }
+
+  // 初始化新的研究任务流程
+  async initializeResearch(domain) {
+    // 清理之前的任务
+    this.clearAllTasks();
+    
+    // 创建竞品搜索任务
+    const searchTask = await this.apiClient.createCompetitorSearchTask(domain);
+    this.tasks.set(TASK_TYPES.COMPETITOR_SEARCH, {
+      id: searchTask.id,
+      type: TASK_TYPES.COMPETITOR_SEARCH,
+      status: TASK_STATUS.PENDING,
+      result: null,
+      details: [],
+      sources: []
+    });
+
+    // 开始轮询第一个任务
+    this.startPolling(TASK_TYPES.COMPETITOR_SEARCH);
+  }
+
+  // 开始轮询特定任务
+  startPolling(taskType) {
+    if (this.activePolling.has(taskType)) return;
+
+    const pollTaskStatus = async () => {
+      const task = this.tasks.get(taskType);
+      if (!task) return;
+
+      try {
+        // 获取任务状态
+        const status = await this.apiClient.getTaskStatus(task.id);
+        const details = await this.apiClient.getTaskDetails(task.id);
+        const sources = await this.apiClient.getTaskSources(task.id);
+
+        // 更新任务信息
+        task.status = status.status;
+        task.result = status.result;
+        task.details = [...task.details, ...details];
+        task.sources = [...task.sources, ...sources];
+
+        // 触发更新回调
+        this.onTaskUpdate?.(taskType, task);
+        this.onDetailsUpdate?.(task.details);
+        this.onSourcesUpdate?.(task.sources);
+
+        // 如果任务完成，启动下一个任务
+        if (status.status === TASK_STATUS.COMPLETED) {
+          this.stopPolling(taskType);
+          await this.startNextTask(taskType);
+        }
+      } catch (error) {
+        console.error(`Error polling task ${taskType}:`, error);
+        task.status = TASK_STATUS.FAILED;
+        this.stopPolling(taskType);
+      }
+    };
+
+    // 设置轮询间隔
+    const intervalId = setInterval(pollTaskStatus, POLLING_INTERVALS.TASK_STATUS);
+    this.activePolling.add(taskType);
+    
+    // 立即执行一次
+    pollTaskStatus();
+  }
+
+  // 停止特定任务的轮询
+  stopPolling(taskType) {
+    this.activePolling.delete(taskType);
+  }
+
+  // 启动下一个任务
+  async startNextTask(currentTaskType) {
+    const currentTask = this.tasks.get(currentTaskType);
+    if (!currentTask || currentTask.status !== TASK_STATUS.COMPLETED) return;
+
+    let nextTaskType;
+    let nextTask;
+
+    switch (currentTaskType) {
+      case TASK_TYPES.COMPETITOR_SEARCH:
+        // 创建竞品评分任务
+        nextTaskType = TASK_TYPES.COMPETITOR_SCORING;
+        nextTask = await this.apiClient.createCompetitorScoringTask(currentTask.result);
+        break;
+      case TASK_TYPES.COMPETITOR_SCORING:
+        // 创建产品对比任务
+        nextTaskType = TASK_TYPES.PRODUCT_COMPARISON;
+        nextTask = await this.apiClient.createProductComparisonTask(currentTask.result);
+        break;
+      default:
+        return;
+    }
+
+    if (nextTask) {
+      this.tasks.set(nextTaskType, {
+        id: nextTask.id,
+        type: nextTaskType,
+        status: TASK_STATUS.PENDING,
+        result: null,
+        details: [],
+        sources: []
+      });
+      this.startPolling(nextTaskType);
+    }
+  }
+
+  // 清理所有任务
+  clearAllTasks() {
+    this.activePolling.forEach(taskType => this.stopPolling(taskType));
+    this.activePolling.clear();
+    this.tasks.clear();
+  }
+
+  // 获取所有任务的状态
+  getAllTasksStatus() {
+    const status = {};
+    this.tasks.forEach((task, type) => {
+      status[type] = {
+        status: task.status,
+        result: task.result
+      };
+    });
+    return status;
+  }
+}
+
 const ResearchTool = () => {
   const [domain, setDomain] = useState('');
   const [loading, setLoading] = useState(false);
@@ -61,6 +220,18 @@ const ResearchTool = () => {
 
   // 添加浏览器显示状态
   const [showBrowser, setShowBrowser] = useState(false);
+
+  // 添加新的状态
+  const [customerId, setCustomerId] = useState(null);
+
+  // 在组件加载时检查登录状态
+  useEffect(() => {
+    const storedCustomerId = localStorage.getItem('alternativelyCustomerId');
+    const token = localStorage.getItem('alternativelyAccessToken');
+    if (storedCustomerId && token) {
+      setCustomerId(storedCustomerId);
+    }
+  }, []);
 
   // 切换 tab 的函数
   const switchTab = (tabId) => {
@@ -138,96 +309,70 @@ Could you please provide a valid domain name? For example: "websitelm.com"`
     }, 500);
   };
   
-  const startAnalysis = (cleanDomain) => {
-    // Clear previous results
-    setWorkflowStage(null);
+  const [taskManager] = useState(() => new TaskManager(apiClient));
+
+  useEffect(() => {
+    // 设置任务更新回调
+    taskManager.onTaskUpdate = (taskType, task) => {
+      // 更新工作流程状态
+      setWorkflowStage(task.status);
+      // 根据任务类型和状态更新UI
+      updateUIForTask(taskType, task);
+    };
+
+    taskManager.onDetailsUpdate = (details) => {
+      // 更新详情面板
+      setDetailsData(details);
+    };
+
+    taskManager.onSourcesUpdate = (sources) => {
+      // 更新来源面板
+      setSourcesData(sources);
+    };
+
+    return () => {
+      taskManager.clearAllTasks();
+    };
+  }, []);
+
+  // 修改 startAnalysis 函数
+  const startAnalysis = async (cleanDomain) => {
+    // 检查登录状态
+    const token = localStorage.getItem('alternativelyAccessToken');
+    const storedCustomerId = localStorage.getItem('alternativelyCustomerId');
     
-    const fullUrl = formatUrl(cleanDomain);
-    
+    if (!token || !storedCustomerId) {
+      // 如果未登录，显示提示并触发登出
+      message.error('Please login to get access to this feature');
+      // 这里需要调用您的登出函数，假设它是 logout
+      localStorage.removeItem('alternativelyAccessToken');
+      localStorage.removeItem('alternativelyCustomerId');
+      return;
+    }
+
     setLoading(true);
     setWorkflowStage('collecting');
     setWorkflowProgress(0);
-    
-    // 添加Joey的热情响应消息，追加到现有消息中，并根据模式调整内容
-    setMessages(prev => [...prev, { 
-      type: 'agent', 
-      agentId: 1,
-      content: deepResearchMode 
-        ? `🔍 Fantastic! I'm launching a deep analysis of ${cleanDomain}! This comprehensive research will explore multiple data sources and provide detailed insights on alternatives, features, pricing, and market positioning. This might take a little longer, but the depth of analysis will be worth it! 💫`
-        : `🔍 Fantastic! I'm on it! Analyzing ${cleanDomain} right now! I'll find the best alternatives and create a detailed comparison for you. This will only take a moment... 💫`,
-      isThinking: true
-    }]);
-    
-    // 使用apiClient调用竞争对手研究方法，传递deepResearchMode参数
-    apiClient.getCompetitorResearch(fullUrl, deepResearchMode)
-      .then(data => {
-        if (data) {
-          // Process API response data
-          handleResearchResults(data, cleanDomain);
-        } else {
-          // API call failed, show error message
-          // 先更新前一条消息，结束思考状态
-          setMessages(prev => {
-            const updatedMessages = [...prev];
-            if (updatedMessages.length > 0) {
-              const lastMessage = updatedMessages[updatedMessages.length - 1];
-              if (lastMessage.isThinking) {
-                updatedMessages[updatedMessages.length - 1] = {
-                  ...lastMessage,
-                  isThinking: false
-                };
-              }
-            }
-            return updatedMessages;
-          });
-          
-          // 然后添加新的错误消息
-          setTimeout(() => {
-            setMessages(prev => [...prev, { 
-              type: 'agent', 
-              agentId: 1,
-              content: `😕 I'm sorry, but I encountered an issue while analyzing ${cleanDomain}. Could we try again? Sometimes these things happen with complex websites.`,
-              isThinking: false
-            }]);
-            setLoading(false);
-            setWorkflowStage(null);
-            // 消息发送完毕，重置状态
-            setIsMessageSending(false);
-          }, 500);
-        }
-      })
-      .catch(error => {
-        console.error('Competitor research API call failed:', error);
-        
-        // 先更新前一条消息，结束思考状态
-        setMessages(prev => {
-          const updatedMessages = [...prev];
-          if (updatedMessages.length > 0) {
-            const lastMessage = updatedMessages[updatedMessages.length - 1];
-            if (lastMessage.isThinking) {
-              updatedMessages[updatedMessages.length - 1] = {
-                ...lastMessage,
-                isThinking: false
-              };
-            }
-          }
-          return updatedMessages;
-        });
-        
-        // 然后添加新的错误消息
-        setTimeout(() => {
-          setMessages(prev => [...prev, { 
-            type: 'agent', 
-            agentId: 1,
-            content: `😓 Oh no! I ran into a technical problem while analyzing ${cleanDomain}: ${error.message}. Let's try again in a moment - I'm eager to help you find those alternatives!`,
-            isThinking: false
-          }]);
-          setLoading(false);
-          setWorkflowStage(null);
-          // 消息发送完毕，重置状态
-          setIsMessageSending(false);
-        }, 500);
-      });
+
+    try {
+      // 调用 generateAlternative 接口
+      const response = await apiClient.generateAlternative(
+        storedCustomerId,
+        deepResearchMode,
+        cleanDomain
+      );
+
+      if (response) {
+        handleResearchResults(response, cleanDomain);
+      } else {
+        throw new Error('Failed to generate alternatives');
+      }
+    } catch (error) {
+      console.error('Failed to start research:', error);
+      message.error('Failed to start research, please try again later');
+      setLoading(false);
+      setWorkflowStage(null);
+    }
   };
   
   // New function to handle research results
@@ -770,8 +915,7 @@ I've loaded these websites for you to explore in the browser panel. Would you li
                   <div
                     key={tab.id}
                     onClick={() => switchTab(tab.id)}
-                    className={`
-                      flex items-center h-7 px-4 text-xs cursor-pointer
+                    className={`                      flex items-center h-7 px-4 text-xs cursor-pointer
                       rounded-t-md transition-colors mr-1
                       ${tab.active 
                         ? 'bg-white text-gray-800' 

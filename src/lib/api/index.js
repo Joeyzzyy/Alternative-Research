@@ -112,6 +112,32 @@ const googleCallback = async (code, state) => {
   }
 };
 
+// 获取替代方案状态
+const getAlternativeStatus = async (websiteId) => {
+  try {
+    const response = await apiClient.get(`/alternatively/${websiteId}/status`);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to get alternative status:', error);
+    throw error;
+  }
+};
+
+// 生成替代方案
+const generateAlternative = async (customerId, deepResearch, website) => {
+  try {
+    const response = await apiClient.post('/alternatively/generate', {
+      customerId,
+      deepResearch,
+      website
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Failed to generate alternative:', error);
+    throw error;
+  }
+};
+
 apiClient.getCompetitorResearch = getCompetitorResearch;
 apiClient.login = login;
 apiClient.register = register;
@@ -119,5 +145,7 @@ apiClient.sendEmailCode = sendEmailCode;
 apiClient.resetPassword = resetPassword;
 apiClient.googleLogin = googleLogin;
 apiClient.googleCallback = googleCallback;
+apiClient.getAlternativeStatus = getAlternativeStatus;
+apiClient.generateAlternative = generateAlternative;
 
 export default apiClient;
