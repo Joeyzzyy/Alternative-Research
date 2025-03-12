@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Input, Button, Card, Spin, message, Tag, Tooltip, Avatar, ConfigProvider, Pagination } from 'antd';
 import { SearchOutlined, ClearOutlined, ArrowRightOutlined, InfoCircleOutlined, SendOutlined, UserOutlined, RobotOutlined } from '@ant-design/icons';
 import apiClient from '../../../lib/api/index.js';
+import BrowserSimulator from '../BrowserSimulator';
 
 // 添加任务状态常量
 const TASK_STATUS = {
@@ -51,6 +52,7 @@ class TaskManager {
     this.pageSize = 300;
     this.sourcesPollingInterval = null;  // 添加 sources 轮询间隔
     this.lastSourceCount = 0;  // 用于追踪 sources 数量变化
+    this.onBrowserUpdate = null;
   }
 
   // 初始化新的研究任务流程
@@ -94,9 +96,19 @@ class TaskManager {
           this.hasCompletionMessage = true;
           
           try {
-            // 获取最终分析结果
             const resultResponse = await this.apiClient.getAlternativeResult(this.websiteId);
             const finalResult = resultResponse?.data;
+            
+            // 解析结果数组
+            let competitors = [];
+            if (finalResult) {
+              try {
+                competitors = Array.isArray(finalResult) ? finalResult : JSON.parse(finalResult);
+              } catch (e) {
+                console.error('Failed to parse result:', e);
+                competitors = [];
+              }
+            }
             
             this.onMessageUpdate?.(prevMessages => {
               const updatedMessages = prevMessages.map(msg => ({
@@ -109,19 +121,35 @@ class TaskManager {
                 {
                   type: 'agent',
                   agentId: 3, // Youssef
-                  content: '🎉 Analysis complete! I\'ve prepared a comprehensive comparison of all products. Joey will now present the final insights to you.',
+                  content: '🎉 Analysis complete! I\'ve prepared a comprehensive comparison of all products.',
                   isThinking: false
                 },
                 {
                   type: 'agent',
                   agentId: 1, // Joey
-                  content: finalResult 
-                    ? `📊 Here's what I found:\n\n${typeof finalResult === 'string' ? finalResult : JSON.stringify(finalResult, null, 2)}`
-                    : '❌ I apologize, but I couldn\'t retrieve the final analysis results. Would you like to try again?',
+                  content: competitors.length > 0 
+                    ? `✨ Great! I've found ${competitors.length} relevant alternatives for you. I've opened them in the browser panel for you to explore. Would you like to know more specific details about any of them?`
+                    : '❌ I apologize, but I couldn\'t find any valid alternatives at this moment. Would you like to try with a different domain?',
                   isThinking: false
                 }
               ];
             });
+
+            // 如果有竞争对手，自动展开浏览器面板并更新标签
+            if (competitors.length > 0) {
+              // 通知外部组件更新浏览器状态
+              if (this.onBrowserUpdate) {
+                this.onBrowserUpdate({
+                  show: true,
+                  tabs: Array(competitors.length).fill(null).map((_, index) => ({
+                    id: index + 1,
+                    title: `Alternative ${index + 1}`,
+                    url: 'https://websitelm.com', // 临时使用固定URL
+                    active: index === 0
+                  }))
+                });
+              }
+            }
           } catch (error) {
             console.error('Failed to get final results:', error);
             this.onMessageUpdate?.(prevMessages => {
@@ -592,20 +620,8 @@ const ResearchTool = () => {
   ];
   
   // 添加 tabs 状态
-  const [tabs, setTabs] = useState([
-    {
-      id: 1,
-      title: 'websitelm.com',
-      url: 'https://websitelm.com',
-      active: true
-    },
-    {
-      id: 2,
-      title: 'EASYFin.ai',
-      url: 'https://easyfin.ai/',
-      active: false
-    }
-  ]);
+  const [tabs, setTabs] = useState([]);
+  const [activeTabId, setActiveTabId] = useState(null);
 
   // 修改右侧面板的 tab 状态
   const [rightPanelTab, setRightPanelTab] = useState('agents'); // 'agents', 'details', 或 'sources'
@@ -640,16 +656,58 @@ const ResearchTool = () => {
     }
   }, []);
 
-  // 切换 tab 的函数
-  const switchTab = (tabId) => {
-    setTabs(tabs.map(tab => ({
+  // 处理新消息,更新tabs
+  const handleNewMessage = (message) => {
+    if (message.details && message.details.length > 0) {
+      const newTabs = message.details.map((detail, index) => ({
+        id: detail.id || `tab-${index}`,
+        title: detail.title || `Page ${index + 1}`,
+        url: detail.url,
+        active: index === 0,
+        created_at: detail.created_at
+      }));
+      setTabs(newTabs);
+      setActiveTabId(newTabs[0].id);
+    }
+  };
+
+  // 添加更多的假数据
+  const mockTabs = [
+    { id: 1, title: 'websitelm.com', url: 'https://websitelm.com', active: true },
+    { id: 2, title: 'competitor1.com', url: 'https://competitor1.com', active: false },
+    { id: 3, title: 'competitor2.com', url: 'https://competitor2.com', active: false },
+    { id: 4, title: 'competitor3.com', url: 'https://competitor3.com', active: false },
+    { id: 5, title: 'competitor4.com', url: 'https://competitor4.com', active: false },
+    { id: 6, title: 'competitor5.com', url: 'https://competitor5.com', active: false },
+    { id: 7, title: 'alternative1.io', url: 'https://alternative1.io', active: false },
+    { id: 8, title: 'alternative2.io', url: 'https://alternative2.io', active: false },
+    { id: 9, title: 'alternative3.io', url: 'https://alternative3.io', active: false },
+    { id: 10, title: 'alternative4.io', url: 'https://alternative4.io', active: false },
+    { id: 11, title: 'solution1.app', url: 'https://solution1.app', active: false },
+    { id: 12, title: 'solution2.app', url: 'https://solution2.app', active: false },
+    { id: 13, title: 'solution3.app', url: 'https://solution3.app', active: false },
+    { id: 14, title: 'solution4.app', url: 'https://solution4.app', active: false },
+    { id: 15, title: 'platform1.co', url: 'https://platform1.co', active: false },
+    { id: 16, title: 'platform2.co', url: 'https://platform2.co', active: false },
+    { id: 17, title: 'platform3.co', url: 'https://platform3.co', active: false },
+    { id: 18, title: 'platform4.co', url: 'https://platform4.co', active: false },
+    { id: 19, title: 'service1.net', url: 'https://service1.net', active: false },
+    { id: 20, title: 'service2.net', url: 'https://service2.net', active: false },
+  ];
+
+  // 初始化时设置假数据
+  useEffect(() => {
+    setTabs(mockTabs);
+    setShowBrowser(true); // 确保浏览器区域显示
+  }, []);
+
+  // 修改 handleTabChange 函数
+  const handleTabChange = (tabId) => {
+    setTabs(prevTabs => prevTabs.map(tab => ({
       ...tab,
       active: tab.id === tabId
     })));
   };
-
-  // 获取当前激活的 tab
-  const activeTab = tabs.find(tab => tab.active);
 
   // 修改域名验证函数，使其更严格
   const validateDomain = (domain) => {
@@ -752,6 +810,12 @@ Could you please provide a valid domain name? For example: "websitelm.com"`,
       } else {
         setMessages(prev => [...prev, messageUpdater]);
       }
+    };
+
+    // 初始化 TaskManager 时添加浏览器更新回调
+    taskManager.onBrowserUpdate = ({ show, tabs }) => {
+      setShowBrowser(show);
+      setTabs(tabs);
     };
 
     return () => {
@@ -922,7 +986,6 @@ I've loaded these websites in the browser panel for you to explore. Would you li
   };
 
   const renderChatMessage = (message, index) => {
-    // 所有非用户消息都作为agent类型处理
     if (message.type !== 'user') {
       const agent = agents.find(a => a.id === message.agentId) || agents[0];
       return (
@@ -940,7 +1003,7 @@ I've loaded these websites in the browser panel for you to explore. Would you li
                  style={{animation: 'slideInRight 0.4s ease-out forwards'}}>
               <div className="text-xs font-medium text-blue-300 mb-1 flex items-center">
                 <span className="mr-1">{agent.name}</span>
-                <span className="text-xs px-1.5 py-0.5 bg-blue-500/20 text-blue-300 rounded-full animate-pulse">
+                <span className="text-[10px] px-1.5 py-0.5 bg-blue-500/20 text-blue-300 rounded-full animate-pulse">
                   {agent.role}
                 </span>
               </div>
@@ -1283,8 +1346,13 @@ I've loaded these websites in the browser panel for you to explore. Would you li
             <div className="flex justify-between items-start">
               <div className="flex-1">
                 <h4 className="font-medium text-purple-200 text-xs">{title || "Agent Start Working"}</h4>
-                <div className="text-xs text-gray-400">
-                  Type: {node_type || "Workflow Started"} | Event: {event}
+                <div className="flex items-center justify-between mt-1">
+                  <div className="text-xs text-gray-400">
+                    Type: {node_type || "Workflow Started"} | Event: {event}
+                  </div>
+                  <div className="text-[10px] text-gray-500">
+                    {new Date(created_at).toLocaleString()}
+                  </div>
                 </div>
               </div>
               <div className="flex items-center space-x-2">
@@ -1314,9 +1382,6 @@ I've loaded these websites in the browser panel for you to explore. Would you li
               <div className="px-3 pb-3">
                 <div className="text-xs text-gray-300 break-words whitespace-pre-wrap bg-gray-900/50 p-2 rounded">
                   {outputContent}
-                </div>
-                <div className="text-xs text-gray-500 mt-2">
-                  {new Date(created_at).toLocaleString()}
                 </div>
               </div>
             )}
@@ -1416,8 +1481,12 @@ I've loaded these websites in the browser panel for you to explore. Would you li
                   deepResearchMode 
                     ? 'bg-purple-500/30 text-purple-200' 
                     : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
-                }`}
-                onClick={toggleDeepResearchMode}
+                } ${loading || isMessageSending ? 'opacity-50 cursor-not-allowed' : ''}`}
+                onClick={() => {
+                  if (!loading && !isMessageSending) {
+                    toggleDeepResearchMode();
+                  }
+                }}
               >
                 <span className={`w-3 h-3 rounded-full mr-1.5 transition-colors ${
                   deepResearchMode ? 'bg-purple-400' : 'bg-gray-500'
@@ -1478,33 +1547,14 @@ I've loaded these websites in the browser panel for you to explore. Would you li
             </div>
           </div>
           
-          {/* 中间浏览器区域 */}
-          <div className={`${showBrowser ? 'w-3/5' : 'hidden'} transition-all duration-300 ease-in-out 
-                           bg-white/5 backdrop-blur-lg rounded-2xl border border-gray-300/20 shadow-xl flex flex-col h-full relative`}>
-            {/* 移动显示/隐藏按钮到顶部 */}
-            <div className="absolute -left-3 top-2 z-10">
-              <button
-                onClick={() => setShowBrowser(!showBrowser)}
-                className="p-1 bg-gray-800 hover:bg-gray-700 rounded-full shadow-lg transition-colors"
-              >
-                <svg
-                  className={`w-4 h-4 text-gray-400 transform transition-transform duration-200 ${showBrowser ? 'rotate-180' : ''}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-            </div>
-
-            {/* 内容区域 */}
-            <div className="flex-1 overflow-auto p-4">
-              {/* 内容区域 */}
-              <div className="flex-1 overflow-auto p-4">
-                {/* ... existing content ... */}
-              </div>
-            </div>
+          {/* 中间浏览器区域 - 始终显示 */}
+          <div className="w-3/5 transition-all duration-300 ease-in-out 
+                    bg-white/5 backdrop-blur-lg rounded-2xl border border-gray-300/20 shadow-xl flex flex-col h-full relative">
+            <BrowserSimulator 
+              url={tabs.find(tab => tab.active)?.url}
+              tabs={tabs}
+              onTabChange={handleTabChange}
+            />
           </div>
           
           {/* 右侧分析结果栏 */}

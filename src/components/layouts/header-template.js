@@ -174,6 +174,9 @@ export default function Header() {
         setShowLoginModal(false);
         
         showNotification('Login successful!', 'success');
+
+        // 添加页面刷新
+        window.location.reload();
       }
     } catch (error) {
       console.error("Login failed:", error);
