@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
-import { Input, Button, Card, Spin, message, Tag, Tooltip, Avatar, ConfigProvider } from 'antd';
+import { Input, Button, Card, Spin, message, Tag, Tooltip, Avatar, ConfigProvider, Pagination } from 'antd';
 import { SearchOutlined, ClearOutlined, ArrowRightOutlined, InfoCircleOutlined, SendOutlined, UserOutlined, RobotOutlined } from '@ant-design/icons';
 import apiClient from '../../../lib/api/index.js';
 
@@ -45,6 +45,10 @@ class TaskManager {
     this.hasXavierStartMessage = false;  // 新增
     this.hasYoussefStartMessage = false; // 新增
     this.pollingInterval = null;
+    this.detailPollingInterval = null;
+    this.lastDetailCount = 0;  // 用于追踪detail数量变化
+    this.currentPage = 1;
+    this.pageSize = 300;
   }
 
   // 初始化新的研究任务流程
@@ -57,6 +61,7 @@ class TaskManager {
     
     // 开始轮询所有任务状态
     this.startPolling();
+    this.startDetailPolling();
   }
 
   // 修改轮询方法以处理所有任务
@@ -295,6 +300,14 @@ class TaskManager {
     this.hasYoussefStartMessage = false;
     this.hasFailureMessage = false;
     this.lastProcessedState = null;
+    
+    if (this.detailPollingInterval) {
+      clearInterval(this.detailPollingInterval);
+      this.detailPollingInterval = null;
+    }
+    
+    this.lastDetailCount = 0;
+    this.currentPage = 1;
   }
 
   // 获取所有任务的状态
@@ -419,6 +432,57 @@ Please try the analysis again with the website URL.`,
         };
     }
   }
+
+  // 添加detail轮询方法
+  startDetailPolling() {
+    if (this.detailPollingInterval) return;
+
+    const pollDetails = async () => {
+      try {
+        const response = await this.apiClient.getAlternativeDetail(
+          this.websiteId,
+          {
+            planningId: this.planningId,
+            page: 1,
+            limit: 300
+          }
+        );
+
+        console.log('API Response:', response);
+
+        // 确保正确获取数据
+        const details = response?.data || [];
+        const hasNewData = details.length > 0;
+
+        console.log('Parsed details:', details);
+
+        if (Array.isArray(details)) {
+          if (hasNewData) {
+            if (this.onDetailsUpdate) {
+              this.onDetailsUpdate(details, hasNewData);
+            }
+          } else {
+            if (this.onDetailsUpdate) {
+              this.onDetailsUpdate(details, false);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error polling details:', error);
+      }
+    };
+
+    this.detailPollingInterval = setInterval(pollDetails, 5000); // Poll every 5 seconds
+    pollDetails(); // Execute immediately for first time
+  }
+
+  // 在任务完成或失败时停止detail轮询
+  stopDetailPolling() {
+    if (this.detailPollingInterval) {
+      clearInterval(this.detailPollingInterval);
+      this.detailPollingInterval = null;
+    }
+  }
 }
 
 const ResearchTool = () => {
@@ -484,6 +548,15 @@ const ResearchTool = () => {
 
   // Add websiteId state
   const [currentWebsiteId, setCurrentWebsiteId] = useState(null);
+
+  // 添加detail相关状态
+  const [detailsData, setDetailsData] = useState([]);
+  const [totalDetails, setTotalDetails] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(300);
+
+  // 将 expandedNodes 状态移到组件顶层
+  const [expandedNodes, setExpandedNodes] = useState({});
 
   // 在组件加载时检查登录状态
   useEffect(() => {
@@ -581,9 +654,13 @@ Could you please provide a valid domain name? For example: "websitelm.com"`
       updateUIForTask(taskType, task);
     };
 
-    taskManager.onDetailsUpdate = (details) => {
-      // 更新详情面板
+    taskManager.onDetailsUpdate = (details, hasNewData) => {
       setDetailsData(details);
+      
+      // 如果有新数据且不在 details tab，自动切换
+      if (hasNewData && rightPanelTab !== 'details') {
+        setRightPanelTab('details');
+      }
     };
 
     taskManager.onSourcesUpdate = (sources) => {
@@ -747,6 +824,9 @@ I've loaded these websites in the browser panel for you to explore. Would you li
       
       setIsMessageSending(false);
     }, 500);
+
+    // 在任务完成时停止detail轮询
+    taskManager.stopDetailPolling();
   };
   
   const formatUrl = (input) => {
@@ -856,9 +936,6 @@ I've loaded these websites in the browser panel for you to explore. Would you li
     }
   ];
 
-  // 示例 details 数据 - 重构为处理过程
-  const detailsData = [];
-
   // 示例 sources 数据 - 简化为URL列表
   const sourcesData = [
     {
@@ -896,36 +973,6 @@ I've loaded these websites in the browser panel for you to explore. Would you li
             </div>
           </div>
           <p className="text-xs text-purple-200 leading-relaxed">{agent.description}</p>
-        </div>
-      ))}
-    </div>
-  );
-
-  // 渲染 details 内容
-  const renderDetails = () => (
-    <div className="space-y-3">
-      {detailsData.map(detail => (
-        <div key={detail.id} className="bg-white/5 rounded-lg p-3">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="text-xl">{detail.agentAvatar}</div>
-            <div className="flex-1">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-purple-100">{detail.agentName}</span>
-                <span className="text-xs text-purple-300">{detail.timestamp}</span>
-              </div>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs text-purple-200">{detail.step}</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${
-                  detail.status === 'Completed' ? 'bg-green-500/20 text-green-300' :
-                  detail.status === 'In Progress' ? 'bg-blue-500/20 text-blue-300' :
-                  'bg-gray-500/20 text-gray-300'
-                }`}>
-                  {detail.status}
-                </span>
-              </div>
-            </div>
-          </div>
-          <p className="text-xs text-purple-200 leading-relaxed">{detail.description}</p>
         </div>
       ))}
     </div>
@@ -997,7 +1044,7 @@ I've loaded these websites in the browser panel for you to explore. Would you li
     }, 1000);
   };
 
-  // 在组件内部添加样式定义
+  // 添加新的动画样式
   const animationStyles = `
     @keyframes fadeIn {
       from { opacity: 0; }
@@ -1019,6 +1066,16 @@ I've loaded these websites in the browser panel for you to explore. Would you li
     @keyframes slideInLeft {
       from { transform: translateX(20px); opacity: 0; }
       to { transform: translateX(0); opacity: 1; }
+    }
+
+    @keyframes slideDown {
+      from { max-height: 0; opacity: 0; }
+      to { max-height: 500px; opacity: 1; }
+    }
+
+    @keyframes slideUp {
+      from { max-height: 500px; opacity: 1; }
+      to { max-height: 0; opacity: 0; }
     }
   `;
 
@@ -1069,10 +1126,138 @@ I've loaded these websites in the browser panel for you to explore. Would you li
     }
   };
 
+  // 修改分页处理函数
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    // 更新TaskManager中的当前页
+    if (taskManager) {
+      taskManager.currentPage = page;
+      // 立即触发一次数据获取
+      taskManager.pollDetails();
+    }
+  };
+
+  // 修改 renderDetails 函数，将状态管理移到外部
+  const renderDetails = (details) => {
+    if (!details || details.length === 0) {
+      return (
+        <div className="text-gray-500 text-center py-4 text-xs">
+          No details available
+        </div>
+      );
+    }
+
+    const toggleNode = (id) => {
+      setExpandedNodes(prev => ({
+        ...prev,
+        [id]: !prev[id]
+      }));
+    };
+
+    return details.map((detail, index) => {
+      const { data, event, created_at } = detail;
+      const { title, node_type, status, outputs } = data || {};
+      const nodeId = detail._id || index;
+      const isExpanded = expandedNodes[nodeId];
+      
+      let statusColor = "text-gray-500";
+      if (status === "succeeded") {
+        statusColor = "text-green-500";
+      } else if (status === "failed") {
+        statusColor = "text-red-500";
+      }
+
+      // 处理输出内容
+      let outputContent = "";
+      if (outputs) {
+        try {
+          const outputObj = typeof outputs === 'string' ? JSON.parse(outputs) : outputs;
+          
+          // 处理不同类型的输出
+          if (typeof outputObj === 'string') {
+            outputContent = outputObj;
+          } else if (outputObj.text) {
+            outputContent = outputObj.text;
+          } else if (outputObj.result) {
+            // 如果 result 是数组或对象，将其转换为格式化的字符串
+            outputContent = Array.isArray(outputObj.result) || typeof outputObj.result === 'object'
+              ? JSON.stringify(outputObj.result, null, 2)
+              : outputObj.result;
+          } else if (outputObj.__is_success !== undefined) {
+            // 处理特殊的成功/失败对象
+            outputContent = outputObj.__reason || 
+              (outputObj.url ? `URL: ${outputObj.url}` : JSON.stringify(outputObj, null, 2));
+          } else {
+            // 如果是其他类型的对象，转换为格式化的字符串
+            outputContent = JSON.stringify(outputObj, null, 2);
+          }
+        } catch (e) {
+          // 如果解析失败，直接显示原始输出
+          outputContent = typeof outputs === 'string' ? outputs : JSON.stringify(outputs, null, 2);
+        }
+      }
+
+      return (
+        <div 
+          key={nodeId} 
+          className="mb-3 border border-gray-700 rounded-lg bg-gray-800/50 overflow-hidden transition-all duration-300 ease-in-out"
+          style={{animation: 'fadeIn 0.3s ease-out'}}
+        >
+          <div 
+            className="p-3 cursor-pointer hover:bg-gray-700/30 transition-colors"
+            onClick={() => toggleNode(nodeId)}
+          >
+            <div className="flex justify-between items-start">
+              <div className="flex-1">
+                <h4 className="font-medium text-purple-200 text-xs">{title || "Unnamed Node"}</h4>
+                <div className="text-xs text-gray-400">
+                  Type: {node_type || "Unknown"} | Event: {event}
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className={`text-xs ${statusColor}`}>
+                  {status || "In Progress"}
+                </div>
+                <svg 
+                  className={`w-4 h-4 text-gray-400 transform transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+          </div>
+          
+          <div 
+            className={`overflow-hidden transition-all duration-300 ease-in-out`}
+            style={{
+              maxHeight: isExpanded ? '500px' : '0',
+              opacity: isExpanded ? 1 : 0
+            }}
+          >
+            {outputContent && (
+              <div className="px-3 pb-3">
+                <div className="text-xs text-gray-300 break-words whitespace-pre-wrap bg-gray-900/50 p-2 rounded">
+                  {outputContent}
+                </div>
+                <div className="text-xs text-gray-500 mt-2">
+                  {new Date(created_at).toLocaleString()}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    });
+  };
+
   return (
     <ConfigProvider wave={{ disabled: true }}>
-      <div className="w-full min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 text-white flex items-center justify-center p-4 relative overflow-hidden" style={{ paddingTop: "80px" }}>
-        {/* 添加内联样式 */}
+      <div className="w-full min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 
+                    text-white flex items-center justify-center p-4 relative overflow-hidden" 
+         style={{ paddingTop: "80px" }}>
         <style>{animationStyles}</style>
         
         <div className="absolute inset-0" style={{ paddingTop: "80px" }}>
@@ -1221,73 +1406,57 @@ I've loaded these websites in the browser panel for you to explore. Would you li
           </div>
           
           {/* 中间浏览器区域 */}
-          {showBrowser && (
-            <div className="w-3/5 bg-gray-800 backdrop-blur-lg rounded-2xl border border-gray-300/20 shadow-xl flex flex-col h-full">
-              <div className="h-10 flex items-center px-4 border-b border-gray-300/20">
-                <div className="flex gap-2 mr-4">
-                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                  <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                </div>
-                <div className="flex items-center flex-1">
-                  {tabs.map((tab) => (
-                    <div
-                      key={tab.id}
-                      onClick={() => switchTab(tab.id)}
-                      className={`                      flex items-center h-7 px-4 text-xs cursor-pointer
-                      rounded-t-md transition-colors mr-1
-                      ${tab.active 
-                        ? 'bg-white text-gray-800' 
-                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                      }
-                    `}
-                  >
-                    <span className="truncate">{tab.title}</span>
-                  </div>
-                  ))}
-                </div>
-              </div>
-              
-              {/* iframe 内容区 */}
-              <div className="flex-1 bg-white">
-                <iframe
-                  key={activeTab?.id}
-                  src={activeTab?.url}
-                  className="w-full h-full border-none"
-                  title={`Tab ${activeTab?.id}`}
-                  sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-                  referrerPolicy="no-referrer"
-                />
-              </div>
-              
-              {/* 简化的隐藏按钮 */}
+          <div className={`${showBrowser ? 'w-3/5' : 'hidden'} transition-all duration-300 ease-in-out 
+                           bg-white/5 backdrop-blur-lg rounded-2xl border border-gray-300/20 shadow-xl flex flex-col h-full relative`}>
+            {/* 移动显示/隐藏按钮到顶部 */}
+            <div className="absolute -left-3 top-2 z-10">
               <button
-                onClick={() => setShowBrowser(false)}
-                className="absolute left-4 bottom-4 bg-white/10 text-purple-100 
-                          rounded-md px-2 py-1 text-xs"
+                onClick={() => setShowBrowser(!showBrowser)}
+                className="p-1 bg-gray-800 hover:bg-gray-700 rounded-full shadow-lg transition-colors"
               >
-                Hide
+                <svg
+                  className={`w-4 h-4 text-gray-400 transform transition-transform duration-200 ${showBrowser ? 'rotate-180' : ''}`}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
               </button>
             </div>
-          )}
+
+            {/* 内容区域 */}
+            <div className="flex-1 overflow-auto p-4">
+              {/* 内容区域 */}
+              <div className="flex-1 overflow-auto p-4">
+                {/* ... existing content ... */}
+              </div>
+            </div>
+          </div>
           
           {/* 右侧分析结果栏 */}
           <div className="w-1/5 bg-white/5 backdrop-blur-lg rounded-2xl border border-gray-300/20 shadow-xl 
-                          flex flex-col h-full relative"
-          >
-            {/* 简化的显示按钮 */}
-            {!showBrowser && (
-              <button
-                onClick={() => setShowBrowser(true)}
-                className="absolute left-4 bottom-4 bg-white/10 text-purple-100 
-                          rounded-md px-2 py-1 text-xs"
-              >
-                Show
-              </button>
-            )}
-            
-            {/* Tab 切换区域 */}
-            <div className="flex border-b border-gray-300/20">
+                          flex flex-col h-full relative">
+            {/* 将 Show 按钮移到 Agents tab 的左边 */}
+            <div className="flex items-center border-b border-gray-300/20">
+              {!showBrowser && (
+                <div className="pl-2">
+                  <button
+                    onClick={() => setShowBrowser(true)}
+                    className="p-1.5 bg-gray-800 hover:bg-gray-700 rounded-full shadow-lg transition-colors"
+                  >
+                    <svg
+                      className="w-4 h-4 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+              
               <button
                 onClick={() => setRightPanelTab('agents')}
                 className={`flex-1 h-10 flex items-center justify-center text-xs font-medium transition-colors
@@ -1320,7 +1489,7 @@ I've loaded these websites in the browser panel for you to explore. Would you li
               </button>
             </div>
             
-            {/* Tab 内容区域 - 移除网格布局，使用单列布局 */}
+            {/* Tab 内容区域 */}
             <div className="flex-1 overflow-y-auto">
               {rightPanelTab === 'agents' && (
                 <div className="p-3">
@@ -1329,9 +1498,9 @@ I've loaded these websites in the browser panel for you to explore. Would you li
               )}
               
               {rightPanelTab === 'details' && (
-                <div className="p-3">
-                  {renderDetails()}
-                </div>
+                <>
+                  {renderDetails(detailsData)}
+                </>
               )}
               
               {rightPanelTab === 'sources' && (

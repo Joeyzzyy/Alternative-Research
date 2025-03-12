@@ -138,6 +138,35 @@ const generateAlternative = async (customerId, deepResearch, website) => {
   }
 };
 
+// 获取竞品分析详情
+const getAlternativeDetail = async (websiteId, options = {}) => {
+  try {
+    const { planningId, page, limit } = options;
+    const params = {};
+    
+    if (planningId) params.planningId = planningId;
+    if (page !== undefined) params.page = page;
+    if (limit !== undefined) params.limit = limit;
+    
+    const response = await apiClient.get(`/alternatively/${websiteId}/detail`, { params });
+    return response.data;
+  } catch (error) {
+    console.error('Failed to get alternative details:', error);
+    throw error;
+  }
+};
+
+// 获取分析竞品的来源
+const getAlternativeSources = async (websiteId) => {
+  try {
+    const response = await apiClient.get(`/alternatively/${websiteId}/sources`);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to get alternative sources:', error);
+    throw error;
+  }
+};
+
 apiClient.getCompetitorResearch = getCompetitorResearch;
 apiClient.login = login;
 apiClient.register = register;
@@ -147,5 +176,7 @@ apiClient.googleLogin = googleLogin;
 apiClient.googleCallback = googleCallback;
 apiClient.getAlternativeStatus = getAlternativeStatus;
 apiClient.generateAlternative = generateAlternative;
+apiClient.getAlternativeDetail = getAlternativeDetail;
+apiClient.getAlternativeSources = getAlternativeSources;
 
 export default apiClient;
