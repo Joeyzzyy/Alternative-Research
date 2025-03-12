@@ -702,9 +702,9 @@ const ResearchTool = () => {
 • No special characters (except hyphens between words)
 • Must include a valid top-level domain (.com, .org, etc.)
 
-Could you please provide a valid domain name? For example: "websitelm.com"`
+Could you please provide a valid domain name? For example: "websitelm.com"`,
+          isThinking: false
         }]);
-        // 消息发送完毕，重置状态
         setIsMessageSending(false);
       }, 500);
       return;
@@ -766,7 +766,14 @@ Could you please provide a valid domain name? For example: "websitelm.com"`
     const storedCustomerId = localStorage.getItem('alternativelyCustomerId');
     
     if (!token || !storedCustomerId) {
-      message.error('Please login to get access to this feature');
+      // 不使用 message.error，而是通过消息对话的方式显示错误
+      setMessages(prev => [...prev, {
+        type: 'agent',
+        agentId: 1,
+        content: '⚠️ Please login to access this feature. Your session may have expired.',
+        isThinking: false
+      }]);
+      
       localStorage.removeItem('alternativelyAccessToken');
       localStorage.removeItem('alternativelyCustomerId');
       return;
@@ -793,23 +800,21 @@ Could you please provide a valid domain name? For example: "websitelm.com"`
 
       if (response?.code === 200 && response?.data?.websiteId) {
         setCurrentWebsiteId(response.data.websiteId);
-        
-        // 修改 TaskManager 初始化方式，传入当前消息
         taskManager.initializeResearch(response.data.websiteId, true);
       } else {
         throw new Error('Invalid response data');
       }
     } catch (error) {
       console.error('Failed to start research:', error);
-      message.error('Analysis failed, please try again later');
+      // 使用消息对话方式显示错误
+      setMessages(prev => [...prev, {
+        type: 'agent',
+        agentId: 1,
+        content: '❌ I apologize, but I encountered an error while starting the analysis. Please try again later.',
+        isThinking: false
+      }]);
       setLoading(false);
       setWorkflowStage(null);
-      
-      // 在错误情况下更新消息状态
-      setMessages(prev => prev.map(msg => ({
-        ...msg,
-        isThinking: false
-      })));
     }
   };
 
