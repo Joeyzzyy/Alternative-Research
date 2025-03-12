@@ -1282,9 +1282,9 @@ I've loaded these websites in the browser panel for you to explore. Would you li
           >
             <div className="flex justify-between items-start">
               <div className="flex-1">
-                <h4 className="font-medium text-purple-200 text-xs">{title || "Unnamed Node"}</h4>
+                <h4 className="font-medium text-purple-200 text-xs">{title || "Agent Start Working"}</h4>
                 <div className="text-xs text-gray-400">
-                  Type: {node_type || "Unknown"} | Event: {event}
+                  Type: {node_type || "Workflow Started"} | Event: {event}
                 </div>
               </div>
               <div className="flex items-center space-x-2">
