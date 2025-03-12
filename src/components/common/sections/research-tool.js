@@ -671,42 +671,13 @@ const ResearchTool = () => {
     }
   };
 
-  // 添加更多的假数据
-  const mockTabs = [
-    { id: 1, title: 'websitelm.com', url: 'https://websitelm.com', active: true },
-    { id: 2, title: 'competitor1.com', url: 'https://competitor1.com', active: false },
-    { id: 3, title: 'competitor2.com', url: 'https://competitor2.com', active: false },
-    { id: 4, title: 'competitor3.com', url: 'https://competitor3.com', active: false },
-    { id: 5, title: 'competitor4.com', url: 'https://competitor4.com', active: false },
-    { id: 6, title: 'competitor5.com', url: 'https://competitor5.com', active: false },
-    { id: 7, title: 'alternative1.io', url: 'https://alternative1.io', active: false },
-    { id: 8, title: 'alternative2.io', url: 'https://alternative2.io', active: false },
-    { id: 9, title: 'alternative3.io', url: 'https://alternative3.io', active: false },
-    { id: 10, title: 'alternative4.io', url: 'https://alternative4.io', active: false },
-    { id: 11, title: 'solution1.app', url: 'https://solution1.app', active: false },
-    { id: 12, title: 'solution2.app', url: 'https://solution2.app', active: false },
-    { id: 13, title: 'solution3.app', url: 'https://solution3.app', active: false },
-    { id: 14, title: 'solution4.app', url: 'https://solution4.app', active: false },
-    { id: 15, title: 'platform1.co', url: 'https://platform1.co', active: false },
-    { id: 16, title: 'platform2.co', url: 'https://platform2.co', active: false },
-    { id: 17, title: 'platform3.co', url: 'https://platform3.co', active: false },
-    { id: 18, title: 'platform4.co', url: 'https://platform4.co', active: false },
-    { id: 19, title: 'service1.net', url: 'https://service1.net', active: false },
-    { id: 20, title: 'service2.net', url: 'https://service2.net', active: false },
-  ];
-
-  // 初始化时设置假数据
-  useEffect(() => {
-    setTabs(mockTabs);
-    setShowBrowser(true); // 确保浏览器区域显示
-  }, []);
-
-  // 修改 handleTabChange 函数
+  // 处理标签页切换
   const handleTabChange = (tabId) => {
-    setTabs(prevTabs => prevTabs.map(tab => ({
+    setTabs(tabs.map(tab => ({
       ...tab,
       active: tab.id === tabId
     })));
+    setActiveTabId(tabId);
   };
 
   // 修改域名验证函数，使其更严格
@@ -1547,9 +1518,10 @@ I've loaded these websites in the browser panel for you to explore. Would you li
             </div>
           </div>
           
-          {/* 中间浏览器区域 - 始终显示 */}
-          <div className="w-3/5 transition-all duration-300 ease-in-out 
-                    bg-white/5 backdrop-blur-lg rounded-2xl border border-gray-300/20 shadow-xl flex flex-col h-full relative">
+          {/* 中间浏览器区域 */}
+          <div className={`${showBrowser ? 'w-3/5' : 'hidden'} transition-all duration-300 ease-in-out 
+                           bg-white/5 backdrop-blur-lg rounded-2xl border border-gray-300/20 shadow-xl flex flex-col h-full relative`}>
+            {/* 直接渲染 BrowserSimulator，移除外层的 tab 栏 */}
             <BrowserSimulator 
               url={tabs.find(tab => tab.active)?.url}
               tabs={tabs}
