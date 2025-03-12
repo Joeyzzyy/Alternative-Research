@@ -167,6 +167,17 @@ const getAlternativeSources = async (websiteId) => {
   }
 };
 
+// 获取竞品分析结果
+const getAlternativeResult = async (websiteId) => {
+  try {
+    const response = await apiClient.get(`/alternatively/${websiteId}/result`);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to get alternative result:', error);
+    throw error;
+  }
+};
+
 apiClient.getCompetitorResearch = getCompetitorResearch;
 apiClient.login = login;
 apiClient.register = register;
@@ -178,5 +189,6 @@ apiClient.getAlternativeStatus = getAlternativeStatus;
 apiClient.generateAlternative = generateAlternative;
 apiClient.getAlternativeDetail = getAlternativeDetail;
 apiClient.getAlternativeSources = getAlternativeSources;
+apiClient.getAlternativeResult = getAlternativeResult;
 
 export default apiClient;

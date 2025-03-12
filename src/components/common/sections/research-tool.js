@@ -49,6 +49,8 @@ class TaskManager {
     this.lastDetailCount = 0;  // 用于追踪detail数量变化
     this.currentPage = 1;
     this.pageSize = 300;
+    this.sourcesPollingInterval = null;  // 添加 sources 轮询间隔
+    this.lastSourceCount = 0;  // 用于追踪 sources 数量变化
   }
 
   // 初始化新的研究任务流程
@@ -62,6 +64,12 @@ class TaskManager {
     // 开始轮询所有任务状态
     this.startPolling();
     this.startDetailPolling();
+    this.startSourcePolling();  // 添加 sources 轮询
+  }
+
+  // 检查是否所有任务都完成
+  areAllTasksCompleted(plannings) {
+    return plannings.every(planning => planning.status === 'finished');
   }
 
   // 修改轮询方法以处理所有任务
@@ -80,6 +88,67 @@ class TaskManager {
         }
         
         this.lastProcessedState = currentState;
+
+        // 检查所有任务完成状态
+        if (this.areAllTasksCompleted(plannings) && !this.hasCompletionMessage) {
+          this.hasCompletionMessage = true;
+          
+          try {
+            // 获取最终分析结果
+            const resultResponse = await this.apiClient.getAlternativeResult(this.websiteId);
+            const finalResult = resultResponse?.data;
+            
+            this.onMessageUpdate?.(prevMessages => {
+              const updatedMessages = prevMessages.map(msg => ({
+                ...msg,
+                isThinking: false
+              }));
+
+              return [
+                ...updatedMessages,
+                {
+                  type: 'agent',
+                  agentId: 3, // Youssef
+                  content: '🎉 Analysis complete! I\'ve prepared a comprehensive comparison of all products. Joey will now present the final insights to you.',
+                  isThinking: false
+                },
+                {
+                  type: 'agent',
+                  agentId: 1, // Joey
+                  content: finalResult 
+                    ? `📊 Here's what I found:\n\n${typeof finalResult === 'string' ? finalResult : JSON.stringify(finalResult, null, 2)}`
+                    : '❌ I apologize, but I couldn\'t retrieve the final analysis results. Would you like to try again?',
+                  isThinking: false
+                }
+              ];
+            });
+          } catch (error) {
+            console.error('Failed to get final results:', error);
+            this.onMessageUpdate?.(prevMessages => {
+              const updatedMessages = prevMessages.map(msg => ({
+                ...msg,
+                isThinking: false
+              }));
+              return [
+                ...updatedMessages,
+                {
+                  type: 'agent',
+                  agentId: 1,
+                  content: '❌ I apologize, but I encountered an error while retrieving the final results. Would you like to try again?',
+                  isThinking: false
+                }
+              ];
+            });
+          }
+
+          // 所有任务完成后立即清除轮询
+          this.clearAllTasks();
+          if (this.pollingInterval) {
+            clearInterval(this.pollingInterval);
+            this.pollingInterval = null;
+          }
+          return;
+        }
 
         // 检查失败状态
         const failedTask = plannings.find(p => p.status === 'failed');
@@ -172,36 +241,6 @@ class TaskManager {
           });
         }
 
-        // 检查所有任务完成状态
-        if (this.areAllTasksCompleted(plannings) && !this.hasCompletionMessage) {
-          this.hasCompletionMessage = true;
-          
-          this.onMessageUpdate?.(prevMessages => {
-            const updatedMessages = prevMessages.map(msg => ({
-              ...msg,
-              isThinking: false
-            }));
-
-            return [
-              ...updatedMessages,
-              {
-                type: 'agent',
-                agentId: 3, // Youssef
-                content: '🎉 Analysis complete! I\'ve prepared a comprehensive comparison of all products. Joey will now present the final insights to you.',
-                isThinking: false
-              }
-            ];
-          });
-
-          // 所有任务完成后立即清除轮询
-          this.clearAllTasks();
-          if (this.pollingInterval) {
-            clearInterval(this.pollingInterval);
-            this.pollingInterval = null;
-          }
-          return;
-        }
-
         // 更新任务状态
         plannings.forEach(planning => {
           const taskType = planning.planningName;
@@ -280,11 +319,6 @@ class TaskManager {
     }
   }
 
-  // 检查是否所有任务都完成
-  areAllTasksCompleted(plannings) {
-    return plannings.every(planning => planning.status === 'finished');
-  }
-
   // 清理所有任务
   clearAllTasks() {
     // 清除轮询间隔
@@ -308,6 +342,13 @@ class TaskManager {
     
     this.lastDetailCount = 0;
     this.currentPage = 1;
+    
+    if (this.sourcesPollingInterval) {
+      clearInterval(this.sourcesPollingInterval);
+      this.sourcesPollingInterval = null;
+    }
+    
+    this.lastSourceCount = 0;
   }
 
   // 获取所有任务的状态
@@ -483,6 +524,35 @@ Please try the analysis again with the website URL.`,
       this.detailPollingInterval = null;
     }
   }
+
+  // 添加 sources 轮询方法
+  startSourcePolling() {
+    if (this.sourcesPollingInterval) return;
+
+    const pollSources = async () => {
+      try {
+        const response = await this.apiClient.getAlternativeSources(this.websiteId);
+        
+        console.log('Sources API Response:', response);
+
+        // 确保正确获取数据
+        const sources = response?.data || [];
+        const hasNewData = sources.length > this.lastSourceCount;
+        this.lastSourceCount = sources.length;
+
+        if (Array.isArray(sources)) {
+          if (this.onSourcesUpdate) {
+            this.onSourcesUpdate(sources, hasNewData);
+          }
+        }
+      } catch (error) {
+        console.error('Error polling sources:', error);
+      }
+    };
+
+    this.sourcesPollingInterval = setInterval(pollSources, POLLING_INTERVALS.SOURCES);
+    pollSources(); // 立即执行第一次
+  }
 }
 
 const ResearchTool = () => {
@@ -557,6 +627,9 @@ const ResearchTool = () => {
 
   // 将 expandedNodes 状态移到组件顶层
   const [expandedNodes, setExpandedNodes] = useState({});
+
+  // 添加 sources 状态
+  const [sourcesData, setSourcesData] = useState([]);
 
   // 在组件加载时检查登录状态
   useEffect(() => {
@@ -663,9 +736,13 @@ Could you please provide a valid domain name? For example: "websitelm.com"`
       }
     };
 
-    taskManager.onSourcesUpdate = (sources) => {
-      // 更新来源面板
+    taskManager.onSourcesUpdate = (sources, hasNewData) => {
       setSourcesData(sources);
+      
+      // 如果有新数据且不在 sources tab，自动切换
+      if (hasNewData && rightPanelTab !== 'sources') {
+        setRightPanelTab('sources');
+      }
     };
 
     // 修改消息更新回调
@@ -936,28 +1013,6 @@ I've loaded these websites in the browser panel for you to explore. Would you li
     }
   ];
 
-  // 示例 sources 数据 - 简化为URL列表
-  const sourcesData = [
-    {
-      id: 1,
-      url: 'https://example.com/pricing',
-      title: 'Product Pricing Page',
-      timestamp: '2024-03-20 14:23'
-    },
-    {
-      id: 2,
-      url: 'https://example.com/features',
-      title: 'Product Features Overview',
-      timestamp: '2024-03-20 14:24'
-    },
-    {
-      id: 3,
-      url: 'https://example.com/api-docs',
-      title: 'API Documentation',
-      timestamp: '2024-03-20 14:25'
-    }
-  ];
-
   // 渲染 agents 卡片
   const renderAgents = () => (
     <div className="space-y-3">
@@ -978,27 +1033,40 @@ I've loaded these websites in the browser panel for you to explore. Would you li
     </div>
   );
 
-  // 渲染 sources 内容
+  // 修改 renderSources 函数，使用真实数据
   const renderSources = () => (
     <div className="space-y-2">
-      {sourcesData.map(source => (
-        <div key={source.id} className="bg-white/5 rounded-lg p-3">
-          <div className="flex items-center justify-between mb-1">
-            <a 
-              href={source.url} 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="text-xs text-purple-100 hover:text-purple-300 transition-colors truncate flex-1"
-            >
-              {source.title}
-            </a>
-            <span className="text-xs text-purple-400 ml-3">{source.timestamp}</span>
-          </div>
-          <div className="text-xs text-purple-400 truncate">
-            {source.url}
-          </div>
+      {sourcesData.length === 0 ? (
+        <div className="text-gray-500 text-center py-4 text-xs">
+          No sources available yet
         </div>
-      ))}
+      ) : (
+        sourcesData.map((source, index) => (
+          <div key={index} className="bg-white/5 rounded-lg p-3">
+            <div className="flex items-center justify-between mb-1">
+              <a 
+                href={source.url} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-xs text-purple-100 hover:text-purple-300 transition-colors truncate flex-1"
+              >
+                {source.title || 'Untitled Source'}
+              </a>
+              <span className="text-xs text-purple-400 ml-3">
+                {new Date(source.created_at).toLocaleString()}
+              </span>
+            </div>
+            <div className="text-xs text-purple-400 truncate">
+              {source.url}
+            </div>
+            {source.description && (
+              <div className="text-xs text-purple-200 mt-1">
+                {source.description}
+              </div>
+            )}
+          </div>
+        ))
+      )}
     </div>
   );
 
