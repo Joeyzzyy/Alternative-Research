@@ -615,7 +615,7 @@ const ResearchTool = () => {
     {
       type: 'agent',
       agentId: 1,
-      content: 'To get started, simply enter a product domain (e.g., websitelm.com) and I\'ll immediately begin finding the best alternatives and generate a comprehensive analysis tailored just for you.\n\nPro tip: Enable Deep Research mode for even more detailed insights and comprehensive analysis! Let\'s begin! 🚀'
+      content: '🔍 Enter a product domain (e.g., websitelm.com) and I\'ll find the best alternatives instantly.\n\n✨ I\'ll generate SEO-friendly Alternative Pages for your instant preview!\n\n💡 Pro tip: Enable Deep Research mode for more in-depth analysis! Let\'s begin! 🚀'
     }
   ];
   
@@ -1483,7 +1483,7 @@ I've loaded these websites in the browser panel for you to explore. Would you li
                   ref={inputRef}
                   placeholder={deepResearchMode 
                     ? "Enter website for comprehensive analysis..." 
-                    : "Enter your product's website URL (e.g., websitelm.com) to find alternatives"}
+                    : "Enter your product URL (e.g., websitelm.com) to find alternatives"}
                   value={userInput}
                   onChange={(e) => setUserInput(e.target.value)}
                   disabled={loading || isMessageSending}
@@ -1513,7 +1513,7 @@ I've loaded these websites in the browser panel for you to explore. Would you li
                 />
               </form>
               <div className="text-xs text-purple-300 mt-1.5">
-                Enter your product's website to discover alternatives and generate a comprehensive analysis
+                I'll find your highly-matched competitors and generate SEO-friendly Alternative Pages for your instant preview!
               </div>
             </div>
           </div>
