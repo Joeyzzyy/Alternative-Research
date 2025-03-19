@@ -1072,7 +1072,7 @@ I've loaded these websites in the browser panel for you to explore. Would you li
     </div>
   );
 
-  // 修改 renderSources 函数，使用真实数据
+  // 修改 renderSources 函数,使用真实数据结构
   const renderSources = () => (
     <div className="space-y-2">
       {sourcesData.length === 0 ? (
@@ -1082,27 +1082,16 @@ I've loaded these websites in the browser panel for you to explore. Would you li
       ) : (
         sourcesData.map((source, index) => (
           <div key={index} className="bg-white/5 rounded-lg p-3">
-            <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center justify-between">
               <a 
-                href={source.url} 
+                href={source.sourceURL}
                 target="_blank" 
                 rel="noopener noreferrer" 
                 className="text-xs text-purple-100 hover:text-purple-300 transition-colors truncate flex-1"
               >
-                {source.title || 'Untitled Source'}
+                {source.sourceURL}
               </a>
-              <span className="text-xs text-purple-400 ml-3">
-                {new Date(source.created_at).toLocaleString()}
-              </span>
             </div>
-            <div className="text-xs text-purple-400 truncate">
-              {source.url}
-            </div>
-            {source.description && (
-              <div className="text-xs text-purple-200 mt-1">
-                {source.description}
-              </div>
-            )}
           </div>
         ))
       )}
