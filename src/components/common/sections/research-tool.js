@@ -1297,6 +1297,10 @@ I've loaded these websites in the browser panel for you to explore. Would you li
     const groupedDetails = {};
     planningIds.forEach((planningId, index) => {
       groupedDetails[planningId] = details.filter(detail => detail.planningId === planningId);
+      // 设置默认展开状态
+      if (!expandedNodes[`section-${index}`]) {
+        setExpandedNodes(prev => ({...prev, [`section-${index}`]: true}));
+      }
     });
 
     // 根据顺序定义阶段标题
@@ -1308,7 +1312,7 @@ I've loaded these websites in the browser panel for you to explore. Would you li
 
     return planningIds.map((planningId, index) => {
       const nodeId = `section-${index}`; // 使用索引而不是 planningId
-      const isExpanded = expandedNodes[nodeId];
+      const isExpanded = expandedNodes[nodeId] !== false; // 默认为 true
       const title = stageTitles[index] || 'Unknown Stage';
       const groupDetails = groupedDetails[planningId];
 
