@@ -295,6 +295,62 @@ async function getPageData() {
           sectionId: "research-tool-1",
         },
         {
+          componentName: "SubscriptionCard",
+          sectionId: "pricing-1",
+          title: "Choose Your Plan",
+          subTitle: "Start free and scale as you grow. All plans come with a 14-day trial.",
+          bottomContent: {
+            plans: [
+              {
+                id: "basic",
+                name: "Basic",
+                price: {
+                  monthly: "29",
+                  yearly: "24"
+                },
+                discount: "20%",
+                description: "Perfect for individuals and small teams",
+                buttonText: "Start Free Trial",
+                features: [
+                  {
+                    title: "Core Features",
+                    items: [
+                      "Up to 5 AI tool comparisons",
+                      "Basic analytics",
+                      "Email support",
+                      "Access to basic templates"
+                    ]
+                  }
+                ]
+              },
+              {
+                id: "pro",
+                name: "Professional",
+                price: {
+                  monthly: "79",
+                  yearly: "63"
+                },
+                discount: "20%",
+                popular: true,
+                description: "Ideal for growing businesses",
+                buttonText: "Start Free Trial",
+                features: [
+                  {
+                    title: "Everything in Basic, plus",
+                    items: [
+                      "Unlimited AI tool comparisons",
+                      "Advanced analytics",
+                      "Priority support",
+                      "Custom templates",
+                      "API access"
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
           componentName: "ProductBenefitsWithBlocks",
           sectionId: "benefits-1",
           leftContent: {

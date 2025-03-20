@@ -5,7 +5,7 @@ import { Icon } from '@iconify/react';
 
 const ProductBenefitsWithFourBlocks = ({ data }) => {
   return (
-    <div className="bg-gradient-to-b from-white via-slate-50/80 to-white py-24 relative overflow-hidden">
+    <div className="bg-white py-24 relative overflow-hidden">
       {/* AI风格的背景装饰 */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_#818cf820_0%,_transparent_50%)]"></div>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_#6366f120_0%,_transparent_50%)]"></div>

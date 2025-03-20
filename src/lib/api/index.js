@@ -20,6 +20,25 @@ apiClient.interceptors.request.use(config => {
   return config;
 });
 
+// 添加响应拦截器处理token失效
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      // 触发一个自定义事件
+      const tokenExpiredEvent = new CustomEvent('tokenExpired');
+      window.dispatchEvent(tokenExpiredEvent);
+      
+      // 清除本地存储的token
+      localStorage.removeItem('alternativelyAccessToken');
+      localStorage.removeItem('alternativelyIsLoggedIn');
+      localStorage.removeItem('alternativelyCustomerEmail');
+      localStorage.removeItem('alternativelyCustomerId');
+    }
+    return Promise.reject(error);
+  }
+);
+
 const getCompetitorResearch = async (website, apiKey) => {
   try {
     const response = await apiClient.post('/competitor/research', {

@@ -8,11 +8,7 @@ const CallToAction = ({ data, theme = 'normal' }) => {
   };
 
   return (
-    <div className={`
-      ${getBgColor()}
-      ${themeConfig[theme].section.padding.wide}
-      relative overflow-hidden
-    `}>
+    <div className="bg-slate-50 py-24 relative overflow-hidden">
       {/* AI风格的背景装饰 */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_#818cf820_0%,_transparent_50%)]"></div>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_#6366f120_0%,_transparent_50%)]"></div>

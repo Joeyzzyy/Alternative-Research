@@ -7,12 +7,14 @@ import FAQ from '../common/sections/faq-standard';
 import CallToAction from '../common/sections/call-to-action';
 import ProductBenefitsWithBlocks from '../common/sections/product-benefits-with-blocks';
 import ResearchTool from '../common/sections/research-tool';
+import SubscriptionCard from '../common/sections/subscription-card';
 
 const COMPONENT_MAP = {
   ProductBenefitsWithBlocks: ProductBenefitsWithBlocks,
   Faqs: FAQ,
   CallToAction: CallToAction,
   ResearchTool: ResearchTool,
+  SubscriptionCard: SubscriptionCard,
 };
 
 const generateSchemaMarkup = (article) => {

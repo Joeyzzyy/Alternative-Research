@@ -64,6 +64,24 @@ export default function Header() {
     };
   }, []);
 
+  useEffect(() => {
+    // 添加token过期事件监听
+    const handleTokenExpired = () => {
+      setIsLoggedIn(false);
+      setUserEmail('');
+      setShowLoginModal(true);
+      setIsLoginForm(true);
+      showNotification('Session expired. Please login again.', 'info');
+    };
+
+    window.addEventListener('tokenExpired', handleTokenExpired);
+
+    // 清理事件监听
+    return () => {
+      window.removeEventListener('tokenExpired', handleTokenExpired);
+    };
+  }, []);
+
   const handleGoogleLogin = async () => {
     try {
       const response = await apiClient.googleLogin();

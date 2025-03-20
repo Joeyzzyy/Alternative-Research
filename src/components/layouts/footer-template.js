@@ -1,13 +1,9 @@
 "use client";
 
 import { FaFacebook, FaDiscord, FaXTwitter, FaYoutube, FaLinkedin, FaInstagram, FaGithub, FaTiktok, FaPinterest, FaReddit, FaTwitch, FaWeibo, FaWhatsapp, FaTelegram, FaMedium, FaSnapchat } from 'react-icons/fa6';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 
 export default function Footer({ data }) {
-  useEffect(() => {
-    console.log('Footer socialMedia data:', data?.socialMedia);
-  }, [data]);
-
   const socialIcons = {
     twitter: FaXTwitter,
     youtube: FaYoutube,
@@ -29,24 +25,7 @@ export default function Footer({ data }) {
   const renderSocialIcon = (platform) => {
     const Icon = socialIcons[platform];
     if (!Icon) return null;
-    return <Icon className="h-6 w-6" />;
-  };
-
-  const footerStyles = {
-    container: {
-      width: '90%',
-      margin: '0 auto',
-      padding: '2rem 0'
-    },
-    grid: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-      gap: '2rem',
-      marginBottom: '2rem'
-    },
-    section: {
-      padding: '0.5rem'
-    }
+    return <Icon className="w-5 h-5" />;
   };
 
   if (!data || !data.sections) {
@@ -54,39 +33,38 @@ export default function Footer({ data }) {
   }
 
   return (
-    <footer style={{
-      backgroundColor: data.styles.backgroundType === 'gradient'
-        ? `linear-gradient(${data.styles.gradientAngle}deg, ${data.styles.gradientStart}, ${data.styles.gradientEnd})`
-        : data.styles.backgroundColor
-    }}>
-      <div style={footerStyles.container}>
-        <div style={footerStyles.grid} className="md:grid-cols-[1fr_repeat(auto-fit,0.8fr)]">
-          <div style={footerStyles.section}>
-            <h3 style={{ color: data.colors.companyName }} className="text-xl font-semibold mb-4">
+    <footer className="bg-white relative overflow-hidden">
+      {/* AI风格的背景装饰 */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_#818cf810_0%,_transparent_50%)]"></div>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_#6366f110_0%,_transparent_50%)]"></div>
+      <div className="absolute top-0 left-0 w-full h-full bg-[url('/grid.svg')] opacity-[0.015]"></div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-8 relative z-10">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-8 lg:gap-12">
+          {/* Company Info */}
+          <div className="col-span-2 sm:col-span-3 lg:col-span-2 space-y-4">
+            <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">
               {data.companyName}
             </h3>
-            <p style={{ color: data.colors.description }} className="text-sm mb-4">
+            <p className="text-gray-600 text-sm leading-relaxed max-w-md">
               {data.description}
             </p>
           </div>
           
+          {/* Footer Sections */}
           {data.sections?.map((section, sectionIndex) => (
-            <div key={sectionIndex} style={footerStyles.section}>
-              <h4 
-                style={{ color: section.colors.title }} 
-                className="text-base font-semibold mb-4"
-              >
+            <div key={sectionIndex} className="space-y-4">
+              <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">
                 {section.title}
               </h4>
-              <ul className="space-y-2">
+              <ul className="space-y-3">
                 {section.links.map((link, linkIndex) => (
                   <li key={linkIndex}>
                     <a 
                       href={link.url} 
                       target="_blank"
                       rel="noopener noreferrer"
-                      style={{ color: section.colors.links }}
-                      className="text-sm hover:opacity-80 transition-colors"
+                      className="text-gray-600 hover:text-gray-900 text-sm transition-colors duration-200"
                     >
                       {link.label}
                     </a>
@@ -97,18 +75,22 @@ export default function Footer({ data }) {
           ))}
         </div>
 
-        <div className="mt-10 md:mt-20 flex flex-col md:flex-row justify-between items-center gap-4 md:gap-6">
-          <div className="flex flex-wrap justify-center md:justify-start gap-4 md:gap-6">
-            {data.socialMedia?.links && Object.entries(data.socialMedia.links).map(([key, link]) => {
+        {/* Divider */}
+        <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent my-8"></div>
+
+        {/* Bottom Section */}
+        <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+          {/* Social Icons */}
+          <div className="flex flex-wrap justify-center gap-4">
+            {data.socialMedia?.links && data.socialMedia.links.map((link, index) => {
               if (link && link.platform && link.url) {
                 return (
                   <a
-                    key={key}
+                    key={index}
                     href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{ color: data.socialMedia?.iconColor || '#9CA3AF' }}
-                    className="hover:opacity-80 transition-opacity"
+                    className="text-gray-500 hover:text-gray-900 transition-colors duration-200"
                   >
                     {renderSocialIcon(link.platform)}
                   </a>
@@ -118,7 +100,8 @@ export default function Footer({ data }) {
             })}
           </div>
           
-          <p style={{ color: data.colors.copyright }} className="text-sm text-center md:text-left">
+          {/* Copyright */}
+          <p className="text-sm text-gray-600">
             {data.copyright || `© ${new Date().getFullYear()} ${data.companyName}. All rights reserved.`}
           </p>
         </div>
