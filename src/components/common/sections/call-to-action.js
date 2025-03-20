@@ -9,30 +9,25 @@ const CallToAction = ({ data, theme = 'normal' }) => {
       : themeConfig[theme].section.background.primary;
   };
 
-  const getButtonStyle = () => {
-    const baseStyles = themeConfig[theme].button.base;
-    const variantStyles = themeConfig[theme].button.variants.secondary;
-    return `${baseStyles} ${variantStyles}`;
-  };
-
   return (
     <div className={`
-      ${getBgColor()} 
-      ${themeConfig[theme].section.padding.wide}
+      relative py-24 overflow-hidden bg-white
     `}>
-      <div className="max-w-3xl mx-auto px-4 text-center">
-        <h2 className="text-3xl font-bold mb-4 bg-gradient-to-r from-blue-600 
-          to-purple-600 bg-clip-text text-transparent">
+      {/* 优雅的背景效果 */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_#f0f7ff_0%,_transparent_70%)]"></div>
+      
+      <div className="max-w-4xl mx-auto px-4 text-center relative z-10">
+        <h2 className="text-3xl md:text-4xl font-bold mb-6 text-gray-900">
           {data.title}
         </h2>
-        <p className={`${themeConfig[theme].typography.paragraph.fontSize} ${themeConfig[theme].typography.paragraph.color} mb-6`}>
+        
+        <p className="text-lg text-gray-600 mb-10 max-w-2xl mx-auto">
           {data.subTitle}
         </p>
+        
         <a 
           href={data.bottomContent.buttonLink}
-          className="px-6 py-3 rounded-full bg-gradient-to-r from-blue-600 
-            to-purple-600 text-white font-medium hover:from-blue-700 
-            hover:to-purple-700 transition-all duration-300 inline-block"
+          className="bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600 hover:from-blue-600 hover:via-blue-700 hover:to-indigo-700 text-white font-medium px-8 py-3.5 rounded-lg shadow-lg shadow-blue-500/20 hover:shadow-blue-600/30 transition-all duration-300 inline-block"
         >
           {data.bottomContent.buttonText}
         </a>
