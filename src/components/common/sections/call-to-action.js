@@ -4,32 +4,38 @@ import themeConfig from '../../../styles/themeConfig';
 
 const CallToAction = ({ data, theme = 'normal' }) => {
   const getBgColor = () => {
-    return theme === 'tech' 
-      ? themeConfig[theme].section.background.secondary
-      : themeConfig[theme].section.background.primary;
+    return 'bg-gradient-to-b from-white via-slate-50/80 to-white';
   };
 
   return (
     <div className={`
-      relative py-24 overflow-hidden bg-white
+      ${getBgColor()}
+      ${themeConfig[theme].section.padding.wide}
+      relative overflow-hidden
     `}>
-      {/* 优雅的背景效果 */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_#f0f7ff_0%,_transparent_70%)]"></div>
+      {/* AI风格的背景装饰 */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_#818cf820_0%,_transparent_50%)]"></div>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_#6366f120_0%,_transparent_50%)]"></div>
+      <div className="absolute top-0 left-0 w-full h-full bg-[url('/grid.svg')] opacity-[0.015]"></div>
       
-      <div className="max-w-4xl mx-auto px-4 text-center relative z-10">
-        <h2 className="text-3xl md:text-4xl font-bold mb-6 text-gray-900">
+      <div className="max-w-3xl mx-auto px-4 text-center relative z-10">
+        <h2 className="text-3xl md:text-4xl font-bold mb-5 bg-clip-text text-transparent bg-gradient-to-r from-gray-900 via-slate-800 to-gray-900">
           {data.title}
         </h2>
         
-        <p className="text-lg text-gray-600 mb-10 max-w-2xl mx-auto">
+        <p className={`${themeConfig[theme].typography.paragraph.fontSize} text-gray-600 mb-8 max-w-2xl mx-auto leading-relaxed`}>
           {data.subTitle}
         </p>
         
         <a 
-          href={data.bottomContent.buttonLink}
-          className="bg-gradient-to-r from-blue-500 via-blue-600 to-indigo-600 hover:from-blue-600 hover:via-blue-700 hover:to-indigo-700 text-white font-medium px-8 py-3.5 rounded-lg shadow-lg shadow-blue-500/20 hover:shadow-blue-600/30 transition-all duration-300 inline-block"
+          href="#"
+          onClick={(e) => {
+            e.preventDefault();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          className="bg-gradient-to-r from-indigo-500 via-purple-500 to-blue-500 hover:from-indigo-600 hover:via-purple-600 hover:to-blue-600 text-white font-medium px-8 py-3.5 rounded-lg shadow-lg shadow-indigo-500/20 hover:shadow-purple-500/30 transition-all duration-300 inline-block backdrop-blur-sm"
         >
-          {data.bottomContent.buttonText}
+          Get it now
         </a>
       </div>
     </div>
