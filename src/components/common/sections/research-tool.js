@@ -53,6 +53,8 @@ class TaskManager {
     this.sourcesPollingInterval = null;  // 添加 sources 轮询间隔
     this.lastSourceCount = 0;  // 用于追踪 sources 数量变化
     this.onBrowserUpdate = null;
+    this.onLoadingUpdate = null;
+    this.onMessageSendingUpdate = null;
   }
 
   // 初始化新的研究任务流程
@@ -286,12 +288,9 @@ class TaskManager {
 
       } catch (error) {
         console.error('Error polling task status:', error);
-        this.clearAllTasks();
         
-        if (this.pollingInterval) {
-          clearInterval(this.pollingInterval);
-          this.pollingInterval = null;
-        }
+        const currentTaskType = this.getCurrentTaskType(); // 需要实现这个方法来获取当前任务类型
+        const activeAgentId = this.getActiveAgent(currentTaskType);
         
         this.onMessageUpdate?.(prevMessages => {
           const updatedMessages = prevMessages.map(msg => ({
@@ -300,11 +299,13 @@ class TaskManager {
           }));
           return [...updatedMessages, {
             type: 'agent',
-            agentId: 1,
-            content: '❌ I apologize, but we encountered an error during the analysis. Would you like to try again?',
-            isThinking: false
+            agentId: activeAgentId,
+            content: this.getRetryMessage(currentTaskType),
+            isThinking: true // 设置为 true 表示正在重试
           }];
         });
+        
+        // 实现自动重试逻辑...
       }
     };
 
@@ -452,6 +453,17 @@ class TaskManager {
 
   // 添加获取失败消息的方法
   getFailureMessage(taskType, errorMsg) {
+    // Clear all polling tasks
+    this.clearAllTasks();
+
+    // Reset loading and message sending states via callback
+    if (this.onLoadingUpdate) {
+      this.onLoadingUpdate(false);
+    }
+    if (this.onMessageSendingUpdate) {
+      this.onMessageSendingUpdate(false);
+    }
+
     switch (taskType) {
       case TASK_TYPES.COMPETITOR_SEARCH:
         return {
@@ -581,6 +593,39 @@ Please try the analysis again with the website URL.`,
     this.sourcesPollingInterval = setInterval(pollSources, POLLING_INTERVALS.SOURCES);
     pollSources(); // 立即执行第一次
   }
+
+  // 在 TaskManager 类中添加获取当前活动 agent 的辅助方法
+  getActiveAgent(taskType) {
+    switch (taskType) {
+      case TASK_TYPES.COMPETITOR_SEARCH:
+        return 1; // Joey
+      case TASK_TYPES.COMPETITOR_SCORING:
+        return 2; // Xavier
+      case TASK_TYPES.PRODUCT_COMPARISON:
+        return 3; // Youssef
+      default:
+        return 1; // 默认使用 Joey
+    }
+  }
+
+  // 修改错误处理消息
+  getRetryMessage(taskType) {
+    const messages = {
+      [TASK_TYPES.COMPETITOR_SEARCH]: "🔄 I've encountered a small hiccup in the competitor search. Don't worry - I'm automatically retrying the analysis. Please hold on for a moment...",
+      [TASK_TYPES.COMPETITOR_SCORING]: "🔄 The scoring analysis hit a brief snag. I'm automatically restarting the process. Just a moment while I recalibrate...",
+      [TASK_TYPES.PRODUCT_COMPARISON]: "🔄 There was a slight interruption in the comparison process. I'm automatically resuming the analysis. Please wait while I reconnect..."
+    };
+    return messages[taskType] || "🔄 A brief interruption occurred. I'm automatically retrying the process. Please wait a moment...";
+  }
+
+  // Add callback setters for loading and message sending states
+  setLoadingUpdateCallback(callback) {
+    this.onLoadingUpdate = callback;
+  }
+
+  setMessageSendingUpdateCallback(callback) {
+    this.onMessageSendingUpdate = callback;
+  }
 }
 
 const ResearchTool = () => {
@@ -623,8 +668,8 @@ const ResearchTool = () => {
   const [tabs, setTabs] = useState([]);
   const [activeTabId, setActiveTabId] = useState(null);
 
-  // 修改右侧面板的 tab 状态
-  const [rightPanelTab, setRightPanelTab] = useState('agents'); // 'agents', 'details', 或 'sources'
+  // 修改 rightPanelTab 的初始状态
+  const [rightPanelTab, setRightPanelTab] = useState('details'); // 默认选中 details
 
   // 添加浏览器显示状态
   const [showBrowser, setShowBrowser] = useState(false);
@@ -788,6 +833,10 @@ Could you please provide a valid domain name? For example: "websitelm.com"`,
       setShowBrowser(show);
       setTabs(tabs);
     };
+
+    // 添加 callbacks during initialization
+    taskManager.setLoadingUpdateCallback(setLoading);
+    taskManager.setMessageSendingUpdateCallback(setIsMessageSending);
 
     return () => {
       taskManager.clearAllTasks();
@@ -1233,7 +1282,7 @@ I've loaded these websites in the browser panel for you to explore. Would you li
     }
   };
 
-  // 修改 renderDetails 函数，将状态管理移到外部
+  // 修改 renderDetails 函数，将 details 按照 planningId 分组并添加展开/折叠功能
   const renderDetails = (details) => {
     if (!details || details.length === 0) {
       return (
@@ -1243,108 +1292,86 @@ I've loaded these websites in the browser panel for you to explore. Would you li
       );
     }
 
-    const toggleNode = (id) => {
-      setExpandedNodes(prev => ({
-        ...prev,
-        [id]: !prev[id]
-      }));
-    };
+    // 按 planningId 对 details 进行分组，并保持顺序
+    const planningIds = [...new Set(details.map(detail => detail.planningId))];
+    const groupedDetails = {};
+    planningIds.forEach((planningId, index) => {
+      groupedDetails[planningId] = details.filter(detail => detail.planningId === planningId);
+    });
 
-    return details.map((detail, index) => {
-      const { data, event, created_at } = detail;
-      const { title, node_type, status, outputs } = data || {};
-      const nodeId = detail._id || index;
+    // 根据顺序定义阶段标题
+    const stageTitles = [
+      'Finding Competitors',
+      'Analyzing Competitors',
+      'Generating Alternative Pages'
+    ];
+
+    return planningIds.map((planningId, index) => {
+      const nodeId = `section-${index}`; // 使用索引而不是 planningId
       const isExpanded = expandedNodes[nodeId];
-      
-      let statusColor = "text-gray-500";
-      if (status === "succeeded") {
-        statusColor = "text-green-500";
-      } else if (status === "failed") {
-        statusColor = "text-red-500";
-      }
-
-      // 处理输出内容
-      let outputContent = "";
-      if (outputs) {
-        try {
-          const outputObj = typeof outputs === 'string' ? JSON.parse(outputs) : outputs;
-          
-          // 处理不同类型的输出
-          if (typeof outputObj === 'string') {
-            outputContent = outputObj;
-          } else if (outputObj.text) {
-            outputContent = outputObj.text;
-          } else if (outputObj.result) {
-            // 如果 result 是数组或对象，将其转换为格式化的字符串
-            outputContent = Array.isArray(outputObj.result) || typeof outputObj.result === 'object'
-              ? JSON.stringify(outputObj.result, null, 2)
-              : outputObj.result;
-          } else if (outputObj.__is_success !== undefined) {
-            // 处理特殊的成功/失败对象
-            outputContent = outputObj.__reason || 
-              (outputObj.url ? `URL: ${outputObj.url}` : JSON.stringify(outputObj, null, 2));
-          } else {
-            // 如果是其他类型的对象，转换为格式化的字符串
-            outputContent = JSON.stringify(outputObj, null, 2);
-          }
-        } catch (e) {
-          // 如果解析失败，直接显示原始输出
-          outputContent = typeof outputs === 'string' ? outputs : JSON.stringify(outputs, null, 2);
-        }
-      }
+      const title = stageTitles[index] || 'Unknown Stage';
+      const groupDetails = groupedDetails[planningId];
 
       return (
-        <div 
-          key={nodeId} 
-          className="mb-3 border border-gray-700 rounded-lg bg-gray-800/50 overflow-hidden transition-all duration-300 ease-in-out"
-          style={{animation: 'fadeIn 0.3s ease-out'}}
-        >
+        <div key={nodeId} className="mb-4">
+          {/* 分组标题和展开/折叠按钮 */}
           <div 
-            className="p-3 cursor-pointer hover:bg-gray-700/30 transition-colors"
-            onClick={() => toggleNode(nodeId)}
+            className="bg-gray-700/50 p-3 rounded-lg cursor-pointer hover:bg-gray-700/70 transition-colors"
+            onClick={() => setExpandedNodes(prev => ({...prev, [nodeId]: !prev[nodeId]}))}
           >
-            <div className="flex justify-between items-start">
-              <div className="flex-1">
-                <h4 className="font-medium text-purple-200 text-xs">{title || "Agent Start Working"}</h4>
-                <div className="flex items-center justify-between mt-1">
-                  <div className="text-xs text-gray-400">
-                    Type: {node_type || "Workflow Started"} | Event: {event}
-                  </div>
-                  <div className="text-[10px] text-gray-500">
-                    {new Date(created_at).toLocaleString()}
-                  </div>
-                </div>
-              </div>
+            <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <div className={`text-xs ${statusColor}`}>
-                  {status || "In Progress"}
-                </div>
-                <svg 
-                  className={`w-4 h-4 text-gray-400 transform transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
+                <span className="text-xs font-medium text-purple-200">{title}</span>
+                <span className="text-xs text-gray-400">({groupDetails.length})</span>
               </div>
+              <svg 
+                className={`w-4 h-4 text-gray-400 transform transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
             </div>
           </div>
-          
+
+          {/* 详细内容区域 */}
           <div 
-            className={`overflow-hidden transition-all duration-300 ease-in-out`}
+            className="overflow-hidden transition-all duration-300 ease-in-out"
             style={{
-              maxHeight: isExpanded ? '500px' : '0',
+              maxHeight: isExpanded ? `${Math.min(groupDetails.length * 100, 400)}px` : '0',
               opacity: isExpanded ? 1 : 0
             }}
           >
-            {outputContent && (
-              <div className="px-3 pb-3">
-                <div className="text-xs text-gray-300 break-words whitespace-pre-wrap bg-gray-900/50 p-2 rounded">
-                  {outputContent}
-                </div>
-              </div>
-            )}
+            <div className="space-y-2 mt-2 overflow-y-auto" style={{ maxHeight: '400px' }}>
+              {groupDetails.map((detail, detailIndex) => {
+                const { data, event, created_at } = detail;
+                const { title, status, outputs } = data || {};
+                
+                return (
+                  <div key={detailIndex} className="bg-gray-800/50 p-2 rounded border border-gray-700/50">
+                    <div className="text-xs text-gray-300">{title || event}</div>
+                    {status && (
+                      <div className={`text-xs mt-1 ${
+                        status === "succeeded" ? "text-green-500" : 
+                        status === "failed" ? "text-red-500" : 
+                        "text-gray-400"
+                      }`}>
+                        {status}
+                      </div>
+                    )}
+                    {outputs && (
+                      <div className="text-xs text-gray-400 mt-1 break-words">
+                        {typeof outputs === 'string' ? outputs : JSON.stringify(outputs)}
+                      </div>
+                    )}
+                    <div className="text-[10px] text-gray-500 mt-1">
+                      {new Date(created_at).toLocaleString()}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       );
@@ -1434,75 +1461,78 @@ I've loaded these websites in the browser panel for you to explore. Would you li
               )}
             </div>
             
-            {/* Deep Research 开关 - 移到输入框上方 */}
-            <div className="px-3 pt-2 flex items-center justify-between">
-              <div 
-                className={`flex items-center cursor-pointer px-2 py-1 rounded-full text-xs transition-colors ${
-                  deepResearchMode 
-                    ? 'bg-purple-500/30 text-purple-200' 
-                    : 'bg-gray-700/50 text-gray-300 hover:bg-gray-700'
-                } ${loading || isMessageSending ? 'opacity-50 cursor-not-allowed' : ''}`}
-                onClick={() => {
-                  if (!loading && !isMessageSending) {
-                    toggleDeepResearchMode();
-                  }
-                }}
-              >
-                <span className={`w-3 h-3 rounded-full mr-1.5 transition-colors ${
-                  deepResearchMode ? 'bg-purple-400' : 'bg-gray-500'
-                }`}></span>
-                Deep Research
-              </div>
-              
-              <div className="text-xs text-purple-300">
-                {deepResearchMode ? (
-                  <span className="flex items-center">
-                    <span className="inline-block w-2 h-2 bg-purple-400 rounded-full mr-1.5 animate-pulse"></span>
-                    Comprehensive mode
-                  </span>
-                ) : (
-                  <span>Standard mode</span>
-                )}
-              </div>
-            </div>
-            
-            <div className="p-3 border-t border-gray-300/20 flex-shrink-0">
-              <form onSubmit={handleUserInput} className="flex items-center space-x-2">
-                <Input
-                  ref={inputRef}
-                  placeholder={deepResearchMode 
-                    ? "Enter website for comprehensive analysis..." 
-                    : "Enter your product URL (e.g., websitelm.com) to find alternatives"}
-                  value={userInput}
-                  onChange={(e) => setUserInput(e.target.value)}
-                  disabled={loading || isMessageSending}
-                  className="bg-white/10 border border-gray-300/30 rounded-lg text-xs"
-                  style={{ 
-                    color: 'black', 
-                    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                    height: '40px'
-                  }}
-                />
-                <Button 
-                  htmlType="submit" 
-                  icon={<SendOutlined className="text-xs" />}
-                  loading={loading}
-                  disabled={loading || isMessageSending}
-                  className={`border-none ${
-                    deepResearchMode 
-                      ? 'bg-gradient-to-r from-purple-600 to-indigo-600' 
-                      : 'bg-gradient-to-r from-purple-500 to-indigo-500'
-                  }`}
-                  size="small"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleUserInput(e);
-                  }}
-                />
-              </form>
-              <div className="text-xs text-purple-300 mt-1.5">
-                I'll find your highly-matched competitors and generate SEO-friendly Alternative Pages for your instant preview!
+            {/* 修改输入区域的样式和位置 */}
+            <div className="p-4 border-t border-gray-300/20 flex-shrink-0">
+              <div className="max-w-[600px] mx-auto">
+                <form onSubmit={handleUserInput} className="relative">
+                  <Input
+                    ref={inputRef}
+                    placeholder={deepResearchMode 
+                      ? "Enter website for comprehensive analysis..." 
+                      : "Enter your product URL (e.g., websitelm.com)"}
+                    value={userInput}
+                    onChange={(e) => setUserInput(e.target.value)}
+                    disabled={loading || isMessageSending}
+                    className="bg-white/10 border border-gray-300/30 rounded-xl text-sm"
+                    style={{ 
+                      color: 'black', 
+                      backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                      height: '48px',
+                      paddingLeft: '16px',
+                      transition: 'all 0.3s ease'
+                    }}
+                    prefix={
+                      <SearchOutlined 
+                        style={{ 
+                          color: 'rgba(0, 0, 0, 0.45)',
+                          fontSize: '16px'
+                        }} 
+                      />
+                    }
+                  />
+                </form>
+
+                <div className="flex items-center justify-between mt-3 px-1">
+                  <div className="flex items-center space-x-4">
+                    {/* Deep 开关移到这里 */}
+                    <button 
+                      type="button"
+                      className={`flex items-center px-2 py-1 rounded-full text-xs transition-all duration-200 
+                        ${loading || isMessageSending 
+                          ? 'opacity-50 cursor-not-allowed bg-gray-200 text-gray-600' 
+                          : deepResearchMode
+                            ? 'bg-purple-500 text-white hover:bg-purple-600' 
+                            : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                        }`}
+                      onClick={() => {
+                        if (!loading && !isMessageSending) {
+                          toggleDeepResearchMode();
+                        }
+                      }}
+                    >
+                      <span className={`w-2 h-2 rounded-full mr-1.5 transition-colors ${
+                        deepResearchMode ? 'bg-white' : 'bg-gray-500'
+                      }`}></span>
+                      Deep
+                    </button>
+
+                    {/* 模式说明文本 */}
+                    <span className="text-xs text-purple-300/80">
+                      {deepResearchMode ? (
+                        <span className="flex items-center">
+                          <span className="inline-block w-2 h-2 bg-purple-400 rounded-full mr-1.5 animate-pulse"></span>
+                          Comprehensive analysis mode
+                        </span>
+                      ) : (
+                        "Quick search mode"
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="text-xs text-gray-400">
+                    Press Enter ↵ to search
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -1521,13 +1551,13 @@ I've loaded these websites in the browser panel for you to explore. Would you li
           {/* 右侧分析结果栏 */}
           <div className="w-1/5 bg-white/5 backdrop-blur-lg rounded-2xl border border-gray-300/20 shadow-xl 
                           flex flex-col h-full relative">
-            {/* 将 Show 按钮移到 Agents tab 的左边 */}
-            <div className="flex items-center border-b border-gray-300/20">
-              {!showBrowser && (
-                <div className="pl-2">
+            {/* 将 Show 按钮和 Agent 头像放在顶部 */}
+            <div className="border-b border-gray-300/20">
+              <div className="flex items-center p-3">
+                {!showBrowser && (
                   <button
                     onClick={() => setShowBrowser(true)}
-                    className="p-1.5 bg-gray-800 hover:bg-gray-700 rounded-full shadow-lg transition-colors"
+                    className="p-1.5 bg-gray-800 hover:bg-gray-700 rounded-full shadow-lg transition-colors mr-2"
                   >
                     <svg
                       className="w-4 h-4 text-gray-400"
@@ -1538,49 +1568,69 @@ I've loaded these websites in the browser panel for you to explore. Would you li
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                     </svg>
                   </button>
+                )}
+                
+                {/* 进一步增加头像间距，并完全移开 Working 标签 */}
+                <div className="flex items-center space-x-6">
+                  {agents.map(agent => (
+                    <div key={agent.id} className="relative">
+                      <Tooltip title={`${agent.name} - ${agent.role}`}>
+                        <div 
+                          className={`w-8 h-8 rounded-full overflow-hidden border-2 transition-all duration-300 ${
+                            messages[messages.length - 1]?.agentId === agent.id && messages[messages.length - 1]?.isThinking
+                              ? 'border-blue-500 scale-110'
+                              : 'border-transparent hover:border-gray-400'
+                          }`}
+                        >
+                          <img 
+                            src={agent.avatar} 
+                            alt={agent.name} 
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      </Tooltip>
+                      {/* 完全移到右上角，不遮挡头像 */}
+                      {messages[messages.length - 1]?.agentId === agent.id && 
+                       messages[messages.length - 1]?.isThinking && (
+                        <div className="absolute -top-4 -right-4">
+                          <div className="px-1.5 py-0.5 bg-blue-500 rounded-full text-[8px] text-white font-medium flex items-center">
+                            <span className="w-1 h-1 bg-white rounded-full mr-1 animate-pulse"></span>
+                            Working
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              )}
+              </div>
               
-              <button
-                onClick={() => setRightPanelTab('agents')}
-                className={`flex-1 h-10 flex items-center justify-center text-xs font-medium transition-colors
-                  ${rightPanelTab === 'agents'
-                    ? 'text-white border-b-2 border-blue-500'
-                    : 'text-gray-300 hover:text-gray-200'
-                  }`}
-              >
-                Agents
-              </button>
-              <button
-                onClick={() => setRightPanelTab('details')}
-                className={`flex-1 h-10 flex items-center justify-center text-xs font-medium transition-colors
-                  ${rightPanelTab === 'details'
-                    ? 'text-white border-b-2 border-blue-500'
-                    : 'text-gray-300 hover:text-gray-200'
-                  }`}
-              >
-                Details
-              </button>
-              <button
-                onClick={() => setRightPanelTab('sources')}
-                className={`flex-1 h-10 flex items-center justify-center text-xs font-medium transition-colors
-                  ${rightPanelTab === 'sources'
-                    ? 'text-white border-b-2 border-blue-500'
-                    : 'text-gray-300 hover:text-gray-200'
-                  }`}
-              >
-                Sources
-              </button>
+              {/* Tab 切换按钮 */}
+              <div className="flex">
+                <button
+                  onClick={() => setRightPanelTab('details')}
+                  className={`flex-1 h-10 flex items-center justify-center text-xs font-medium transition-colors
+                    ${rightPanelTab === 'details'
+                      ? 'text-white border-b-2 border-blue-500'
+                      : 'text-gray-300 hover:text-gray-200'
+                    }`}
+                >
+                  Details
+                </button>
+                <button
+                  onClick={() => setRightPanelTab('sources')}
+                  className={`flex-1 h-10 flex items-center justify-center text-xs font-medium transition-colors
+                    ${rightPanelTab === 'sources'
+                      ? 'text-white border-b-2 border-blue-500'
+                      : 'text-gray-300 hover:text-gray-200'
+                    }`}
+                >
+                  Sources
+                </button>
+              </div>
             </div>
             
             {/* Tab 内容区域 */}
             <div className="flex-1 overflow-y-auto">
-              {rightPanelTab === 'agents' && (
-                <div className="p-3">
-                  {renderAgents()}
-                </div>
-              )}
-              
               {rightPanelTab === 'details' && (
                 <>
                   {renderDetails(detailsData)}
