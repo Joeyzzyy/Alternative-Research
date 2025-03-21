@@ -1363,18 +1363,12 @@ I've loaded these websites in the browser panel for you to explore. Would you li
       );
     }
 
-    // 按 planningId 对 details 进行分组，并保持顺序
     const planningIds = [...new Set(details.map(detail => detail.planningId))];
     const groupedDetails = {};
     planningIds.forEach((planningId, index) => {
       groupedDetails[planningId] = details.filter(detail => detail.planningId === planningId);
-      // 设置默认展开状态
-      if (!expandedNodes[`section-${index}`]) {
-        setExpandedNodes(prev => ({...prev, [`section-${index}`]: true}));
-      }
     });
 
-    // 根据顺序定义阶段标题
     const stageTitles = [
       'Finding Competitors',
       'Analyzing Competitors',
@@ -1410,17 +1404,16 @@ I've loaded these websites in the browser panel for you to explore. Would you li
             </div>
           </div>
 
-          {/* 详细内容区域 - 修改折叠动画实现 */}
+          {/* 详细内容区域 - 修改折叠动画和最大高度 */}
           <div 
-            className={`mt-2 transition-all duration-300 ease-in-out origin-top ${
-              isExpanded ? 'opacity-100' : 'opacity-0 h-0'
-            }`}
+            className={`overflow-hidden transition-all duration-300 ease-in-out`}
             style={{
-              maxHeight: isExpanded ? '2000px' : '0',
-              overflow: 'hidden'
+              maxHeight: isExpanded ? '400px' : '0',
+              opacity: isExpanded ? 1 : 0,
+              marginTop: isExpanded ? '0.5rem' : '0'
             }}
           >
-            <div className="space-y-2 pr-2">
+            <div className="space-y-2 pr-2 overflow-y-auto" style={{ maxHeight: '400px' }}>
               {groupDetails.map((detail, detailIndex) => {
                 const { data, event, created_at } = detail;
                 const { title, status, outputs } = data || {};
