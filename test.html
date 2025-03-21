@@ -1,0 +1,79 @@
+<style>
+.editable-input {
+    width: 100%;
+    padding: 8px;
+    border: 2px solid var(--primary);
+    border-radius: var(--border-radius-sm);
+    font-size: inherit;
+    font-family: inherit;
+    background: white;
+    color: var(--text-dark);
+    margin: 4px 0;
+}
+
+.editable-textarea {
+    width: 100%;
+    min-height: 100px;
+    padding: 8px;
+    border: 2px solid var(--primary);
+    border-radius: var(--border-radius-sm);
+    font-size: inherit;
+    font-family: inherit;
+    background: white;
+    color: var(--text-dark);
+    margin: 4px 0;
+    resize: vertical;
+}
+</style>
+
+<script>
+    function makeEditable(element) {
+        // 创建输入框或文本框
+        const isLongText = element.tagName === 'P' || element.innerHTML.length > 50;
+        const input = document.createElement(isLongText ? 'textarea' : 'input');
+        input.value = element.innerText;
+        input.className = isLongText ? 'editable-textarea' : 'editable-input';
+        
+        // 保存原始内容
+        const originalContent = element.innerHTML;
+        
+        // 替换原始元素为输入框
+        element.innerHTML = '';
+        element.appendChild(input);
+        input.focus();
+        
+        // 处理失去焦点事件
+        input.onblur = function() {
+            if (input.value.trim() === '') {
+                element.innerHTML = originalContent;
+            } else {
+                element.innerHTML = input.value;
+            }
+        };
+        
+        // 处理回车键
+        input.onkeydown = function(e) {
+            if (e.key === 'Enter' && !isLongText) {
+                input.blur();
+            }
+            if (e.key === 'Escape') {
+                element.innerHTML = originalContent;
+            }
+        };
+    }
+
+    function highlightEditableAreas() {
+        const editableElements = document.querySelectorAll('[canEdit="true"]');
+        editableElements.forEach(element => {
+            element.classList.add('canEdit-highlight');
+            // 添加点击事件监听器
+            element.addEventListener('click', function(e) {
+                if (!e.target.matches('input, textarea')) {
+                    makeEditable(this);
+                }
+            });
+        });
+    }
+
+    // ... existing FAQ code ...
+</script> 

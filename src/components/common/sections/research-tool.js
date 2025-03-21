@@ -85,235 +85,125 @@ class TaskManager {
         const response = await this.apiClient.getAlternativeStatus(this.websiteId);
         const plannings = response?.data || [];
 
+        // 创建当前状态快照
         const currentState = plannings.map(p => `${p.planningName}:${p.status}`).join('|');
         
+        // 如果状态没有变化,跳过更新
         if (this.lastProcessedState === currentState) {
           return;
         }
         
         this.lastProcessedState = currentState;
 
-        // 检查所有任务完成状态
-        if (this.areAllTasksCompleted(plannings) && !this.hasCompletionMessage) {
-          this.hasCompletionMessage = true;
-          
-          try {
-            const resultResponse = await this.apiClient.getAlternativeResult(this.websiteId);
-            const finalResult = resultResponse?.data;
-            
-            // 解析结果数组
-            let competitors = [];
-            if (finalResult) {
-              try {
-                competitors = Array.isArray(finalResult) ? finalResult : JSON.parse(finalResult);
-              } catch (e) {
-                console.error('Failed to parse result:', e);
-                competitors = [];
-              }
-            }
-            
-            this.onMessageUpdate?.(prevMessages => {
-              const updatedMessages = prevMessages.map(msg => ({
-                ...msg,
-                isThinking: false
-              }));
-
-              return [
-                ...updatedMessages,
-                {
-                  type: 'agent',
-                  agentId: 3, // Youssef
-                  content: '🎉 Analysis complete! I\'ve prepared a comprehensive comparison of all products.',
-                  isThinking: false
-                },
-                {
-                  type: 'agent',
-                  agentId: 1, // Joey
-                  content: competitors.length > 0 
-                    ? `✨ Great! I've found ${competitors.length} relevant alternatives for you. I've opened them in the browser panel for you to explore. Would you like to know more specific details about any of them?`
-                    : '❌ I apologize, but I couldn\'t find any valid alternatives at this moment. Would you like to try with a different domain?',
-                  isThinking: false
-                }
-              ];
-            });
-
-            // 如果有竞争对手，自动展开浏览器面板并更新标签
-            if (competitors.length > 0) {
-              // 通知外部组件更新浏览器状态
-              if (this.onBrowserUpdate) {
-                this.onBrowserUpdate({
-                  show: true,
-                  tabs: Array(competitors.length).fill(null).map((_, index) => ({
-                    id: index + 1,
-                    title: `Alternative ${index + 1}`,
-                    url: 'https://websitelm.com', // 临时使用固定URL
-                    active: index === 0
-                  }))
-                });
-              }
-            }
-          } catch (error) {
-            console.error('Failed to get final results:', error);
-            this.onMessageUpdate?.(prevMessages => {
-              const updatedMessages = prevMessages.map(msg => ({
-                ...msg,
-                isThinking: false
-              }));
-              return [
-                ...updatedMessages,
-                {
-                  type: 'agent',
-                  agentId: 1,
-                  content: '❌ I apologize, but I encountered an error while retrieving the final results. Would you like to try again?',
-                  isThinking: false
-                }
-              ];
-            });
-          }
-
-          // 所有任务完成后立即清除轮询
-          this.clearAllTasks();
-          if (this.pollingInterval) {
-            clearInterval(this.pollingInterval);
-            this.pollingInterval = null;
-          }
-          return;
-        }
-
-        // 检查失败状态
+        // 检查任务失败
         const failedTask = plannings.find(p => p.status === 'failed');
-        if (failedTask && !this.hasFailureMessage) {
-          this.hasFailureMessage = true;
-          this.clearAllTasks();  // 这里会清除轮询
-          
-          const failureMessage = this.getFailureMessage(failedTask.planningName, failedTask.errorMsg);
-          
-          this.onMessageUpdate?.(prevMessages => {
-            const updatedMessages = prevMessages.map(msg => ({
-              ...msg,
-              isThinking: false
-            }));
-            return [...updatedMessages, failureMessage];
-          });
-          
-          // 立即清除轮询间隔
-          if (this.pollingInterval) {
-            clearInterval(this.pollingInterval);
-            this.pollingInterval = null;
-          }
+        if (failedTask) {
+          this.handleTaskFailure(failedTask);
           return;
         }
 
-        // 检查第一阶段完成和第二阶段开始的状态
-        const competitorSearch = plannings.find(p => p.planningName === TASK_TYPES.COMPETITOR_SEARCH);
-        const competitorScoring = plannings.find(p => p.planningName === TASK_TYPES.COMPETITOR_SCORING);
-
-        if (competitorSearch?.status === 'finished' && 
-            competitorScoring?.status === 'processing' && 
-            !this.hasXavierStartMessage) {  // 新增标志
-          
-          this.hasXavierStartMessage = true;  // 设置标志
-          
-          this.onMessageUpdate?.(prevMessages => {
-            const updatedMessages = prevMessages.map(msg => ({
-              ...msg,
-              isThinking: false
-            }));
-
-            return [
-              ...updatedMessages,
-              {
-                type: 'agent',
-                agentId: 1, // Joey
-                content: '✨ Great! I\'ve identified the main competitors. Now I\'ll hand this over to Xavier for detailed scoring analysis.',
-                isThinking: false
-              },
-              {
-                type: 'agent',
-                agentId: 2, // Xavier
-                content: '📊 I\'m analyzing each competitor\'s strengths and weaknesses, evaluating their features, pricing, and market positioning...',
-                isThinking: true
-              }
-            ];
-          });
+        // 检查所有任务是否完成
+        const allCompleted = this.areAllTasksCompleted(plannings);
+        if (allCompleted) {
+          await this.handleAllTasksCompleted();
+          return;
         }
 
-        // 检查第二阶段完成和第三阶段开始的状态
-        const productComparison = plannings.find(p => p.planningName === TASK_TYPES.PRODUCT_COMPARISON);
-
-        if (competitorScoring?.status === 'finished' && 
-            productComparison?.status === 'processing' && 
-            !this.hasYoussefStartMessage) {  // 新增标志
-          
-          this.hasYoussefStartMessage = true;  // 设置标志
-          
-          this.onMessageUpdate?.(prevMessages => {
-            const updatedMessages = prevMessages.map(msg => ({
-              ...msg,
-              isThinking: false
-            }));
-
-            return [
-              ...updatedMessages,
-              {
-                type: 'agent',
-                agentId: 2, // Xavier
-                content: '📈 Scoring analysis complete! I\'ve evaluated all competitors. Passing this to Youssef for the final comparison.',
-                isThinking: false
-              },
-              {
-                type: 'agent',
-                agentId: 3, // Youssef
-                content: '🔄 Now comparing all products to identify key differentiators and unique value propositions...',
-                isThinking: true
-              }
-            ];
-          });
-        }
+        // 更新各阶段状态
+        await this.updateTaskStages(plannings);
 
         // 更新任务状态
-        plannings.forEach(planning => {
-          const taskType = planning.planningName;
-          const newStatus = this.mapApiStatus(planning.status);
-          
-          this.tasks.set(taskType, {
-            id: planning.planningId,
-            type: taskType,
-            status: newStatus,
-            result: null,
-            details: [],
-            sources: []
-          });
-        });
+        this.updateTasksStatus(plannings);
 
       } catch (error) {
         console.error('Error polling task status:', error);
-        
-        const currentTaskType = this.getCurrentTaskType(); // 需要实现这个方法来获取当前任务类型
-        const activeAgentId = this.getActiveAgent(currentTaskType);
-        
-        this.onMessageUpdate?.(prevMessages => {
-          const updatedMessages = prevMessages.map(msg => ({
-            ...msg,
-            isThinking: false
-          }));
-          return [...updatedMessages, {
-            type: 'agent',
-            agentId: activeAgentId,
-            content: this.getRetryMessage(currentTaskType),
-            isThinking: true // 设置为 true 表示正在重试
-          }];
-        });
-        
-        // 实现自动重试逻辑...
+        this.handlePollingError();
       }
     };
 
-    // 存储轮询间隔的引用
+    // 设置轮询间隔
     this.pollingInterval = setInterval(pollTaskStatus, POLLING_INTERVALS.TASK_STATUS);
     this.activePolling.add('ALL_TASKS');
     
+    // 立即执行第一次轮询
     pollTaskStatus();
+  }
+
+  // 处理任务失败的情况
+  handleTaskFailure(failedTask) {
+    if (!this.hasFailureMessage) {
+      this.hasFailureMessage = true;
+      this.clearAllTasks();
+      
+      const failureMessage = this.getFailureMessage(failedTask.planningName, failedTask.errorMsg);
+      this.onMessageUpdate?.(prevMessages => {
+        const updatedMessages = prevMessages.map(msg => ({
+          ...msg,
+          isThinking: false
+        }));
+        return [...updatedMessages, failureMessage];
+      });
+    }
+  }
+
+  // 处理所有任务完成的情况
+  async handleAllTasksCompleted() {
+    if (!this.hasCompletionMessage) {
+      this.hasCompletionMessage = true;
+      
+      try {
+        const resultResponse = await this.apiClient.getAlternativeResult(this.websiteId);
+        const competitors = this.parseCompetitors(resultResponse?.data);
+        
+        this.updateCompletionMessages(competitors);
+        this.updateBrowserState(competitors);
+      } catch (error) {
+        console.error('Failed to get final results:', error);
+        this.handleCompletionError();
+      }
+
+      this.clearAllTasks();
+    }
+  }
+
+  // 更新任务阶段状态
+  async updateTaskStages(plannings) {
+    const competitorSearch = plannings.find(p => p.planningName === TASK_TYPES.COMPETITOR_SEARCH);
+    const competitorScoring = plannings.find(p => p.planningName === TASK_TYPES.COMPETITOR_SCORING);
+    const productComparison = plannings.find(p => p.planningName === TASK_TYPES.PRODUCT_COMPARISON);
+
+    // 检查第一阶段完成和第二阶段开始
+    if (competitorSearch?.status === 'finished' && 
+        competitorScoring?.status === 'processing' && 
+        !this.hasXavierStartMessage) {
+      this.hasXavierStartMessage = true;
+      await this.updateXavierStartMessage();
+    }
+
+    // 检查第二阶段完成和第三阶段开始
+    if (competitorScoring?.status === 'finished' && 
+        productComparison?.status === 'processing' && 
+        !this.hasYoussefStartMessage) {
+      this.hasYoussefStartMessage = true;
+      await this.updateYoussefStartMessage();
+    }
+  }
+
+  // 更新任务状态
+  updateTasksStatus(plannings) {
+    plannings.forEach(planning => {
+      const taskType = planning.planningName;
+      const newStatus = this.mapApiStatus(planning.status);
+      
+      this.tasks.set(taskType, {
+        id: planning.planningId,
+        type: taskType,
+        status: newStatus,
+        result: null,
+        details: [],
+        sources: []
+      });
+    });
   }
 
   // 添加获取下一个任务的辅助方法
@@ -1161,67 +1051,91 @@ I've loaded these websites in the browser panel for you to explore. Would you li
     if (message.type !== 'user') {
       const agent = agents.find(a => a.id === message.agentId) || agents[0];
       return (
-        <div key={index} className="flex justify-start mb-3" style={{animation: 'fadeIn 0.5s ease-out forwards'}}>
-          <div className="flex max-w-[80%] flex-row">
-            <div className="flex-shrink-0 mr-2" style={{animation: 'bounceIn 0.6s ease-out forwards'}}>
-              <Avatar 
-                size="small"
-                src={agent.avatar}
-                className="bg-transparent"
-              />
-            </div>
-            <div className="p-2 rounded-lg text-xs bg-white/10 backdrop-blur-sm text-gray-100 rounded-tl-none 
-                            transform transition-all duration-300" 
-                 style={{animation: 'slideInRight 0.4s ease-out forwards'}}>
-              <div className="text-xs font-medium text-blue-300 mb-1 flex items-center">
-                <span className="mr-1">{agent.name}</span>
-                <span className="text-[10px] px-1.5 py-0.5 bg-blue-500/20 text-blue-300 rounded-full animate-pulse">
-                  {agent.role}
-                </span>
+        <div key={index} className="flex justify-start mb-8" style={{animation: 'fadeIn 0.5s ease-out forwards'}}>
+          <div className="flex max-w-[80%] flex-row group">
+            <div className="flex-shrink-0 mr-4" style={{animation: 'bounceIn 0.6s ease-out forwards'}}>
+              <div className="relative">
+                <Avatar 
+                  size={40}
+                  src={agent.avatar}
+                  className="border-2 border-transparent group-hover:border-blue-400/50 transition-colors duration-300"
+                />
+                {message.isThinking && (
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                    <div className="w-2 h-2 bg-white rounded-full animate-ping"></div>
+                  </div>
+                )}
               </div>
-              {message.content.split('\n').map((line, i) => (
-                <React.Fragment key={i}>
-                  {line}
-                  {i < message.content.split('\n').length - 1 && <br />}
-                </React.Fragment>
-              ))}
-              {message.isThinking && (
-                <div className="flex space-x-1 mt-1.5">
-                  <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce"></div>
-                  <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                  <div className="w-1.5 h-1.5 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+            </div>
+            <div className="relative">
+              <div className="absolute -top-6 left-0">
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs font-medium text-blue-300">{agent.name}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 bg-blue-500/20 text-blue-300 rounded-full">
+                    {agent.role}
+                  </span>
                 </div>
-              )}
+              </div>
+              <div className="p-4 rounded-2xl text-sm bg-gradient-to-br from-gray-800/95 to-gray-900/95 
+                            text-gray-100 shadow-xl backdrop-blur-sm border border-white/10 
+                            hover:border-blue-500/30 transition-all duration-300
+                            rounded-tl-none transform hover:-translate-y-0.5">
+                <div className="relative z-10">
+                  {message.content.split('\n').map((line, i) => (
+                    <React.Fragment key={i}>
+                      {line}
+                      {i < message.content.split('\n').length - 1 && <br />}
+                    </React.Fragment>
+                  ))}
+                </div>
+                {message.isThinking && (
+                  <div className="flex space-x-1.5 mt-3 items-center">
+                    <div className="w-1.5 h-1.5 bg-blue-400/60 rounded-full animate-bounce"></div>
+                    <div className="w-1.5 h-1.5 bg-blue-400/60 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="w-1.5 h-1.5 bg-blue-400/60 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                  </div>
+                )}
+              </div>
+              <div className="absolute -left-1 top-0 w-2 h-2 bg-gradient-to-br from-gray-800 to-gray-900 transform rotate-45"></div>
             </div>
           </div>
         </div>
       );
     }
     
-    // 用户消息保持不变
+    // 用户消息样式
     return (
       <div 
         key={index} 
-        className="flex justify-end mb-3"
+        className="flex justify-end mb-8"
+        style={{animation: 'fadeIn 0.5s ease-out forwards'}}
       >
-        <div className="flex max-w-[80%] flex-row-reverse">
-          <div className="flex-shrink-0 ml-2">
-            <Avatar 
-              size="small"
-              icon={<UserOutlined />} 
-              className="bg-blue-500"
-            />
+        <div className="flex max-w-[80%] flex-row-reverse group">
+          <div className="flex-shrink-0 ml-4">
+            <div className="relative" style={{animation: 'bounceIn 0.6s ease-out forwards'}}>
+              <Avatar 
+                size={40}
+                icon={<UserOutlined />} 
+                className="bg-gradient-to-br from-blue-500 to-blue-600 border-2 border-transparent
+                         group-hover:border-blue-300/50 transition-colors duration-300"
+              />
+            </div>
           </div>
-          <div 
-            className="p-2 rounded-lg text-xs bg-blue-600 text-white rounded-tr-none transform transition-all duration-300"
-            style={{animation: 'slideInLeft 0.4s ease-out forwards'}}
-          >
-            {message.content.split('\n').map((line, i) => (
-              <React.Fragment key={i}>
-                {line}
-                {i < message.content.split('\n').length - 1 && <br />}
-              </React.Fragment>
-            ))}
+          <div className="relative">
+            <div className="p-4 rounded-2xl text-sm bg-gradient-to-br from-blue-500 to-blue-600 
+                          text-white shadow-xl backdrop-blur-sm
+                          hover:shadow-blue-500/20 transition-all duration-300
+                          rounded-tr-none transform hover:-translate-y-0.5">
+              <div className="relative z-10">
+                {message.content.split('\n').map((line, i) => (
+                  <React.Fragment key={i}>
+                    {line}
+                    {i < message.content.split('\n').length - 1 && <br />}
+                  </React.Fragment>
+                ))}
+              </div>
+            </div>
+            <div className="absolute -right-1 top-0 w-2 h-2 bg-blue-500 transform rotate-45"></div>
           </div>
         </div>
       </div>
@@ -1311,22 +1225,27 @@ I've loaded these websites in the browser panel for you to explore. Would you li
     }
   }, [messages]);
 
-  // 添加初始化加载效果
+  // 修改初始化加载效果
   useEffect(() => {
     // 模拟初始化加载
     const timer = setTimeout(() => {
       setInitialLoading(false);
-      
-      // 开始显示初始消息时，设置消息发送状态为true
-      setIsMessageSending(true);
-      
-      // 开始逐步显示初始消息
-      showInitialMessagesSequentially();
     }, 1500);
     
     return () => clearTimeout(timer);
   }, []);
-  
+
+  // 添加新的 useEffect 来处理引导弹窗关闭后的欢迎消息
+  useEffect(() => {
+    // 当引导弹窗被关闭时
+    if (!showGuideModal && !initialMessagesShown) {
+      // 开始显示初始消息时，设置消息发送状态为true
+      setIsMessageSending(true);
+      // 开始逐步显示初始消息
+      showInitialMessagesSequentially();
+    }
+  }, [showGuideModal]); // 仅在 showGuideModal 状态改变时触发
+
   // 修改逐步显示初始消息的函数
   const showInitialMessagesSequentially = () => {
     // 设置第一条消息
@@ -1434,7 +1353,7 @@ I've loaded these websites in the browser panel for you to explore. Would you li
     }
   };
 
-  // 修改 renderDetails 函数，将 details 按照 planningId 分组并添加展开/折叠功能
+  // 修改 renderDetails 函数
   const renderDetails = (details) => {
     if (!details || details.length === 0) {
       return (
@@ -1463,13 +1382,13 @@ I've loaded these websites in the browser panel for you to explore. Would you li
     ];
 
     return planningIds.map((planningId, index) => {
-      const nodeId = `section-${index}`; // 使用索引而不是 planningId
-      const isExpanded = expandedNodes[nodeId] !== false; // 默认为 true
+      const nodeId = `section-${index}`;
+      const isExpanded = expandedNodes[nodeId] !== false;
       const title = stageTitles[index] || 'Unknown Stage';
       const groupDetails = groupedDetails[planningId];
 
       return (
-        <div key={nodeId} className="mb-4">
+        <div key={nodeId} className="mb-6">
           {/* 分组标题和展开/折叠按钮 */}
           <div 
             className="bg-gray-700/50 p-3 rounded-lg cursor-pointer hover:bg-gray-700/70 transition-colors"
@@ -1491,24 +1410,26 @@ I've loaded these websites in the browser panel for you to explore. Would you li
             </div>
           </div>
 
-          {/* 详细内容区域 */}
+          {/* 详细内容区域 - 修改折叠动画实现 */}
           <div 
-            className="overflow-hidden transition-all duration-300 ease-in-out"
+            className={`mt-2 transition-all duration-300 ease-in-out origin-top ${
+              isExpanded ? 'opacity-100' : 'opacity-0 h-0'
+            }`}
             style={{
-              maxHeight: isExpanded ? `${Math.min(groupDetails.length * 100, 400)}px` : '0',
-              opacity: isExpanded ? 1 : 0
+              maxHeight: isExpanded ? '2000px' : '0',
+              overflow: 'hidden'
             }}
           >
-            <div className="space-y-2 mt-2 overflow-y-auto" style={{ maxHeight: '400px' }}>
+            <div className="space-y-2 pr-2">
               {groupDetails.map((detail, detailIndex) => {
                 const { data, event, created_at } = detail;
                 const { title, status, outputs } = data || {};
                 
                 return (
-                  <div key={detailIndex} className="bg-gray-800/50 p-2 rounded border border-gray-700/50">
-                    <div className="text-xs text-gray-300">{title || event}</div>
+                  <div key={detailIndex} className="bg-gray-800/50 p-3 rounded border border-gray-700/50 hover:border-gray-600/50 transition-colors">
+                    <div className="text-xs text-gray-300 font-medium">{title || event}</div>
                     {status && (
-                      <div className={`text-xs mt-1 ${
+                      <div className={`text-xs mt-2 ${
                         status === "succeeded" ? "text-green-500" : 
                         status === "failed" ? "text-red-500" : 
                         "text-gray-400"
@@ -1517,11 +1438,11 @@ I've loaded these websites in the browser panel for you to explore. Would you li
                       </div>
                     )}
                     {outputs && (
-                      <div className="text-xs text-gray-400 mt-1 break-words">
+                      <div className="text-xs text-gray-400 mt-2 break-words leading-relaxed">
                         {typeof outputs === 'string' ? outputs : JSON.stringify(outputs)}
                       </div>
                     )}
-                    <div className="text-[10px] text-gray-500 mt-1">
+                    <div className="text-[10px] text-gray-500 mt-2">
                       {new Date(created_at).toLocaleString()}
                     </div>
                   </div>
@@ -1606,8 +1527,8 @@ I've loaded these websites in the browser panel for you to explore. Would you li
               </div>
             </div>
             
-            {/* 聊天消息容器 */}
-            <div className="flex-1 overflow-y-auto p-4 chat-messages-container">
+            {/* 聊天消息容器 - 进一步增加顶部内边距 */}
+            <div className="flex-1 overflow-y-auto pt-12 px-4 pb-4 chat-messages-container">
               {initialLoading ? (
                 <div className="flex items-center justify-center h-full">
                   <Spin size="large" />
