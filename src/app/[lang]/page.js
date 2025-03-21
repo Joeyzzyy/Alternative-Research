@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { ClientWrapper } from '../../components/layouts/client-wrapper';
 import CommonLayout from '../../components/layouts/layout';
 import Script from 'next/script'
+import FeatureIntro from '../../components/common/sections/feature-intro';
 
 // 1. 确保动态渲染
 export const dynamic = 'force-dynamic'
@@ -292,7 +293,7 @@ async function getPageData() {
       sections: [
         {
           componentName: "ResearchTool",
-          sectionId: "research-tool-1",
+          sectionId: "research-tool",
         },
         {
           componentName: "SubscriptionCard",
@@ -305,8 +306,8 @@ async function getPageData() {
                 id: "basic",
                 name: "Basic",
                 price: {
-                  monthly: "29",
-                  yearly: "24"
+                  monthly: "59",
+                  yearly: "39"
                 },
                 discount: "20%",
                 description: "Perfect for individuals and small teams",
@@ -315,10 +316,9 @@ async function getPageData() {
                   {
                     title: "Core Features",
                     items: [
-                      "Up to 5 AI tool comparisons",
-                      "Basic analytics",
-                      "Email support",
-                      "Access to basic templates"
+                      "Up to 5 times tool comparisons",
+                      "Compare 3 tools at a time",
+                      "Access to basic templates from your own site"
                     ]
                   }
                 ]
@@ -327,8 +327,8 @@ async function getPageData() {
                 id: "pro",
                 name: "Professional",
                 price: {
-                  monthly: "79",
-                  yearly: "63"
+                  monthly: "99",
+                  yearly: "79"
                 },
                 discount: "20%",
                 popular: true,
@@ -338,11 +338,11 @@ async function getPageData() {
                   {
                     title: "Everything in Basic, plus",
                     items: [
-                      "Unlimited AI tool comparisons",
-                      "Advanced analytics",
+                      "Up to 10 times tool comparisons",
+                      "Compare 5 tools at a time",
+                      "Access to basic templates from your own site",
+                      "Copilot template change",
                       "Priority support",
-                      "Custom templates",
-                      "API access"
                     ]
                   }
                 ]
@@ -374,169 +374,19 @@ async function getPageData() {
         },
         {
           componentName: "FeatureIntro",
-          sectionId: "feature-intro-1",
-          title: "Automated Competitive Research at Scale",
-          description: "Transform your competitive research process with our AI-powered platform. Input any URL, and our intelligent agents will automatically analyze competitors, identify key features, pricing strategies, and market positioning, then generate comprehensive alternative pages optimized for search engines.",
-          buttonText: "Start Research Now",
-          styles: {
-            background: "bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950",
-            buttonGradient: "from-cyan-500 via-purple-500 to-rose-500",
-            decorations: {
-              topRight: "radial-gradient(circle at top right, #22d3ee15 0%, transparent 60%)",
-              bottomLeft: "radial-gradient(circle at bottom left, #a78bfa15 0%, transparent 60%)",
-              circuitGrid: {
-                url: "/circuit-grid.svg",
-                opacity: "0.05"
-              }
-            }
-          }
+          sectionId: "feature-intro-1"
         },
         {
           componentName: "FeatureIntroLeftRight",
-          sectionId: "feature-intro-left-right-1",
-          title: "Customizable Research Parameters",
-          description: "Take control of your competitive analysis with our flexible research parameters. Set your focus areas, analysis depth, and SEO requirements, and let our AI generate detailed insights and content tailored to your needs.",
-          data: {
-            leftContent: {
-              uploadSection: {
-                icon: "image",
-                text: "Tap to upload image",
-                supportText: "Upload JPG/PNG images up to 10MB, with a minimum width/height of 300px."
-              },
-              modes: [
-                {
-                  name: "Standard Mode",
-                  description: "Fast AI video generation speed",
-                  isSelected: true,
-                  isLocked: false
-                },
-                {
-                  name: "Professional Mode",
-                  description: "Higher video quality but with longer generation time",
-                  isSelected: false,
-                  isLocked: true,
-                  badge: "New"
-                }
-              ],
-              promptStrength: {
-                value: 30,
-                labels: {
-                  left: "More Creative",
-                  right: "Follow Prompt"
-                }
-              },
-              length: {
-                options: [
-                  { value: "5s", isSelected: true },
-                  { value: "10s", isSelected: false }
-                ]
-              }
-            },
-            rightContent: {
-              icon: "video",
-              buttonText: "Turn Image to Video"
-            }
-          },
-          styles: {
-            background: "bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950",
-            decorations: {
-              topRight: "radial-gradient(circle at top right, #22d3ee15 0%, transparent 60%)",
-              bottomLeft: "radial-gradient(circle at bottom left, #a78bfa15 0%, transparent 60%)",
-              circuitGrid: {
-                url: "/circuit-grid.svg",
-                opacity: "0.05"
-              }
-            }
-          }
+          sectionId: "feature-intro-left-right-1"
         },
         {
           componentName: "FeatureIntroRightLeft",
-          sectionId: "feature-intro-right-left-1",
-          title: "How to Use Our Image to Video Generator",
-          description: "With only three steps, you can easily create videos from images with Pollo AI.",
-          data: {
-            videoTutorial: {
-              title: {
-                main: "How to Convert",
-                from: "Image",
-                to: "Video",
-                subtitle: "with Pollo AI"
-              },
-              logo: {
-                text: "P",
-                gradient: "from-cyan-500 via-blue-500 to-purple-500"
-              },
-              youtubeButton: {
-                text: "Watch on",
-                logo: "YouTube"
-              }
-            },
-            steps: [
-              {
-                title: "Step 1",
-                description: "Upload your image."
-              },
-              {
-                title: "Step 2",
-                description: "Input your text prompt and set the additional customization settings."
-              },
-              {
-                title: "Step 3",
-                description: "View and share the generated video."
-              }
-            ],
-            buttonText: "Try Our Image to Video Generator"
-          },
-          styles: {
-            background: "bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950",
-            decorations: {
-              topRight: "radial-gradient(circle at top right, #22d3ee15 0%, transparent 60%)",
-              bottomLeft: "radial-gradient(circle at bottom left, #a78bfa15 0%, transparent 60%)",
-              circuitGrid: {
-                url: "/circuit-grid.svg",
-                opacity: "0.05"
-              }
-            }
-          }
+          sectionId: "feature-intro-right-left-1"
         },
         {
           componentName: "Recommendations",
           sectionId: "recommendations-1",
-          title: "Helpful Resources About Image to Video",
-          description: "Learn more about AI image to video generation with these articles.",
-          data: {
-            resources: {
-              columnOne: [
-                { title: "10 Best AI Image-to-Video Generators", url: "#" },
-                { title: "Runway Image to Video", url: "#" },
-                { title: "Kling AI Image to Video", url: "#" },
-                { title: "How to Use Kling AI Image to Video", url: "#" },
-                { title: "Kling AI Image to Video Not Working", url: "#" }
-              ],
-              columnTwo: [
-                { title: "How to Use Runway Image to Video", url: "#" },
-                { title: "How to Use Motion Brush", url: "#" },
-                { title: "Kling AI Motion Brush", url: "#" },
-                { title: "Runway Motion Brush", url: "#" },
-                { title: "How to Use Kling AI Motion Brush", url: "#" }
-              ]
-            },
-            moreResourcesLink: {
-              text: "More Resources About Video Generation",
-              url: "#"
-            },
-            styles: {
-              background: "bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950",
-              decorations: {
-                topRight: "radial-gradient(circle at top right, #22d3ee15 0%, transparent 60%)",
-                bottomLeft: "radial-gradient(circle at bottom left, #a78bfa15 0%, transparent 60%)",
-                circuitGrid: {
-                  url: "/circuit-grid.svg",
-                  opacity: "0.05"
-                }
-              }
-            }
-          }
         },
         {
           componentName: "Faqs",
