@@ -417,58 +417,99 @@ export default function Header() {
       label: "Pricing",
       color: "#000000",
       fontWeight: "600",
-      link: "https://alternatively.websitelm.com/pricing"
+      link: "#pricing-1"
     },
     {
       label: "FAQ",
       color: "#000000", 
       fontWeight: "600",
-      link: "https://alternatively.websitelm.com/faq"
+      link: "#faq-1"
     }
   ];
 
   return (
     <>
-      <nav 
-        className="fixed top-0 left-0 right-0 z-50"
-        style={{
-          background: "#FFFFFF"
-        }}
-      >
-        <div className="max-w-[1450px] mx-auto px-6">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-slate-950 to-black border-b border-slate-800/50">
+        {/* 科技感背景装饰 */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_#22d3ee10_0%,_transparent_60%)]"></div>
+        <div className="absolute inset-0 bg-[url('/circuit-grid.svg')] opacity-[0.03]"></div>
+        
+        {/* 动态粒子效果 */}
+        <div className="absolute inset-0 overflow-hidden">
+          {Array(3).fill(0).map((_, i) => (
+            <div 
+              key={i}
+              className={`absolute w-0.5 h-0.5 rounded-full ${
+                i % 3 === 0 ? 'bg-cyan-500/30' : 
+                i % 3 === 1 ? 'bg-purple-500/30' : 
+                'bg-rose-400/30'
+              }`}
+              style={{
+                top: `${5 + (i * 20)}%`,
+                left: `${10 + (i * 15)}%`,
+                boxShadow: '0 0 8px 1px currentColor',
+                animation: `float-y ${6 + i}s ease-in-out infinite alternate`
+              }}
+            ></div>
+          ))}
+        </div>
+
+        <div className="max-w-[1450px] mx-auto px-6 relative z-10">
           <div className="flex items-center justify-between h-[4.2rem]">
-            {/* Logo */}
-            <div className="flex-shrink-0 flex items-center h-full">
-              <a href="/" className="flex items-center h-full py-2" target="_blank" rel="noopener noreferrer">
-                <Image
-                  src="/images/alternatively-logo-tem.png"
-                  alt="Logo"
-                  width={160}
-                  height={40}
-                  className="object-contain"
-                  quality={100}
-                  priority
-                />
+            {/* Logo 添加光效 */}
+            <div className="flex-shrink-0 flex items-center h-full group">
+              <a href="/" className="flex items-center h-full py-2 relative">
+                {/* 添加文字渐变容器 */}
+                <div className="relative z-10">
+                  <Image
+                    src="/images/alternatively-logo-tem.png"
+                    alt="Logo"
+                    width={160}
+                    height={40}
+                    className="object-contain transition-transform duration-300 group-hover:scale-105 mix-blend-lighten"
+                    quality={100}
+                    priority
+                  />
+                </div>
+                {/* 增强背景光效 */}
+                <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/50 to-purple-500/50 opacity-70 group-hover:opacity-90 transition-opacity duration-300 rounded-full blur-[20px]"></div>
+                {/* 添加动态光晕动画 */}
+                <div className="absolute inset-0 animate-pulse-slow opacity-30 bg-gradient-to-r from-cyan-400/30 to-purple-400/30 blur-[30px]"></div>
+                {/* 添加文字描边 */}
+                <div className="absolute inset-0 bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-200 opacity-30 mix-blend-overlay"></div>
               </a>
             </div>
 
-            {/* Desktop Navigation */}
+            {/* Desktop Navigation 更新样式 */}
             <div className="hidden md:flex items-center justify-center flex-1 px-8">
               <div className="flex gap-8">
-                {mainMenuItems.map(renderMenuItem)}
+                {mainMenuItems.map(item => (
+                  <div 
+                    key={item.label}
+                    className="relative group"
+                  >
+                    <a
+                      href={item.link}
+                      className="text-sm font-medium bg-clip-text text-transparent bg-gradient-to-r from-gray-300 to-gray-400 hover:from-cyan-400 hover:to-purple-400 transition-all duration-300"
+                    >
+                      {item.label}
+                    </a>
+                    <div className="absolute bottom-0 left-0 w-0 h-px bg-gradient-to-r from-cyan-400 to-purple-400 transition-all duration-300 group-hover:w-full"></div>
+                  </div>
+                ))}
               </div>
             </div>
 
-            {/* Action Items */}
+            {/* 更新按钮样式 */}
             <div className="hidden md:flex items-center gap-4">
               {isLoggedIn ? (
                 <div className="flex items-center gap-4">
-                  <div className="text-[15px] font-medium">
+                  <div className="text-sm font-medium text-gray-300">
                     {userEmail}
                   </div>
                   <button
                     onClick={handleLogout}
-                    className="px-4 py-2 rounded-lg bg-white text-[#DD33FF] hover:opacity-90 border border-[#DD33FF] cursor-pointer text-[15px] font-medium transition-all duration-300"
+                    className="px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-600/80 to-blue-600/80 text-white hover:from-cyan-500 hover:to-blue-500 transition-all duration-300 shadow-lg hover:shadow-cyan-500/20"
                   >
                     Log Out
                   </button>
@@ -477,13 +518,13 @@ export default function Header() {
                 <div className="flex items-center space-x-4">
                   <button
                     onClick={handleRegularLoginClick}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    className="px-4 py-2 text-sm font-medium text-white bg-slate-800/50 backdrop-blur-sm rounded-lg hover:bg-slate-700/60 transition-all duration-300 border border-slate-700/50 hover:border-cyan-500/30"
                   >
                     Sign In
                   </button>
                   <button
                     onClick={handleGoogleLogin}
-                    className="flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    className="flex items-center px-4 py-2 text-sm font-medium text-white bg-slate-800/50 backdrop-blur-sm rounded-lg hover:bg-slate-700/60 transition-all duration-300 border border-slate-700/50 hover:border-purple-500/30"
                   >
                     <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
                       <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -497,55 +538,26 @@ export default function Header() {
               )}
             </div>
 
-            {/* Mobile menu button */}
-            <div className="md:hidden flex items-center">
-              <button
-                onClick={() => setState({ ...state, isOpen: !state.isOpen })}
-                className="p-2 rounded-md cursor-pointer"
-              >
-                <span className="sr-only">Open menu</span>
-                {!state.isOpen ? (
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
-                ) : (
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* 添加移动端菜单 */}
-          {state.isOpen && (
-            <div className="md:hidden absolute top-[4.2rem] left-0 right-0 bg-white border-t border-gray-100 shadow-lg">
-              <div className="py-4 px-6">
-                <div className="space-y-3">
-                  {mainMenuItems.map((item) => (
-                    <div key={item.label} className="space-y-2">
-                      <div className="text-[15px] font-medium">{item.label}</div>
-                      {item.children?.length > 0 && (
-                        <div className="pl-4 space-y-2">
-                          {item.children.map((child) => (
-                            <a
-                              key={child.label}
-                              href={child.href}
-                              className="block text-sm text-gray-600 hover:text-[#3374FF]"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              {child.label}
-                            </a>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
+            {/* 移动菜单样式更新 */}
+            {state.isOpen && (
+              <div className="md:hidden absolute top-[4.2rem] left-0 right-0 bg-slate-900/95 backdrop-blur-sm border-t border-slate-800/50">
+                <div className="py-4 px-6">
+                  <div className="space-y-4">
+                    {mainMenuItems.map((item) => (
+                      <div key={item.label} className="group">
+                        <a
+                          href={item.link}
+                          className="text-gray-300 hover:text-cyan-400 transition-colors duration-300 text-sm font-medium"
+                        >
+                          {item.label}
+                        </a>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </nav>
 

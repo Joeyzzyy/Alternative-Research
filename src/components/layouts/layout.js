@@ -87,6 +87,7 @@ const CommonLayout = ({ article, keywords }) => {
             <div 
               key={`${section.componentName}-${section.sectionId}`}
               className={sectionClassName}
+              id={section.sectionId}
             >
               <Component 
                 data={section}
