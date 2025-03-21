@@ -156,12 +156,11 @@ const searchCompetitor = async (website, deepResearch) => {
 };
 
 // 生成替代方案
-const generateAlternative = async (customerId, deepResearch, website) => {
+const generateAlternative = async (websiteId, domains) => {
   try {
     const response = await apiClient.post('/alternatively/generate', {
-      customerId,
-      deepResearch,
-      website
+      domains,
+      websiteId
     });
     return response.data;
   } catch (error) {

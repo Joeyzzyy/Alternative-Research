@@ -17,7 +17,8 @@ const TASK_STATUS = {
 const TASK_TYPES = {
   COMPETITOR_SEARCH: 'COMPETITOR_SEARCH',
   COMPETITOR_SCORING: 'COMPETITOR_SCORING',
-  PRODUCT_COMPARISON: 'PRODUCT_COMPARISON'
+  PRODUCT_COMPARISON: 'PRODUCT_COMPARISON',
+  CODE_ANALYSIS: 'CODE_ANALYSIS'
 };
 
 // 添加轮询间隔常量
@@ -55,6 +56,12 @@ class TaskManager {
     this.onBrowserUpdate = null;
     this.onLoadingUpdate = null;
     this.onMessageSendingUpdate = null;
+    this.hasCompetitorSelection = false;
+    this.allPollingIntervals = new Set();
+    this.currentTaskType = null;
+    this.messageQueue = [];
+    this.isProcessingQueue = false;
+    this.contentPrepFlag = false; // 新增内容准备标志
   }
 
   // 初始化新的研究任务流程
@@ -78,18 +85,35 @@ class TaskManager {
 
   // 修改轮询方法以处理所有任务
   startPolling() {
-    if (this.activePolling.has('ALL_TASKS')) return;
-
+    // 移除条件检查，强制重启轮询
+    console.log('Force restarting polling...');
+    
     const pollTaskStatus = async () => {
       try {
+        console.log('Polling task status...');
         const response = await this.apiClient.getAlternativeStatus(this.websiteId);
-        const plannings = response?.data || [];
+        console.log('Poll response:', response);
 
-        // 创建当前状态快照
+        const plannings = response?.data || [];
+        
+        // 创建当前状态快照（包含所有任务状态）
         const currentState = plannings.map(p => `${p.planningName}:${p.status}`).join('|');
         
-        // 如果状态没有变化,跳过更新
+        // 检查是否所有任务都失败或完成
+        const allTasksFinished = plannings.every(p => 
+          p.status === 'finished' || p.status === 'failed'
+        ) && plannings.some(p => p.status === 'finished');
+
+        // 如果所有任务都完成或失败，则停止轮询
+        if (allTasksFinished) {
+          console.log('All tasks finished or failed, clearing polling');
+          this.clearAllTasks();
+          return;
+        }
+
+        // 如果状态没有变化且不是所有任务都完成，继续轮询
         if (this.lastProcessedState === currentState) {
+          console.log('No state change, continuing polling');
           return;
         }
         
@@ -117,15 +141,22 @@ class TaskManager {
 
       } catch (error) {
         console.error('Error polling task status:', error);
-        this.handlePollingError();
+        await this.handlePollingError(error);
       }
     };
 
-    // 设置轮询间隔
-    this.pollingInterval = setInterval(pollTaskStatus, POLLING_INTERVALS.TASK_STATUS);
+    // 清除现有间隔（如果有）
+    if (this.allPollingIntervals.size > 0) {
+      this.allPollingIntervals.forEach(interval => clearInterval(interval));
+      this.allPollingIntervals.clear();
+    }
+
+    const interval = setInterval(pollTaskStatus, 3000);
+    this.allPollingIntervals.add(interval);
     this.activePolling.add('ALL_TASKS');
     
     // 立即执行第一次轮询
+    console.log('Executing initial poll for new phase...');
     pollTaskStatus();
   }
 
@@ -168,14 +199,26 @@ class TaskManager {
 
   // 更新任务阶段状态
   async updateTaskStages(plannings) {
+    console.log('Current plannings status:', plannings.map(p => ({
+      name: p.planningName,
+      status: p.status
+    })));
+
     const competitorSearch = plannings.find(p => p.planningName === TASK_TYPES.COMPETITOR_SEARCH);
     const competitorScoring = plannings.find(p => p.planningName === TASK_TYPES.COMPETITOR_SCORING);
     const productComparison = plannings.find(p => p.planningName === TASK_TYPES.PRODUCT_COMPARISON);
+
+    console.log('Task stages:', {
+      search: competitorSearch?.status,
+      scoring: competitorScoring?.status,
+      comparison: productComparison?.status
+    });
 
     // 检查第一阶段完成和第二阶段开始
     if (competitorSearch?.status === 'finished' && 
         competitorScoring?.status === 'processing' && 
         !this.hasXavierStartMessage) {
+      console.log('Transitioning from search to scoring phase');
       this.hasXavierStartMessage = true;
       await this.updateXavierStartMessage();
     }
@@ -184,8 +227,199 @@ class TaskManager {
     if (competitorScoring?.status === 'finished' && 
         productComparison?.status === 'processing' && 
         !this.hasYoussefStartMessage) {
+      console.log('Transitioning from scoring to content phase');
       this.hasYoussefStartMessage = true;
-      await this.updateYoussefStartMessage();
+
+      this.messageQueue.push(
+        {
+          type: 'agent',
+          agentId: 1, // Joey
+          content: '✅ Final selection confirmed',
+          isThinking: false
+        },
+        {
+          type: 'agent',
+          agentId: 1,
+          content: '⏳ Starting final scoring process...',
+          isThinking: true
+        },
+        {
+          type: 'agent',
+          agentId: 2, // Youssef
+          content: '🔄 Receiving analysis data...',
+          isThinking: true
+        }
+      );
+    }
+
+    // 处理竞品选择逻辑
+    if (competitorSearch?.status === 'finished' && !this.hasCompetitorSelection) {
+      console.log('Competitor search finished, hasCompetitorSelection:', this.hasCompetitorSelection);
+      this.hasCompetitorSelection = true;
+      
+      try {
+        const competitors = this.parseCompetitors(competitorSearch.data);
+        console.log('Parsed competitors:', competitors);
+        
+        // 添加新消息而不是修改现有消息
+        this.onMessageUpdate?.(prev => {
+          console.log('Current messages:', prev);
+          // 检查是否已经存在选择消息
+          const hasSelectionMessage = prev.some(msg => 
+            msg.content.includes('I\'ve identified the main competitors') && 
+            msg.options
+          );
+
+          console.log('Has selection message:', hasSelectionMessage);
+          
+          if (hasSelectionMessage) {
+            console.log('Selection message already exists, skipping...');
+            return prev;
+          }
+
+          // 先关闭前一条消息的加载状态
+          const updated = prev.map(msg => {
+            if (msg.isThinking && msg.content.includes('searching for your top competitors')) {
+              return { ...msg, isThinking: false };
+            }
+            return msg;
+          });
+          
+          // 添加新的选项消息
+          return [...updated, {
+            type: 'agent',
+            agentId: 1, // 保持Joey的头像
+            content: '✨ Great! I\'ve identified the main competitors. Please select up to 3 to analyze:',
+            options: competitors.map((c, i) => ({
+              label: `${i + 1}. ${c.replace('www.', '')}`,
+              value: c
+            })),
+            maxSelections: 3,
+            isThinking: false
+          }];
+        });
+        
+      } catch (error) {
+        console.error('Error processing competitors:', error);
+      }
+      return;
+    }
+
+    // 当进入评分阶段时更新消息状态
+    if (competitorScoring?.status === 'processing') {
+      this.onMessageUpdate?.(prev => {
+        return prev.map(msg => {
+          // 关闭Joey的初始消息加载状态
+          if (msg.content.includes('Initializing competitor scoring') && msg.agentId === 1) {
+            return { ...msg, isThinking: false };
+          }
+          return msg;
+        }).concat({
+          type: 'agent',
+          agentId: 1, // Joey负责评分分析
+          content: '📊 Now conducting in-depth scoring analysis of selected competitors...',
+          isThinking: true
+        });
+      });
+    }
+
+    // 当评分完成时更新状态
+    if (competitorScoring?.status === 'finished') {
+      this.onMessageUpdate?.(prev => prev.map(msg => {
+        if (msg.content.includes('conducting in-depth scoring analysis') && msg.agentId === 1) {
+          return { ...msg, isThinking: false };
+        }
+        return msg;
+      }));
+    }
+
+    // 当进入内容准备阶段
+    if (competitorScoring?.status === 'finished' && !this.contentPrepFlag) {
+      this.contentPrepFlag = true;
+      
+      this.messageQueue.push(
+        {
+          type: 'agent',
+          agentId: 2, // Youssef
+          content: '🔍 Comparing key features between selected competitors...',
+          isThinking: true
+        },
+        {
+          type: 'agent',
+          agentId: 2,
+          content: '📚 Analyzing technical specifications...',
+          isThinking: true
+        },
+        {
+          type: 'agent',
+          agentId: 2,
+          content: '📝 Starting markdown content creation...',
+          isThinking: true
+        }
+      );
+    }
+
+    // 当进入内容生成阶段
+    if (productComparison?.status === 'processing') {
+      this.messageQueue.push({
+        type: 'agent',
+        agentId: 2,
+        content: '✍️ Drafting comparative analysis document...',
+        isThinking: true
+      });
+    }
+
+    if (competitorScoring?.status === 'finished' && 
+        productComparison?.status === 'processing') {
+      this.messageQueue.push(
+        {
+          type: 'agent',
+          agentId: 1,
+          content: '📋 Scoring summary: Completed all evaluations',
+          isThinking: false
+        },
+        {
+          type: 'agent',
+          agentId: 1,
+          content: '⇢ Transferring to content team',
+          isThinking: false
+        },
+        {
+          type: 'agent',
+          agentId: 2, // Youssef
+          content: '🔄 Starting content creation process in markdown...',
+          isThinking: true
+        }
+      );
+    }
+
+    // Xavier只在内容完成后触发
+    if (productComparison?.status === 'finished' && 
+        !this.hasXavierStartMessage) {
+      this.messageQueue.push({
+        type: 'agent',
+        agentId: 3, // Xavier
+        content: '💻 Starting page development...',
+        isThinking: true
+      });
+    }
+
+    // 当进入开发阶段时
+    if (productComparison?.status === 'finished') {
+      this.messageQueue.push(
+        {
+          type: 'agent',
+          agentId: 2, // Youssef
+          content: '📄 Finalizing content package...',
+          isThinking: false
+        },
+        {
+          type: 'agent',
+          agentId: 3, // Xavier
+          content: '💻 Analyzing technical requirements...', // 代码分析转移给Xavier
+          isThinking: true
+        }
+      );
     }
   }
 
@@ -240,19 +474,28 @@ class TaskManager {
 
   // 清理所有任务
   clearAllTasks() {
-    // 清除轮询间隔
-    if (this.pollingInterval) {
-      clearInterval(this.pollingInterval);
-      this.pollingInterval = null;
-    }
+    console.log('Clearing all tasks...');
     
+    // 清除轮询间隔
+    this.allPollingIntervals.forEach(interval => {
+      console.log('Clearing interval:', interval);
+      clearInterval(interval);
+    });
+    this.allPollingIntervals.clear();
     this.activePolling.clear();
-    this.tasks.clear();
-    this.hasCompletionMessage = false;
-    this.hasXavierStartMessage = false;
-    this.hasYoussefStartMessage = false;
-    this.hasFailureMessage = false;
-    this.lastProcessedState = null;
+    
+    // 只有在所有任务完成或失败时才重置这些状态
+    const allTasksFinished = Array.from(this.tasks.values()).every(task => 
+      task.status === TASK_STATUS.COMPLETED || task.status === TASK_STATUS.FAILED
+    );
+
+    if (allTasksFinished) {
+      this.hasCompletionMessage = false;
+      this.hasXavierStartMessage = false;
+      this.hasYoussefStartMessage = false;
+      this.hasFailureMessage = false;
+      this.lastProcessedState = null;
+    }
     
     if (this.detailPollingInterval) {
       clearInterval(this.detailPollingInterval);
@@ -268,6 +511,8 @@ class TaskManager {
     }
     
     this.lastSourceCount = 0;
+    this.messageQueue = [];
+    this.isProcessingQueue = false;
   }
 
   // 获取所有任务的状态
@@ -290,14 +535,14 @@ class TaskManager {
           ? { 
               type: 'agent',
               agentId: 1, // Joey
-              content: '🔍 I\'m now searching for your top competitors. This involves analyzing market data and identifying companies with similar offerings...',
+              content: '🔍 Analyzing market landscape and identifying key competitors...',
               isThinking: true
             }
           : status === TASK_STATUS.COMPLETED
             ? {
                 type: 'agent',
                 agentId: 1,
-                content: '✨ Great! I\'ve identified the main competitors. Now I\'ll hand this over to Xavier for detailed scoring analysis.',
+                content: '✅ Competitor list finalized. Starting scoring analysis...',
                 isThinking: false
               }
             : null;
@@ -306,15 +551,15 @@ class TaskManager {
         return status === TASK_STATUS.RUNNING
           ? {
               type: 'agent',
-              agentId: 2, // Xavier
-              content: '📊 I\'m analyzing each competitor\'s strengths and weaknesses, evaluating their features, pricing, and market positioning...',
+              agentId: 1, // Joey handles scoring
+              content: '📊 Evaluating competitor strengths/weaknesses and market positions...',
               isThinking: true
             }
           : status === TASK_STATUS.COMPLETED
             ? {
                 type: 'agent',
-                agentId: 2,
-                content: '📈 Scoring analysis complete! I\'ve evaluated all competitors. Passing this to Youssef for the final comparison.',
+                agentId: 1,
+                content: '📈 Scoring complete. Transferring to Youssef for content creation.',
                 isThinking: false
               }
             : null;
@@ -323,18 +568,21 @@ class TaskManager {
         return status === TASK_STATUS.RUNNING
           ? {
               type: 'agent',
-              agentId: 3, // Youssef
-              content: '🔄 Now comparing all products to identify key differentiators and unique value propositions...',
+              agentId: 2, // Youssef
+              content: '📝 Drafting comparative content in markdown...',
               isThinking: true
             }
           : status === TASK_STATUS.COMPLETED
             ? {
                 type: 'agent',
-                agentId: 3,
-                content: '🎉 Analysis complete! I\'ve prepared a comprehensive comparison of all products. Joey will now present the final insights to you.',
+                agentId: 2,
+                content: '✅ Content draft ready for development.',
                 isThinking: false
               }
             : null;
+
+      case TASK_TYPES.CODE_ANALYSIS:  // 移除该case或重定向给Xavier
+        return null; // 禁用代码分析任务类型
 
       default:
         return null;
@@ -406,7 +654,7 @@ Please try the analysis again with the website URL.`,
 
   // 添加detail轮询方法
   startDetailPolling() {
-    if (this.detailPollingInterval) return;
+    if (this.activePolling.has('DETAILS')) return;
 
     const pollDetails = async () => {
       try {
@@ -443,7 +691,9 @@ Please try the analysis again with the website URL.`,
       }
     };
 
-    this.detailPollingInterval = setInterval(pollDetails, 5000); // Poll every 5 seconds
+    const interval = setInterval(pollDetails, 8000);
+    this.allPollingIntervals.add(interval);
+    this.activePolling.add('DETAILS');
     pollDetails(); // Execute immediately for first time
   }
 
@@ -457,7 +707,7 @@ Please try the analysis again with the website URL.`,
 
   // 添加 sources 轮询方法
   startSourcePolling() {
-    if (this.sourcesPollingInterval) return;
+    if (this.activePolling.has('SOURCES')) return;
 
     const pollSources = async () => {
       try {
@@ -480,7 +730,9 @@ Please try the analysis again with the website URL.`,
       }
     };
 
-    this.sourcesPollingInterval = setInterval(pollSources, POLLING_INTERVALS.SOURCES);
+    const interval = setInterval(pollSources, 10000);
+    this.allPollingIntervals.add(interval);
+    this.activePolling.add('SOURCES');
     pollSources(); // 立即执行第一次
   }
 
@@ -490,9 +742,9 @@ Please try the analysis again with the website URL.`,
       case TASK_TYPES.COMPETITOR_SEARCH:
         return 1; // Joey
       case TASK_TYPES.COMPETITOR_SCORING:
-        return 2; // Xavier
+        return 1; // Joey
       case TASK_TYPES.PRODUCT_COMPARISON:
-        return 3; // Youssef
+        return 2; // Youssef
       default:
         return 1; // 默认使用 Joey
     }
@@ -516,9 +768,236 @@ Please try the analysis again with the website URL.`,
   setMessageSendingUpdateCallback(callback) {
     this.onMessageSendingUpdate = callback;
   }
+
+  pausePolling() {
+    // 停止所有类型的轮询
+    this.allPollingIntervals.forEach(interval => clearInterval(interval));
+    this.allPollingIntervals.clear();
+    this.activePolling.clear();
+  }
+
+  parseCompetitors(data) {
+    try {
+      const rawData = typeof data === 'string' ? JSON.parse(data) : data;
+      return rawData.slice(0, 10); // 限制最多显示10个
+    } catch (e) {
+      return [];
+    }
+  }
+
+  showCompetitorOptions(competitors) {
+    const selectionMessage = {
+      type: 'agent',
+      agentId: 1,
+      content: '✨ Great! I\'ve identified the main competitors. Please select up to 3 to analyze:',
+      options: competitors.map((c, i) => ({
+        label: `${i + 1}. ${c.replace('www.', '')}`,
+        value: c
+      })),
+      maxSelections: 3, // 添加最大选择数量限制
+      isThinking: false
+    };
+
+    this.onMessageUpdate?.(prev => [...prev, selectionMessage]);
+  }
+
+  async continueAnalysis(selected) {
+    // 修改这里：仅清理消息队列，不清理轮询
+    this.messageQueue = [];
+    this.isProcessingQueue = false;
+    this.currentTaskType = TASK_TYPES.COMPETITOR_SCORING;
+    const scoringAgent = this.getActiveAgent(this.currentTaskType);
+
+    try {
+      this.onMessageSendingUpdate?.(true);
+      
+      const response = await this.apiClient.generateAlternative(
+        this.websiteId,
+        selected
+      );
+
+      if (!response || response.code !== 200 || !response.data?.websiteId) {
+        throw new Error(response?.message || 'Invalid server response');
+      }
+
+      // 更新为新的websiteId
+      this.websiteId = response.data.websiteId;
+
+      // 成功后再构建消息队列
+      this.messageQueue = [
+        {
+          type: 'agent',
+          agentId: 1, // Joey确认选择
+          content: '✅ Final selection confirmed',
+          isThinking: false
+        },
+        {
+          type: 'agent',
+          agentId: 1,
+          content: '⏳ Starting final scoring process...',
+          isThinking: true
+        }
+      ];
+
+      // 修改这里：不再重置轮询状态
+      this.hasCompetitorSelection = false;
+      this.hasCompletionMessage = false;
+      this.hasFailureMessage = false;
+
+      // 确保轮询持续运行
+      if (this.allPollingIntervals.size === 0) {
+        this.startPolling();
+        this.startDetailPolling();
+        this.startSourcePolling();
+      }
+
+    } catch (error) {
+      console.error('Analysis failed:', error);
+      this.messageQueue = [];
+      this.onMessageUpdate?.(prev => [
+        ...prev.filter(msg => 
+          !msg.content.includes('Xavier is now analyzing') &&
+          !msg.content.includes('Transferring analysis')
+        ),
+        {
+          type: 'agent',
+          agentId: 1,
+          content: `⚠️ Failed to start analysis: ${error.message}`,
+          isThinking: false
+        }
+      ]);
+    } finally {
+      this.onMessageSendingUpdate?.(false);
+      if (!this.isProcessingQueue) {
+        this.processMessageQueue();
+      }
+    }
+  }
+
+  // 添加获取agent名称的辅助方法
+  getAgentName(agentId) {
+    const agents = {
+      1: 'Joey',
+      2: 'Youssef',
+      3: 'Xavier'
+    };
+    return agents[agentId] || 'Joey';
+  }
+
+  async processMessageQueue() {
+    if (this.isProcessingQueue || !this.onMessageUpdate) return;
+    
+    this.isProcessingQueue = true;
+    
+    while (this.messageQueue.length > 0) {
+      const message = this.messageQueue.shift();
+      
+      // 使用 Promise 来确保消息按顺序显示
+      await new Promise(resolve => {
+        this.onMessageUpdate(prev => {
+          // 检查是否已存在相同消息
+          const messageExists = prev.some(m => 
+            m.content === message.content && 
+            m.agentId === message.agentId
+          );
+          
+          if (messageExists) {
+            return prev;
+          }
+
+          // 更新前一条消息的状态
+          const updatedMessages = prev.map(msg => {
+            if (msg.isThinking) {
+              return { ...msg, isThinking: false };
+            }
+            return msg;
+          });
+
+          return [...updatedMessages, message];
+        });
+        
+        // 添加小延迟使消息显示更自然
+        setTimeout(resolve, 800);
+      });
+    }
+    
+    this.isProcessingQueue = false;
+  }
+
+  // 添加 Xavier 开始消息的方法
+  async updateXavierStartMessage() {
+    this.messageQueue.push({
+      type: 'agent',
+      agentId: 3, // Xavier
+      content: '💻 Converting markdown to webpage...',
+      isThinking: true
+    });
+  }
+
+  // 添加 Youssef 开始消息的方法
+  async updateYoussefStartMessage() {
+    if (this.hasYoussefStartMessage) return; // 防止重复
+
+    this.messageQueue.push(
+      {
+        type: 'agent',
+        agentId: 3, // Youssef
+        content: '🔄 Starting product comparison analysis...',
+        isThinking: true
+      },
+      {
+        type: 'agent',
+        agentId: 2, // Xavier
+        content: '✅ Scoring analysis complete! Handing over to Youssef for final comparison...',
+        isThinking: false
+      }
+    );
+
+    await this.processMessageQueue();
+  }
+
+  // 添加错误处理方法
+  async handlePollingError(error) {
+    console.error('Polling error occurred:', error);
+    
+    // 清理所有进行中的任务
+    this.clearAllTasks();
+    
+    // 如果已经有错误消息，不再添加
+    if (this.hasFailureMessage) return;
+    this.hasFailureMessage = true;
+
+    // 更新所有现有消息的状态
+    this.onMessageUpdate?.(prev => {
+      // 先关闭所有思考状态
+      const updatedMessages = prev.map(msg => ({
+        ...msg,
+        isThinking: false
+      }));
+
+      // 添加错误消息
+      return [...updatedMessages, {
+        type: 'agent',
+        agentId: 1, // 使用 Joey 发送错误消息
+        content: '❌ I encountered an error while processing your request. Please try again.',
+        isThinking: false
+      }];
+    });
+
+    // 重置 UI 状态
+    if (this.onLoadingUpdate) {
+      this.onLoadingUpdate(false);
+    }
+    if (this.onMessageSendingUpdate) {
+      this.onMessageSendingUpdate(false);
+    }
+  }
 }
 
 const ResearchTool = () => {
+  // 确保在组件顶层调用hooks
+  const [messageApi, contextHolder] = message.useMessage();
+  const [selectedCompetitors, setSelectedCompetitors] = useState([]);
   const [domain, setDomain] = useState('');
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -635,6 +1114,12 @@ const ResearchTool = () => {
   };
 
   const handleUserInput = (e) => {
+    // 新增选择处理
+    if (userInput?.type === 'competitor_select') {
+      handleCompetitorSelect(userInput.values);
+      return;
+    }
+    
     // 阻止任何可能的默认行为
     if (e) {
       e.preventDefault();
@@ -683,11 +1168,64 @@ Could you please provide a valid domain name? For example: "websitelm.com"`,
     }, 500);
   };
   
+  // 修改竞品选择处理逻辑
+  const handleCompetitorSelect = (selected) => {
+    if (selected.length > 3) {
+      messageApi.error('Maximum 3 competitors can be selected');
+      return;
+    }
+    if (selected.length === 3) {
+      messageApi.info('You have reached the maximum selection (3 competitors)');
+    }
+    setSelectedCompetitors(selected);
+  };
+
+  // 添加确认处理方法
+  const handleConfirmSelection = async () => {
+    // 清除旧消息
+    setMessages(prev => prev.filter(msg => 
+      !msg.content.includes('Xavier is now analyzing') &&
+      !msg.content.includes('Transferring analysis')
+    ));
+    
+    if (selectedCompetitors.length === 0) {
+      messageApi.error('Please select at least 1 competitor');
+      return;
+    }
+
+    setMessages(prev => [
+      ...prev,
+      { 
+        type: 'user', 
+        content: `Selected: ${selectedCompetitors.map(c => c.replace('www.', '')).join(', ')}` 
+      },
+      {
+        type: 'agent',
+        agentId: 1,
+        content: '✅ Great choices! Now transferring to Youssef for content analysis...',
+        isThinking: true
+      }
+    ]);
+
+    taskManager.continueAnalysis(selectedCompetitors);
+    setSelectedCompetitors([]); // 清空选中状态
+  };
+
   const [taskManager] = useState(() => new TaskManager(apiClient));
 
   useEffect(() => {
     // 设置任务更新回调
     taskManager.onTaskUpdate = (taskType, task) => {
+      // 当任务类型变化时自动更新消息
+      if (taskType !== taskManager.currentTaskType) {
+        const newAgent = taskManager.getActiveAgent(taskType);
+        setMessages(prev => [...prev, {
+          type: 'agent',
+          agentId: newAgent,
+          content: `${taskManager.getAgentName(newAgent)} is now leading the analysis...`,
+          isThinking: true
+        }]);
+      }
       // 更新工作流程状态
       setWorkflowStage(task.status);
       // 根据任务类型和状态更新UI
@@ -805,7 +1343,7 @@ Could you please provide a valid domain name? For example: "websitelm.com"`,
           handleResearchResults(statusResponse.data, domain);
         } else if (statusResponse?.data?.status === 'FAILED') {
           clearInterval(pollInterval);
-          message.error('Analysis failed, please try again later');
+          messageApi.error('Analysis failed, please try again later');
           setLoading(false);
           setWorkflowStage(null);
         }
@@ -814,7 +1352,7 @@ Could you please provide a valid domain name? For example: "websitelm.com"`,
       } catch (error) {
         console.error('Failed to get status:', error);
         clearInterval(pollInterval);
-        message.error('Failed to get analysis status');
+        messageApi.error('Failed to get analysis status');
         setLoading(false);
         setWorkflowStage(null);
       }
@@ -897,6 +1435,93 @@ I've loaded these websites in the browser panel for you to explore. Would you li
   };
 
   const renderChatMessage = (message, index) => {
+    if (message.options) {
+      const agent = agents.find(a => a.id === message.agentId) || agents[0];
+      return (
+        <div key={index} className="flex justify-start mb-8">
+          <div className="flex max-w-[80%] flex-row group">
+            <div className="flex-shrink-0 mr-4">
+              <div className="relative">
+                <Avatar 
+                  size={40}
+                  src={agent.avatar}
+                  className="border-2 border-transparent group-hover:border-blue-400/50 transition-colors duration-300"
+                />
+                {message.isThinking && (
+                  <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
+                    <div className="w-2 h-2 bg-white rounded-full animate-ping"></div>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="relative">
+              <div className="absolute -top-6 left-0">
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs font-medium text-blue-300">{agent.name}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 bg-blue-500/20 text-blue-300 rounded-full">
+                    {agent.role}
+                  </span>
+                </div>
+              </div>
+              <div className="p-4 rounded-2xl text-sm bg-gradient-to-br from-gray-800/95 to-gray-900/95 
+                            text-gray-100 shadow-xl backdrop-blur-sm border border-white/10 
+                            hover:border-blue-500/30 transition-all duration-300
+                            rounded-tl-none transform hover:-translate-y-0.5">
+                <div className="relative z-10">
+                  {message.content}
+                  
+                  <div className="text-xs text-gray-400 mt-2">(Max 3 selections)</div>
+                  <div className="grid grid-cols-2 gap-2 mt-3">
+                    {message.options.map((opt, i) => (
+                      <button
+                        key={i}
+                        onClick={() => {
+                          const currentCount = selectedCompetitors.length;
+                          const isSelected = selectedCompetitors.includes(opt.value);
+                          
+                          if (!isSelected && currentCount >= 3) {
+                            messageApi.error('Maximum 3 competitors can be selected');
+                            return;
+                          }
+                          
+                          const newSelected = isSelected 
+                            ? selectedCompetitors.filter(c => c !== opt.value)
+                            : [...selectedCompetitors, opt.value];
+                          
+                          handleCompetitorSelect(newSelected);
+                        }}
+                        className={`p-2 rounded text-left transition-colors ${
+                          selectedCompetitors.includes(opt.value)
+                            ? 'bg-blue-600/30 border border-blue-400/50'
+                            : 'bg-gray-700/50 hover:bg-gray-600/50'
+                        }`}
+                      >
+                        <div className="text-sm">{opt.label}</div>
+                        <div className="text-xs text-gray-400 truncate">{opt.value}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleConfirmSelection}
+                  disabled={selectedCompetitors.length === 0}
+                  className={`mt-4 w-full py-2 rounded-lg transition-colors ${
+                    selectedCompetitors.length > 0
+                      ? 'bg-blue-600 hover:bg-blue-500'
+                      : 'bg-gray-700 cursor-not-allowed'
+                  }`}
+                >
+                  {selectedCompetitors.length > 0 
+                    ? `Confirm ${selectedCompetitors.length} Selection(s)`
+                    : 'Select Competitors to Continue'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
     if (message.type !== 'user') {
       const agent = agents.find(a => a.id === message.agentId) || agents[0];
       return (
@@ -991,28 +1616,28 @@ I've loaded these websites in the browser panel for you to explore. Would you li
     );
   };
   
-  // 修改 agents 数据
+  // 调整agents顺序并修正职责描述
   const agents = [
     {
       id: 1,
       name: 'Joey.Z',
       avatar: '/images/zy.jpg',
-      role: 'Market Researcher',
-      description: 'Specialized in market analysis, competitor research, and identifying market opportunities. I help discover and evaluate alternatives in your market space.'
+      role: 'Competitive Analyst',
+      description: 'Specializes in competitor discovery and scoring analysis. Responsible for market research and competitor evaluation.'
     },
     {
-      id: 2,
+      id: 2,  // 调整为第二位
       name: 'Youssef',
       avatar: '/images/youssef.jpg',
-      role: 'UI/UX Designer',
-      description: 'Focus on analyzing design patterns, user interfaces, and user experience flows. I provide detailed visual and interaction analysis.'
+      role: 'Content Strategist',
+      description: 'Focuses on comparative content creation. Responsible for writing SEO-optimized alternative page content in markdown format.'
     },
     {
-      id: 3,
+      id: 3,  // 调整为第三位
       name: 'Xavier.S',
       avatar: '/images/hy.jpg',
-      role: 'Developer',
-      description: 'Expert in technical implementation and code analysis. I help evaluate technology stacks and implementation approaches.'
+      role: 'Full-stack Developer',
+      description: 'Handles page implementation. Responsible for converting markdown content into production-ready web pages.'
     }
   ];
 
@@ -1212,125 +1837,35 @@ I've loaded these websites in the browser panel for you to explore. Would you li
       );
     }
 
-    const planningIds = [...new Set(details.map(detail => detail.planningId))];
-    const groupedDetails = {};
-    planningIds.forEach((planningId, index) => {
-      groupedDetails[planningId] = details.filter(detail => detail.planningId === planningId);
-    });
-
-    const stageTitles = [
-      { title: 'Finding Competitors', icon: '🔍' },
-      { title: 'Analyzing Competitors', icon: '📊' },
-      { title: 'Generating Alternative Pages', icon: '📝' }
-    ];
-
     return (
-      <div className="relative pl-8 pt-4">
-        {/* 垂直时间线 - 调整宽度和位置 */}
-        <div className="absolute left-[11px] top-0 bottom-0 w-[2px] bg-gradient-to-b from-blue-500/50 via-purple-500/50 to-blue-500/50"></div>
-
-        {planningIds.map((planningId, index) => {
-          const nodeId = `section-${index}`;
-          const isExpanded = expandedNodes[nodeId] !== false;
-          const { title, icon } = stageTitles[index] || { title: 'Unknown Stage', icon: '📌' };
-          const groupDetails = groupedDetails[planningId];
-          const isLast = index === planningIds.length - 1;
-
+      <div className="p-3 space-y-2">
+        {details.map((detail, index) => {
+          const { data, event, created_at } = detail;
+          const { title, status, outputs } = data || {};
+          
           return (
-            <div key={nodeId} className="mb-6 relative">
-              {/* 时间线节点 - 调整大小和位置 */}
-              <div 
-                className={`absolute -left-[13px] w-5 h-5 rounded-full flex items-center justify-center
-                           ${isExpanded ? 'bg-blue-500' : 'bg-gray-700'} 
-                           transition-colors duration-300 z-10`}
-              >
-                <span className="text-[10px]">{icon}</span>
-              </div>
-
-              {/* 连接线 - 调整位置和样式 */}
-              {!isLast && (
-                <div className="absolute -left-[10px] top-5 bottom-0 w-[2px] bg-gray-700/30"></div>
+            <div 
+              key={index} 
+              className="bg-gray-800/50 p-2.5 rounded border border-gray-700/50 
+                        hover:border-gray-600/50 transition-all duration-300"
+            >
+              <div className="text-[11px] text-gray-300 font-medium">{title || event}</div>
+              {status && (
+                <div className={`text-[10px] mt-1.5 ${
+                  status === "succeeded" ? "text-green-500" : 
+                  status === "failed" ? "text-red-500" : 
+                  "text-gray-400"
+                }`}>
+                  {status}
+                </div>
               )}
-
-              {/* 内容区域 */}
-              <div className="relative">
-                {/* 标题和展开/折叠按钮 */}
-                <div 
-                  className={`bg-gray-700/50 p-3 rounded-lg cursor-pointer hover:bg-gray-700/70 
-                             transition-all duration-300 ${isExpanded ? 'ring-1 ring-blue-500/50' : ''}`}
-                  onClick={() => setExpandedNodes(prev => ({...prev, [nodeId]: !prev[nodeId]}))}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <span className="text-xs font-medium text-purple-200">{title}</span>
-                      <div className="flex items-center space-x-1.5">
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full transition-colors duration-300
-                                       ${isExpanded ? 'bg-blue-500/20 text-blue-300' : 'bg-gray-600/50 text-gray-400'}`}>
-                          {groupDetails.length}
-                        </span>
-                        <span className={`text-[10px] transition-colors duration-300
-                                       ${isExpanded ? 'text-blue-300/70' : 'text-gray-400/70'}`}>
-                          executed steps
-                        </span>
-                      </div>
-                    </div>
-                    <svg 
-                      className={`w-3.5 h-3.5 text-gray-400 transform transition-transform duration-300
-                                ${isExpanded ? 'rotate-180 text-blue-400' : ''}`}
-                      fill="none" 
-                      stroke="currentColor" 
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </div>
+              {outputs && (
+                <div className="text-[10px] text-gray-400 mt-1.5 break-words leading-relaxed">
+                  {typeof outputs === 'string' ? outputs : JSON.stringify(outputs)}
                 </div>
-
-                {/* 详细内容区域 */}
-                <div 
-                  className="overflow-hidden transition-all duration-300 ease-in-out"
-                  style={{
-                    maxHeight: isExpanded ? '320px' : '0',
-                    opacity: isExpanded ? 1 : 0,
-                    marginTop: isExpanded ? '0.5rem' : '0'
-                  }}
-                >
-                  <div className="space-y-2 pr-2 overflow-y-auto" style={{ maxHeight: '320px' }}>
-                    {groupDetails.map((detail, detailIndex) => {
-                      const { data, event, created_at } = detail;
-                      const { title, status, outputs } = data || {};
-                      
-                      return (
-                        <div 
-                          key={detailIndex} 
-                          className={`bg-gray-800/50 p-2.5 rounded border border-gray-700/50 
-                                    hover:border-gray-600/50 transition-all duration-300
-                                    ${isExpanded ? 'translate-x-0 opacity-100' : '-translate-x-4 opacity-0'}`}
-                          style={{ transitionDelay: `${detailIndex * 50}ms` }}
-                        >
-                          <div className="text-[11px] text-gray-300 font-medium">{title || event}</div>
-                          {status && (
-                            <div className={`text-[10px] mt-1.5 ${
-                              status === "succeeded" ? "text-green-500" : 
-                              status === "failed" ? "text-red-500" : 
-                              "text-gray-400"
-                            }`}>
-                              {status}
-                            </div>
-                          )}
-                          {outputs && (
-                            <div className="text-[10px] text-gray-400 mt-1.5 break-words leading-relaxed">
-                              {typeof outputs === 'string' ? outputs : JSON.stringify(outputs)}
-                            </div>
-                          )}
-                          <div className="text-[9px] text-gray-500 mt-1.5">
-                            {new Date(created_at).toLocaleString()}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+              )}
+              <div className="text-[9px] text-gray-500 mt-1.5">
+                {new Date(created_at).toLocaleString()}
               </div>
             </div>
           );
@@ -1341,6 +1876,7 @@ I've loaded these websites in the browser panel for you to explore. Would you li
 
   return (
     <ConfigProvider wave={{ disabled: true }}>
+      {contextHolder}
       <div className="w-full min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 
                     text-white flex items-center justify-center p-4 relative overflow-hidden" 
            style={{ paddingTop: "80px" }}>
@@ -1561,9 +2097,9 @@ I've loaded these websites in the browser panel for you to explore. Would you li
                               <span className="animate-ping absolute inline-flex h-1.5 w-1.5 rounded-full bg-white opacity-75"></span>
                               <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white"></span>
                             </span>
-                            {agent.role === 'Market Researcher' && 'Analyzing Market'}
-                            {agent.role === 'UI/UX Designer' && 'Reviewing Design'}
-                            {agent.role === 'Developer' && 'Analyzing Code'}
+                            {agent.role === 'Competitive Analyst' && 'Analyzing Market'}
+                            {agent.role === 'Full-stack Developer' && 'Coding For Final Pages'}
+                            {agent.role === 'Content Strategist' && 'Writing Content'}
                           </div>
                           {/* 添加小三角形指示器 */}
                           <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 
