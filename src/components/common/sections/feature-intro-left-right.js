@@ -32,9 +32,15 @@ const CustomizableResearchUI = () => {
             <button 
               className="px-8 py-3.5 rounded-full relative overflow-hidden group"
               onClick={(e) => {
-                e.preventDefault(); // 阻止默认行为
-                window.open('https://app.alternatively.websitelm.com', '_blank');
+                e.preventDefault();
+                e.stopPropagation();
+                // 滚动到页面顶部
+                window.scrollTo({
+                  top: 0,
+                  behavior: 'smooth' // 可选平滑滚动效果
+                });
               }}
+              type="button"
             >
               <span className="absolute inset-0 bg-gradient-to-r from-cyan-500 via-purple-500 to-rose-500 animate-gradient-x"></span>
               <span className="absolute inset-0.5 rounded-full bg-slate-900 group-hover:bg-slate-800 transition-colors duration-300"></span>
