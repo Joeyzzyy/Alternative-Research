@@ -142,6 +142,19 @@ const getAlternativeStatus = async (websiteId) => {
   }
 };
 
+const searchCompetitor = async (website, deepResearch) => {
+  try {
+    const response = await apiClient.post(`/alternatively/search`, {
+      deepResearch,
+      website
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Failed to search competitor:', error);
+    throw error;
+  }
+};
+
 // 生成替代方案
 const generateAlternative = async (customerId, deepResearch, website) => {
   try {
@@ -209,5 +222,6 @@ apiClient.generateAlternative = generateAlternative;
 apiClient.getAlternativeDetail = getAlternativeDetail;
 apiClient.getAlternativeSources = getAlternativeSources;
 apiClient.getAlternativeResult = getAlternativeResult;
+apiClient.searchCompetitor = searchCompetitor;
 
 export default apiClient;

@@ -582,157 +582,8 @@ const ResearchTool = () => {
   // 添加 sources 状态
   const [sourcesData, setSourcesData] = useState([]);
 
-  // 添加引导弹窗状态
-  const [showGuideModal, setShowGuideModal] = useState(true);
-
   // 在组件的最开始部分添加引导弹窗的渲染逻辑
-  const renderGuideModal = () => (
-    <div 
-      className={`fixed inset-0 z-50 flex items-center justify-center px-4 ${showGuideModal ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-      style={{ transition: 'opacity 0.3s ease-in-out' }}
-    >
-      {/* 背景遮罩 */}
-      <div 
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={() => setShowGuideModal(false)}
-      ></div>
-      
-      {/* 弹窗内容 - 更新标题和描述 */}
-      <div className="relative bg-gradient-to-b from-gray-900 to-gray-800 rounded-2xl border border-gray-700 shadow-2xl 
-                      max-w-2xl w-full min-h-[700px] max-h-[90vh] overflow-y-auto transform transition-all">
-        {/* Logo 容器 - 增加上方空间确保完整显示 */}
-        <div className="h-32 flex items-center justify-center relative">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2">
-            <div className="w-24 h-24 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 p-0.5 mt-6">
-              <div className="w-full h-full rounded-full bg-gray-900 flex items-center justify-center">
-                <img src="/images/alternatively-logo.png" alt="Alternatively" className="w-14 h-14" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 内容区域 - 更新标题和描述 */}
-        <div className="px-12 pb-12">
-          <h2 className="text-3xl font-bold text-center text-white mb-8">
-            Generate SEO-Optimized Alternative Pages
-          </h2>
-          <p className="text-gray-300 text-center mb-12 text-lg leading-relaxed max-w-xl mx-auto">
-            Enter your website domain and our AI agents will instantly create SEO-friendly comparison pages by analyzing your top competitors. Perfect for boosting your organic traffic!
-          </p>
-
-          {/* 示例展示 - 更新文案 */}
-          <div className="bg-gray-800/50 rounded-lg p-8 mb-12">
-            <div className="flex items-center space-x-4 mb-6">
-              <div className="w-12 h-12 rounded-full bg-blue-500/20 flex items-center justify-center">
-                <span className="text-blue-400 text-2xl">💡</span>
-              </div>
-              <span className="text-lg text-gray-300">Just enter your domain</span>
-            </div>
-            <div className="flex items-center justify-between space-x-6">
-              <code className="text-lg bg-gray-900/50 text-purple-300 px-6 py-3 rounded flex-shrink-0">websitelm.com</code>
-              <ArrowRightOutlined className="text-gray-500 text-xl flex-shrink-0" />
-              <div className="text-base text-gray-400">Get instant SEO pages</div>
-            </div>
-          </div>
-
-          {/* AI Agents 介绍 - 更新角色描述 */}
-          <div className="grid grid-cols-3 gap-6 mb-12">
-            {[
-              {
-                id: 1,
-                name: 'Joey.Z',
-                avatar: '/images/zy.jpg',
-                role: 'SEO Specialist',
-              },
-              {
-                id: 2,
-                name: 'Xavier.S',
-                avatar: '/images/hy.jpg',
-                role: 'Content Generator',
-              },
-              {
-                id: 3,
-                name: 'Youssef',
-                avatar: '/images/youssef.jpg',
-                role: 'Page Builder',
-              }
-            ].map(agent => (
-              <div key={agent.id} className="text-center p-6 bg-gray-800/30 rounded-lg hover:bg-gray-800/50 transition-colors">
-                <div className="w-20 h-20 rounded-full overflow-hidden mx-auto mb-4 border-2 border-gray-700">
-                  <img src={agent.avatar} alt={agent.name} className="w-full h-full object-cover" />
-                </div>
-                <div className="text-base text-gray-300 font-medium mb-2">{agent.name}</div>
-                <div className="text-sm text-gray-400">{agent.role}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* 开始按钮 - 更新文案 */}
-          <div className="max-w-xl mx-auto">
-            <button
-              onClick={() => {
-                setShowGuideModal(false);
-                inputRef.current?.focus();
-              }}
-              className="w-full py-5 relative group overflow-hidden rounded-xl"
-            >
-              {/* 渐变背景 */}
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500 opacity-90
-                              group-hover:opacity-100 transition-opacity duration-300"></div>
-              
-              {/* 动态光效 */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent 
-                              translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
-              
-              {/* 内容容器 */}
-              <div className="relative flex items-center justify-center gap-3 text-white">
-                <span className="text-xl font-medium tracking-wide">Create SEO Pages Now</span>
-                <svg 
-                  className="w-6 h-6 transform transition-all duration-300 
-                             group-hover:translate-y-1 group-hover:scale-110" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
-                >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth={2} 
-                    d="M19 14l-7 7m0 0l-7-7m7 7V3"
-                  />
-                </svg>
-              </div>
-
-              {/* 按钮边框光效 */}
-              <div className="absolute inset-0 rounded-xl border border-white/20 
-                              group-hover:border-white/40 transition-colors duration-300"></div>
-                      
-              {/* 按钮阴影效果 */}
-              <div className="absolute inset-0 rounded-xl opacity-50 blur-xl 
-                              bg-gradient-to-r from-blue-500/50 to-purple-500/50 
-                              group-hover:opacity-75 transition-opacity duration-300"></div>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  // 在组件顶部添加 useEffect 来控制滚动
-  useEffect(() => {
-    if (showGuideModal) {
-      // 当弹窗显示时禁用滚动
-      document.body.style.overflow = 'hidden';
-    } else {
-      // 当弹窗关闭时恢复滚动
-      document.body.style.overflow = 'unset';
-    }
-    
-    // 清理函数
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [showGuideModal]);
+  // const renderGuideModal = () => ( ... );
 
   // 在组件加载时检查登录状态
   useEffect(() => {
@@ -892,7 +743,6 @@ Could you please provide a valid domain name? For example: "websitelm.com"`,
     const storedCustomerId = localStorage.getItem('alternativelyCustomerId');
     
     if (!token || !storedCustomerId) {
-      // 不使用 message.error，而是通过消息对话的方式显示错误
       setMessages(prev => [...prev, {
         type: 'agent',
         agentId: 1,
@@ -918,10 +768,10 @@ Could you please provide a valid domain name? For example: "websitelm.com"`,
         isThinking: true
       }]);
 
-      const response = await apiClient.generateAlternative(
-        storedCustomerId,
-        deepResearchMode,
-        cleanDomain
+      // 修改为调用 searchCompetitor 而不是 generateAlternative
+      const response = await apiClient.searchCompetitor(
+        cleanDomain,
+        deepResearchMode
       );
 
       if (response?.code === 200 && response?.data?.websiteId) {
@@ -932,7 +782,6 @@ Could you please provide a valid domain name? For example: "websitelm.com"`,
       }
     } catch (error) {
       console.error('Failed to start research:', error);
-      // 使用消息对话方式显示错误
       setMessages(prev => [...prev, {
         type: 'agent',
         agentId: 1,
@@ -1142,28 +991,28 @@ I've loaded these websites in the browser panel for you to explore. Would you li
     );
   };
   
-  // 新增 agents 数据 - 将Joey提升为主要研究专家，移除Alexis
+  // 修改 agents 数据
   const agents = [
     {
       id: 1,
       name: 'Joey.Z',
-      avatar: '/images/zy.jpg',  // 使用指定的图片路径
-      role: 'Research Specialist',
-      description: 'Specialized in comprehensive competitor research and market analysis. I help identify and analyze alternative products in your market space.'
+      avatar: '/images/zy.jpg',
+      role: 'Market Researcher',
+      description: 'Specialized in market analysis, competitor research, and identifying market opportunities. I help discover and evaluate alternatives in your market space.'
     },
     {
       id: 2,
-      name: 'Xavier.S',
-      avatar: '/images/hy.jpg',  // 使用指定的图片路径
-      role: 'Detail Analyst',
-      description: 'Focus on deep-diving into competitor features, pricing strategies, and unique selling propositions. I provide detailed comparative analysis.'
+      name: 'Youssef',
+      avatar: '/images/youssef.jpg',
+      role: 'UI/UX Designer',
+      description: 'Focus on analyzing design patterns, user interfaces, and user experience flows. I provide detailed visual and interaction analysis.'
     },
     {
       id: 3,
-      name: 'Youssef',
-      avatar: '/images/youssef.jpg',  // 使用指定的图片路径
-      role: 'Integration Specialist',
-      description: 'Expert in connecting research findings with actionable insights. I help translate competitor analysis into strategic recommendations for your business.'
+      name: 'Xavier.S',
+      avatar: '/images/hy.jpg',
+      role: 'Developer',
+      description: 'Expert in technical implementation and code analysis. I help evaluate technology stacks and implementation approaches.'
     }
   ];
 
@@ -1238,13 +1087,13 @@ I've loaded these websites in the browser panel for you to explore. Would you li
   // 添加新的 useEffect 来处理引导弹窗关闭后的欢迎消息
   useEffect(() => {
     // 当引导弹窗被关闭时
-    if (!showGuideModal && !initialMessagesShown) {
+    if (!initialMessagesShown) {
       // 开始显示初始消息时，设置消息发送状态为true
       setIsMessageSending(true);
       // 开始逐步显示初始消息
       showInitialMessagesSequentially();
     }
-  }, [showGuideModal]); // 仅在 showGuideModal 状态改变时触发
+  }, []);
 
   // 修改逐步显示初始消息的函数
   const showInitialMessagesSequentially = () => {
@@ -1298,7 +1147,7 @@ I've loaded these websites in the browser panel for you to explore. Would you li
   // 如果正在初始化加载，显示加载界面
   if (initialLoading) {
     return (
-      <div className="w-full min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 
+      <div className="w-full min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 
                     flex items-center justify-center" style={{ paddingTop: "80px" }}>
         <div className="text-center">
           <img 
@@ -1492,17 +1341,14 @@ I've loaded these websites in the browser panel for you to explore. Would you li
 
   return (
     <ConfigProvider wave={{ disabled: true }}>
-      {/* 添加引导弹窗 */}
-      {renderGuideModal()}
-      
-      <div className="w-full min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 
+      <div className="w-full min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 
                     text-white flex items-center justify-center p-4 relative overflow-hidden" 
-         style={{ paddingTop: "80px" }}>
+           style={{ paddingTop: "80px" }}>
         <style>{animationStyles}</style>
         
         <div className="absolute inset-0" style={{ paddingTop: "80px" }}>
-          <div className="absolute w-96 h-96 bg-blue-500/10 rounded-full blur-3xl -top-20 -left-20 animate-pulse"></div>
-          <div className="absolute w-96 h-96 bg-gray-500/10 rounded-full blur-3xl -bottom-20 -right-20 animate-pulse delay-1000"></div>
+          <div className="absolute w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl -top-20 -left-20 animate-pulse"></div>
+          <div className="absolute w-96 h-96 bg-purple-500/10 rounded-full blur-3xl -bottom-20 -right-20 animate-pulse delay-1000"></div>
         </div>
         
         <div className="relative z-10 w-full flex flex-row gap-6 h-[calc(100vh-140px)] px-4 text-sm">
@@ -1685,18 +1531,16 @@ I've loaded these websites in the browser panel for you to explore. Would you li
                   </button>
                 )}
                 
-                {/* 进一步增加头像间距，并完全移开 Working 标签 */}
+                {/* 修改 Agent 头像和状态气泡的渲染部分 */}
                 <div className="flex items-center space-x-6">
                   {agents.map(agent => (
-                    <div key={agent.id} className="relative">
+                    <div key={agent.id} className="relative group">
                       <Tooltip title={`${agent.name} - ${agent.role}`}>
-                        <div 
-                          className={`w-8 h-8 rounded-full overflow-hidden border-2 transition-all duration-300 ${
-                            messages[messages.length - 1]?.agentId === agent.id && messages[messages.length - 1]?.isThinking
-                              ? 'border-blue-500 scale-110'
-                              : 'border-transparent hover:border-gray-400'
-                          }`}
-                        >
+                        <div className={`w-8 h-8 rounded-full overflow-hidden border-2 transition-all duration-300 ${
+                          messages[messages.length - 1]?.agentId === agent.id && messages[messages.length - 1]?.isThinking
+                            ? 'border-blue-500 scale-110'
+                            : 'border-transparent hover:border-gray-400'
+                        }`}>
                           <img 
                             src={agent.avatar} 
                             alt={agent.name} 
@@ -1704,14 +1548,27 @@ I've loaded these websites in the browser panel for you to explore. Would you li
                           />
                         </div>
                       </Tooltip>
-                      {/* 完全移到右上角，不遮挡头像 */}
+                      
+                      {/* 重新设计的状态气泡 */}
                       {messages[messages.length - 1]?.agentId === agent.id && 
                        messages[messages.length - 1]?.isThinking && (
-                        <div className="absolute -top-4 -right-4">
-                          <div className="px-1.5 py-0.5 bg-blue-500 rounded-full text-[8px] text-white font-medium flex items-center">
-                            <span className="w-1 h-1 bg-white rounded-full mr-1 animate-pulse"></span>
-                            Working
+                        <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
+                          <div className="px-2 py-1 bg-gradient-to-r from-blue-600 to-blue-500 
+                                        rounded-full shadow-lg border border-blue-400/20
+                                        text-[9px] text-white font-medium tracking-tight
+                                        flex items-center gap-1.5 backdrop-blur-sm">
+                            <span className="flex h-1.5 w-1.5">
+                              <span className="animate-ping absolute inline-flex h-1.5 w-1.5 rounded-full bg-white opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white"></span>
+                            </span>
+                            {agent.role === 'Market Researcher' && 'Analyzing Market'}
+                            {agent.role === 'UI/UX Designer' && 'Reviewing Design'}
+                            {agent.role === 'Developer' && 'Analyzing Code'}
                           </div>
+                          {/* 添加小三角形指示器 */}
+                          <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 
+                                        border-l-4 border-r-4 border-b-4 
+                                        border-l-transparent border-r-transparent border-b-blue-600"></div>
                         </div>
                       )}
                     </div>

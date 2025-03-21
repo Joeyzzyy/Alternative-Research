@@ -33,28 +33,66 @@ export default function Footer({ data }) {
   }
 
   return (
-    <footer className="bg-white relative overflow-hidden">
-      {/* AI风格的背景装饰 */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_#818cf810_0%,_transparent_50%)]"></div>
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_#6366f110_0%,_transparent_50%)]"></div>
-      <div className="absolute top-0 left-0 w-full h-full bg-[url('/grid.svg')] opacity-[0.015]"></div>
+    <footer className="bg-gradient-to-b from-slate-950 to-black relative overflow-hidden">
+      {/* AI-style background decorations */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_#22d3ee10_0%,_transparent_60%)]"></div>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_#a78bfa10_0%,_transparent_60%)]"></div>
+      <div className="absolute top-0 left-0 w-full h-full bg-[url('/circuit-grid.svg')] opacity-[0.05]"></div>
+
+      {/* Animated particles for enhanced tech feel */}
+      <div className="absolute inset-0 overflow-hidden">
+        {Array(5).fill(0).map((_, i) => (
+          <div 
+            key={i}
+            className={`absolute w-0.5 h-0.5 rounded-full \${
+              i % 3 === 0 ? 'bg-cyan-500/30' : 
+              i % 3 === 1 ? 'bg-purple-500/30' : 
+              'bg-rose-400/30'
+            }`}
+            style={{
+              top: `\${5 + (i * 20)}%`, 
+              left: `\${10 + (i * 15)}%`,
+              boxShadow: '0 0 8px 1px currentColor',
+              animation: `float-y \${6 + i}s ease-in-out infinite alternate, float-x \${8 + i}s ease-in-out infinite alternate`
+            }}
+          ></div>
+        ))}
+      </div>
+
+      {/* Top Border with Gradient */}
+      <div className="w-full h-px bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent"></div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-8 relative z-10">
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-8 lg:gap-12">
           {/* Company Info */}
           <div className="col-span-2 sm:col-span-3 lg:col-span-2 space-y-4">
-            <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-600">
+            <h3 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-purple-400">
               {data.companyName}
             </h3>
-            <p className="text-gray-600 text-sm leading-relaxed max-w-md">
+            <p className="text-gray-400 text-sm leading-relaxed max-w-md">
               {data.description}
             </p>
+
+            {/* Add a subscribe box */}
+            <div className="pt-4">
+              <p className="text-gray-300 text-sm font-medium mb-3">Stay updated with our latest AI innovations</p>
+              <div className="flex max-w-md">
+                <input 
+                  type="email" 
+                  placeholder="Enter your email" 
+                  className="bg-slate-800/80 text-white border border-slate-700/50 rounded-l-lg px-4 py-2 focus:outline-none focus:ring-1 focus:ring-cyan-500 w-full text-sm"
+                />
+                <button className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-r-lg px-4 py-2 text-sm font-medium hover:from-cyan-600 hover:to-blue-700 transition-all duration-300 whitespace-nowrap">
+                  Subscribe
+                </button>
+              </div>
+            </div>
           </div>
           
           {/* Footer Sections */}
           {data.sections?.map((section, sectionIndex) => (
             <div key={sectionIndex} className="space-y-4">
-              <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wider">
+              <h4 className="text-sm font-semibold text-white uppercase tracking-wider">
                 {section.title}
               </h4>
               <ul className="space-y-3">
@@ -64,7 +102,7 @@ export default function Footer({ data }) {
                       href={link.url} 
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-gray-600 hover:text-gray-900 text-sm transition-colors duration-200"
+                      className="text-gray-400 hover:text-cyan-400 text-sm transition-colors duration-200"
                     >
                       {link.label}
                     </a>
@@ -76,12 +114,12 @@ export default function Footer({ data }) {
         </div>
 
         {/* Divider */}
-        <div className="h-px bg-gradient-to-r from-transparent via-gray-200 to-transparent my-8"></div>
+        <div className="h-px bg-gradient-to-r from-transparent via-slate-700/50 to-transparent my-8"></div>
 
         {/* Bottom Section */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-6">
           {/* Social Icons */}
-          <div className="flex flex-wrap justify-center gap-4">
+          <div className="flex flex-wrap justify-center gap-5">
             {data.socialMedia?.links && data.socialMedia.links.map((link, index) => {
               if (link && link.platform && link.url) {
                 return (
@@ -90,9 +128,15 @@ export default function Footer({ data }) {
                     href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-gray-500 hover:text-gray-900 transition-colors duration-200"
+                    className="text-gray-500 hover:text-white hover:scale-110 transition-all duration-200 group"
+                    aria-label={`Follow us on \${link.platform}`}
                   >
-                    {renderSocialIcon(link.platform)}
+                    <div className="relative">
+                      <div className="absolute -inset-1 rounded-full opacity-0 group-hover:opacity-100 blur-md bg-gradient-to-r from-cyan-500 to-purple-500 transition-opacity duration-300"></div>
+                      <div className="relative">
+                        {renderSocialIcon(link.platform)}
+                      </div>
+                    </div>
                   </a>
                 );
               }
@@ -101,8 +145,8 @@ export default function Footer({ data }) {
           </div>
           
           {/* Copyright */}
-          <p className="text-sm text-gray-600">
-            {data.copyright || `© ${new Date().getFullYear()} ${data.companyName}. All rights reserved.`}
+          <p className="text-sm text-gray-500">
+            {data.copyright || `© \${new Date().getFullYear()} \${data.companyName}. All rights reserved.`}
           </p>
         </div>
       </div>

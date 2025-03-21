@@ -169,7 +169,7 @@ async function getPageData() {
   const mockData = {
     data: {
       title: "Alternatively",
-      description: "Comprehensive AI tool comparison platform",
+      description: "AI-Powered Competitive Research & SEO Content Generation Platform",
       author: "AI Research Team",
       updatedAt: "2024-03-20T08:00:00.000Z",
       createdAt: "2024-03-20T08:00:00.000Z",
@@ -351,36 +351,192 @@ async function getPageData() {
           }
         },
         {
-          componentName: "ProductBenefitsWithBlocks",
-          sectionId: "benefits-1",
-          leftContent: {
-              buttonLink: "https://alternatively.websitelm.com/features",
-              buttonText: "Explore Features",
-              description: "Make informed decisions with comprehensive AI tool comparisons and insights",
-              title: "Why Choose Our AI Research Platform"
-          },
-          rightContent: [
-              {
-                  content: "Access detailed comparisons of 500+ AI tools with real-time updates on features, pricing, and user feedback. Our comprehensive database helps you find the perfect AI solution for your needs.",
-                  icon: "mdi:database-search",
-                  title: "Comprehensive Analysis"
-              },
-              {
-                  content: "Save hours of research time with our side-by-side comparison tools. Easily evaluate multiple AI solutions across 50+ criteria including features, pricing, integration capabilities, and user reviews.",
-                  icon: "mdi:clock-fast",
-                  title: "Time-Saving Comparisons"
-              },
-              {
-                  content: "Make data-driven decisions with our unbiased, detailed reviews and performance metrics. Get insights from real user experiences and expert evaluations.",
-                  icon: "mdi:chart-bar",
-                  title: "Data-Driven Insights"
-              },
-              {
-                  content: "Stay ahead with daily updates on new AI tools, feature releases, and pricing changes. Get customized recommendations based on your specific requirements and industry.",
-                  icon: "mdi:trending-up",
-                  title: "Real-Time Updates"
+          componentName: "AIModelShowcase",
+          sectionId: "ai-model-showcase-1",
+          title: "All-in-One AI Competitive Research Platform",
+          description: "Alternatively is your ultimate AI-powered competitive research assistant. Simply input a URL, and our advanced AI agents will automatically analyze competitors, generate comprehensive reports, and create SEO-optimized alternative pages - all in one place.",
+          data: {
+            aiModels: [
+              { name: 'Market Analysis', icon: 'circle', color: 'from-cyan-400 to-blue-500' },
+              { name: 'SEO Optimization', icon: 'square', color: 'from-emerald-400 to-green-500' },
+              { name: 'Content Generation', icon: 'circle', color: 'from-pink-500 to-rose-600' },
+              { name: 'Competitor Tracking', icon: 'square', color: 'from-blue-400 to-cyan-300' },
+              { name: 'Keyword Research', icon: 'triangle', color: 'from-teal-400 to-cyan-500' },
+              { name: 'Performance Analytics', icon: 'square', color: 'from-fuchsia-500 to-purple-600' },
+              { name: 'Trend Analysis', icon: 'cloud', color: 'from-slate-200 to-slate-400' },
+              { name: 'Feature Comparison', icon: 'hexagon', color: 'from-violet-500 to-purple-600' },
+              { name: 'Price Monitoring', icon: 'circle', color: 'from-blue-400 to-blue-600' },
+              { name: 'User Sentiment', icon: 'circle', color: 'from-blue-500 to-indigo-600' },
+              { name: 'Market Insights', icon: 'diamond', color: 'from-emerald-400 to-teal-500' }
+            ],
+            moreButtonText: "Explore Features"
+          }
+        },
+        {
+          componentName: "FeatureIntro",
+          sectionId: "feature-intro-1",
+          title: "Automated Competitive Research at Scale",
+          description: "Transform your competitive research process with our AI-powered platform. Input any URL, and our intelligent agents will automatically analyze competitors, identify key features, pricing strategies, and market positioning, then generate comprehensive alternative pages optimized for search engines.",
+          buttonText: "Start Research Now",
+          styles: {
+            background: "bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950",
+            buttonGradient: "from-cyan-500 via-purple-500 to-rose-500",
+            decorations: {
+              topRight: "radial-gradient(circle at top right, #22d3ee15 0%, transparent 60%)",
+              bottomLeft: "radial-gradient(circle at bottom left, #a78bfa15 0%, transparent 60%)",
+              circuitGrid: {
+                url: "/circuit-grid.svg",
+                opacity: "0.05"
               }
-          ]
+            }
+          }
+        },
+        {
+          componentName: "FeatureIntroLeftRight",
+          sectionId: "feature-intro-left-right-1",
+          title: "Customizable Research Parameters",
+          description: "Take control of your competitive analysis with our flexible research parameters. Set your focus areas, analysis depth, and SEO requirements, and let our AI generate detailed insights and content tailored to your needs.",
+          data: {
+            leftContent: {
+              uploadSection: {
+                icon: "image",
+                text: "Tap to upload image",
+                supportText: "Upload JPG/PNG images up to 10MB, with a minimum width/height of 300px."
+              },
+              modes: [
+                {
+                  name: "Standard Mode",
+                  description: "Fast AI video generation speed",
+                  isSelected: true,
+                  isLocked: false
+                },
+                {
+                  name: "Professional Mode",
+                  description: "Higher video quality but with longer generation time",
+                  isSelected: false,
+                  isLocked: true,
+                  badge: "New"
+                }
+              ],
+              promptStrength: {
+                value: 30,
+                labels: {
+                  left: "More Creative",
+                  right: "Follow Prompt"
+                }
+              },
+              length: {
+                options: [
+                  { value: "5s", isSelected: true },
+                  { value: "10s", isSelected: false }
+                ]
+              }
+            },
+            rightContent: {
+              icon: "video",
+              buttonText: "Turn Image to Video"
+            }
+          },
+          styles: {
+            background: "bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950",
+            decorations: {
+              topRight: "radial-gradient(circle at top right, #22d3ee15 0%, transparent 60%)",
+              bottomLeft: "radial-gradient(circle at bottom left, #a78bfa15 0%, transparent 60%)",
+              circuitGrid: {
+                url: "/circuit-grid.svg",
+                opacity: "0.05"
+              }
+            }
+          }
+        },
+        {
+          componentName: "FeatureIntroRightLeft",
+          sectionId: "feature-intro-right-left-1",
+          title: "How to Use Our Image to Video Generator",
+          description: "With only three steps, you can easily create videos from images with Pollo AI.",
+          data: {
+            videoTutorial: {
+              title: {
+                main: "How to Convert",
+                from: "Image",
+                to: "Video",
+                subtitle: "with Pollo AI"
+              },
+              logo: {
+                text: "P",
+                gradient: "from-cyan-500 via-blue-500 to-purple-500"
+              },
+              youtubeButton: {
+                text: "Watch on",
+                logo: "YouTube"
+              }
+            },
+            steps: [
+              {
+                title: "Step 1",
+                description: "Upload your image."
+              },
+              {
+                title: "Step 2",
+                description: "Input your text prompt and set the additional customization settings."
+              },
+              {
+                title: "Step 3",
+                description: "View and share the generated video."
+              }
+            ],
+            buttonText: "Try Our Image to Video Generator"
+          },
+          styles: {
+            background: "bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950",
+            decorations: {
+              topRight: "radial-gradient(circle at top right, #22d3ee15 0%, transparent 60%)",
+              bottomLeft: "radial-gradient(circle at bottom left, #a78bfa15 0%, transparent 60%)",
+              circuitGrid: {
+                url: "/circuit-grid.svg",
+                opacity: "0.05"
+              }
+            }
+          }
+        },
+        {
+          componentName: "Recommendations",
+          sectionId: "recommendations-1",
+          title: "Helpful Resources About Image to Video",
+          description: "Learn more about AI image to video generation with these articles.",
+          data: {
+            resources: {
+              columnOne: [
+                { title: "10 Best AI Image-to-Video Generators", url: "#" },
+                { title: "Runway Image to Video", url: "#" },
+                { title: "Kling AI Image to Video", url: "#" },
+                { title: "How to Use Kling AI Image to Video", url: "#" },
+                { title: "Kling AI Image to Video Not Working", url: "#" }
+              ],
+              columnTwo: [
+                { title: "How to Use Runway Image to Video", url: "#" },
+                { title: "How to Use Motion Brush", url: "#" },
+                { title: "Kling AI Motion Brush", url: "#" },
+                { title: "Runway Motion Brush", url: "#" },
+                { title: "How to Use Kling AI Motion Brush", url: "#" }
+              ]
+            },
+            moreResourcesLink: {
+              text: "More Resources About Video Generation",
+              url: "#"
+            },
+            styles: {
+              background: "bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950",
+              decorations: {
+                topRight: "radial-gradient(circle at top right, #22d3ee15 0%, transparent 60%)",
+                bottomLeft: "radial-gradient(circle at bottom left, #a78bfa15 0%, transparent 60%)",
+                circuitGrid: {
+                  url: "/circuit-grid.svg",
+                  opacity: "0.05"
+                }
+              }
+            }
+          }
         },
         {
           componentName: "Faqs",
@@ -418,7 +574,8 @@ async function getPageData() {
             smallText: "Join 5,000+ professionals receiving our weekly AI tool insights",
             buttonText: "Subscribe Now"
           }
-        }
+        },
+        
       ]
     }
   };

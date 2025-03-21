@@ -10,93 +10,144 @@ const SubscriptionCard = ({ data, theme = 'normal' }) => {
     { id: 'monthly', label: 'Monthly' }
   ];
 
-  // Theme related functions
-  const getTypographyStyles = () => {
-    const typography = themeConfig[theme].typography;
-    return {
-      title: `${typography.h2.fontSize} ${typography.h2.fontWeight} ${typography.h2.color}`,
-      subtitle: `${typography.h3.fontSize} ${typography.h3.fontWeight} ${typography.h3.color} mt-4 text-gray-600`
-    };
+  // Sample data for demonstration - in a real app this would come from props
+  const sampleData = {
+    title: "Choose Your Plan",
+    subTitle: "Start free and scale as you grow. All plans come with a 14-day trial.",
+    bottomContent: {
+      plans: [
+        {
+          name: "Basic",
+          price: { 
+            monthly: "29",
+            yearly: "23"
+          },
+          discount: "20%",
+          description: "Perfect for individuals and small teams",
+          buttonText: "Start Free Trial",
+          popular: false,
+          features: [
+            {
+              title: "Core Features",
+              items: [
+                "Up to 5 AI tool comparisons",
+                "Basic analytics",
+                "Email support",
+                "Access to basic templates"
+              ]
+            }
+          ]
+        },
+        {
+          name: "Professional",
+          price: {
+            monthly: "79",
+            yearly: "63"
+          },
+          discount: "20%",
+          description: "Ideal for growing businesses",
+          buttonText: "Start Free Trial",
+          popular: true,
+          features: [
+            {
+              title: "Everything in Basic, plus",
+              items: [
+                "Unlimited AI tool comparisons",
+                "Advanced analytics",
+                "Priority support",
+                "Custom templates",
+                "API access"
+              ]
+            }
+          ]
+        }
+      ]
+    }
   };
 
+  // Use either provided data or sample data
+  const displayData = data || sampleData;
+
   return (
-    <div className="bg-white py-24 relative overflow-hidden">
-      {/* AI风格的背景装饰 */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_#818cf820_0%,_transparent_50%)]"></div>
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_#6366f120_0%,_transparent_50%)]"></div>
-      <div className="absolute top-0 left-0 w-full h-full bg-[url('/grid.svg')] opacity-[0.015]"></div>
+    <div className="bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 py-24 relative overflow-hidden">
+      {/* AI-style background decorations */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_#22d3ee15_0%,_transparent_60%)]"></div>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_#a78bfa15_0%,_transparent_60%)]"></div>
+      <div className="absolute top-0 left-0 w-full h-full bg-[url('/circuit-grid.svg')] opacity-[0.05]"></div>
       
       <div className="max-w-7xl mx-auto px-4 relative z-10">
         <div className="text-center">
-          {data.title && (
-            <h2 className="text-4xl sm:text-5xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-gray-900 via-slate-800 to-gray-900 leading-tight">
-              {data.title}
+          {displayData.title && (
+            <h2 className="text-4xl sm:text-5xl font-bold mb-6 text-white leading-tight">
+              {displayData.title}
             </h2>
           )}
-          {data.subTitle && (
-            <p className="text-xl text-gray-600 mb-12 max-w-3xl mx-auto leading-relaxed">
-              {data.subTitle}
+          {displayData.subTitle && (
+            <p className="text-xl text-gray-300 mb-12 max-w-3xl mx-auto leading-relaxed">
+              {displayData.subTitle}
             </p>
           )}
 
-          {/* 计费周期切换 */}
+          {/* Billing period toggle */}
           <div className="mt-12 flex justify-center">
-            <div className="relative bg-gray-100 p-0.5 rounded-full flex">
+            <div className="relative bg-slate-800/50 backdrop-blur-sm p-1 rounded-full flex border border-slate-700/50">
               {billingPeriods.map(period => (
                 <button
                   key={period.id}
                   onClick={() => setSelectedPeriod(period.id)}
-                  className={`relative py-2 px-6 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                  className={`relative py-2 px-6 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-300 ${
                     selectedPeriod === period.id
-                      ? 'bg-white text-gray-900 shadow-sm'
-                      : 'text-gray-700 hover:text-gray-900'
+                      ? 'bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-rose-500/20 text-white shadow-inner shadow-cyan-500/10'
+                      : 'text-gray-400 hover:text-gray-200'
                   }`}
                 >
-                  {period.label}
+                  {selectedPeriod === period.id && (
+                    <span className="absolute inset-0 rounded-full bg-slate-700/50 backdrop-blur-sm" />
+                  )}
+                  <span className="relative">{period.label}</span>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* 订阅卡片列表 */}
+          {/* Subscription cards */}
           <div className="mt-12 grid gap-8 lg:grid-cols-2 max-w-4xl mx-auto">
-            {data.bottomContent.plans.map((plan) => (
+            {displayData.bottomContent.plans.map((plan) => (
               <div
                 key={plan.name}
                 className={`relative flex flex-col rounded-2xl p-8 transition-all duration-500 text-center 
-                  backdrop-blur-sm bg-white/80 hover:translate-y-[-4px]
+                  backdrop-blur-sm 
                   ${
                     plan.popular
-                      ? 'border-2 border-indigo-500 ring-4 ring-indigo-500/10 scale-[1.02] shadow-xl shadow-indigo-500/20'
-                      : 'border border-slate-200 shadow-lg hover:shadow-xl hover:shadow-slate-200/40'
-                  }`}
+                      ? 'bg-gradient-to-b from-slate-800/95 to-slate-900/95 border-2 border-purple-500/50 ring-4 ring-purple-500/10 scale-[1.02] shadow-xl shadow-purple-500/20'
+                      : 'bg-slate-900/70 border border-slate-700/50 shadow-lg shadow-cyan-500/5 hover:shadow-xl hover:shadow-cyan-500/10'
+                  }
+                  hover:translate-y-[-4px]`}
               >
                 {plan.popular && (
                   <div className="absolute -top-5 left-1/2 -translate-x-1/2">
-                    <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-2 rounded-full text-sm font-bold shadow-lg">
+                    <div className="bg-gradient-to-r from-purple-500 to-rose-500 text-white px-6 py-2 rounded-full text-sm font-bold shadow-lg shadow-purple-500/20">
                       MOST POPULAR ✨
                     </div>
                   </div>
                 )}
 
-                <h3 className="text-2xl font-bold text-gray-900 mt-4">{plan.name}</h3>
+                <h3 className="text-2xl font-bold text-white mt-4">{plan.name}</h3>
 
                 <div className="mt-4 flex items-baseline justify-center">
                   <div className="flex items-baseline">
                     <span className={`text-5xl font-bold tracking-tight ${
-                      plan.popular ? 'text-indigo-600' : 'text-gray-900'
+                      plan.popular ? 'bg-gradient-to-r from-purple-400 to-rose-400 bg-clip-text text-transparent' : 'text-white'
                     }`}>
-                      {plan.price[selectedPeriod] ? `$${plan.price[selectedPeriod]}` : 'Custom'}
+                      ${plan.price[selectedPeriod]}
                     </span>
-                    {plan.price[selectedPeriod] && plan.price[selectedPeriod] !== 'Custom' && (
-                      <span className="text-xl text-gray-500 ml-1">/mo</span>
-                    )}
+                    <span className="text-xl text-gray-400 ml-1">/mo</span>
                   </div>
                 </div>
 
-                {selectedPeriod === 'yearly' && plan.discount && plan.price[selectedPeriod] && (
+                {selectedPeriod === 'yearly' && plan.discount && (
                   <div className="mt-3">
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-emerald-900/30 text-emerald-400 border border-emerald-700/30">
                       <svg className="w-4 h-4 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 14a6 6 0 110-12 6 6 0 010 12zm-1-5h2v2H9v-2zm0-6h2v4H9V5z"/>
                       </svg>
@@ -105,34 +156,40 @@ const SubscriptionCard = ({ data, theme = 'normal' }) => {
                   </div>
                 )}
 
-                <p className="mt-4 text-gray-600">{plan.description}</p>
+                <p className="mt-4 text-gray-300">{plan.description}</p>
 
-                <button className={`mt-8 w-full py-4 px-6 rounded-xl text-white text-base font-medium 
-                  transition-all duration-300 transform hover:-translate-y-1 active:translate-y-0
-                  ${plan.popular 
-                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-purple-500/40' 
-                    : 'bg-gray-900 hover:bg-gray-800 shadow-lg shadow-gray-900/20 hover:shadow-xl hover:shadow-gray-900/30'
-                  }`}>
-                  {plan.buttonText}
-                </button>
+                <div className="mt-8 relative group">
+                  <div className={`absolute -inset-0.5 rounded-xl blur-sm bg-gradient-to-r ${
+                    plan.popular 
+                      ? 'from-purple-500 via-fuchsia-500 to-rose-500 opacity-70 group-hover:opacity-100' 
+                      : 'from-cyan-500 to-blue-500 opacity-50 group-hover:opacity-70'
+                    } transition duration-300`}></div>
+                  <button className={`relative w-full py-4 px-6 rounded-xl text-white text-base font-medium bg-slate-900
+                    transition-all duration-300 transform hover:-translate-y-1 active:translate-y-0`}>
+                    {plan.buttonText}
+                  </button>
+                </div>
 
-                {/* 功能列表 */}
+                {/* Feature list */}
                 <div className="mt-8 space-y-6">
                   {plan.features.map((section, index) => (
                     <div key={index}>
                       <h4 className={`text-sm font-semibold uppercase tracking-wide mb-4 
-                        ${plan.popular ? 'text-indigo-600' : 'text-gray-900'}`}>
+                        ${plan.popular ? 'text-purple-400' : 'text-cyan-400'}`}>
                         {section.title}
                       </h4>
                       <ul className="space-y-4">
                         {section.items.map((feature, featureIndex) => (
                           <li key={featureIndex} className="flex items-start">
-                            <svg className={`w-5 h-5 mr-3 flex-shrink-0 
-                              ${plan.popular ? 'text-indigo-600' : 'text-gray-600'}`} 
-                              fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                            <span className="text-gray-600 text-left">{feature}</span>
+                            <div className={`w-5 h-5 mr-3 rounded-full flex-shrink-0 flex items-center justify-center
+                              ${plan.popular ? 'bg-purple-500/20' : 'bg-cyan-500/20'}`}>
+                              <svg className={`w-3.5 h-3.5 
+                                ${plan.popular ? 'text-purple-400' : 'text-cyan-400'}`} 
+                                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            </div>
+                            <span className="text-gray-300 text-left">{feature}</span>
                           </li>
                         ))}
                       </ul>
