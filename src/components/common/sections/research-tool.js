@@ -1299,7 +1299,7 @@ I've loaded these websites in the browser panel for you to explore. Would you li
   if (initialLoading) {
     return (
       <div className="w-full min-h-screen bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 
-                      flex items-center justify-center" style={{ paddingTop: "80px" }}>
+                    flex items-center justify-center" style={{ paddingTop: "80px" }}>
         <div className="text-center">
           <img 
             src="/images/alternatively-logo.png" 
@@ -1370,82 +1370,124 @@ I've loaded these websites in the browser panel for you to explore. Would you li
     });
 
     const stageTitles = [
-      'Finding Competitors',
-      'Analyzing Competitors',
-      'Generating Alternative Pages'
+      { title: 'Finding Competitors', icon: '🔍' },
+      { title: 'Analyzing Competitors', icon: '📊' },
+      { title: 'Generating Alternative Pages', icon: '📝' }
     ];
 
-    return planningIds.map((planningId, index) => {
-      const nodeId = `section-${index}`;
-      const isExpanded = expandedNodes[nodeId] !== false;
-      const title = stageTitles[index] || 'Unknown Stage';
-      const groupDetails = groupedDetails[planningId];
+    return (
+      <div className="relative pl-8 pt-4">
+        {/* 垂直时间线 - 调整宽度和位置 */}
+        <div className="absolute left-[11px] top-0 bottom-0 w-[2px] bg-gradient-to-b from-blue-500/50 via-purple-500/50 to-blue-500/50"></div>
 
-      return (
-        <div key={nodeId} className="mb-6">
-          {/* 分组标题和展开/折叠按钮 */}
-          <div 
-            className="bg-gray-700/50 p-3 rounded-lg cursor-pointer hover:bg-gray-700/70 transition-colors"
-            onClick={() => setExpandedNodes(prev => ({...prev, [nodeId]: !prev[nodeId]}))}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <span className="text-xs font-medium text-purple-200">{title}</span>
-                <span className="text-xs text-gray-400">({groupDetails.length})</span>
-              </div>
-              <svg 
-                className={`w-4 h-4 text-gray-400 transform transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
+        {planningIds.map((planningId, index) => {
+          const nodeId = `section-${index}`;
+          const isExpanded = expandedNodes[nodeId] !== false;
+          const { title, icon } = stageTitles[index] || { title: 'Unknown Stage', icon: '📌' };
+          const groupDetails = groupedDetails[planningId];
+          const isLast = index === planningIds.length - 1;
+
+          return (
+            <div key={nodeId} className="mb-6 relative">
+              {/* 时间线节点 - 调整大小和位置 */}
+              <div 
+                className={`absolute -left-[13px] w-5 h-5 rounded-full flex items-center justify-center
+                           ${isExpanded ? 'bg-blue-500' : 'bg-gray-700'} 
+                           transition-colors duration-300 z-10`}
               >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-          </div>
+                <span className="text-[10px]">{icon}</span>
+              </div>
 
-          {/* 详细内容区域 - 修改折叠动画和最大高度 */}
-          <div 
-            className={`overflow-hidden transition-all duration-300 ease-in-out`}
-            style={{
-              maxHeight: isExpanded ? '400px' : '0',
-              opacity: isExpanded ? 1 : 0,
-              marginTop: isExpanded ? '0.5rem' : '0'
-            }}
-          >
-            <div className="space-y-2 pr-2 overflow-y-auto" style={{ maxHeight: '400px' }}>
-              {groupDetails.map((detail, detailIndex) => {
-                const { data, event, created_at } = detail;
-                const { title, status, outputs } = data || {};
-                
-                return (
-                  <div key={detailIndex} className="bg-gray-800/50 p-3 rounded border border-gray-700/50 hover:border-gray-600/50 transition-colors">
-                    <div className="text-xs text-gray-300 font-medium">{title || event}</div>
-                    {status && (
-                      <div className={`text-xs mt-2 ${
-                        status === "succeeded" ? "text-green-500" : 
-                        status === "failed" ? "text-red-500" : 
-                        "text-gray-400"
-                      }`}>
-                        {status}
+              {/* 连接线 - 调整位置和样式 */}
+              {!isLast && (
+                <div className="absolute -left-[10px] top-5 bottom-0 w-[2px] bg-gray-700/30"></div>
+              )}
+
+              {/* 内容区域 */}
+              <div className="relative">
+                {/* 标题和展开/折叠按钮 */}
+                <div 
+                  className={`bg-gray-700/50 p-3 rounded-lg cursor-pointer hover:bg-gray-700/70 
+                             transition-all duration-300 ${isExpanded ? 'ring-1 ring-blue-500/50' : ''}`}
+                  onClick={() => setExpandedNodes(prev => ({...prev, [nodeId]: !prev[nodeId]}))}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <span className="text-xs font-medium text-purple-200">{title}</span>
+                      <div className="flex items-center space-x-1.5">
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full transition-colors duration-300
+                                       ${isExpanded ? 'bg-blue-500/20 text-blue-300' : 'bg-gray-600/50 text-gray-400'}`}>
+                          {groupDetails.length}
+                        </span>
+                        <span className={`text-[10px] transition-colors duration-300
+                                       ${isExpanded ? 'text-blue-300/70' : 'text-gray-400/70'}`}>
+                          executed steps
+                        </span>
                       </div>
-                    )}
-                    {outputs && (
-                      <div className="text-xs text-gray-400 mt-2 break-words leading-relaxed">
-                        {typeof outputs === 'string' ? outputs : JSON.stringify(outputs)}
-                      </div>
-                    )}
-                    <div className="text-[10px] text-gray-500 mt-2">
-                      {new Date(created_at).toLocaleString()}
                     </div>
+                    <svg 
+                      className={`w-3.5 h-3.5 text-gray-400 transform transition-transform duration-300
+                                ${isExpanded ? 'rotate-180 text-blue-400' : ''}`}
+                      fill="none" 
+                      stroke="currentColor" 
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
                   </div>
-                );
-              })}
+                </div>
+
+                {/* 详细内容区域 */}
+                <div 
+                  className="overflow-hidden transition-all duration-300 ease-in-out"
+                  style={{
+                    maxHeight: isExpanded ? '320px' : '0',
+                    opacity: isExpanded ? 1 : 0,
+                    marginTop: isExpanded ? '0.5rem' : '0'
+                  }}
+                >
+                  <div className="space-y-2 pr-2 overflow-y-auto" style={{ maxHeight: '320px' }}>
+                    {groupDetails.map((detail, detailIndex) => {
+                      const { data, event, created_at } = detail;
+                      const { title, status, outputs } = data || {};
+                      
+                      return (
+                        <div 
+                          key={detailIndex} 
+                          className={`bg-gray-800/50 p-2.5 rounded border border-gray-700/50 
+                                    hover:border-gray-600/50 transition-all duration-300
+                                    ${isExpanded ? 'translate-x-0 opacity-100' : '-translate-x-4 opacity-0'}`}
+                          style={{ transitionDelay: `${detailIndex * 50}ms` }}
+                        >
+                          <div className="text-[11px] text-gray-300 font-medium">{title || event}</div>
+                          {status && (
+                            <div className={`text-[10px] mt-1.5 ${
+                              status === "succeeded" ? "text-green-500" : 
+                              status === "failed" ? "text-red-500" : 
+                              "text-gray-400"
+                            }`}>
+                              {status}
+                            </div>
+                          )}
+                          {outputs && (
+                            <div className="text-[10px] text-gray-400 mt-1.5 break-words leading-relaxed">
+                              {typeof outputs === 'string' ? outputs : JSON.stringify(outputs)}
+                            </div>
+                          )}
+                          <div className="text-[9px] text-gray-500 mt-1.5">
+                            {new Date(created_at).toLocaleString()}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      );
-    });
+          );
+        })}
+      </div>
+    );
   };
 
   return (
