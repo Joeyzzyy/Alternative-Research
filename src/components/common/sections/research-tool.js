@@ -5,7 +5,7 @@ import { SearchOutlined, ClearOutlined, ArrowRightOutlined, InfoCircleOutlined, 
 import apiClient from '../../../lib/api/index.js';
 import BrowserSimulator from '../BrowserSimulator';
 
-// 添加任务状态常量
+// Constants
 const TASK_STATUS = {
   PENDING: 'init',
   RUNNING: 'processing',
@@ -13,22 +13,47 @@ const TASK_STATUS = {
   FAILED: 'failed'
 };
 
-// 添加任务类型常量
 const TASK_TYPES = {
   COMPETITOR_SEARCH: 'COMPETITOR_SEARCH',
   COMPETITOR_SCORING: 'COMPETITOR_SCORING',
   PRODUCT_COMPARISON: 'PRODUCT_COMPARISON',
-  CODE_ANALYSIS: 'CODE_ANALYSIS'
+  STYLE_APPLICATION: 'PRODUCT_CHANGE_STYLE'
 };
 
-// 添加轮询间隔常量
 const POLLING_INTERVALS = {
-  TASK_STATUS: 3000,    // 3秒
-  TASK_DETAILS: 5000,   // 5秒
-  SOURCES: 10000        // 10秒
+  TASK_STATUS: 3000,
+  TASK_DETAILS: 5000,
+  SOURCES: 10000
 };
 
-// 任务管理器类
+const AGENTS = [
+  {
+    id: 1,
+    name: 'Joey.Z',
+    avatar: '/images/zy.jpg',
+    role: 'Competitive Analyst',
+    description: 'Specializes in competitor discovery and scoring analysis. Responsible for market research and competitor evaluation.'
+  },
+  {
+    id: 2,
+    name: 'Youssef',
+    avatar: '/images/youssef.jpg',
+    role: 'Content Strategist',
+    description: 'Focuses on comparative content creation. Responsible for writing SEO-optimized alternative page content in markdown format.'
+  },
+  {
+    id: 3,
+    name: 'Xavier.S',
+    avatar: '/images/hy.jpg',
+    role: 'Full-stack Developer',
+    description: 'Handles page implementation. Responsible for converting markdown content into production-ready web pages.'
+  }
+];
+
+/**
+ * Task Manager Class
+ * Handles all task-related operations and state management
+ */
 class TaskManager {
   constructor(apiClient) {
     this.apiClient = apiClient;
@@ -39,53 +64,77 @@ class TaskManager {
     this.onSourcesUpdate = null;
     this.onMessageUpdate = null;
     this.websiteId = null;
+    
+    // State flags
     this.hasInitialMessage = false;
     this.hasCompletionMessage = false;
-    this.hasXavierCompletionMessage = false;  // 添加 Xavier 完成消息的标志
-    this.hasFailureMessage = false;  // 添加失败消息标志
-    this.lastProcessedState = null;  // 添加状态追踪
-    this.hasXavierStartMessage = false;  // 新增
-    this.hasYoussefStartMessage = false; // 新增
+    this.hasXavierCompletionMessage = false;
+    this.hasFailureMessage = false;
+    this.hasXavierStartMessage = false;
+    this.hasYoussefStartMessage = false;
+    this.hasCompetitorSelection = false;
+    this.contentPrepFlag = false;
+    
+    // Polling state
+    this.lastProcessedState = null;
     this.pollingInterval = null;
     this.detailPollingInterval = null;
-    this.lastDetailCount = 0;  // 用于追踪detail数量变化
+    this.sourcesPollingInterval = null;
+    this.allPollingIntervals = new Set();
+    
+    // Pagination
     this.currentPage = 1;
     this.pageSize = 300;
-    this.sourcesPollingInterval = null;  // 添加 sources 轮询间隔
-    this.lastSourceCount = 0;  // 用于追踪 sources 数量变化
+    this.lastDetailCount = 0;
+    this.lastSourceCount = 0;
+    
+    // Callbacks
     this.onBrowserUpdate = null;
     this.onLoadingUpdate = null;
     this.onMessageSendingUpdate = null;
-    this.hasCompetitorSelection = false;
-    this.allPollingIntervals = new Set();
+    
+    // Task state
     this.currentTaskType = null;
     this.messageQueue = [];
     this.isProcessingQueue = false;
-    this.contentPrepFlag = false; // 新增内容准备标志
+    this.onTaskCompleted = null;
+
+    // 新增样式任务状态
+    this.hasStyleTask = false;
+    this.styleTaskCompleted = false;
+    this.isStyleTaskActive = false;
+    this.stylePollInterval = null;
   }
 
-  // 初始化新的研究任务流程
+  /**
+   * Initialize a new research task
+   * @param {string} websiteId - The website ID to research
+   * @param {boolean} hasInitialMessage - Whether initial message has already been shown
+   */
   async initializeResearch(websiteId, hasInitialMessage = false) {
     this.websiteId = websiteId;
     this.clearAllTasks();
     
-    // 如果已经有初始消息，就不要再添加新消息
     this.hasInitialMessage = hasInitialMessage;
     
-    // 开始轮询所有任务状态
     this.startPolling();
     this.startDetailPolling();
-    this.startSourcePolling();  // 添加 sources 轮询
+    this.startSourcePolling();
   }
 
-  // 检查是否所有任务都完成
+  /**
+   * Check if all tasks are completed
+   * @param {Array} plannings - Array of planning objects
+   * @returns {boolean} Whether all tasks are completed
+   */
   areAllTasksCompleted(plannings) {
     return plannings.every(planning => planning.status === 'finished');
   }
 
-  // 修改轮询方法以处理所有任务
+  /**
+   * Start polling for task status updates
+   */
   startPolling() {
-    // 移除条件检查，强制重启轮询
     console.log('Force restarting polling...');
     
     const pollTaskStatus = async () => {
@@ -96,22 +145,29 @@ class TaskManager {
 
         const plannings = response?.data || [];
         
-        // 创建当前状态快照（包含所有任务状态）
+        // Create a snapshot of current state
         const currentState = plannings.map(p => `${p.planningName}:${p.status}`).join('|');
         
-        // 检查是否所有任务都失败或完成
+        // Check if all tasks are complete or failed
         const allTasksFinished = plannings.every(p => 
-          p.status === 'finished' || p.status === 'failed'
+          ['finished', 'failed'].includes(p.status)
         ) && plannings.some(p => p.status === 'finished');
 
-        // 如果所有任务都完成或失败，则停止轮询
+        // 增加调试日志
+        console.log('All tasks finished check:', {
+          allFinished: plannings.every(p => ['finished', 'failed'].includes(p.status)),
+          hasSuccess: plannings.some(p => p.status === 'finished'),
+          allTasksFinished
+        });
+
         if (allTasksFinished) {
           console.log('All tasks finished or failed, clearing polling');
+          await this.handleAllTasksCompleted();
           this.clearAllTasks();
           return;
         }
 
-        // 如果状态没有变化且不是所有任务都完成，继续轮询
+        // Skip if no state change and not all tasks are complete
         if (this.lastProcessedState === currentState) {
           console.log('No state change, continuing polling');
           return;
@@ -119,24 +175,22 @@ class TaskManager {
         
         this.lastProcessedState = currentState;
 
-        // 检查任务失败
+        // Check for failed tasks
         const failedTask = plannings.find(p => p.status === 'failed');
         if (failedTask) {
           this.handleTaskFailure(failedTask);
           return;
         }
 
-        // 检查所有任务是否完成
+        // Check if all tasks completed
         const allCompleted = this.areAllTasksCompleted(plannings);
         if (allCompleted) {
           await this.handleAllTasksCompleted();
           return;
         }
 
-        // 更新各阶段状态
+        // Update task stages and status
         await this.updateTaskStages(plannings);
-
-        // 更新任务状态
         this.updateTasksStatus(plannings);
 
       } catch (error) {
@@ -145,22 +199,24 @@ class TaskManager {
       }
     };
 
-    // 清除现有间隔（如果有）
+    // Clear existing intervals
     if (this.allPollingIntervals.size > 0) {
       this.allPollingIntervals.forEach(interval => clearInterval(interval));
       this.allPollingIntervals.clear();
     }
 
-    const interval = setInterval(pollTaskStatus, 3000);
+    const interval = setInterval(pollTaskStatus, POLLING_INTERVALS.TASK_STATUS);
     this.allPollingIntervals.add(interval);
     this.activePolling.add('ALL_TASKS');
     
-    // 立即执行第一次轮询
-    console.log('Executing initial poll for new phase...');
+    // Execute first poll immediately
     pollTaskStatus();
   }
 
-  // 处理任务失败的情况
+  /**
+   * Handle task failure
+   * @param {Object} failedTask - The failed task object
+   */
   handleTaskFailure(failedTask) {
     if (!this.hasFailureMessage) {
       this.hasFailureMessage = true;
@@ -177,27 +233,65 @@ class TaskManager {
     }
   }
 
-  // 处理所有任务完成的情况
+  /**
+   * Handle completion of all tasks
+   */
   async handleAllTasksCompleted() {
     if (!this.hasCompletionMessage) {
       this.hasCompletionMessage = true;
       
+      // 新增关键修复：重置加载状态
+      this.onLoadingUpdate?.(false);
+      this.onMessageSendingUpdate?.(false);
+
+      // 修改这里：仅关闭加载状态，不移除特定内容
+      this.onMessageUpdate?.(prevMessages => {
+        return prevMessages.map(msg => ({
+          ...msg,
+          isThinking: false  // 关闭所有加载状态
+        }));
+      });
+
       try {
         const resultResponse = await this.apiClient.getAlternativeResult(this.websiteId);
-        const competitors = this.parseCompetitors(resultResponse?.data);
-        
-        this.updateCompletionMessages(competitors);
-        this.updateBrowserState(competitors);
+        if (this.onBrowserUpdate) {
+          this.onBrowserUpdate({ 
+            show: true,
+            data: resultResponse.data
+          });
+        }
+
+        // 修改这里：添加保留历史消息的逻辑
+        this.onMessageUpdate?.(prev => {
+          const hasCompletionMessage = prev.some(msg => 
+            msg.content.includes('Alternative Page generation complete')
+          );
+          
+          return hasCompletionMessage ? prev : [
+            ...prev,
+            {
+              type: 'agent',
+              agentId: 2,
+              content: '🎉 Alternative Page generation complete!\n\n**Customization Options:**\nWe notice you might want to adjust the color scheme. Feel free to tell us your style preferences in English!\n\nExamples:\n- "Modern gradient theme with purple and cyan"\n- "Clean white background with navy accents"\n- "Dark mode with neon cyberpunk colors"',
+              isThinking: false
+            }
+          ];
+        });
+
       } catch (error) {
         console.error('Failed to get final results:', error);
-        this.handleCompletionError();
       }
 
+      this.messageQueue = [];
       this.clearAllTasks();
+      this.onTaskCompleted?.();
     }
   }
 
-  // 更新任务阶段状态
+  /**
+   * Update task stages based on planning status
+   * @param {Array} plannings - Array of planning objects
+   */
   async updateTaskStages(plannings) {
     console.log('Current plannings status:', plannings.map(p => ({
       name: p.planningName,
@@ -214,7 +308,7 @@ class TaskManager {
       comparison: productComparison?.status
     });
 
-    // 检查第一阶段完成和第二阶段开始
+    // Search to Scoring transition
     if (competitorSearch?.status === 'finished' && 
         competitorScoring?.status === 'processing' && 
         !this.hasXavierStartMessage) {
@@ -223,61 +317,52 @@ class TaskManager {
       await this.updateXavierStartMessage();
     }
 
-    // 检查第二阶段完成和第三阶段开始
+    // Scoring to Comparison transition
     if (competitorScoring?.status === 'finished' && 
-        productComparison?.status === 'processing' && 
-        !this.hasYoussefStartMessage) {
-      console.log('Transitioning from scoring to content phase');
+        (productComparison?.status === 'processing' || productComparison?.status === 'init')) {
       this.hasYoussefStartMessage = true;
+
+      // 添加任务初始化逻辑
+      if (productComparison?.status === 'init') {
+          this.tasks.set(TASK_TYPES.PRODUCT_COMPARISON, {
+              id: productComparison.planningId,
+              type: TASK_TYPES.PRODUCT_COMPARISON,
+              status: TASK_STATUS.PENDING,
+              result: null,
+              details: [],
+              sources: []
+          });
+      }
 
       this.messageQueue.push(
         {
           type: 'agent',
-          agentId: 1, // Joey
-          content: '✅ Final selection confirmed',
-          isThinking: false
-        },
-        {
-          type: 'agent',
-          agentId: 1,
-          content: '⏳ Starting final scoring process...',
+          agentId: 2, // Youssef
+          content: '🔄 Starting content analysis...',
           isThinking: true
         },
         {
           type: 'agent',
-          agentId: 2, // Youssef
-          content: '🔄 Receiving analysis data...',
+          agentId: 2,
+          content: '📝 Preparing comparative content...',
           isThinking: true
         }
       );
     }
 
-    // 处理竞品选择逻辑
+    // Competitor selection logic
     if (competitorSearch?.status === 'finished' && !this.hasCompetitorSelection) {
-      console.log('Competitor search finished, hasCompetitorSelection:', this.hasCompetitorSelection);
+      console.log('Competitor search finished');
       this.hasCompetitorSelection = true;
       
       try {
-        const competitors = this.parseCompetitors(competitorSearch.data);
-        console.log('Parsed competitors:', competitors);
-        
-        // 添加新消息而不是修改现有消息
+        const competitors = this.parseCompetitors(competitorSearch);
+        console.log('Processed competitors:', competitors);
+
         this.onMessageUpdate?.(prev => {
-          console.log('Current messages:', prev);
-          // 检查是否已经存在选择消息
-          const hasSelectionMessage = prev.some(msg => 
-            msg.content.includes('I\'ve identified the main competitors') && 
-            msg.options
-          );
+          const hasSelectionMessage = prev.some(msg => msg.options);
+          if (hasSelectionMessage) return prev;
 
-          console.log('Has selection message:', hasSelectionMessage);
-          
-          if (hasSelectionMessage) {
-            console.log('Selection message already exists, skipping...');
-            return prev;
-          }
-
-          // 先关闭前一条消息的加载状态
           const updated = prev.map(msg => {
             if (msg.isThinking && msg.content.includes('searching for your top competitors')) {
               return { ...msg, isThinking: false };
@@ -285,145 +370,65 @@ class TaskManager {
             return msg;
           });
           
-          // 添加新的选项消息
           return [...updated, {
             type: 'agent',
-            agentId: 1, // 保持Joey的头像
+            agentId: 1,
             content: '✨ Great! I\'ve identified the main competitors. Please select up to 3 to analyze:',
-            options: competitors.map((c, i) => ({
-              label: `${i + 1}. ${c.replace('www.', '')}`,
-              value: c
-            })),
+            options: competitors.slice(0, 20)
+              .map((c, i) => ({
+                label: `${i + 1}. ${c.replace('www.', '')}`,
+                value: c
+              })),
             maxSelections: 3,
             isThinking: false
           }];
         });
-        
       } catch (error) {
         console.error('Error processing competitors:', error);
       }
       return;
     }
 
-    // 当进入评分阶段时更新消息状态
-    if (competitorScoring?.status === 'processing') {
-      this.onMessageUpdate?.(prev => {
-        return prev.map(msg => {
-          // 关闭Joey的初始消息加载状态
-          if (msg.content.includes('Initializing competitor scoring') && msg.agentId === 1) {
-            return { ...msg, isThinking: false };
-          }
-          return msg;
-        }).concat({
+    if (productComparison?.status === 'finished') {
+      // 清理Youssef的进行中消息
+      this.messageQueue = this.messageQueue.filter(msg => 
+        !msg.content.includes('Preparing comparative content') &&
+        !msg.content.includes('Starting content analysis')
+      );
+      
+      // 如果还没显示完成消息，添加过渡消息
+      if (!this.hasCompletionMessage) {
+        this.messageQueue.push({
           type: 'agent',
-          agentId: 1, // Joey负责评分分析
-          content: '📊 Now conducting in-depth scoring analysis of selected competitors...',
+          agentId: 2,
+          content: '✨ Finalizing content polish...',
           isThinking: true
         });
-      });
+      }
     }
 
-    // 当评分完成时更新状态
-    if (competitorScoring?.status === 'finished') {
-      this.onMessageUpdate?.(prev => prev.map(msg => {
-        if (msg.content.includes('conducting in-depth scoring analysis') && msg.agentId === 1) {
-          return { ...msg, isThinking: false };
-        }
-        return msg;
-      }));
-    }
-
-    // 当进入内容准备阶段
-    if (competitorScoring?.status === 'finished' && !this.contentPrepFlag) {
-      this.contentPrepFlag = true;
-      
-      this.messageQueue.push(
-        {
-          type: 'agent',
-          agentId: 2, // Youssef
-          content: '🔍 Comparing key features between selected competitors...',
-          isThinking: true
-        },
-        {
-          type: 'agent',
-          agentId: 2,
-          content: '📚 Analyzing technical specifications...',
-          isThinking: true
-        },
-        {
-          type: 'agent',
-          agentId: 2,
-          content: '📝 Starting markdown content creation...',
-          isThinking: true
-        }
-      );
-    }
-
-    // 当进入内容生成阶段
-    if (productComparison?.status === 'processing') {
+    // Force task type update when scoring completes
+    const scoringTask = plannings.find(p => 
+      p.planningName === TASK_TYPES.COMPETITOR_SCORING && 
+      p.status === 'finished'
+    );
+    
+    if (scoringTask && this.currentTaskType !== TASK_TYPES.PRODUCT_COMPARISON) {
+      console.log('Forcing task transition after scoring completion');
+      this.currentTaskType = TASK_TYPES.PRODUCT_COMPARISON;
       this.messageQueue.push({
         type: 'agent',
         agentId: 2,
-        content: '✍️ Drafting comparative analysis document...',
+        content: '🔧 Starting final content generation...',
         isThinking: true
       });
-    }
-
-    if (competitorScoring?.status === 'finished' && 
-        productComparison?.status === 'processing') {
-      this.messageQueue.push(
-        {
-          type: 'agent',
-          agentId: 1,
-          content: '📋 Scoring summary: Completed all evaluations',
-          isThinking: false
-        },
-        {
-          type: 'agent',
-          agentId: 1,
-          content: '⇢ Transferring to content team',
-          isThinking: false
-        },
-        {
-          type: 'agent',
-          agentId: 2, // Youssef
-          content: '🔄 Starting content creation process in markdown...',
-          isThinking: true
-        }
-      );
-    }
-
-    // Xavier只在内容完成后触发
-    if (productComparison?.status === 'finished' && 
-        !this.hasXavierStartMessage) {
-      this.messageQueue.push({
-        type: 'agent',
-        agentId: 3, // Xavier
-        content: '💻 Starting page development...',
-        isThinking: true
-      });
-    }
-
-    // 当进入开发阶段时
-    if (productComparison?.status === 'finished') {
-      this.messageQueue.push(
-        {
-          type: 'agent',
-          agentId: 2, // Youssef
-          content: '📄 Finalizing content package...',
-          isThinking: false
-        },
-        {
-          type: 'agent',
-          agentId: 3, // Xavier
-          content: '💻 Analyzing technical requirements...', // 代码分析转移给Xavier
-          isThinking: true
-        }
-      );
     }
   }
 
-  // 更新任务状态
+  /**
+   * Update the status of all tasks
+   * @param {Array} plannings - Array of planning objects
+   */
   updateTasksStatus(plannings) {
     plannings.forEach(planning => {
       const taskType = planning.planningName;
@@ -440,7 +445,12 @@ class TaskManager {
     });
   }
 
-  // 添加获取下一个任务的辅助方法
+  /**
+   * Get the next task in sequence
+   * @param {string} currentTaskType - Current task type
+   * @param {Array} plannings - Array of planning objects
+   * @returns {Object|null} The next task or null if no next task
+   */
   getNextTask(currentTaskType, plannings) {
     const taskOrder = [
       TASK_TYPES.COMPETITOR_SEARCH,
@@ -456,27 +466,28 @@ class TaskManager {
     return null;
   }
 
-  // 添加 API 状态映射方法
+  /**
+   * Map API status to internal status
+   * @param {string} apiStatus - Status from API
+   * @returns {string} Internal status
+   */
   mapApiStatus(apiStatus) {
     switch (apiStatus) {
-      case 'init':
-        return TASK_STATUS.PENDING;
-      case 'processing':
-        return TASK_STATUS.RUNNING;
-      case 'finished':
-        return TASK_STATUS.COMPLETED;
-      case 'failed':
-        return TASK_STATUS.FAILED;
-      default:
-        return TASK_STATUS.PENDING;
+      case 'init': return TASK_STATUS.PENDING;
+      case 'processing': return TASK_STATUS.RUNNING;
+      case 'finished': return TASK_STATUS.COMPLETED;
+      case 'failed': return TASK_STATUS.FAILED;
+      default: return TASK_STATUS.PENDING;
     }
   }
 
-  // 清理所有任务
+  /**
+   * Clear all tasks and reset state
+   */
   clearAllTasks() {
     console.log('Clearing all tasks...');
     
-    // 清除轮询间隔
+    // Clear polling intervals
     this.allPollingIntervals.forEach(interval => {
       console.log('Clearing interval:', interval);
       clearInterval(interval);
@@ -484,7 +495,7 @@ class TaskManager {
     this.allPollingIntervals.clear();
     this.activePolling.clear();
     
-    // 只有在所有任务完成或失败时才重置这些状态
+    // Only reset these states if all tasks are finished
     const allTasksFinished = Array.from(this.tasks.values()).every(task => 
       task.status === TASK_STATUS.COMPLETED || task.status === TASK_STATUS.FAILED
     );
@@ -515,7 +526,10 @@ class TaskManager {
     this.isProcessingQueue = false;
   }
 
-  // 获取所有任务的状态
+  /**
+   * Get status of all tasks
+   * @returns {Object} Status of all tasks
+   */
   getAllTasksStatus() {
     const status = {};
     this.tasks.forEach((task, type) => {
@@ -527,7 +541,12 @@ class TaskManager {
     return status;
   }
 
-  // 获取任务消息
+  /**
+   * Get message for a task based on type and status
+   * @param {string} taskType - Task type
+   * @param {string} status - Task status
+   * @returns {Object|null} Message object or null
+   */
   getTaskMessage(taskType, status) {
     switch (taskType) {
       case TASK_TYPES.COMPETITOR_SEARCH:
@@ -551,7 +570,7 @@ class TaskManager {
         return status === TASK_STATUS.RUNNING
           ? {
               type: 'agent',
-              agentId: 1, // Joey handles scoring
+              agentId: 1, 
               content: '📊 Evaluating competitor strengths/weaknesses and market positions...',
               isThinking: true
             }
@@ -581,20 +600,22 @@ class TaskManager {
               }
             : null;
 
-      case TASK_TYPES.CODE_ANALYSIS:  // 移除该case或重定向给Xavier
-        return null; // 禁用代码分析任务类型
-
       default:
         return null;
     }
   }
 
-  // 添加获取失败消息的方法
+  /**
+   * Get failure message based on task type
+   * @param {string} taskType - Task type
+   * @param {string} errorMsg - Error message
+   * @returns {Object} Failure message
+   */
   getFailureMessage(taskType, errorMsg) {
     // Clear all polling tasks
     this.clearAllTasks();
 
-    // Reset loading and message sending states via callback
+    // Reset loading states
     if (this.onLoadingUpdate) {
       this.onLoadingUpdate(false);
     }
@@ -652,7 +673,9 @@ Please try the analysis again with the website URL.`,
     }
   }
 
-  // 添加detail轮询方法
+  /**
+   * Start polling for details
+   */
   startDetailPolling() {
     if (this.activePolling.has('DETAILS')) return;
 
@@ -668,22 +691,14 @@ Please try the analysis again with the website URL.`,
         );
 
         console.log('API Response:', response);
-
-        // 确保正确获取数据
         const details = response?.data || [];
         const hasNewData = details.length > 0;
 
         console.log('Parsed details:', details);
 
         if (Array.isArray(details)) {
-          if (hasNewData) {
-            if (this.onDetailsUpdate) {
-              this.onDetailsUpdate(details, hasNewData);
-            }
-          } else {
-            if (this.onDetailsUpdate) {
-              this.onDetailsUpdate(details, false);
-            }
+          if (this.onDetailsUpdate) {
+            this.onDetailsUpdate(details, hasNewData);
           }
         }
       } catch (error) {
@@ -691,13 +706,15 @@ Please try the analysis again with the website URL.`,
       }
     };
 
-    const interval = setInterval(pollDetails, 8000);
+    const interval = setInterval(pollDetails, POLLING_INTERVALS.TASK_DETAILS);
     this.allPollingIntervals.add(interval);
     this.activePolling.add('DETAILS');
-    pollDetails(); // Execute immediately for first time
+    pollDetails(); // Execute immediately
   }
 
-  // 在任务完成或失败时停止detail轮询
+  /**
+   * Stop polling for details
+   */
   stopDetailPolling() {
     if (this.detailPollingInterval) {
       clearInterval(this.detailPollingInterval);
@@ -705,7 +722,9 @@ Please try the analysis again with the website URL.`,
     }
   }
 
-  // 添加 sources 轮询方法
+  /**
+   * Start polling for sources
+   */
   startSourcePolling() {
     if (this.activePolling.has('SOURCES')) return;
 
@@ -714,43 +733,47 @@ Please try the analysis again with the website URL.`,
         const response = await this.apiClient.getAlternativeSources(this.websiteId);
         
         console.log('Sources API Response:', response);
-
-        // 确保正确获取数据
         const sources = response?.data || [];
         const hasNewData = sources.length > this.lastSourceCount;
         this.lastSourceCount = sources.length;
 
-        if (Array.isArray(sources)) {
-          if (this.onSourcesUpdate) {
-            this.onSourcesUpdate(sources, hasNewData);
-          }
+        if (Array.isArray(sources) && this.onSourcesUpdate) {
+          this.onSourcesUpdate(sources, hasNewData);
         }
       } catch (error) {
         console.error('Error polling sources:', error);
       }
     };
 
-    const interval = setInterval(pollSources, 10000);
+    const interval = setInterval(pollSources, POLLING_INTERVALS.SOURCES);
     this.allPollingIntervals.add(interval);
     this.activePolling.add('SOURCES');
-    pollSources(); // 立即执行第一次
+    pollSources(); // Execute immediately
   }
 
-  // 在 TaskManager 类中添加获取当前活动 agent 的辅助方法
+  /**
+   * Get the active agent ID for a task type
+   * @param {string} taskType - Task type
+   * @returns {number} Agent ID
+   */
   getActiveAgent(taskType) {
     switch (taskType) {
       case TASK_TYPES.COMPETITOR_SEARCH:
-        return 1; // Joey
-      case TASK_TYPES.COMPETITOR_SCORING:
+      case TASK_TYPES.COMPETITOR_SCORING: 
         return 1; // Joey
       case TASK_TYPES.PRODUCT_COMPARISON:
+      case TASK_TYPES.STYLE_APPLICATION:
         return 2; // Youssef
       default:
-        return 1; // 默认使用 Joey
+        return 1;
     }
   }
 
-  // 修改错误处理消息
+  /**
+   * Get retry message based on task type
+   * @param {string} taskType - Task type
+   * @returns {string} Retry message
+   */
   getRetryMessage(taskType) {
     const messages = {
       [TASK_TYPES.COMPETITOR_SEARCH]: "🔄 I've encountered a small hiccup in the competitor search. Don't worry - I'm automatically retrying the analysis. Please hold on for a moment...",
@@ -760,31 +783,65 @@ Please try the analysis again with the website URL.`,
     return messages[taskType] || "🔄 A brief interruption occurred. I'm automatically retrying the process. Please wait a moment...";
   }
 
-  // Add callback setters for loading and message sending states
+  /**
+   * Set loading update callback
+   * @param {Function} callback - Loading update callback
+   */
   setLoadingUpdateCallback(callback) {
     this.onLoadingUpdate = callback;
   }
 
+  /**
+   * Set message sending update callback
+   * @param {Function} callback - Message sending update callback
+   */
   setMessageSendingUpdateCallback(callback) {
     this.onMessageSendingUpdate = callback;
   }
 
+  /**
+   * Pause all polling
+   */
   pausePolling() {
-    // 停止所有类型的轮询
     this.allPollingIntervals.forEach(interval => clearInterval(interval));
     this.allPollingIntervals.clear();
     this.activePolling.clear();
   }
 
-  parseCompetitors(data) {
+  /**
+   * Parse competitors from planning data
+   * @param {Object} planningData - Planning data
+   * @returns {Array} Array of competitors
+   */
+  parseCompetitors(planningData) {
     try {
-      const rawData = typeof data === 'string' ? JSON.parse(data) : data;
-      return rawData.slice(0, 10); // 限制最多显示10个
+      const rawData = planningData?.data || '[]';
+      console.log('Raw competitor data:', rawData);
+
+      // Handle double-encoded JSON
+      const decodedData = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
+      console.log('First parse:', decodedData);
+
+      // Handle possible second encoding
+      const finalData = typeof decodedData === 'string' ? JSON.parse(decodedData) : decodedData;
+      console.log('Final competitors:', finalData);
+
+      // Clean and format data
+      return finalData
+        .filter(item => typeof item === 'string' && item.length > 0)
+        .map(domain => domain.replace(/^https?:\/\/(www\.)?/i, ''))
+        .slice(0, 20);
+
     } catch (e) {
+      console.error('Competitor parsing error:', e);
       return [];
     }
   }
 
+  /**
+   * Show competitor options
+   * @param {Array} competitors - List of competitors
+   */
   showCompetitorOptions(competitors) {
     const selectionMessage = {
       type: 'agent',
@@ -794,40 +851,40 @@ Please try the analysis again with the website URL.`,
         label: `${i + 1}. ${c.replace('www.', '')}`,
         value: c
       })),
-      maxSelections: 3, // 添加最大选择数量限制
+      maxSelections: 3,
       isThinking: false
     };
 
     this.onMessageUpdate?.(prev => [...prev, selectionMessage]);
   }
 
+  /**
+   * Continue analysis with selected competitors
+   * @param {Array} selected - Selected competitors
+   */
   async continueAnalysis(selected) {
-    // 修改这里：仅清理消息队列，不清理轮询
+    // Only clear message queue, not polling
     this.messageQueue = [];
     this.isProcessingQueue = false;
     this.currentTaskType = TASK_TYPES.COMPETITOR_SCORING;
-    const scoringAgent = this.getActiveAgent(this.currentTaskType);
 
     try {
       this.onMessageSendingUpdate?.(true);
       
-      const response = await this.apiClient.generateAlternative(
-        this.websiteId,
-        selected
-      );
+      const response = await this.apiClient.generateAlternative(this.websiteId, selected);
 
       if (!response || response.code !== 200 || !response.data?.websiteId) {
         throw new Error(response?.message || 'Invalid server response');
       }
 
-      // 更新为新的websiteId
+      // Update website ID
       this.websiteId = response.data.websiteId;
 
-      // 成功后再构建消息队列
+      // Build message queue
       this.messageQueue = [
         {
           type: 'agent',
-          agentId: 1, // Joey确认选择
+          agentId: 1,
           content: '✅ Final selection confirmed',
           isThinking: false
         },
@@ -839,17 +896,28 @@ Please try the analysis again with the website URL.`,
         }
       ];
 
-      // 修改这里：不再重置轮询状态
+      // Reset selection flags
       this.hasCompetitorSelection = false;
       this.hasCompletionMessage = false;
       this.hasFailureMessage = false;
 
-      // 确保轮询持续运行
+      // Ensure polling continues
       if (this.allPollingIntervals.size === 0) {
         this.startPolling();
         this.startDetailPolling();
         this.startSourcePolling();
       }
+
+      // Force transition to next stage
+      this.currentTaskType = TASK_TYPES.PRODUCT_COMPARISON;
+      
+      // Add explicit agent handoff message
+      this.messageQueue.push({
+        type: 'agent',
+        agentId: 2, // Youssef
+        content: '🚀 Transitioning to content creation...',
+        isThinking: true
+      });
 
     } catch (error) {
       console.error('Analysis failed:', error);
@@ -874,7 +942,11 @@ Please try the analysis again with the website URL.`,
     }
   }
 
-  // 添加获取agent名称的辅助方法
+  /**
+   * Get agent name by ID
+   * @param {number} agentId - Agent ID
+   * @returns {string} Agent name
+   */
   getAgentName(agentId) {
     const agents = {
       1: 'Joey',
@@ -884,28 +956,36 @@ Please try the analysis again with the website URL.`,
     return agents[agentId] || 'Joey';
   }
 
+  /**
+   * Process message queue sequentially
+   */
   async processMessageQueue() {
-    if (this.isProcessingQueue || !this.onMessageUpdate) return;
-    
-    this.isProcessingQueue = true;
+    // Add task type validation
+    const currentAgent = this.getActiveAgent(this.currentTaskType);
     
     while (this.messageQueue.length > 0) {
       const message = this.messageQueue.shift();
       
-      // 使用 Promise 来确保消息按顺序显示
+      // Ensure message uses current agent
+      const validatedMessage = {
+        ...message,
+        agentId: currentAgent
+      };
+      
+      // Use Promise to ensure sequential display
       await new Promise(resolve => {
         this.onMessageUpdate(prev => {
-          // 检查是否已存在相同消息
+          // Check for duplicate messages
           const messageExists = prev.some(m => 
-            m.content === message.content && 
-            m.agentId === message.agentId
+            m.content === validatedMessage.content && 
+            m.agentId === validatedMessage.agentId
           );
           
           if (messageExists) {
             return prev;
           }
 
-          // 更新前一条消息的状态
+          // Update previous message status
           const updatedMessages = prev.map(msg => {
             if (msg.isThinking) {
               return { ...msg, isThinking: false };
@@ -913,18 +993,18 @@ Please try the analysis again with the website URL.`,
             return msg;
           });
 
-          return [...updatedMessages, message];
+          return [...updatedMessages, validatedMessage];
         });
         
-        // 添加小延迟使消息显示更自然
+        // Small delay for natural appearance
         setTimeout(resolve, 800);
       });
     }
-    
-    this.isProcessingQueue = false;
   }
 
-  // 添加 Xavier 开始消息的方法
+  /**
+   * Update Xavier start message
+   */
   async updateXavierStartMessage() {
     this.messageQueue.push({
       type: 'agent',
@@ -934,57 +1014,38 @@ Please try the analysis again with the website URL.`,
     });
   }
 
-  // 添加 Youssef 开始消息的方法
-  async updateYoussefStartMessage() {
-    if (this.hasYoussefStartMessage) return; // 防止重复
-
-    this.messageQueue.push(
-      {
-        type: 'agent',
-        agentId: 3, // Youssef
-        content: '🔄 Starting product comparison analysis...',
-        isThinking: true
-      },
-      {
-        type: 'agent',
-        agentId: 2, // Xavier
-        content: '✅ Scoring analysis complete! Handing over to Youssef for final comparison...',
-        isThinking: false
-      }
-    );
-
-    await this.processMessageQueue();
-  }
-
-  // 添加错误处理方法
+  /**
+   * Handle polling errors
+   * @param {Error} error - Error object
+   */
   async handlePollingError(error) {
     console.error('Polling error occurred:', error);
     
-    // 清理所有进行中的任务
+    // Clear all tasks
     this.clearAllTasks();
     
-    // 如果已经有错误消息，不再添加
+    // Avoid duplicate error messages
     if (this.hasFailureMessage) return;
     this.hasFailureMessage = true;
 
-    // 更新所有现有消息的状态
+    // Update all existing messages
     this.onMessageUpdate?.(prev => {
-      // 先关闭所有思考状态
+      // Remove thinking states
       const updatedMessages = prev.map(msg => ({
         ...msg,
         isThinking: false
       }));
 
-      // 添加错误消息
+      // Add error message
       return [...updatedMessages, {
         type: 'agent',
-        agentId: 1, // 使用 Joey 发送错误消息
+        agentId: 1,
         content: '❌ I encountered an error while processing your request. Please try again.',
         isThinking: false
       }];
     });
 
-    // 重置 UI 状态
+    // Reset UI states
     if (this.onLoadingUpdate) {
       this.onLoadingUpdate(false);
     }
@@ -992,10 +1053,119 @@ Please try the analysis again with the website URL.`,
       this.onMessageSendingUpdate(false);
     }
   }
+
+  /**
+   * 启动样式任务轮询
+   */
+  startStylePolling() {
+    if (this.stylePollInterval) return;
+
+    console.log('[Style] Starting style task monitoring...');
+    this.isStyleTaskActive = true;
+    
+    const pollStyleStatus = async () => {
+      try {
+        const response = await this.apiClient.getAlternativeStatus(this.websiteId);
+        const plannings = response?.data || [];
+        
+        const styleTask = plannings.find(p => 
+          p.planningName === TASK_TYPES.STYLE_APPLICATION
+        );
+
+        if (styleTask) {
+          console.log('[Style] Task status:', styleTask.status);
+          if (styleTask.status === 'finished') {
+            console.log('[Style] Detected completed style task');
+            await this.handleStyleCompletion();
+            this.stopStylePolling();
+          }
+        }
+      } catch (error) {
+        console.error('[Style] Polling error:', error);
+        this.stopStylePolling();
+      }
+    };
+
+    this.stylePollInterval = setInterval(pollStyleStatus, 3000);
+    pollStyleStatus();
+  }
+
+  /**
+   * 清理样式任务轮询
+   */
+  stopStylePolling() {
+    if (this.stylePollInterval) {
+      clearInterval(this.stylePollInterval);
+      this.stylePollInterval = null;
+      this.isStyleTaskActive = false;
+      console.log('[Style] Terminated style task monitoring');
+    }
+  }
+
+  /**
+   * 处理样式任务完成
+   */
+  async handleStyleCompletion() {
+    console.log('[Style] Processing completed task...');
+    try {
+      const startTime = Date.now();
+      const result = await this.apiClient.getAlternativeResult(this.websiteId);
+      console.log(`[Style] Result fetched in ${Date.now() - startTime}ms`);
+
+      if (result.data) {
+        console.log('[Style] Updating browser preview');
+        this.onBrowserUpdate?.({
+          show: true,
+          data: result.data,
+          timestamp: Date.now()
+        });
+      }
+
+      this.onMessageUpdate?.(prev => {
+        // Preserve all existing messages
+        const updatedMessages = prev.map(msg => {
+          // Only update thinking states
+          if (msg.isThinking) {
+            return { ...msg, isThinking: false };
+          }
+          return msg;
+        });
+
+        // Add completion message without removing history
+        return [
+          ...updatedMessages,
+          {
+            type: 'agent',
+            agentId: 2,
+            content: '✨ Style modifications applied successfully',
+            isThinking: false
+          }
+        ];
+      });
+
+    } catch (error) {
+      console.error('[Style] Result fetch failed:', error);
+      this.onMessageUpdate?.(prev => [
+        ...prev,
+        {
+          type: 'agent',
+          agentId: 2,
+          content: '⚠️ Failed to refresh preview. Please try again.',
+          isThinking: false
+        }
+      ]);
+    }
+  }
 }
 
+/**
+ * ResearchTool Component
+ */
 const ResearchTool = () => {
-  // 确保在组件顶层调用hooks
+  // 所有hooks必须无条件地在组件顶部调用
+  const [isTaskCompleted, setIsTaskCompleted] = useState(false); // 确保这个状态在最顶部
+  
+  // 其他状态声明
   const [messageApi, contextHolder] = message.useMessage();
   const [selectedCompetitors, setSelectedCompetitors] = useState([]);
   const [domain, setDomain] = useState('');
@@ -1006,20 +1176,28 @@ const ResearchTool = () => {
   const [messages, setMessages] = useState([]);
   const [userInput, setUserInput] = useState('');
   const [isMessageSending, setIsMessageSending] = useState(false);
-  // 添加Deep Research模式状态
   const [deepResearchMode, setDeepResearchMode] = useState(false);
-  // 添加credits状态
-  const [credits, setCredits] = useState(100);
-  // 修改credits弹窗显示状态
-  const [showCreditsTooltip, setShowCreditsTooltip] = useState(false);
+  const [initialMessagesShown, setInitialMessagesShown] = useState(0);
+  const [tabs, setTabs] = useState([]);
+  const [activeTabId, setActiveTabId] = useState(null);
+  const [rightPanelTab, setRightPanelTab] = useState('details');
+  const [showBrowser, setShowBrowser] = useState(false);
+  const [customerId, setCustomerId] = useState(null);
+  const [currentWebsiteId, setCurrentWebsiteId] = useState(null);
+  const [detailsData, setDetailsData] = useState([]);
+  const [totalDetails, setTotalDetails] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(300);
+  const [expandedNodes, setExpandedNodes] = useState({});
+  const [sourcesData, setSourcesData] = useState([]);
+  const [activeAgentId, setActiveAgentId] = useState(null);
+  const [currentTaskType, setCurrentTaskType] = useState(null);
+  const [chatHistory, setChatHistory] = useState([]);
+  const [isStyleOperationActive, setStyleOperationActive] = useState(false);
   
   const inputRef = useRef(null);
   const chatEndRef = useRef(null);
   
-  // 添加初始消息的状态控制
-  const [initialMessagesShown, setInitialMessagesShown] = useState(0);
-  
-  // 修改初始消息数组，只保留两条消息
   const initialMessages = [
     { 
       type: 'agent', 
@@ -1032,63 +1210,27 @@ const ResearchTool = () => {
       content: '🔍 Enter a product domain (e.g., websitelm.com) and I\'ll find the best alternatives instantly.\n\n✨ I\'ll generate SEO-friendly Alternative Pages for your instant preview!\n\n💡 Pro tip: Enable Deep Research mode for more in-depth analysis! Let\'s begin! 🚀'
     }
   ];
-  
-  // 添加 tabs 状态
-  const [tabs, setTabs] = useState([]);
-  const [activeTabId, setActiveTabId] = useState(null);
 
-  // 修改 rightPanelTab 的初始状态
-  const [rightPanelTab, setRightPanelTab] = useState('details'); // 默认选中 details
+  // 初始化taskManager必须放在所有hooks之后
+  const [taskManager] = useState(() => new TaskManager(apiClient));
 
-  // 添加浏览器显示状态
-  const [showBrowser, setShowBrowser] = useState(false);
-
-  // 添加新的状态
-  const [customerId, setCustomerId] = useState(null);
-
-  // Add websiteId state
-  const [currentWebsiteId, setCurrentWebsiteId] = useState(null);
-
-  // 添加detail相关状态
-  const [detailsData, setDetailsData] = useState([]);
-  const [totalDetails, setTotalDetails] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(300);
-
-  // 将 expandedNodes 状态移到组件顶层
-  const [expandedNodes, setExpandedNodes] = useState({});
-
-  // 添加 sources 状态
-  const [sourcesData, setSourcesData] = useState([]);
-
-  // 在组件的最开始部分添加引导弹窗的渲染逻辑
-  // const renderGuideModal = () => ( ... );
-
-  // 在组件加载时检查登录状态
+  // 所有useEffect必须按固定顺序声明
   useEffect(() => {
-    const storedCustomerId = localStorage.getItem('alternativelyCustomerId');
-    const token = localStorage.getItem('alternativelyAccessToken');
-    if (storedCustomerId && token) {
-      setCustomerId(storedCustomerId);
-    }
-  }, []);
+    taskManager.onTaskCompleted = () => setIsTaskCompleted(true);
+  }, []); // 空依赖数组确保只运行一次
 
-  // 处理新消息,更新tabs
-  const handleNewMessage = (message) => {
-    if (message.details && message.details.length > 0) {
-      const newTabs = message.details.map((detail, index) => ({
-        id: detail.id || `tab-${index}`,
-        title: detail.title || `Page ${index + 1}`,
-        url: detail.url,
-        active: index === 0,
-        created_at: detail.created_at
-      }));
-      setTabs(newTabs);
-      setActiveTabId(newTabs[0].id);
-    }
+  // Modify task type to agent ID mapping
+  const AGENT_TASK_MAP = {
+    [TASK_TYPES.COMPETITOR_SEARCH]: 1,
+    [TASK_TYPES.COMPETITOR_SCORING]: 1,
+    [TASK_TYPES.PRODUCT_COMPARISON]: 2,
+    [TASK_TYPES.STYLE_APPLICATION]: 3
   };
 
-  // 处理标签页切换
+  /**
+   * Handle tab change
+   * @param {string} tabId - Tab ID
+   */
   const handleTabChange = (tabId) => {
     setTabs(tabs.map(tab => ({
       ...tab,
@@ -1097,33 +1239,112 @@ const ResearchTool = () => {
     setActiveTabId(tabId);
   };
 
-  // 修改域名验证函数，使其更严格
+  /**
+   * Validate domain format
+   * @param {string} domain - Domain to validate
+   * @returns {boolean} Whether domain is valid
+   */
   const validateDomain = (domain) => {
-    // 移除 http:// 或 https:// 前缀
+    // Remove http:// or https:// prefix
     const cleanDomain = domain.replace(/^https?:\/\//i, '');
-    // 移除末尾的斜杠
+    // Remove trailing slashes
     const trimmedDomain = cleanDomain.replace(/\/+$/, '');
     
-    // 验证域名格式：
-    // - 允许字母、数字、连字符
-    // - 必须包含至少一个点
-    // - 顶级域名至少2个字符
-    // - 不允许连续的点或连字符
+    // Validate domain format
     const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9](?:\.[a-zA-Z]{2,})+$/;
     return domainRegex.test(trimmedDomain);
   };
 
-  const handleUserInput = (e) => {
-    // 新增选择处理
+  /**
+   * Handle user input submission
+   * @param {Event} e - Form event
+   */
+  const handleUserInput = async (e) => {
+    // 统一处理事件对象
+    if (e && e.preventDefault) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    // 任务完成后的聊天模式
+    if (isTaskCompleted) {
+        try {
+            setIsMessageSending(true);
+            const newMessages = [...messages, { type: 'user', content: userInput }];
+            setMessages(newMessages);
+            setUserInput('');
+
+            const response = await apiClient.chatWithAI(
+                userInput,
+                currentWebsiteId
+            );
+
+            if (response?.code === 200 && response.data?.answer) {
+                const answer = response.data.answer;
+                
+                if (answer.endsWith('[END]')) {
+                    const styleDescription = answer.replace(/\[END\]$/i, '').trim();
+                    
+                    setMessages(prev => [
+                        ...prev,
+                        {
+                            type: 'agent',
+                            agentId: 2,
+                            content: '🎨 Applying style changes...',
+                            isThinking: true
+                        }
+                    ]);
+
+                    try {
+                        await apiClient.changeStyle(styleDescription, currentWebsiteId);
+                        
+                        // 启动独立样式任务轮询
+                        taskManager.hasStyleTask = true;
+                        taskManager.startStylePolling();
+                        
+                    } catch (error) {
+                        setMessages(prev => [
+                            ...prev.filter(msg => !msg.isThinking),
+                            {
+                                type: 'agent',
+                                agentId: 2,
+                                content: `⚠️ Failed to apply style: ${error.message}`,
+                                isThinking: false
+                            }
+                        ]);
+                    }
+                } else {
+                    setMessages(prev => [
+                        ...prev,
+                        {
+                            type: 'agent',
+                            agentId: 2,
+                            content: answer,
+                            isThinking: false
+                        }
+                    ]);
+                }
+            }
+        } catch (error) {
+            setMessages(prev => [
+                ...prev,
+                {
+                    type: 'agent',
+                    agentId: 2,
+                    content: `⚠️ Failed to get response: ${error.message}`,
+                    isThinking: false
+                }
+            ]);
+        } finally {
+            setIsMessageSending(false);
+        }
+        return;
+    }
+
+    // 原有处理逻辑（仅在任务未完成时执行）
     if (userInput?.type === 'competitor_select') {
       handleCompetitorSelect(userInput.values);
       return;
-    }
-    
-    // 阻止任何可能的默认行为
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
     }
     
     if (!userInput.trim()) return;
@@ -1132,14 +1353,14 @@ const ResearchTool = () => {
     const newMessages = [...messages, { type: 'user', content: userInput }];
     setMessages(newMessages);
     
-    // Process the input as domain
+    // Process input as domain
     const cleanDomain = userInput.trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '');
     setDomain(cleanDomain);
     
     // Clear input field
     setUserInput('');
     
-    // 设置消息发送状态为true
+    // Set message sending state
     setIsMessageSending(true);
     
     // Validate domain and start analysis
@@ -1162,13 +1383,16 @@ Could you please provide a valid domain name? For example: "websitelm.com"`,
       return;
     }
     
-    // 延迟0.5秒后开始分析过程，显得更真实
+    // Delay analysis to appear more natural
     setTimeout(() => {
       startAnalysis(cleanDomain);
     }, 500);
   };
   
-  // 修改竞品选择处理逻辑
+  /**
+   * Handle competitor selection
+   * @param {Array} selected - Selected competitors
+   */
   const handleCompetitorSelect = (selected) => {
     if (selected.length > 3) {
       messageApi.error('Maximum 3 competitors can be selected');
@@ -1180,9 +1404,11 @@ Could you please provide a valid domain name? For example: "websitelm.com"`,
     setSelectedCompetitors(selected);
   };
 
-  // 添加确认处理方法
+  /**
+   * Handle confirmation of competitor selection
+   */
   const handleConfirmSelection = async () => {
-    // 清除旧消息
+    // Clear old messages
     setMessages(prev => prev.filter(msg => 
       !msg.content.includes('Xavier is now analyzing') &&
       !msg.content.includes('Transferring analysis')
@@ -1208,15 +1434,37 @@ Could you please provide a valid domain name? For example: "websitelm.com"`,
     ]);
 
     taskManager.continueAnalysis(selectedCompetitors);
-    setSelectedCompetitors([]); // 清空选中状态
+    setSelectedCompetitors([]); // Clear selection state
   };
 
-  const [taskManager] = useState(() => new TaskManager(apiClient));
-
+  // Initialize task manager callbacks
   useEffect(() => {
-    // 设置任务更新回调
     taskManager.onTaskUpdate = (taskType, task) => {
-      // 当任务类型变化时自动更新消息
+      setCurrentTaskType(taskType);
+      
+      // 新增完成状态检测
+      if (task.status === 'finished') {
+        const allFinished = taskManager.getTasks().every(t => t.status === 'finished');
+        if (allFinished) {
+          setMessages(prev => [...prev, {
+            type: 'agent',
+            agentId: 1,
+            content: '✅ All tasks completed! Ready for your next request.',
+            isThinking: false
+          }]);
+          setCurrentTaskType(null);
+        }
+      }
+
+      // 设置当前agent
+      const agentMap = {
+        [TASK_TYPES.COMPETITOR_SEARCH]: 1,
+        [TASK_TYPES.COMPETITOR_SCORING]: 1,
+        [TASK_TYPES.PRODUCT_COMPARISON]: 2,
+        [TASK_TYPES.STYLE_APPLICATION]: 3
+      };
+      setActiveAgentId(agentMap[taskType] || null);
+      // Update message when task type changes
       if (taskType !== taskManager.currentTaskType) {
         const newAgent = taskManager.getActiveAgent(taskType);
         setMessages(prev => [...prev, {
@@ -1226,16 +1474,14 @@ Could you please provide a valid domain name? For example: "websitelm.com"`,
           isThinking: true
         }]);
       }
-      // 更新工作流程状态
+      // Update workflow state
       setWorkflowStage(task.status);
-      // 根据任务类型和状态更新UI
-      updateUIForTask(taskType, task);
     };
 
     taskManager.onDetailsUpdate = (details, hasNewData) => {
       setDetailsData(details);
       
-      // 如果有新数据且不在 details tab，自动切换
+      // Switch to details tab if new data arrives
       if (hasNewData && rightPanelTab !== 'details') {
         setRightPanelTab('details');
       }
@@ -1244,13 +1490,12 @@ Could you please provide a valid domain name? For example: "websitelm.com"`,
     taskManager.onSourcesUpdate = (sources, hasNewData) => {
       setSourcesData(sources);
       
-      // 如果有新数据且不在 sources tab，自动切换
+      // Switch to sources tab if new data arrives
       if (hasNewData && rightPanelTab !== 'sources') {
         setRightPanelTab('sources');
       }
     };
 
-    // 修改消息更新回调
     taskManager.onMessageUpdate = (messageUpdater) => {
       if (typeof messageUpdater === 'function') {
         setMessages(messageUpdater);
@@ -1259,24 +1504,56 @@ Could you please provide a valid domain name? For example: "websitelm.com"`,
       }
     };
 
-    // 初始化 TaskManager 时添加浏览器更新回调
-    taskManager.onBrowserUpdate = ({ show, tabs }) => {
-      setShowBrowser(show);
-      setTabs(tabs);
+    taskManager.onBrowserUpdate = (state) => {
+      setShowBrowser(state.show);
+      
+      const generatedTabs = [];
+      Object.entries(state.data || {}).forEach(([styleType, ids]) => {
+        if (Array.isArray(ids)) {
+          ids.forEach((id, index) => {
+            if (id && typeof id === 'string') {
+              generatedTabs.push({
+                id: `${styleType}-${index}`,
+                title: `${styleType.replace('style', 'Style ')} #${index + 1}`,
+                url: `https://preview.websitelm.site/en/${id}`,
+                active: generatedTabs.length === 0
+              });
+            }
+          });
+        }
+      });
+
+      console.log('Processed tabs:', generatedTabs);
+      console.log('Raw browser data:', state.data);
+
+      setTabs(generatedTabs);
+      setActiveTabId(generatedTabs[0]?.id || null);
     };
 
-    // 添加 callbacks during initialization
     taskManager.setLoadingUpdateCallback(setLoading);
     taskManager.setMessageSendingUpdateCallback(setIsMessageSending);
 
+    // 添加消息监听
+    const handleMessage = (event) => {
+      if (event.data === 'closeBrowser') {
+        setShowBrowser(false)
+      }
+    }
+    window.addEventListener('message', handleMessage)
+
     return () => {
+      // 清理监听
+      window.removeEventListener('message', handleMessage)
       taskManager.clearAllTasks();
     };
   }, []);
 
-  // Modify startAnalysis function
+  /**
+   * Start research analysis
+   * @param {string} cleanDomain - Cleaned domain
+   */
   const startAnalysis = async (cleanDomain) => {
-    // 检查登录状态
+    // Check login status
     const token = localStorage.getItem('alternativelyAccessToken');
     const storedCustomerId = localStorage.getItem('alternativelyCustomerId');
     
@@ -1298,7 +1575,7 @@ Could you please provide a valid domain name? For example: "websitelm.com"`,
     setWorkflowProgress(0);
 
     try {
-      // 添加初始消息（带loading状态）
+      // Add initial message (with loading state)
       setMessages(prev => [...prev, { 
         type: 'agent', 
         agentId: 1,
@@ -1306,7 +1583,7 @@ Could you please provide a valid domain name? For example: "websitelm.com"`,
         isThinking: true
       }]);
 
-      // 修改为调用 searchCompetitor 而不是 generateAlternative
+      // Call searchCompetitor API
       const response = await apiClient.searchCompetitor(
         cleanDomain,
         deepResearchMode
@@ -1331,112 +1608,15 @@ Could you please provide a valid domain name? For example: "websitelm.com"`,
     }
   };
 
-  // Add status polling function
-  const startPollingStatus = (websiteId) => {
-    const pollInterval = setInterval(async () => {
-      try {
-        const statusResponse = await apiClient.getAlternativeStatus(websiteId);
-        
-        // Update UI based on status
-        if (statusResponse?.data?.status === 'COMPLETED') {
-          clearInterval(pollInterval);
-          handleResearchResults(statusResponse.data, domain);
-        } else if (statusResponse?.data?.status === 'FAILED') {
-          clearInterval(pollInterval);
-          messageApi.error('Analysis failed, please try again later');
-          setLoading(false);
-          setWorkflowStage(null);
-        }
-        // Continue polling if status is PENDING or RUNNING
-        
-      } catch (error) {
-        console.error('Failed to get status:', error);
-        clearInterval(pollInterval);
-        messageApi.error('Failed to get analysis status');
-        setLoading(false);
-        setWorkflowStage(null);
-      }
-    }, 3000); // Poll every 3 seconds
-
-    // Return cleanup function
-    return () => clearInterval(pollInterval);
-  };
-
-  // Modify handleResearchResults function to handle new data structure
-  const handleResearchResults = (data, cleanDomain) => {
-    setWorkflowStage('completed');
-    setWorkflowProgress(100);
-    setLoading(false);
-    
-    // 更新消息，移除思考状态
-    setMessages(prev => {
-      const updatedMessages = [...prev];
-      if (updatedMessages.length > 0) {
-        const lastMessage = updatedMessages[updatedMessages.length - 1];
-        if (lastMessage.isThinking) {
-          updatedMessages[updatedMessages.length - 1] = {
-            ...lastMessage,
-            isThinking: false
-          };
-        }
-      }
-      return updatedMessages;
-    });
-    
-    // 添加数据验证
-    const competitors = Array.isArray(data?.result) 
-      ? data.result.filter(url => url !== null && url !== undefined)
-      : [];
-      
-    // 添加结果消息
-    setTimeout(() => {
-      const message = competitors.length > 0 
-        ? `🎉 Great news! I've found some excellent alternatives! Here are the main competitors to ${cleanDomain}:
-
-${competitors.slice(0, 5).map((url, index) => `${index + 1}. ${url}`).join('\n')}
-
-I've loaded these websites in the browser panel for you to explore. Would you like to know more specific details about any of them?`
-        : `I apologize, but I couldn't find any valid alternatives for ${cleanDomain} at this moment. Would you like to try with a different domain?`;
-
-      setMessages(prev => [...prev, { 
-        type: 'agent', 
-        agentId: 1,
-        content: message,
-        isThinking: false
-      }]);
-      
-      // 只在有竞争对手时更新浏览器标签
-      if (competitors.length > 0) {
-        const newTabs = competitors.slice(0, 5).map((url, index) => ({
-          id: index + 1,
-          title: new URL(url).hostname.replace('www.', ''),
-          url: url,
-          active: index === 0
-        }));
-        
-        setTabs(newTabs);
-      }
-      
-      setIsMessageSending(false);
-    }, 500);
-
-    // 在任务完成时停止detail轮询
-    taskManager.stopDetailPolling();
-  };
-  
-  const formatUrl = (input) => {
-    let cleanDomain = input.trim();
-    if (cleanDomain.startsWith('http://')) {
-      cleanDomain = cleanDomain.substring(7);
-    } else if (cleanDomain.startsWith('https://')) {
-      cleanDomain = cleanDomain.substring(8);
-    }
-    return `https://${cleanDomain}`;
-  };
-
+  /**
+   * Render chat message
+   * @param {Object} message - Message object
+   * @param {number} index - Message index
+   * @returns {JSX.Element} Rendered message
+   */
   const renderChatMessage = (message, index) => {
     if (message.options) {
-      const agent = agents.find(a => a.id === message.agentId) || agents[0];
+      const agent = AGENTS.find(a => a.id === message.agentId) || AGENTS[0];
       return (
         <div key={index} className="flex justify-start mb-8">
           <div className="flex max-w-[80%] flex-row group">
@@ -1471,7 +1651,7 @@ I've loaded these websites in the browser panel for you to explore. Would you li
                   {message.content}
                   
                   <div className="text-xs text-gray-400 mt-2">(Max 3 selections)</div>
-                  <div className="grid grid-cols-2 gap-2 mt-3">
+                  <div className="grid grid-cols-3 gap-2 mt-3">
                     {message.options.map((opt, i) => (
                       <button
                         key={i}
@@ -1523,7 +1703,7 @@ I've loaded these websites in the browser panel for you to explore. Would you li
       );
     }
     if (message.type !== 'user') {
-      const agent = agents.find(a => a.id === message.agentId) || agents[0];
+      const agent = AGENTS.find(a => a.id === message.agentId) || AGENTS[0];
       return (
         <div key={index} className="flex justify-start mb-8" style={{animation: 'fadeIn 0.5s ease-out forwards'}}>
           <div className="flex max-w-[80%] flex-row group">
@@ -1577,7 +1757,7 @@ I've loaded these websites in the browser panel for you to explore. Would you li
       );
     }
     
-    // 用户消息样式
+    // User message style
     return (
       <div 
         key={index} 
@@ -1615,36 +1795,13 @@ I've loaded these websites in the browser panel for you to explore. Would you li
       </div>
     );
   };
-  
-  // 调整agents顺序并修正职责描述
-  const agents = [
-    {
-      id: 1,
-      name: 'Joey.Z',
-      avatar: '/images/zy.jpg',
-      role: 'Competitive Analyst',
-      description: 'Specializes in competitor discovery and scoring analysis. Responsible for market research and competitor evaluation.'
-    },
-    {
-      id: 2,  // 调整为第二位
-      name: 'Youssef',
-      avatar: '/images/youssef.jpg',
-      role: 'Content Strategist',
-      description: 'Focuses on comparative content creation. Responsible for writing SEO-optimized alternative page content in markdown format.'
-    },
-    {
-      id: 3,  // 调整为第三位
-      name: 'Xavier.S',
-      avatar: '/images/hy.jpg',
-      role: 'Full-stack Developer',
-      description: 'Handles page implementation. Responsible for converting markdown content into production-ready web pages.'
-    }
-  ];
 
-  // 渲染 agents 卡片
+  /**
+   * Render agent cards
+   */
   const renderAgents = () => (
     <div className="space-y-3">
-      {agents.map(agent => (
+      {AGENTS.map(agent => (
         <div key={agent.id} className="bg-white/5 rounded-lg p-3 hover:bg-white/10 transition-colors">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-8 h-8 rounded-full overflow-hidden">
@@ -1661,7 +1818,9 @@ I've loaded these websites in the browser panel for you to explore. Would you li
     </div>
   );
 
-  // 修改 renderSources 函数,使用真实数据结构
+  /**
+   * Render sources list
+   */
   const renderSources = () => (
     <div className="space-y-2">
       {sourcesData.length === 0 ? (
@@ -1687,10 +1846,8 @@ I've loaded these websites in the browser panel for you to explore. Would you li
     </div>
   );
 
-  // 修改 useEffect，防止任何自动滚动
+  // Auto-scroll chat when messages update
   useEffect(() => {
-    // 完全禁用自动滚动到底部的行为
-    // 只在聊天区域内部滚动，不影响整个页面
     if (chatEndRef.current && messages.length > 1) {
       const chatContainer = document.querySelector('.chat-messages-container');
       if (chatContainer) {
@@ -1699,9 +1856,8 @@ I've loaded these websites in the browser panel for you to explore. Would you li
     }
   }, [messages]);
 
-  // 修改初始化加载效果
+  // Initialize loading effect
   useEffect(() => {
-    // 模拟初始化加载
     const timer = setTimeout(() => {
       setInitialLoading(false);
     }, 1500);
@@ -1709,24 +1865,30 @@ I've loaded these websites in the browser panel for you to explore. Would you li
     return () => clearTimeout(timer);
   }, []);
 
-  // 添加新的 useEffect 来处理引导弹窗关闭后的欢迎消息
+  // Show initial welcome messages
   useEffect(() => {
-    // 当引导弹窗被关闭时
     if (!initialMessagesShown) {
-      // 开始显示初始消息时，设置消息发送状态为true
       setIsMessageSending(true);
-      // 开始逐步显示初始消息
       showInitialMessagesSequentially();
     }
   }, []);
 
-  // 修改逐步显示初始消息的函数
+  // Check login status
+  useEffect(() => {
+    const storedCustomerId = localStorage.getItem('alternativelyCustomerId');
+    const token = localStorage.getItem('alternativelyAccessToken');
+    if (storedCustomerId && token) {
+      setCustomerId(storedCustomerId);
+    }
+  }, []);
+
+  /**
+   * Show initial messages sequentially
+   */
   const showInitialMessagesSequentially = () => {
-    // 设置第一条消息
     setMessages([initialMessages[0]]);
     setInitialMessagesShown(1);
     
-    // 设置第二条消息
     setTimeout(() => {
       setMessages(prev => [...prev, initialMessages[1]]);
       setInitialMessagesShown(2);
@@ -1734,7 +1896,91 @@ I've loaded these websites in the browser panel for you to explore. Would you li
     }, 1000);
   };
 
-  // 添加新的动画样式
+  /**
+   * Toggle deep research mode
+   */
+  const toggleDeepResearchMode = () => {
+    setDeepResearchMode(!deepResearchMode);
+    
+    if (!deepResearchMode) {
+      setMessages(prev => [...prev, { 
+        type: 'agent', 
+        agentId: 1,
+        content: '🔬 Deep Research mode activated! I\'ll now perform a more comprehensive analysis, exploring additional data sources and providing more detailed insights. This may take a bit longer, but the results will be much more thorough.',
+        isThinking: false
+      }]);
+    } else {
+      setMessages(prev => [...prev, { 
+        type: 'agent',
+        agentId: 1,
+        content: '📊 Standard Research mode activated. I\'ll focus on providing quick, essential insights about alternatives. This is perfect for getting a rapid overview of your options.',
+        isThinking: false
+      }]);
+    }
+  };
+
+  /**
+   * Handle page change
+   * @param {number} page - New page number
+   */
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    if (taskManager) {
+      taskManager.currentPage = page;
+      taskManager.pollDetails();
+    }
+  };
+
+  /**
+   * Render details
+   * @param {Array} details - Details data
+   */
+  const renderDetails = (details) => {
+    if (!details || details.length === 0) {
+      return (
+        <div className="text-gray-500 text-center py-4 text-xs">
+          No details available
+        </div>
+      );
+    }
+
+    return (
+      <div className="p-3 space-y-2">
+        {details.map((detail, index) => {
+          const { data, event, created_at } = detail;
+          const { title, status, outputs } = data || {};
+          
+          return (
+            <div 
+              key={index} 
+              className="bg-gray-800/50 p-2.5 rounded border border-gray-700/50 hover:border-gray-600/50 transition-all duration-300"
+            >
+              <div className="text-[11px] text-gray-300 font-medium">{title || event}</div>
+              {status && (
+                <div className={`text-[10px] mt-1.5 ${
+                  status === "succeeded" ? "text-green-500" : 
+                  status === "failed" ? "text-red-500" : 
+                  "text-gray-400"
+                }`}>
+                  {status}
+                </div>
+              )}
+              {outputs && (
+                <div className="text-[10px] text-gray-400 mt-1.5 break-words leading-relaxed">
+                  {typeof outputs === 'string' ? outputs : JSON.stringify(outputs)}
+                </div>
+              )}
+              <div className="text-[9px] text-gray-500 mt-1.5">
+                {new Date(created_at).toLocaleString()}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // CSS Animation styles
   const animationStyles = `
     @keyframes fadeIn {
       from { opacity: 0; }
@@ -1769,7 +2015,7 @@ I've loaded these websites in the browser panel for you to explore. Would you li
     }
   `;
 
-  // 如果正在初始化加载，显示加载界面
+  // Show loading screen while initializing
   if (initialLoading) {
     return (
       <div className="w-full min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 
@@ -1792,86 +2038,16 @@ I've loaded these websites in the browser panel for you to explore. Would you li
     );
   }
 
-  // 切换Deep Research模式
-  const toggleDeepResearchMode = () => {
-    setDeepResearchMode(!deepResearchMode);
+  // Add task description method
+  const getActiveTaskDescription = () => {
+    if (!currentTaskType) return '🔄 Ready for new tasks';
     
-    // 当用户切换模式时，添加相应的代理消息提示
-    if (!deepResearchMode) {
-      // 如果当前是关闭状态，切换到开启状态
-      setMessages(prev => [...prev, { 
-        type: 'agent', 
-        agentId: 1, // 使用Joey来解释深度研究模式
-        content: '🔬 Deep Research mode activated! I\'ll now perform a more comprehensive analysis, exploring additional data sources and providing more detailed insights. This may take a bit longer, but the results will be much more thorough.',
-        isThinking: false
-      }]);
-    } else {
-      // 如果当前是开启状态，切换到关闭状态
-      setMessages(prev => [...prev, { 
-        type: 'agent', 
-        agentId: 1,
-        content: '📊 Standard Research mode activated. I\'ll focus on providing quick, essential insights about alternatives. This is perfect for getting a rapid overview of your options.',
-        isThinking: false
-      }]);
-    }
-  };
-
-  // 修改分页处理函数
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-    // 更新TaskManager中的当前页
-    if (taskManager) {
-      taskManager.currentPage = page;
-      // 立即触发一次数据获取
-      taskManager.pollDetails();
-    }
-  };
-
-  // 修改 renderDetails 函数
-  const renderDetails = (details) => {
-    if (!details || details.length === 0) {
-      return (
-        <div className="text-gray-500 text-center py-4 text-xs">
-          No details available
-        </div>
-      );
-    }
-
-    return (
-      <div className="p-3 space-y-2">
-        {details.map((detail, index) => {
-          const { data, event, created_at } = detail;
-          const { title, status, outputs } = data || {};
-          
-          return (
-            <div 
-              key={index} 
-              className="bg-gray-800/50 p-2.5 rounded border border-gray-700/50 
-                        hover:border-gray-600/50 transition-all duration-300"
-            >
-              <div className="text-[11px] text-gray-300 font-medium">{title || event}</div>
-              {status && (
-                <div className={`text-[10px] mt-1.5 ${
-                  status === "succeeded" ? "text-green-500" : 
-                  status === "failed" ? "text-red-500" : 
-                  "text-gray-400"
-                }`}>
-                  {status}
-                </div>
-              )}
-              {outputs && (
-                <div className="text-[10px] text-gray-400 mt-1.5 break-words leading-relaxed">
-                  {typeof outputs === 'string' ? outputs : JSON.stringify(outputs)}
-                </div>
-              )}
-              <div className="text-[9px] text-gray-500 mt-1.5">
-                {new Date(created_at).toLocaleString()}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
+    return {
+      [TASK_TYPES.COMPETITOR_SEARCH]: '🔍 Searching competitors...',
+      [TASK_TYPES.COMPETITOR_SCORING]: '📊 Scoring competitors...',
+      [TASK_TYPES.PRODUCT_COMPARISON]: '📝 Generating comparison...',
+      [TASK_TYPES.STYLE_APPLICATION]: '🎨 Applying style...'
+    }[currentTaskType] || 'Processing request...';
   };
 
   return (
@@ -1887,64 +2063,33 @@ I've loaded these websites in the browser panel for you to explore. Would you li
           <div className="absolute w-96 h-96 bg-purple-500/10 rounded-full blur-3xl -bottom-20 -right-20 animate-pulse delay-1000"></div>
         </div>
         
+        {/* Chat container */}
         <div className="relative z-10 w-full flex flex-row gap-6 h-[calc(100vh-140px)] px-4 text-sm">
-          {/* 左侧对话栏 */}
-          <div className={`${showBrowser ? 'w-1/5' : 'w-4/5'} transition-all duration-300 ease-in-out 
-                           bg-white/5 backdrop-blur-lg rounded-2xl border border-gray-300/20 shadow-xl flex flex-col h-full`}>
-            <div className="h-10 px-4 border-b border-gray-300/20 flex items-center justify-between flex-shrink-0">
+          {/* Left panel - Chat */}
+          <div className={`${showBrowser ? 'hidden' : 'flex-1'} relative flex flex-col`}>
+            {/* Open Browser button */}
+            <div className="absolute top-3 right-4 z-50 flex gap-2">
+              <button
+                onClick={() => setShowBrowser(true)}
+                className="px-3 py-1.5 text-xs bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 rounded-full 
+                         backdrop-blur-sm transition-all flex items-center gap-1.5 border border-purple-500/30"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 4l-4 4 4 4"/>
+                </svg>
+                Open Browser
+              </button>
+            </div>
+
+            {/* Header */}
+            <div className="h-10 px-4 border-b border-gray-300/20 flex-shrink-0">
               <div className="flex items-center">
                 <img src="/images/alternatively-logo.png" alt="Alternatively" className="w-5 h-5 mr-1.5" />
                 <h2 className="text-sm font-semibold text-gray-100">Copilot</h2>
               </div>
-              
-              {/* 修改Credits图标和弹窗 */}
-              <div className="relative">
-                <div 
-                  className="flex items-center cursor-pointer text-gray-300 hover:text-white transition-colors"
-                  onClick={() => setShowCreditsTooltip(!showCreditsTooltip)}
-                >
-                  <div className="w-6 h-6 rounded-full bg-purple-500/30 flex items-center justify-center">
-                    <span className="text-xs font-medium">💎</span>
-                  </div>
-                </div>
-                
-                {showCreditsTooltip && (
-                  <div 
-                    className="absolute right-0 top-8 w-56 bg-gray-800 border border-gray-700 rounded-lg shadow-xl p-4 z-50 text-xs"
-                    style={{animation: 'fadeIn 0.2s ease-out forwards'}}
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="font-medium text-purple-300">Account Balance</span>
-                      <button 
-                        onClick={() => setShowCreditsTooltip(false)}
-                        className="text-gray-400 hover:text-white transition-colors"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                    
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-white font-bold text-lg">{credits} Credits</span>
-                    </div>
-                    
-                    <div className="h-2 bg-gray-700 rounded-full overflow-hidden mb-3">
-                      <div 
-                        className="h-full bg-gradient-to-r from-purple-500 to-blue-500" 
-                        style={{width: `${Math.min(100, (credits/200)*100)}%`}}
-                      ></div>
-                    </div>
-                    
-                    <p className="mb-3 text-gray-300">Each research consumes 10-20 Credits</p>
-                    
-                    <button className="w-full py-1.5 bg-purple-600 hover:bg-purple-700 rounded text-white text-xs transition-colors">
-                      Recharge Credits
-                    </button>
-                  </div>
-                )}
-              </div>
             </div>
-            
-            {/* 聊天消息容器 - 进一步增加顶部内边距 */}
+
+            {/* Messages container */}
             <div className="flex-1 overflow-y-auto pt-12 px-4 pb-4 chat-messages-container">
               {initialLoading ? (
                 <div className="flex items-center justify-center h-full">
@@ -1957,11 +2102,11 @@ I've loaded these websites in the browser panel for you to explore. Would you li
                 </>
               )}
             </div>
-            
-            {/* 修改输入区域的样式和位置 */}
+
+            {/* Input area */}
             <div className="p-4 border-t border-gray-300/20 flex-shrink-0">
               <div className="max-w-[600px] mx-auto">
-                <form onSubmit={handleUserInput} className="relative">
+                <div className="relative">
                   <Input
                     ref={inputRef}
                     placeholder={deepResearchMode 
@@ -1969,7 +2114,7 @@ I've loaded these websites in the browser panel for you to explore. Would you li
                       : "Enter your product URL (e.g., websitelm.com)"}
                     value={userInput}
                     onChange={(e) => setUserInput(e.target.value)}
-                    disabled={loading || isMessageSending}
+                    disabled={loading || isMessageSending || isStyleOperationActive}
                     className="bg-white/10 border border-gray-300/30 rounded-xl text-sm"
                     style={{ 
                       color: 'black', 
@@ -1986,23 +2131,30 @@ I've loaded these websites in the browser panel for you to explore. Would you li
                         }} 
                       />
                     }
+                    onPressEnter={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (userInput.trim()) {
+                        handleUserInput(e);
+                      }
+                    }}
                   />
-                </form>
+                </div>
 
                 <div className="flex items-center justify-between mt-3 px-1">
                   <div className="flex items-center space-x-4">
-                    {/* Deep 开关移到这里 */}
+                    {/* Deep research toggle */}
                     <button 
                       type="button"
                       className={`flex items-center px-2 py-1 rounded-full text-xs transition-all duration-200 
-                        ${loading || isMessageSending 
+                        ${loading || isMessageSending || isStyleOperationActive 
                           ? 'opacity-50 cursor-not-allowed bg-gray-200 text-gray-600' 
                           : deepResearchMode
                             ? 'bg-purple-500 text-white hover:bg-purple-600' 
                             : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
                         }`}
                       onClick={() => {
-                        if (!loading && !isMessageSending) {
+                        if (!loading && !isMessageSending && !isStyleOperationActive) {
                           toggleDeepResearchMode();
                         }
                       }}
@@ -2013,7 +2165,7 @@ I've loaded these websites in the browser panel for you to explore. Would you li
                       Deep
                     </button>
 
-                    {/* 模式说明文本 */}
+                    {/* Mode description */}
                     <span className="text-xs text-purple-300/80">
                       {deepResearchMode ? (
                         <span className="flex items-center">
@@ -2034,122 +2186,62 @@ I've loaded these websites in the browser panel for you to explore. Would you li
             </div>
           </div>
           
-          {/* 中间浏览器区域 */}
-          <div className={`${showBrowser ? 'w-3/5' : 'hidden'} transition-all duration-300 ease-in-out 
-                           bg-white/5 backdrop-blur-lg rounded-2xl border border-gray-300/20 shadow-xl flex flex-col h-full relative`}>
-            {/* 直接渲染 BrowserSimulator，移除外层的 tab 栏 */}
+          {/* Middle panel - Browser */}
+          <div className={`${showBrowser ? 'flex-1' : 'hidden'} relative flex flex-col`}>
+            {/* Keep existing Back to Chat button */}
+            <div className="absolute top-3 right-4 z-50 flex gap-2">
+              <button
+                onClick={() => setShowBrowser(false)}
+                className="px-3 py-1.5 text-xs bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-full 
+                         backdrop-blur-sm transition-all flex items-center gap-1.5 border border-blue-500/30"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h10a8 8 0 018 8v0M3 10l6 6m-6-6l6-6"/>
+                </svg>
+                Back to Chat
+              </button>
+            </div>
             <BrowserSimulator 
-              url={tabs.find(tab => tab.active)?.url}
               tabs={tabs}
+              activeTab={activeTabId}
               onTabChange={handleTabChange}
+              style={{ height: '600px' }}
             />
           </div>
           
-          {/* 右侧分析结果栏 */}
+          {/* Right panel - Analysis */}
           <div className="w-1/5 bg-white/5 backdrop-blur-lg rounded-2xl border border-gray-300/20 shadow-xl 
                           flex flex-col h-full relative">
-            {/* 将 Show 按钮和 Agent 头像放在顶部 */}
-            <div className="border-b border-gray-300/20">
-              <div className="flex items-center p-3">
-                {!showBrowser && (
-                  <button
-                    onClick={() => setShowBrowser(true)}
-                    className="p-1.5 bg-gray-800 hover:bg-gray-700 rounded-full shadow-lg transition-colors mr-2"
-                  >
-                    <svg
-                      className="w-4 h-4 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-                )}
-                
-                {/* 修改 Agent 头像和状态气泡的渲染部分 */}
-                <div className="flex items-center space-x-6">
-                  {agents.map(agent => (
-                    <div key={agent.id} className="relative group">
-                      <Tooltip title={`${agent.name} - ${agent.role}`}>
-                        <div className={`w-8 h-8 rounded-full overflow-hidden border-2 transition-all duration-300 ${
-                          messages[messages.length - 1]?.agentId === agent.id && messages[messages.length - 1]?.isThinking
-                            ? 'border-blue-500 scale-110'
-                            : 'border-transparent hover:border-gray-400'
-                        }`}>
-                          <img 
-                            src={agent.avatar} 
-                            alt={agent.name} 
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      </Tooltip>
-                      
-                      {/* 重新设计的状态气泡 */}
-                      {messages[messages.length - 1]?.agentId === agent.id && 
-                       messages[messages.length - 1]?.isThinking && (
-                        <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
-                          <div className="px-2 py-1 bg-gradient-to-r from-blue-600 to-blue-500 
-                                        rounded-full shadow-lg border border-blue-400/20
-                                        text-[9px] text-white font-medium tracking-tight
-                                        flex items-center gap-1.5 backdrop-blur-sm">
-                            <span className="flex h-1.5 w-1.5">
-                              <span className="animate-ping absolute inline-flex h-1.5 w-1.5 rounded-full bg-white opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white"></span>
-                            </span>
-                            {agent.role === 'Competitive Analyst' && 'Analyzing Market'}
-                            {agent.role === 'Full-stack Developer' && 'Coding For Final Pages'}
-                            {agent.role === 'Content Strategist' && 'Writing Content'}
-                          </div>
-                          {/* 添加小三角形指示器 */}
-                          <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 
-                                        border-l-4 border-r-4 border-b-4 
-                                        border-l-transparent border-r-transparent border-b-blue-600"></div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
-              {/* Tab 切换按钮 */}
-              <div className="flex">
-                <button
-                  onClick={() => setRightPanelTab('details')}
-                  className={`flex-1 h-10 flex items-center justify-center text-xs font-medium transition-colors
-                    ${rightPanelTab === 'details'
-                      ? 'text-white border-b-2 border-blue-500'
-                      : 'text-gray-300 hover:text-gray-200'
-                    }`}
+            {/* 面板头部保持不变 */}
+            <div className="border-b border-gray-300/20 p-3">
+              <div className="flex justify-between">
+                <button 
+                  onClick={() => setRightPanelTab('details')} 
+                  className={`text-sm ${
+                    rightPanelTab === 'details' 
+                      ? 'text-blue-400 font-medium' 
+                      : 'text-gray-400 hover:text-gray-200'
+                  }`}
                 >
                   Details
                 </button>
-                <button
-                  onClick={() => setRightPanelTab('sources')}
-                  className={`flex-1 h-10 flex items-center justify-center text-xs font-medium transition-colors
-                    ${rightPanelTab === 'sources'
-                      ? 'text-white border-b-2 border-blue-500'
-                      : 'text-gray-300 hover:text-gray-200'
-                    }`}
+                <button 
+                  onClick={() => setRightPanelTab('sources')} 
+                  className={`text-sm ${
+                    rightPanelTab === 'sources' 
+                      ? 'text-blue-400 font-medium' 
+                      : 'text-gray-400 hover:text-gray-200'
+                  }`}
                 >
                   Sources
                 </button>
               </div>
             </div>
             
-            {/* Tab 内容区域 */}
+            {/* 内容区域保持不变 */}
             <div className="flex-1 overflow-y-auto">
-              {rightPanelTab === 'details' && (
-                <>
-                  {renderDetails(detailsData)}
-                </>
-              )}
-              
-              {rightPanelTab === 'sources' && (
-                <div className="p-3">
-                  {renderSources()}
-                </div>
-              )}
+              {rightPanelTab === 'details' && renderDetails(detailsData)}
+              {rightPanelTab === 'sources' && renderSources()}
             </div>
           </div>
         </div>
@@ -2158,4 +2250,4 @@ I've loaded these websites in the browser panel for you to explore. Would you li
   );
 };
 
-export default ResearchTool; 
+export default ResearchTool;

@@ -209,6 +209,34 @@ const getAlternativeResult = async (websiteId) => {
   }
 };
 
+// 新增竞品分析聊天接口
+const chatWithAI = async (message, websiteId) => {
+  try {
+    const response = await apiClient.post('/alternatively/chat', {
+      message,
+      websiteId
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Failed to chat with AI:', error);
+    throw error;
+  }
+};
+
+// 新增设计样式修改接口
+const changeStyle = async (styleColor, websiteId) => {
+  try {
+    const response = await apiClient.post('/alternatively/style', {
+      styleColor,
+      websiteId
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Failed to change website style:', error);
+    throw error;
+  }
+};
+
 apiClient.getCompetitorResearch = getCompetitorResearch;
 apiClient.login = login;
 apiClient.register = register;
@@ -222,5 +250,7 @@ apiClient.getAlternativeDetail = getAlternativeDetail;
 apiClient.getAlternativeSources = getAlternativeSources;
 apiClient.getAlternativeResult = getAlternativeResult;
 apiClient.searchCompetitor = searchCompetitor;
+apiClient.chatWithAI = chatWithAI;
+apiClient.changeStyle = changeStyle;  // 新增样式修改方法导出
 
 export default apiClient;

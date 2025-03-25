@@ -4,6 +4,13 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import apiClient from '../../lib/api/index.js';
 
+const animationStyles = `
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+`;
+
 export default function Header() {
   const router = useRouter();
   const [state, setState] = useState({
@@ -46,6 +53,8 @@ export default function Header() {
     newPassword: false,
     confirmPassword: false
   });
+  const [showCreditsTooltip, setShowCreditsTooltip] = useState(false);
+  const [credits, setCredits] = useState(150); // 从API获取实际值
 
   useEffect(() => {
     // Check if user is logged in with alternatively prefix
@@ -504,9 +513,50 @@ export default function Header() {
             <div className="hidden md:flex items-center gap-4">
               {isLoggedIn ? (
                 <div className="flex items-center gap-4">
-                  <div className="text-sm font-medium text-gray-300">
-                    {userEmail}
+                  {/* 积分显示 */}
+                  <div className="relative flex items-center gap-2">
+                    <div 
+                      className="flex items-center cursor-pointer text-gray-300 hover:text-white transition-colors"
+                      onClick={() => setShowCreditsTooltip(!showCreditsTooltip)}
+                    >
+                      <div className="w-8 h-8 rounded-full bg-purple-500/30 flex items-center justify-center">
+                        <span className="text-sm font-medium">💎</span>
+                      </div>
+                      <span className="ml-1.5 text-sm font-medium">{credits}</span>
+                    </div>
+
+                    {/* 积分工具提示 */}
+                    {showCreditsTooltip && (
+                      <div className="absolute right-0 top-10 w-56 bg-gray-800 border border-gray-700 rounded-lg shadow-xl p-4 z-50 text-xs"
+                           style={{animation: 'fadeIn 0.2s ease-out forwards'}}>
+                        {/* 保持原有工具提示内容 */}
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="font-medium text-purple-300">Account Balance</span>
+                          <button 
+                            onClick={() => setShowCreditsTooltip(false)}
+                            className="text-gray-400 hover:text-white transition-colors"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-white font-bold text-lg">{credits} Credits</span>
+                        </div>
+                        <div className="h-2 bg-gray-700 rounded-full overflow-hidden mb-3">
+                          <div 
+                            className="h-full bg-gradient-to-r from-purple-500 to-blue-500" 
+                            style={{width: `${Math.min(100, (credits/200)*100)}%`}}
+                          ></div>
+                        </div>
+                        <p className="mb-3 text-gray-300">Each research consumes 10-20 Credits</p>
+                        <button className="w-full py-1.5 bg-purple-600 hover:bg-purple-700 rounded text-white text-xs transition-colors">
+                          Recharge Credits
+                        </button>
+                      </div>
+                    )}
                   </div>
+
+                  {/* 原有登出按钮 */}
                   <button
                     onClick={handleLogout}
                     className="px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-600/80 to-blue-600/80 text-white hover:from-cyan-500 hover:to-blue-500 transition-all duration-300 shadow-lg hover:shadow-cyan-500/20"
@@ -891,6 +941,8 @@ export default function Header() {
           </div>
         </div>
       )}
+
+      <style>{animationStyles}</style>
     </>
   );
 }
