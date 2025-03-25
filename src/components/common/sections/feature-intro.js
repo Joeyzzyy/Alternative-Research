@@ -31,7 +31,7 @@ const ImageToVideoFeature = () => {
             <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900">
               <div className="w-full h-full overflow-hidden">
                 <img 
-                  src="https://websitelm-us-east-2.s3.amazonaws.com/67a9fabf538eb88a2247b5be/2025-03-12/m8tm1cba29_clipboard-image-1741757380.png" 
+                  src="https://websitelm-us-east-2.s3.amazonaws.com/67a9fabf538eb88a2247b5be/2025-03-14/mlxk8a94f7_clipboard-image-1741933081.png" 
                   alt="Alternatively" 
                   className="w-full h-full object-cover" 
                 />

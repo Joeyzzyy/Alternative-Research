@@ -42,7 +42,7 @@ const HowToUseGuide = () => {
             <div className="rounded-xl overflow-hidden border border-slate-700/50 shadow-xl shadow-cyan-500/10 bg-black/30 backdrop-blur-sm transform scale-110 origin-center mx-auto w-[90%]">
               <div className="aspect-w-16 aspect-h-9 relative">
                 <img 
-                  src="https://websitelm-us-east-2.s3.amazonaws.com/67a9fabf538eb88a2247b5be/2025-03-11/3az2448c11_An overview of digital marketing packages. (1).png"
+                  src="https://websitelm-us-east-2.s3.amazonaws.com/67a9fabf538eb88a2247b5be/2025-03-10/33kf353c26_ai detector, caricature, detectorist, detector, beach scene, coloured, sunny, sunglasses.jpeg"
                   alt="Digital Marketing Packages"
                   className="w-full h-full object-cover"
                 />

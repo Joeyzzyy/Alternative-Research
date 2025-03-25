@@ -13,7 +13,7 @@ const CustomizableResearchUI = () => {
         <div className="grid md:grid-cols-2 gap-16 items-center">
           <div className="flex justify-center">
             <img 
-              src="https://websitelm-us-east-2.s3.amazonaws.com/67a9fabf538eb88a2247b5be/2025-03-12/m8tm1cba29_clipboard-image-1741757380.png"
+              src="https://websitelm-us-east-2.s3.amazonaws.com/67a9fabf538eb88a2247b5be/2025-03-12/tiydfa70c1_Untitled (9) (1).png"
               alt="AI-powered research parameters configuration" 
               className="w-full rounded-lg shadow-2xl shadow-slate-900/70 border border-slate-800/50 transform scale-110 origin-center"
             />  
