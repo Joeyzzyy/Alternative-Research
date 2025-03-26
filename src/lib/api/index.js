@@ -209,12 +209,16 @@ const getAlternativeResult = async (websiteId) => {
   }
 };
 
-// 新增竞品分析聊天接口
-const chatWithAI = async (message, websiteId) => {
+// 修改竞品分析聊天接口参数结构
+const chatWithAI = async (message, websiteId, extraParams = {}) => {
   try {
+    const { competitorList, selectCompetitorList, isFinished } = extraParams;
     const response = await apiClient.post('/alternatively/chat', {
       message,
-      websiteId
+      websiteId,
+      competitorList,
+      selectCompetitorList,
+      isFinished
     });
     return response.data;
   } catch (error) {
