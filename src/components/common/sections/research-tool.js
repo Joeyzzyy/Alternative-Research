@@ -5,6 +5,7 @@ import { SearchOutlined, ClearOutlined, ArrowRightOutlined, InfoCircleOutlined, 
 import apiClient from '../../../lib/api/index.js';
 import BrowserSimulator from '../BrowserSimulator';
 import Typewriter from 'typewriter-effect';
+import { EventSourcePolyfill } from 'event-source-polyfill';
 
 const AGENTS = [
   {
@@ -53,61 +54,6 @@ const CodeTypingEffect = ({ code, speed = 3 }) => {
   );
 };
 
-const CodeDisplay = () => {
-  const [htmlCode, setHtmlCode] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  
-  useEffect(() => {
-    fetch('/mock-data/html-codes.txt')
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Failed to load HTML code');
-        }
-        return response.text();
-      })
-      .then(data => {
-        const normalizedHtml = data.replace(/\\n/g, '\n');
-        
-        const unescapedHtml = normalizedHtml
-          .replace(/\\"/g, '"')
-          .replace(/&amp;/g, '&')
-          .replace(/&lt;/g, '<')
-          .replace(/&gt;/g, '>')
-          .replace(/&quot;/g, '"')
-          .replace(/&#039;/g, "'");
-          
-        setHtmlCode(unescapedHtml);
-        setIsLoading(false);
-      })
-      .catch(err => {
-        console.error('Error loading HTML code:', err);
-        setError(err.message);
-        setIsLoading(false);
-      });
-  }, []);
-  
-  return (
-    <div className="p-3">
-      <div className="bg-gray-800/50 p-3 rounded border border-gray-700/50">
-        <div className="relative">
-          {isLoading ? (
-            <div className="text-center py-4">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-              <p className="mt-2 text-blue-300 text-sm">Loading code...</p>
-            </div>
-          ) : error ? (
-            <div className="text-red-400 text-sm">Error: {error}</div>
-          ) : (
-            <CodeTypingEffect code={htmlCode} speed={3} />
-          )}
-          <div className="absolute bottom-0 right-0 bg-gradient-to-t from-gray-800/50 to-transparent h-8 w-full pointer-events-none"></div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 const ResearchTool = () => {
   const [messageApi, contextHolder] = message.useMessage();
   const [domain, setDomain] = useState('');
@@ -128,6 +74,54 @@ const ResearchTool = () => {
   const chatEndRef = useRef(null);
   const [showDemo, setShowDemo] = useState(true);
   const [showInitialScreen, setShowInitialScreen] = useState(true);
+  const [logs, setLogs] = useState([
+    // 错误日志
+    {
+      type: 'error',
+      message: 'Failed to connect to API endpoint: Connection timeout after 30s',
+      timestamp: new Date().toISOString()
+    },
+    {
+      type: 'error',
+      message: 'Error parsing competitor data: Invalid JSON response',
+      timestamp: new Date().toISOString()
+    },
+    // Dify 工作流日志
+    {
+      type: 'dify',
+      message: 'Successfully executed Dify workflow for competitor analysis. Processed 3 competitors in 2.3 seconds.',
+      timestamp: new Date().toISOString()
+    },
+    // API 请求日志
+    {
+      type: 'api',
+      message: 'GET request to https://api.alternatively.com/competitors returned 200 OK. Processed 5 results.',
+      timestamp: new Date().toISOString()
+    },
+    // HTML/代码日志
+    {
+      type: 'code',
+      message: `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Example Page</title>
+</head>
+<body>
+  <h1>Hello World</h1>
+  <p>This is an example HTML page.</p>
+</body>
+</html>`,
+      timestamp: new Date().toISOString()
+    },
+    // 普通信息日志
+    {
+      type: 'info',
+      message: 'Successfully retrieved website metadata',
+      timestamp: new Date().toISOString()
+    }
+  ]);
 
   const filterMessageTags = (message) => {
     let filteredMessage = message;
@@ -143,8 +137,12 @@ const ResearchTool = () => {
       e.stopPropagation();
     }
 
-    if (!userInput.trim()) return;
+    if (!userInput.trim()) {
+      console.log('User input is empty, skipping request');
+      return;
+    }
     
+    console.log('Starting new chat message with input:', userInput);
     const newMessages = [...messages, { 
       type: 'user', 
       content: userInput,
@@ -155,12 +153,14 @@ const ResearchTool = () => {
     setIsMessageSending(true);
 
     try {
+      console.log('Sending user input to server');
       const response = await apiClient.chatWithAI(
         userInput,
         currentWebsiteId
       );
 
       if (response?.code === 200 && response.data?.answer) {
+        console.log('Received response from server:', response.data.answer);
         const answer = filterMessageTags(response.data.answer);
         setMessages(prev => [
           ...prev,
@@ -172,8 +172,21 @@ const ResearchTool = () => {
             source: 'agent'
           }
         ]);
+      } else {
+        console.warn('Received invalid response from server:', response);
+        setMessages(prev => [
+          ...prev,
+          {
+            type: 'agent',
+            agentId: 1,
+            content: '⚠️ Failed to get valid response from server',
+            isThinking: false,
+            source: 'agent'
+          }
+        ]);
       }
     } catch (error) {
+      console.error('Error sending user input:', error);
       setMessages(prev => [
         ...prev,
         {
@@ -185,6 +198,7 @@ const ResearchTool = () => {
         }
       ]);
     } finally {
+      console.log('Finished processing user input');
       setIsMessageSending(false);
     }
   };
@@ -399,44 +413,104 @@ const ResearchTool = () => {
   };
 
   const renderDetails = (details) => {
-    if (!details || details.length === 0) {
-      return <CodeDisplay />;
-    }
-
     return (
       <div className="h-full flex flex-col">
-        <CodeOutputDemo />
-        <div className="p-3 space-y-2">
-          {details.map((detail, index) => {
-            const { data, event, created_at } = detail;
-            const { title, status, outputs } = data || {};
-            
-            return (
-              <div 
-                key={index} 
-                className="bg-gray-800/50 p-2.5 rounded border border-gray-700/50 hover:border-gray-600/50 transition-all duration-300"
-              >
-                <div className="text-[11px] text-gray-300 font-medium">{title || event}</div>
-                {status && (
-                  <div className={`text-[10px] mt-1.5 ${
-                    status === "succeeded" ? "text-green-500" : 
-                    status === "failed" ? "text-red-500" : 
-                    "text-gray-400"
-                  }`}>
-                    {status}
-                  </div>
-                )}
-                {outputs && (
-                  <div className="text-[10px] text-gray-400 mt-1.5 break-words leading-relaxed">
-                    {typeof outputs === 'string' ? outputs : JSON.stringify(outputs)}
-                  </div>
-                )}
-                <div className="text-[9px] text-gray-500 mt-1.5">
-                  {new Date(created_at).toLocaleString()}
-                </div>
+        <div className="p-3 space-y-2 overflow-y-auto">
+          {/* Error Messages */}
+          {logs.filter(log => log.type === 'error').length > 0 && (
+            <div className="bg-red-900/30 p-2.5 rounded border border-red-700/50 hover:border-red-600/50 transition-all duration-300">
+              <div className="flex items-center mb-2">
+                <svg className="w-4 h-4 mr-2 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div className="text-[11px] text-red-300 font-medium">Error Messages</div>
               </div>
-            );
-          })}
+              <div className="text-[10px] text-red-200 break-words leading-relaxed">
+                {logs.filter(log => log.type === 'error').map((log, index) => (
+                  <div key={index} className="mb-1.5 pb-1.5 border-b border-red-700/30 last:border-0 last:mb-0 last:pb-0">
+                    {log.message || "Unknown error occurred"}
+                  </div>
+                ))}
+              </div>
+              <div className="text-[9px] text-red-400/70 mt-1.5">
+                {new Date().toLocaleString()}
+              </div>
+            </div>
+          )}
+
+          {/* Dify Examples */}
+          {logs.filter(log => log.type === 'dify').map((log, index) => (
+            <div key={`dify-${index}`} className="bg-gray-800/50 p-2.5 rounded border border-gray-700/50 hover:border-gray-600/50 transition-all duration-300">
+              <div className="flex items-center mb-2">
+                <img src="/images/dify.png" alt="Dify" className="w-4 h-4 mr-2" />
+                <div className="text-[11px] text-gray-300 font-medium">Dify Workflow Execution</div>
+              </div>
+              <div className="text-[10px] text-gray-400 break-words leading-relaxed">
+                {log.message}
+              </div>
+              <div className="text-[9px] text-gray-500 mt-1.5">
+                {new Date(log.timestamp).toLocaleString()}
+              </div>
+            </div>
+          ))}
+
+          {/* API Examples */}
+          {logs.filter(log => log.type === 'api').map((log, index) => (
+            <div key={`api-${index}`} className="bg-gray-800/50 p-2.5 rounded border border-gray-700/50 hover:border-gray-600/50 transition-all duration-300">
+              <div className="flex items-center mb-2">
+                <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                <div className="text-[11px] text-gray-300 font-medium">API Request</div>
+              </div>
+              <div className="text-[10px] text-gray-400 break-words leading-relaxed">
+                {log.message}
+              </div>
+              <div className="text-[9px] text-gray-500 mt-1.5">
+                {new Date(log.timestamp).toLocaleString()}
+              </div>
+            </div>
+          ))}
+
+          {/* Code Examples */}
+          {logs.filter(log => log.type === 'code').map((log, index) => (
+            <div key={`code-${index}`} className="bg-gray-800/50 p-2.5 rounded border border-gray-700/50 hover:border-gray-600/50 transition-all duration-300">
+              <div className="flex items-center mb-2">
+                <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 4l-4 4 4 4" />
+                </svg>
+                <div className="text-[11px] text-gray-300 font-medium">Code Execution</div>
+              </div>
+              <div className="text-[10px] text-blue-300 font-mono whitespace-pre-wrap leading-relaxed overflow-auto" 
+                   style={{ maxHeight: '300px' }}>
+                <pre>
+                  {log.message}
+                </pre>
+                <span className="animate-pulse">▋</span>
+              </div>
+              <div className="text-[9px] text-gray-500 mt-1.5">
+                {new Date(log.timestamp).toLocaleString()}
+              </div>
+            </div>
+          ))}
+          
+          {/* Info Messages */}
+          {logs.filter(log => log.type === 'info').map((log, index) => (
+            <div key={`info-${index}`} className="bg-gray-800/50 p-2.5 rounded border border-gray-700/50 hover:border-gray-600/50 transition-all duration-300">
+              <div className="flex items-center mb-2">
+                <svg className="w-4 h-4 mr-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div className="text-[11px] text-gray-300 font-medium">Information</div>
+              </div>
+              <div className="text-[10px] text-gray-400 break-words leading-relaxed">
+                {log.message}
+              </div>
+              <div className="text-[9px] text-gray-500 mt-1.5">
+                {new Date(log.timestamp).toLocaleString()}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -795,6 +869,41 @@ const ResearchTool = () => {
     }
   };
 
+  // 初始化 SSE 连接以接收日志
+  useEffect(() => {
+    console.log('Initializing SSE connection for logs');
+    const eventSource = new EventSourcePolyfill(`http://192.168.10.89:9091/events/67c6ceb6bc0093c9c79fb932-chat`, {
+      headers: {
+        'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDM1ODIxNzYsImlhdCI6MTc0Mjk3NzM3NiwiaWQiOiI2N2M2Y2ViNmJjMDA5M2M5Yzc5ZmI5MzIiLCJyb2xlIjoiYWRtaW4iLCJ1c2VyX25hbWUiOiJoYW55dUB0ZWNoYWNjLmNvbSJ9.h-xn4pamjqyLOkOL30DbMLy4dxf5lzb34o-xcWVEqxw`
+      },
+      heartbeatTimeout: 5 * 45000
+    });
+
+    eventSource.onopen = () => {
+      console.log('SSE connection for logs opened');
+    };
+
+    eventSource.onmessage = (event) => {
+      console.log('Received log from server:', event.data);
+      try {
+        const logData = JSON.parse(event.data);
+        setLogs(prevLogs => [...prevLogs, logData]);
+      } catch (error) {
+        console.error('Error parsing log data:', error);
+      }
+    };
+
+    eventSource.onerror = (error) => {
+      console.error('SSE connection for logs failed:', error);
+      eventSource.close();
+    };
+
+    return () => {
+      console.log('Closing SSE connection for logs');
+      eventSource.close();
+    };
+  }, []);
+
   if (initialLoading) {
     return (
       <div className="w-full min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 
@@ -980,27 +1089,35 @@ const ResearchTool = () => {
           <div className="w-[30%] bg-white/5 backdrop-blur-lg rounded-2xl border border-gray-300/20 shadow-xl 
                           flex flex-col h-full relative">
             <div className="border-b border-gray-300/20 p-3">
-              <div className="flex justify-between">
-                <button 
-                  onClick={() => setRightPanelTab('details')} 
-                  className={`text-sm ${
-                    rightPanelTab === 'details' 
-                      ? 'text-blue-400 font-medium' 
-                      : 'text-gray-400 hover:text-gray-200'
-                  }`}
-                >
-                  Details
-                </button>
-                <button 
-                  onClick={() => setRightPanelTab('sources')} 
-                  className={`text-sm ${
-                    rightPanelTab === 'sources' 
-                      ? 'text-blue-400 font-medium' 
-                      : 'text-gray-400 hover:text-gray-200'
-                  }`}
-                >
-                  Sources
-                </button>
+              <div className="flex justify-between items-center">
+                <div className="flex space-x-4">
+                  <button 
+                    onClick={() => setRightPanelTab('details')} 
+                    className={`text-sm ${
+                      rightPanelTab === 'details' 
+                        ? 'text-blue-400 font-medium' 
+                        : 'text-gray-400 hover:text-gray-200'
+                    }`}
+                  >
+                    Details
+                  </button>
+                  <button 
+                    onClick={() => setRightPanelTab('sources')} 
+                    className={`text-sm ${
+                      rightPanelTab === 'sources' 
+                        ? 'text-blue-400 font-medium' 
+                        : 'text-gray-400 hover:text-gray-200'
+                    }`}
+                  >
+                    Sources
+                  </button>
+                </div>
+                <div className="flex items-center text-xs">
+                  <div className={`w-2 h-2 rounded-full mr-2 ${
+                    logs.length > 0 ? 'bg-green-500 animate-pulse' : 'bg-red-500'
+                  }`}></div>
+                  <span>SSE {logs.length > 0 ? 'Connected' : 'Disconnected'}</span>
+                </div>
               </div>
             </div>
             
