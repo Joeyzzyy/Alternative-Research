@@ -442,108 +442,177 @@ const ResearchTool = () => {
     );
   };
 
-  const initializeChat = async (userInput) => {
-    try {
-      setShowInitialScreen(false);
-      setLoading(true);
-
-      const searchResponse = await apiClient.searchCompetitor(
-        userInput,
-        deepResearchMode
-      );
-
-      if (searchResponse?.code === 200 && searchResponse?.data?.websiteId) {
-        const websiteId = searchResponse.data.websiteId;
-        setCurrentWebsiteId(websiteId);
-        
-        const greetingResponse = await apiClient.chatWithAI(
-          userInput,
-          websiteId,
-        );
-        
-        if (greetingResponse?.code === 200 && greetingResponse.data?.answer) {
-          const answer = filterMessageTags(greetingResponse.data.answer);
-          setMessages([
-            {
-              type: 'agent',
-              agentId: 1,
-              content: answer,
-              isThinking: false
-            }
-          ]);
-        }
-      }
-    } catch (error) {
-      console.error('Initialize chat failed:', error);
-      setMessages([
-        {
-          type: 'agent',
-          agentId: 1,
-          content: `⚠️ Failed to initialize chat: ${error.message}`,
-          isThinking: false
-        }
-      ]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const renderInitialScreen = () => {
     return (
-      <div className="w-full h-screen flex items-center justify-center bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
-        <div className="max-w-2xl w-full px-4">
+      <div className="w-full h-screen flex items-center justify-center bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 initial-screen-container">
+        <div className="w-full max-w-3xl px-8 py-12 initial-screen-content rounded-xl">
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold text-white mb-6">
               Welcome to <span className="text-blue-400">Alternatively</span>
             </h1>
             <p className="text-lg text-gray-300 mb-8">
-              Which product would you like to analyze and create an SEO-friendly Alternatively Page for?
+              Which product would you like to analyze and create an SEO-friendly Alternatively page for?
             </p>
           </div>
           <div className="relative">
-            <Input
-              placeholder="Enter product website URL (e.g., example.com)"
-              value={userInput}
-              onChange={(e) => setUserInput(e.target.value)}
-              className="bg-white/10 border border-gray-300/30 rounded-xl text-lg"
-              style={{ 
-                color: 'black', 
-                backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                height: '64px',
-                paddingLeft: '24px',
-                paddingRight: '120px',
-                transition: 'all 0.3s ease'
-              }}
-              prefix={
-                <SearchOutlined 
-                  style={{ 
-                    color: 'rgba(0, 0, 0, 0.45)',
-                    fontSize: '20px'
-                  }} 
-                />
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (userInput.trim()) {
+                initializeChat(userInput);
               }
-              onPressEnter={(e) => {
-                e.preventDefault();
-                if (userInput.trim()) {
-                  initializeChat(userInput);
+            }}>
+              <Input
+                placeholder="Enter product website URL (e.g., example.com)"
+                value={userInput}
+                onChange={(e) => setUserInput(e.target.value)}
+                className="bg-white/10 border border-gray-300/30 rounded-xl text-lg w-full"
+                style={{ 
+                  color: 'black', 
+                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                  height: '80px',
+                  paddingLeft: '24px',
+                  paddingRight: '120px',
+                  transition: 'all 0.3s ease'
+                }}
+                prefix={
+                  <SearchOutlined 
+                    style={{ 
+                      color: 'rgba(0, 0, 0, 0.45)',
+                      fontSize: '24px'
+                    }} 
+                  />
                 }
-              }}
-            />
-            <button
-              onClick={() => {
-                if (userInput.trim()) {
-                  initializeChat(userInput);
-                }
-              }}
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 px-6 py-3 text-base bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-xl 
-                       backdrop-blur-sm transition-all flex items-center gap-2 border border-blue-500/30 hover:shadow-blue-500/20"
-            >
-              <ArrowRightOutlined className="w-5 h-5" />
-              Start Analysis
-            </button>
+              />
+              <button
+                type="submit"
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 z-10 px-6 py-4 text-base 
+                         bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-xl 
+                         transition-all duration-300 flex items-center gap-2 
+                         border border-blue-400/50 hover:border-blue-300
+                         shadow-[0_0_15px_rgba(59,130,246,0.5)] hover:shadow-[0_0_25px_rgba(59,130,246,0.7)]
+                         hover:scale-105 hover:from-blue-500 hover:to-indigo-600
+                         after:content-[''] after:absolute after:inset-0 after:bg-gradient-to-r 
+                         after:from-transparent after:via-white/20 after:to-transparent 
+                         after:translate-x-[-200%] hover:after:translate-x-[200%] after:transition-all after:duration-1000
+                         after:rounded-xl overflow-hidden"
+                style={{ height: '64px' }}
+              >
+                <ArrowRightOutlined className="w-6 h-6" />
+                <span className="relative z-10">Analyze Now</span>
+              </button>
+            </form>
           </div>
-          <div className="mt-6 text-center text-gray-400 text-sm">
-            Enter your product website URL, and we'll help you find the best competitors and create an SEO-optimized page
+          
+          <div className="mt-6 text-center text-gray-400 text-sm mb-10">
+            Enter your product website URL and we'll help you find the best competitors and create an SEO-optimized page
+          </div>
+          
+          <div className="mt-12">
+            <h3 className="text-xl font-semibold text-white mb-6 text-center">Popular Product Analysis Examples</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div 
+                onClick={() => {
+                  setUserInput("notion.so");
+                  initializeChat("notion.so");
+                }}
+                className="bg-gradient-to-br from-purple-900/40 to-purple-800/20 backdrop-blur-sm p-5 rounded-xl 
+                         border border-purple-500/30 hover:border-purple-400/50 cursor-pointer 
+                         transition-all duration-300 hover:shadow-[0_0_15px_rgba(168,85,247,0.3)] 
+                         hover:-translate-y-1 group relative overflow-hidden"
+              >
+                <div className="absolute -right-6 -top-6 w-16 h-16 bg-purple-500/20 rounded-full blur-xl group-hover:bg-purple-500/30 transition-all"></div>
+                <div className="w-10 h-10 mb-3 flex items-center justify-center bg-white/90 rounded-lg">
+                  <svg viewBox="0 0 24 24" className="w-7 h-7" fill="black" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.981-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466l1.823 1.447zm1.775 2.809v13.91c0 .746.373 1.027 1.214.98l14.523-.84c.841-.046.935-.56.935-1.167V6.354c0-.606-.233-.886-.748-.84l-15.177.887c-.56.047-.747.327-.747.886zm14.337.745c.093.42 0 .84-.42.888l-.7.14v10.264c-.608.327-1.168.514-1.635.514-.748 0-.935-.234-1.495-.933l-4.577-7.186v6.952L12.21 19.1s0 .84-1.168.84l-3.222.186c-.093-.186 0-.653.327-.746l.84-.233V9.854L7.822 9.76c-.094-.42.14-1.026.793-1.073l3.456-.233 4.764 7.279v-6.44l-1.215-.139c-.093-.514.28-.887.747-.933zM1.936 1.035l13.31-.98c1.634-.14 2.055-.047 3.082.7l4.249 2.986c.7.513.934.653.934 1.213v16.378c0 1.026-.373 1.634-1.68 1.726l-15.458.934c-.98.047-1.448-.093-1.962-.747l-3.129-4.06c-.56-.747-.793-1.306-.793-1.96V2.667c0-.839.374-1.54 1.447-1.632z" />
+                  </svg>
+                </div>
+                <div className="text-purple-300 font-medium mb-2 group-hover:text-purple-200 text-base">Notion</div>
+                <div className="text-xs text-gray-400 group-hover:text-gray-300">Generate Notion alternatives page</div>
+                <div className="absolute bottom-3 right-3">
+                  <ArrowRightOutlined className="text-purple-400/50 group-hover:text-purple-300 transition-all" />
+                </div>
+              </div>
+              
+              <div 
+                onClick={() => {
+                  setUserInput("slack.com");
+                  initializeChat("slack.com");
+                }}
+                className="bg-gradient-to-br from-blue-900/40 to-blue-800/20 backdrop-blur-sm p-5 rounded-xl 
+                         border border-blue-500/30 hover:border-blue-400/50 cursor-pointer 
+                         transition-all duration-300 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] 
+                         hover:-translate-y-1 group relative overflow-hidden"
+              >
+                <div className="absolute -right-6 -top-6 w-16 h-16 bg-blue-500/20 rounded-full blur-xl group-hover:bg-blue-500/30 transition-all"></div>
+                <img src="https://cdn.worldvectorlogo.com/logos/slack-new-logo.svg" alt="Slack" className="w-10 h-10 mb-3 rounded-lg" />
+                <div className="text-blue-300 font-medium mb-2 group-hover:text-blue-200 text-base">Slack</div>
+                <div className="text-xs text-gray-400 group-hover:text-gray-300">Generate Slack alternatives page</div>
+                <div className="absolute bottom-3 right-3">
+                  <ArrowRightOutlined className="text-blue-400/50 group-hover:text-blue-300 transition-all" />
+                </div>
+              </div>
+              
+              <div 
+                onClick={() => {
+                  setUserInput("figma.com");
+                  initializeChat("figma.com");
+                }}
+                className="bg-gradient-to-br from-green-900/40 to-green-800/20 backdrop-blur-sm p-5 rounded-xl 
+                         border border-green-500/30 hover:border-green-400/50 cursor-pointer 
+                         transition-all duration-300 hover:shadow-[0_0_15px_rgba(34,197,94,0.3)] 
+                         hover:-translate-y-1 group relative overflow-hidden"
+              >
+                <div className="absolute -right-6 -top-6 w-16 h-16 bg-green-500/20 rounded-full blur-xl group-hover:bg-green-500/30 transition-all"></div>
+                <div className="w-10 h-10 mb-3 flex items-center justify-center bg-white/90 rounded-lg">
+                  <svg viewBox="0 0 38 57" className="w-7 h-7" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M19 28.5C19 25.9804 20.0009 23.5641 21.7825 21.7825C23.5641 20.0009 25.9804 19 28.5 19C31.0196 19 33.4359 20.0009 35.2175 21.7825C36.9991 23.5641 38 25.9804 38 28.5C38 31.0196 36.9991 33.4359 35.2175 35.2175C33.4359 36.9991 31.0196 38 28.5 38C25.9804 38 23.5641 36.9991 21.7825 35.2175C20.0009 33.4359 19 31.0196 19 28.5Z" fill="#1ABCFE"/>
+                    <path d="M0 47.5C0 44.9804 1.00089 42.5641 2.78249 40.7825C4.56408 39.0009 6.98044 38 9.5 38H19V47.5C19 50.0196 17.9991 52.4359 16.2175 54.2175C14.4359 55.9991 12.0196 57 9.5 57C6.98044 57 4.56408 55.9991 2.78249 54.2175C1.00089 52.4359 0 50.0196 0 47.5Z" fill="#0ACF83"/>
+                    <path d="M19 0V19H28.5C31.0196 19 33.4359 17.9991 35.2175 16.2175C36.9991 14.4359 38 12.0196 38 9.5C38 6.98044 36.9991 4.56408 35.2175 2.78249C33.4359 1.00089 31.0196 0 28.5 0H19Z" fill="#FF7262"/>
+                    <path d="M0 9.5C0 12.0196 1.00089 14.4359 2.78249 16.2175C4.56408 17.9991 6.98044 19 9.5 19H19V0H9.5C6.98044 0 4.56408 1.00089 2.78249 2.78249C1.00089 4.56408 0 6.98044 0 9.5Z" fill="#F24E1E"/>
+                    <path d="M0 28.5C0 31.0196 1.00089 33.4359 2.78249 35.2175C4.56408 36.9991 6.98044 38 9.5 38H19V19H9.5C6.98044 19 4.56408 20.0009 2.78249 21.7825C1.00089 23.5641 0 25.9804 0 28.5Z" fill="#A259FF"/>
+                  </svg>
+                </div>
+                <div className="text-green-300 font-medium mb-2 group-hover:text-green-200 text-base">Figma</div>
+                <div className="text-xs text-gray-400 group-hover:text-gray-300">Generate Figma alternatives page</div>
+                <div className="absolute bottom-3 right-3">
+                  <ArrowRightOutlined className="text-green-400/50 group-hover:text-green-300 transition-all" />
+                </div>
+              </div>
+              
+              <div 
+                onClick={() => {
+                  setUserInput("clickup.com");
+                  initializeChat("clickup.com");
+                }}
+                className="bg-gradient-to-br from-orange-900/40 to-orange-800/20 backdrop-blur-sm p-5 rounded-xl 
+                         border border-orange-500/30 hover:border-orange-400/50 cursor-pointer 
+                         transition-all duration-300 hover:shadow-[0_0_15px_rgba(249,115,22,0.3)] 
+                         hover:-translate-y-1 group relative overflow-hidden"
+              >
+                <div className="absolute -right-6 -top-6 w-16 h-16 bg-orange-500/20 rounded-full blur-xl group-hover:bg-orange-500/30 transition-all"></div>
+                <div className="w-10 h-10 mb-3 flex items-center justify-center bg-white/90 rounded-lg">
+                  <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="#7B68EE"/>
+                    <path d="M2 17L12 22L22 17V7L12 12L2 7V17Z" fill="#7B68EE"/>
+                    <path d="M12 22V12" stroke="#7B68EE" strokeWidth="2"/>
+                    <path d="M17 19.5V9.5" stroke="#7B68EE" strokeWidth="2"/>
+                    <path d="M7 19.5V9.5" stroke="#7B68EE" strokeWidth="2"/>
+                  </svg>
+                </div>
+                <div className="text-orange-300 font-medium mb-2 group-hover:text-orange-200 text-base">ClickUp</div>
+                <div className="text-xs text-gray-400 group-hover:text-gray-300">Generate ClickUp alternatives page</div>
+                <div className="absolute bottom-3 right-3">
+                  <ArrowRightOutlined className="text-orange-400/50 group-hover:text-orange-300 transition-all" />
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-8 text-center">
+              <div className="inline-flex items-center px-4 py-2 bg-white/10 rounded-full text-xs text-gray-300">
+                <InfoCircleOutlined className="mr-2 text-blue-400" />
+                Click any card to start analyzing that product
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -564,6 +633,167 @@ const ResearchTool = () => {
 
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    // 添加CSS动画样式
+    const style = document.createElement('style');
+    style.innerHTML = `
+      .fade-out-animation {
+        animation: fadeOut 0.5s ease-out forwards;
+      }
+      
+      @keyframes fadeOut {
+        0% { opacity: 1; transform: scale(1); }
+        100% { opacity: 0; transform: scale(0.98); }
+      }
+      
+      .chat-messages-container {
+        opacity: 0;
+        animation: fadeIn 0.5s ease-out forwards;
+      }
+      
+      @keyframes fadeIn {
+        0% { opacity: 0; transform: translateY(10px); }
+        100% { opacity: 1; transform: translateY(0); }
+      }
+      
+      .initial-screen-content {
+        padding: 2.5rem;
+        border: 1px solid rgba(59, 130, 246, 0.2);
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(10px);
+        transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      
+      .initial-screen-container,
+      .w-full.min-h-screen.bg-gradient-to-b.from-slate-950.via-slate-900.to-slate-950 {
+        background: linear-gradient(to bottom, #0f172a, #1e293b, #0f172a) !important;
+        transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      
+      .page-transition {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(to bottom, rgba(15, 23, 42, 0.5), rgba(30, 41, 59, 0.5));
+        z-index: 9999;
+        opacity: 0;
+        pointer-events: none;
+        animation: gentleFade 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      
+      @keyframes gentleFade {
+        0% { opacity: 0; backdrop-filter: blur(0px); }
+        30% { opacity: 0.4; backdrop-filter: blur(3px); }
+        70% { opacity: 0.4; backdrop-filter: blur(3px); }
+        100% { opacity: 0; backdrop-filter: blur(0px); }
+      }
+      
+      .form-transition {
+        transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      
+      .form-transition.fade-out {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
+  const initializeChat = async (userInput) => {
+    try {
+      // 添加更柔和的页面过渡效果
+      const transitionElement = document.createElement('div');
+      transitionElement.className = 'page-transition';
+      document.body.appendChild(transitionElement);
+
+      // 先让表单淡出
+      const formElement = document.querySelector('.initial-screen-content form');
+      if (formElement) {
+        formElement.classList.add('form-transition', 'fade-out');
+      }
+      
+      // 延迟后再淡出整个初始屏幕
+      setTimeout(() => {
+        const initialScreenElement = document.querySelector('.initial-screen-container');
+        if (initialScreenElement) {
+          initialScreenElement.classList.add('fade-out-animation');
+          
+          setTimeout(() => {
+            setShowInitialScreen(false);
+            // 移除过渡元素
+            setTimeout(() => {
+              transitionElement.remove();
+            }, 400);
+          }, 400);
+        } else {
+          setShowInitialScreen(false);
+        }
+      }, 150);
+      
+      setLoading(true);
+
+      // 添加用户输入作为第一条消息
+      setMessages([
+        {
+          type: 'user',
+          content: userInput,
+          source: 'user'
+        }
+      ]);
+      
+      // 清空输入框
+      setUserInput('');
+
+      const searchResponse = await apiClient.searchCompetitor(
+        userInput,
+        deepResearchMode
+      );
+
+      if (searchResponse?.code === 200 && searchResponse?.data?.websiteId) {
+        const websiteId = searchResponse.data.websiteId;
+        setCurrentWebsiteId(websiteId);
+        
+        const greetingResponse = await apiClient.chatWithAI(
+          userInput,
+          websiteId,
+        );
+        
+        if (greetingResponse?.code === 200 && greetingResponse.data?.answer) {
+          const answer = filterMessageTags(greetingResponse.data.answer);
+          setMessages(prevMessages => [
+            ...prevMessages,
+            {
+              type: 'agent',
+              agentId: 1,
+              content: answer,
+              isThinking: false
+            }
+          ]);
+        }
+      }
+    } catch (error) {
+      console.error('Initialize chat failed:', error);
+      setMessages(prevMessages => [
+        ...prevMessages,
+        {
+          type: 'agent',
+          agentId: 1,
+          content: `⚠️ Failed to initialize chat: ${error.message}`,
+          isThinking: false
+        }
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (initialLoading) {
     return (
