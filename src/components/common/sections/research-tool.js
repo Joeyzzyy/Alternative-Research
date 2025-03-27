@@ -142,10 +142,13 @@ const ResearchTool = () => {
       return;
     }
     
-    console.log('Starting new chat message with input:', userInput);
+    // 确保输入包含 https://
+    const formattedInput = userInput.trim().startsWith('http') ? userInput.trim() : `https://${userInput.trim()}`;
+    
+    console.log('Starting new chat message with input:', formattedInput);
     const newMessages = [...messages, { 
       type: 'user', 
-      content: userInput,
+      content: formattedInput,
       source: 'user'
     }];
     setMessages(newMessages);
@@ -155,7 +158,7 @@ const ResearchTool = () => {
     try {
       console.log('Sending user input to server');
       const response = await apiClient.chatWithAI(
-        userInput,
+        formattedInput,
         currentWebsiteId
       );
 
@@ -519,7 +522,7 @@ const ResearchTool = () => {
   const renderInitialScreen = () => {
     return (
       <div className="w-full h-screen flex items-center justify-center bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 initial-screen-container">
-        <div className="w-full max-w-3xl px-8 py-12 initial-screen-content rounded-xl">
+        <div className="w-full max-w-4xl px-8 py-12 initial-screen-content rounded-xl">
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold text-white mb-6">
               Welcome to <span className="text-blue-400">Alternatively</span>
@@ -528,35 +531,42 @@ const ResearchTool = () => {
               Which product would you like to analyze and create an SEO-friendly Alternatively page for?
             </p>
           </div>
-          <div className="relative">
+          <div className="relative max-w-3xl mx-auto">
             <form onSubmit={(e) => {
               e.preventDefault();
               if (userInput.trim()) {
-                initializeChat(userInput);
+                // 确保输入包含 https://
+                const formattedInput = userInput.trim().startsWith('http') ? userInput.trim() : `https://${userInput.trim()}`;
+                initializeChat(formattedInput);
               }
             }}>
-              <Input
-                placeholder="Enter product website URL (e.g., example.com)"
-                value={userInput}
-                onChange={(e) => setUserInput(e.target.value)}
-                className="bg-white/10 border border-gray-300/30 rounded-xl text-lg w-full"
-                style={{ 
-                  color: 'black', 
-                  backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                  height: '80px',
-                  paddingLeft: '24px',
-                  paddingRight: '120px',
-                  transition: 'all 0.3s ease'
-                }}
-                prefix={
-                  <SearchOutlined 
-                    style={{ 
-                      color: 'rgba(0, 0, 0, 0.45)',
-                      fontSize: '24px'
-                    }} 
-                  />
-                }
-              />
+              <div className="relative">
+                <Input
+                  placeholder="Enter product website URL (e.g., example.com)"
+                  value={userInput}
+                  onChange={(e) => setUserInput(e.target.value)}
+                  className="bg-white/10 border border-gray-300/30 rounded-xl text-lg w-full"
+                  style={{ 
+                    color: 'black', 
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    height: '80px',
+                    paddingRight: '120px',
+                    transition: 'all 0.3s ease'
+                  }}
+                  prefix={
+                    <div className="flex items-center">
+                      <SearchOutlined 
+                        style={{ 
+                          color: 'rgba(0, 0, 0, 0.45)',
+                          fontSize: '24px',
+                          marginRight: '8px'
+                        }} 
+                      />
+                      <span className="text-gray-500 font-mono">https://</span>
+                    </div>
+                  }
+                />
+              </div>
               <button
                 type="submit"
                 className="absolute right-2 top-1/2 transform -translate-y-1/2 z-10 px-6 py-4 text-base 
@@ -581,13 +591,13 @@ const ResearchTool = () => {
             Enter your product website URL and we'll help you find the best competitors and create an SEO-optimized page
           </div>
           
-          <div className="mt-12">
+          <div className="mt-12 max-w-4xl mx-auto">
             <h3 className="text-xl font-semibold text-white mb-6 text-center">Popular Product Analysis Examples</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div 
                 onClick={() => {
                   setUserInput("notion.so");
-                  initializeChat("notion.so");
+                  initializeChat("https://notion.so");
                 }}
                 className="bg-gradient-to-br from-purple-900/40 to-purple-800/20 backdrop-blur-sm p-5 rounded-xl 
                          border border-purple-500/30 hover:border-purple-400/50 cursor-pointer 
@@ -610,7 +620,7 @@ const ResearchTool = () => {
               <div 
                 onClick={() => {
                   setUserInput("slack.com");
-                  initializeChat("slack.com");
+                  initializeChat("https://slack.com");
                 }}
                 className="bg-gradient-to-br from-blue-900/40 to-blue-800/20 backdrop-blur-sm p-5 rounded-xl 
                          border border-blue-500/30 hover:border-blue-400/50 cursor-pointer 
@@ -629,7 +639,7 @@ const ResearchTool = () => {
               <div 
                 onClick={() => {
                   setUserInput("figma.com");
-                  initializeChat("figma.com");
+                  initializeChat("https://figma.com");
                 }}
                 className="bg-gradient-to-br from-green-900/40 to-green-800/20 backdrop-blur-sm p-5 rounded-xl 
                          border border-green-500/30 hover:border-green-400/50 cursor-pointer 
@@ -656,7 +666,7 @@ const ResearchTool = () => {
               <div 
                 onClick={() => {
                   setUserInput("clickup.com");
-                  initializeChat("clickup.com");
+                  initializeChat("https://clickup.com");
                 }}
                 className="bg-gradient-to-br from-orange-900/40 to-orange-800/20 backdrop-blur-sm p-5 rounded-xl 
                          border border-orange-500/30 hover:border-orange-400/50 cursor-pointer 
@@ -713,7 +723,7 @@ const ResearchTool = () => {
     const style = document.createElement('style');
     style.innerHTML = `
       .fade-out-animation {
-        animation: fadeOut 0.5s ease-out forwards;
+        animation: fadeOut 0.6s ease-out forwards;
       }
       
       @keyframes fadeOut {
@@ -723,7 +733,7 @@ const ResearchTool = () => {
       
       .chat-messages-container {
         opacity: 0;
-        animation: fadeIn 0.5s ease-out forwards;
+        animation: fadeIn 0.6s ease-out forwards;
       }
       
       @keyframes fadeIn {
@@ -731,47 +741,55 @@ const ResearchTool = () => {
         100% { opacity: 1; transform: translateY(0); }
       }
       
-      .initial-screen-content {
-        padding: 2.5rem;
-        border: 1px solid rgba(59, 130, 246, 0.2);
-        background: rgba(15, 23, 42, 0.6);
-        backdrop-filter: blur(10px);
-        transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
-      }
-      
-      .initial-screen-container,
-      .w-full.min-h-screen.bg-gradient-to-b.from-slate-950.via-slate-900.to-slate-950 {
-        background: linear-gradient(to bottom, #0f172a, #1e293b, #0f172a) !important;
-        transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
-      }
-      
-      .page-transition {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(to bottom, rgba(15, 23, 42, 0.5), rgba(30, 41, 59, 0.5));
-        z-index: 9999;
-        opacity: 0;
-        pointer-events: none;
-        animation: gentleFade 0.7s cubic-bezier(0.22, 1, 0.36, 1);
-      }
-      
-      @keyframes gentleFade {
-        0% { opacity: 0; backdrop-filter: blur(0px); }
-        30% { opacity: 0.4; backdrop-filter: blur(3px); }
-        70% { opacity: 0.4; backdrop-filter: blur(3px); }
-        100% { opacity: 0; backdrop-filter: blur(0px); }
-      }
-      
       .form-transition {
-        transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+        transition: all 0.4s ease-out;
       }
       
       .form-transition.fade-out {
         opacity: 0;
         transform: translateY(20px);
+      }
+      
+      .loading-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(to bottom, #0f172a, #1e293b, #0f172a);
+        z-index: 9999;
+        opacity: 0;
+        animation: fadeInOut 1.2s ease-out forwards;
+      }
+      
+      @keyframes fadeInOut {
+        0% { opacity: 0; }
+        50% { opacity: 1; }
+        100% { opacity: 0; }
+      }
+      
+      .loading-spinner {
+        width: 60px;
+        height: 60px;
+        border: 3px solid rgba(59, 130, 246, 0.3);
+        border-radius: 50%;
+        border-top-color: rgba(59, 130, 246, 0.8);
+        animation: spin 1s linear infinite;
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      
+      .loading-text {
+        margin-top: 20px;
+        color: white;
+        font-size: 16px;
       }
     `;
     document.head.appendChild(style);
@@ -783,18 +801,13 @@ const ResearchTool = () => {
 
   const initializeChat = async (userInput) => {
     try {
-      // 添加更柔和的页面过渡效果
-      const transitionElement = document.createElement('div');
-      transitionElement.className = 'page-transition';
-      document.body.appendChild(transitionElement);
-
-      // 先让表单淡出
+      // 1. 淡出表单
       const formElement = document.querySelector('.initial-screen-content form');
       if (formElement) {
         formElement.classList.add('form-transition', 'fade-out');
       }
       
-      // 延迟后再淡出整个初始屏幕
+      // 2. 淡出初始屏幕
       setTimeout(() => {
         const initialScreenElement = document.querySelector('.initial-screen-container');
         if (initialScreenElement) {
@@ -802,15 +815,31 @@ const ResearchTool = () => {
           
           setTimeout(() => {
             setShowInitialScreen(false);
-            // 移除过渡元素
+            
+            // 3. 显示加载动画
+            const loadingContainer = document.createElement('div');
+            loadingContainer.className = 'loading-container';
+            
+            const loadingSpinner = document.createElement('div');
+            loadingSpinner.className = 'loading-spinner';
+            loadingContainer.appendChild(loadingSpinner);
+            
+            const loadingText = document.createElement('div');
+            loadingText.className = 'loading-text';
+            loadingText.textContent = 'Analyzing your product...';
+            loadingContainer.appendChild(loadingText);
+            
+            document.body.appendChild(loadingContainer);
+            
+            // 4. 移除加载动画，进入聊天界面
             setTimeout(() => {
-              transitionElement.remove();
-            }, 400);
-          }, 400);
+              document.body.removeChild(loadingContainer);
+            }, 1200);
+          }, 500);
         } else {
           setShowInitialScreen(false);
         }
-      }, 150);
+      }, 300);
       
       setLoading(true);
 
@@ -944,7 +973,7 @@ const ResearchTool = () => {
         
         <div className="relative z-10 w-full flex flex-row gap-6 h-[calc(100vh-140px)] px-4 text-sm">
           <div className={`${showBrowser ? 'hidden' : 'w-[70%]'} relative flex flex-col`}>
-            <div className="absolute top-3 right-4 z-50 flex gap-2">
+            <div className="absolute top-0 right-8 z-50 flex gap-2 mt-2">
               <button
                 onClick={() => setShowBrowser(true)}
                 className="px-3 py-1.5 text-xs bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 rounded-full 
@@ -984,7 +1013,7 @@ const ResearchTool = () => {
                     ref={inputRef}
                     placeholder={deepResearchMode 
                       ? "Enter website for comprehensive analysis..." 
-                      : "Enter your product URL (e.g., websitelm.com)"}
+                      : "Enter your product URL (e.g., example.com)"}
                     value={userInput}
                     onChange={(e) => setUserInput(e.target.value)}
                     disabled={loading || isMessageSending}
@@ -993,16 +1022,19 @@ const ResearchTool = () => {
                       color: 'black', 
                       backgroundColor: 'rgba(255, 255, 255, 0.9)',
                       height: '48px',
-                      paddingLeft: '16px',
                       transition: 'all 0.3s ease'
                     }}
                     prefix={
-                      <SearchOutlined 
-                        style={{ 
-                          color: 'rgba(0, 0, 0, 0.45)',
-                          fontSize: '16px'
-                        }} 
-                      />
+                      <div className="flex items-center">
+                        <SearchOutlined 
+                          style={{ 
+                            color: 'rgba(0, 0, 0, 0.45)',
+                            fontSize: '16px',
+                            marginRight: '4px'
+                          }} 
+                        />
+                        <span className="text-gray-500 font-mono text-xs">https://</span>
+                      </div>
                     }
                     onPressEnter={(e) => {
                       e.preventDefault();
@@ -1069,7 +1101,7 @@ const ResearchTool = () => {
           </div>
           
           <div className={`${showBrowser ? 'flex-1' : 'hidden'} relative flex flex-col`}>
-            <div className="absolute top-3 right-4 z-50 flex gap-2">
+            <div className="absolute top-0 right-8 z-50 flex gap-2 mt-2">
               <button
                 onClick={() => setShowBrowser(false)}
                 className="px-3 py-1.5 text-xs bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-full 
