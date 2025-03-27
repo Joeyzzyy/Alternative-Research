@@ -4,6 +4,7 @@ import { Input, Button, Card, Spin, message, Tag, Tooltip, Avatar, ConfigProvide
 import { SearchOutlined, ClearOutlined, ArrowRightOutlined, InfoCircleOutlined, SendOutlined, UserOutlined, RobotOutlined } from '@ant-design/icons';
 import apiClient from '../../../lib/api/index.js';
 import BrowserSimulator from '../BrowserSimulator';
+import Typewriter from 'typewriter-effect';
 
 const AGENTS = [
   {
@@ -27,44 +28,106 @@ const TAG_FILTERS = {
   '\\[URL_GET\\]': '',  // 过滤 [URL_GET]
 };
 
+const CodeTypingEffect = ({ code, speed = 3 }) => {
+  const [displayedCode, setDisplayedCode] = useState('');
+  const [currentIndex, setCurrentIndex] = useState(0);
+  
+  useEffect(() => {
+    if (currentIndex < code.length) {
+      const timer = setTimeout(() => {
+        const nextChunk = code.substring(currentIndex, currentIndex + 10);
+        setDisplayedCode(prev => prev + nextChunk);
+        setCurrentIndex(prev => Math.min(prev + 10, code.length));
+      }, speed);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [code, currentIndex, speed]);
+  
+  return (
+    <pre className="text-[10px] text-blue-300 font-mono whitespace-pre-wrap leading-relaxed overflow-auto" 
+         style={{ maxHeight: '300px' }}>
+      {displayedCode}
+      <span className="animate-pulse">▋</span>
+    </pre>
+  );
+};
+
+const CodeDisplay = () => {
+  const [htmlCode, setHtmlCode] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  useEffect(() => {
+    fetch('/mock-data/html-codes.txt')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to load HTML code');
+        }
+        return response.text();
+      })
+      .then(data => {
+        const normalizedHtml = data.replace(/\\n/g, '\n');
+        
+        const unescapedHtml = normalizedHtml
+          .replace(/\\"/g, '"')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .replace(/&#039;/g, "'");
+          
+        setHtmlCode(unescapedHtml);
+        setIsLoading(false);
+      })
+      .catch(err => {
+        console.error('Error loading HTML code:', err);
+        setError(err.message);
+        setIsLoading(false);
+      });
+  }, []);
+  
+  return (
+    <div className="p-3">
+      <div className="bg-gray-800/50 p-3 rounded border border-gray-700/50">
+        <div className="relative">
+          {isLoading ? (
+            <div className="text-center py-4">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+              <p className="mt-2 text-blue-300 text-sm">Loading code...</p>
+            </div>
+          ) : error ? (
+            <div className="text-red-400 text-sm">Error: {error}</div>
+          ) : (
+            <CodeTypingEffect code={htmlCode} speed={3} />
+          )}
+          <div className="absolute bottom-0 right-0 bg-gradient-to-t from-gray-800/50 to-transparent h-8 w-full pointer-events-none"></div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ResearchTool = () => {
-  const [isTaskCompleted, setIsTaskCompleted] = useState(false);
   const [messageApi, contextHolder] = message.useMessage();
   const [domain, setDomain] = useState('');
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
-  const [workflowStage, setWorkflowStage] = useState(null);
-  const [workflowProgress, setWorkflowProgress] = useState(0);
   const [messages, setMessages] = useState([]);
   const [userInput, setUserInput] = useState('');
   const [isMessageSending, setIsMessageSending] = useState(false);
   const [deepResearchMode, setDeepResearchMode] = useState(false);
-  const [tabs, setTabs] = useState([]);
-  const [activeTabId, setActiveTabId] = useState(null);
   const [rightPanelTab, setRightPanelTab] = useState('details');
   const [showBrowser, setShowBrowser] = useState(false);
   const [customerId, setCustomerId] = useState(null);
   const [currentWebsiteId, setCurrentWebsiteId] = useState(null);
   const [detailsData, setDetailsData] = useState([]);
-  const [totalDetails, setTotalDetails] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(300);
-  const [expandedNodes, setExpandedNodes] = useState({});
   const [sourcesData, setSourcesData] = useState([]);
   const [activeAgentId, setActiveAgentId] = useState(null);
-  const [currentTaskType, setCurrentTaskType] = useState(null);
-  const [chatHistory, setChatHistory] = useState([]);
-  const [isStyleOperationActive, setStyleOperationActive] = useState(false);
   const inputRef = useRef(null);
   const chatEndRef = useRef(null);
-
-  const handleTabChange = (tabId) => {
-    setTabs(tabs.map(tab => ({
-      ...tab,
-      active: tab.id === tabId
-    })));
-    setActiveTabId(tabId);
-  };
+  const [showDemo, setShowDemo] = useState(true);
+  const [showInitialScreen, setShowInitialScreen] = useState(true);
 
   const filterMessageTags = (message) => {
     let filteredMessage = message;
@@ -135,24 +198,21 @@ const ResearchTool = () => {
         { name: 'aiseo.ai', url: 'https://writesonic.com' }
       ];
 
-      // 生成友好的公告信息
       const announcement = `🎉 As a professional competitive analyst, I have found some potential competitors for you. I will share the list shortly and guide you through the next steps. Please hold on!`;
 
-      // 使用 Youssef 发送消息
       setMessages(prev => [
         ...prev,
         {
           type: 'agent',
-          agentId: 2,  // 使用 Youssef 的 ID
+          agentId: 2,
           content: announcement,
           isThinking: false,
           source: 'agent'
         }
       ]);
 
-      // 将竞品列表通过 message 传递
       const response = await apiClient.chatWithAI(
-        JSON.stringify(competitors), // 将竞品列表作为消息内容
+        JSON.stringify(competitors),
         currentWebsiteId
       );
 
@@ -162,7 +222,7 @@ const ResearchTool = () => {
           ...prev,
           {
             type: 'agent',
-            agentId: 2,  // 使用 Youssef 的 ID
+            agentId: 2,
             content: answer,
             isThinking: false,
             source: 'agent'
@@ -174,7 +234,7 @@ const ResearchTool = () => {
         ...prev,
         {
           type: 'agent',
-          agentId: 2,  // 使用 Youssef 的 ID
+          agentId: 2,
           content: `Sorry, I encountered an error: ${error.message}`,
           isThinking: false,
           source: 'agent'
@@ -228,7 +288,6 @@ const ResearchTool = () => {
       const hasUrlGet = message.content.includes('[URL_GET]');
       const filteredContent = filterMessageTags(message.content);
 
-      // 修复URL_GET动画显示问题
       const showUrlGetAnimation = hasUrlGet && (message.isThinking || message.content.includes('Processing'));
 
       return (
@@ -341,91 +400,55 @@ const ResearchTool = () => {
 
   const renderDetails = (details) => {
     if (!details || details.length === 0) {
-      return (
-        <div className="text-gray-500 text-center py-4 text-xs">
-          No details available
-        </div>
-      );
+      return <CodeDisplay />;
     }
 
     return (
-      <div className="p-3 space-y-2">
-        {details.map((detail, index) => {
-          const { data, event, created_at } = detail;
-          const { title, status, outputs } = data || {};
-          
-          return (
-            <div 
-              key={index} 
-              className="bg-gray-800/50 p-2.5 rounded border border-gray-700/50 hover:border-gray-600/50 transition-all duration-300"
-            >
-              <div className="text-[11px] text-gray-300 font-medium">{title || event}</div>
-              {status && (
-                <div className={`text-[10px] mt-1.5 ${
-                  status === "succeeded" ? "text-green-500" : 
-                  status === "failed" ? "text-red-500" : 
-                  "text-gray-400"
-                }`}>
-                  {status}
+      <div className="h-full flex flex-col">
+        <CodeOutputDemo />
+        <div className="p-3 space-y-2">
+          {details.map((detail, index) => {
+            const { data, event, created_at } = detail;
+            const { title, status, outputs } = data || {};
+            
+            return (
+              <div 
+                key={index} 
+                className="bg-gray-800/50 p-2.5 rounded border border-gray-700/50 hover:border-gray-600/50 transition-all duration-300"
+              >
+                <div className="text-[11px] text-gray-300 font-medium">{title || event}</div>
+                {status && (
+                  <div className={`text-[10px] mt-1.5 ${
+                    status === "succeeded" ? "text-green-500" : 
+                    status === "failed" ? "text-red-500" : 
+                    "text-gray-400"
+                  }`}>
+                    {status}
+                  </div>
+                )}
+                {outputs && (
+                  <div className="text-[10px] text-gray-400 mt-1.5 break-words leading-relaxed">
+                    {typeof outputs === 'string' ? outputs : JSON.stringify(outputs)}
+                  </div>
+                )}
+                <div className="text-[9px] text-gray-500 mt-1.5">
+                  {new Date(created_at).toLocaleString()}
                 </div>
-              )}
-              {outputs && (
-                <div className="text-[10px] text-gray-400 mt-1.5 break-words leading-relaxed">
-                  {typeof outputs === 'string' ? outputs : JSON.stringify(outputs)}
-                </div>
-              )}
-              <div className="text-[9px] text-gray-500 mt-1.5">
-                {new Date(created_at).toLocaleString()}
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
     );
   };
 
-  const animationStyles = `
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-
-    @keyframes bounceIn {
-      0% { transform: scale(0.3); opacity: 0; }
-      50% { transform: scale(1.05); }
-      70% { transform: scale(0.9); }
-      100% { transform: scale(1); opacity: 1; }
-    }
-
-    @keyframes slideInRight {
-      from { transform: translateX(-20px); opacity: 0; }
-      to { transform: translateX(0); opacity: 1; }
-    }
-
-    @keyframes slideInLeft {
-      from { transform: translateX(20px); opacity: 0; }
-      to { transform: translateX(0); opacity: 1; }
-    }
-
-    @keyframes slideDown {
-      from { max-height: 0; opacity: 0; }
-      to { max-height: 500px; opacity: 1; }
-    }
-
-    @keyframes slideUp {
-      from { max-height: 500px; opacity: 1; }
-      to { max-height: 0; opacity: 0; }
-    }
-  `;
-
-  const initializeChat = async () => {
+  const initializeChat = async (userInput) => {
     try {
-      // 如果已经有websiteId，直接返回
-      if (currentWebsiteId) return;
+      setShowInitialScreen(false);
+      setLoading(true);
 
-      // 执行搜索获取websiteId
       const searchResponse = await apiClient.searchCompetitor(
-        'default', // 使用默认搜索词
+        userInput,
         deepResearchMode
       );
 
@@ -433,9 +456,8 @@ const ResearchTool = () => {
         const websiteId = searchResponse.data.websiteId;
         setCurrentWebsiteId(websiteId);
         
-        // 发送空消息获取招呼消息
         const greetingResponse = await apiClient.chatWithAI(
-          ' ',
+          userInput,
           websiteId,
         );
         
@@ -461,15 +483,87 @@ const ResearchTool = () => {
           isThinking: false
         }
       ]);
+    } finally {
+      setLoading(false);
     }
   };
 
+  const renderInitialScreen = () => {
+    return (
+      <div className="w-full h-screen flex items-center justify-center bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
+        <div className="max-w-2xl w-full px-4">
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold text-white mb-6">
+              Welcome to <span className="text-blue-400">Alternatively</span>
+            </h1>
+            <p className="text-lg text-gray-300 mb-8">
+              Which product would you like to analyze and create an SEO-friendly Alternatively Page for?
+            </p>
+          </div>
+          <div className="relative">
+            <Input
+              placeholder="Enter product website URL (e.g., example.com)"
+              value={userInput}
+              onChange={(e) => setUserInput(e.target.value)}
+              className="bg-white/10 border border-gray-300/30 rounded-xl text-lg"
+              style={{ 
+                color: 'black', 
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                height: '64px',
+                paddingLeft: '24px',
+                paddingRight: '120px',
+                transition: 'all 0.3s ease'
+              }}
+              prefix={
+                <SearchOutlined 
+                  style={{ 
+                    color: 'rgba(0, 0, 0, 0.45)',
+                    fontSize: '20px'
+                  }} 
+                />
+              }
+              onPressEnter={(e) => {
+                e.preventDefault();
+                if (userInput.trim()) {
+                  initializeChat(userInput);
+                }
+              }}
+            />
+            <button
+              onClick={() => {
+                if (userInput.trim()) {
+                  initializeChat(userInput);
+                }
+              }}
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 px-6 py-3 text-base bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-xl 
+                       backdrop-blur-sm transition-all flex items-center gap-2 border border-blue-500/30 hover:shadow-blue-500/20"
+            >
+              <ArrowRightOutlined className="w-5 h-5" />
+              Start Analysis
+            </button>
+          </div>
+          <div className="mt-6 text-center text-gray-400 text-sm">
+            Enter your product website URL, and we'll help you find the best competitors and create an SEO-optimized page
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   useEffect(() => {
-    // 在组件加载时执行初始化
     if (!initialLoading) {
-      initializeChat();
+      // 移除自动初始化
+      // initializeChat(); // 注释掉这行
     }
   }, [initialLoading]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowDemo(false);
+    }, 10000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   if (initialLoading) {
     return (
@@ -493,24 +587,24 @@ const ResearchTool = () => {
     );
   }
 
+  if (showInitialScreen) {
+    return renderInitialScreen();
+  }
+
   return (
     <ConfigProvider wave={{ disabled: true }}>
       {contextHolder}
       <div className="w-full min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 
                     text-white flex items-center justify-center p-4 relative overflow-hidden" 
            style={{ paddingTop: "80px" }}>
-        <style>{animationStyles}</style>
         
         <div className="absolute inset-0" style={{ paddingTop: "80px" }}>
           <div className="absolute w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl -top-20 -left-20 animate-pulse"></div>
           <div className="absolute w-96 h-96 bg-purple-500/10 rounded-full blur-3xl -bottom-20 -right-20 animate-pulse delay-1000"></div>
         </div>
         
-        {/* Chat container */}
         <div className="relative z-10 w-full flex flex-row gap-6 h-[calc(100vh-140px)] px-4 text-sm">
-          {/* Left panel - Chat */}
-          <div className={`${showBrowser ? 'hidden' : 'flex-1'} relative flex flex-col`}>
-            {/* Open Browser button */}
+          <div className={`${showBrowser ? 'hidden' : 'w-[70%]'} relative flex flex-col`}>
             <div className="absolute top-3 right-4 z-50 flex gap-2">
               <button
                 onClick={() => setShowBrowser(true)}
@@ -524,7 +618,6 @@ const ResearchTool = () => {
               </button>
             </div>
 
-            {/* Header */}
             <div className="h-10 px-4 border-b border-gray-300/20 flex-shrink-0">
               <div className="flex items-center">
                 <img src="/images/alternatively-logo.png" alt="Alternatively" className="w-5 h-5 mr-1.5" />
@@ -532,7 +625,6 @@ const ResearchTool = () => {
               </div>
             </div>
 
-            {/* Messages container */}
             <div className="flex-1 overflow-y-auto pt-12 px-4 pb-4 chat-messages-container">
               {initialLoading ? (
                 <div className="flex items-center justify-center h-full">
@@ -546,7 +638,6 @@ const ResearchTool = () => {
               )}
             </div>
 
-            {/* Input area */}
             <div className="p-4 border-t border-gray-300/20 flex-shrink-0">
               <div className="max-w-[600px] mx-auto">
                 <div className="relative">
@@ -557,7 +648,7 @@ const ResearchTool = () => {
                       : "Enter your product URL (e.g., websitelm.com)"}
                     value={userInput}
                     onChange={(e) => setUserInput(e.target.value)}
-                    disabled={loading || isMessageSending || isStyleOperationActive}
+                    disabled={loading || isMessageSending}
                     className="bg-white/10 border border-gray-300/30 rounded-xl text-sm"
                     style={{ 
                       color: 'black', 
@@ -587,18 +678,17 @@ const ResearchTool = () => {
 
                 <div className="flex items-center justify-between mt-3 px-1">
                   <div className="flex items-center space-x-4">
-                    {/* Deep research toggle */}
                     <button 
                       type="button"
                       className={`flex items-center px-2 py-1 rounded-full text-xs transition-all duration-200 
-                        ${loading || isMessageSending || isStyleOperationActive 
+                        ${loading || isMessageSending 
                           ? 'opacity-50 cursor-not-allowed bg-gray-200 text-gray-600' 
                           : deepResearchMode
                             ? 'bg-purple-500 text-white hover:bg-purple-600' 
                             : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
                         }`}
                       onClick={() => {
-                        if (!loading && !isMessageSending && !isStyleOperationActive) {
+                        if (!loading && !isMessageSending) {
                           toggleDeepResearchMode();
                         }
                       }}
@@ -619,7 +709,6 @@ const ResearchTool = () => {
                     Mock Getting Competitors
                   </button>
 
-                    {/* Mode description */}
                     <span className="text-xs text-purple-300/80">
                       {deepResearchMode ? (
                         <span className="flex items-center">
@@ -640,9 +729,7 @@ const ResearchTool = () => {
             </div>
           </div>
           
-          {/* Middle panel - Browser */}
           <div className={`${showBrowser ? 'flex-1' : 'hidden'} relative flex flex-col`}>
-            {/* Keep existing Back to Chat button */}
             <div className="absolute top-3 right-4 z-50 flex gap-2">
               <button
                 onClick={() => setShowBrowser(false)}
@@ -656,17 +743,12 @@ const ResearchTool = () => {
               </button>
             </div>
             <BrowserSimulator 
-              tabs={tabs}
-              activeTab={activeTabId}
-              onTabChange={handleTabChange}
               style={{ height: '600px' }}
             />
           </div>
           
-          {/* Right panel - Analysis */}
-          <div className="w-1/5 bg-white/5 backdrop-blur-lg rounded-2xl border border-gray-300/20 shadow-xl 
+          <div className="w-[30%] bg-white/5 backdrop-blur-lg rounded-2xl border border-gray-300/20 shadow-xl 
                           flex flex-col h-full relative">
-            {/* 面板头部保持不变 */}
             <div className="border-b border-gray-300/20 p-3">
               <div className="flex justify-between">
                 <button 
@@ -692,7 +774,6 @@ const ResearchTool = () => {
               </div>
             </div>
             
-            {/* 内容区域保持不变 */}
             <div className="flex-1 overflow-y-auto">
               {rightPanelTab === 'details' && renderDetails(detailsData)}
               {rightPanelTab === 'sources' && renderSources()}
