@@ -894,7 +894,7 @@ const ResearchTool = () => {
       return;
     }
     
-    const eventSource = new EventSourcePolyfill(`http://192.168.10.89:9091/events/${customerId}-chat`, {
+    const eventSource = new EventSourcePolyfill(`http://api.websitelm.com/events/${customerId}-chat`, {
       headers: {
         'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDM1ODIxNzYsImlhdCI6MTc0Mjk3NzM3NiwiaWQiOiI2N2M2Y2ViNmJjMDA5M2M5Yzc5ZmI5MzIiLCJyb2xlIjoiYWRtaW4iLCJ1c2VyX25hbWUiOiJoYW55dUB0ZWNoYWNjLmNvbSJ9.h-xn4pamjqyLOkOL30DbMLy4dxf5lzb34o-xcWVEqxw`
       },

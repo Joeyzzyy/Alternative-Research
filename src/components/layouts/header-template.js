@@ -133,7 +133,7 @@ export default function Header() {
       
       const response = await apiClient.googleCallback(code, state);
       
-      if (response && response.accessToken) {
+      if (response) {
         // Store user data
         localStorage.setItem('alternativelyAccessToken', response.accessToken);
         localStorage.setItem('alternativelyIsLoggedIn', 'true');
