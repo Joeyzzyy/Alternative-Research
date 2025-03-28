@@ -5,7 +5,7 @@ const API_URL_TEST = 'http://192.168.10.89:9091/v1';
 
 // 创建 axios 实例，更新配置
 const apiClient = axios.create({
-  baseURL: API_URL_TEST,
+  baseURL: API_URL,
   timeout: 300000,
   headers: {
     'Content-Type': 'application/json',
