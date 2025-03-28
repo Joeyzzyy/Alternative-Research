@@ -1,10 +1,11 @@
 import axios from 'axios';
 
 const API_URL = 'https://api.websitelm.com/v1';
+const API_URL_TEST = 'http://192.168.10.89:9091/v1';
 
 // 创建 axios 实例，更新配置
 const apiClient = axios.create({
-  baseURL: API_URL,
+  baseURL: API_URL_TEST,
   timeout: 300000,
   headers: {
     'Content-Type': 'application/json',
@@ -107,7 +108,7 @@ const resetPassword = async (resetData) => {
 
 const googleLogin = async () => {
   try {
-    const response = await apiClient.get('/customer/google');
+    const response = await apiClient.get('/customer/google?source=alternatively');
     return response.data;
   } catch (error) {
     console.error('Failed to login with Google:', error);
@@ -241,6 +242,7 @@ const changeStyle = async (styleColor, websiteId) => {
   }
 };
 
+
 apiClient.getCompetitorResearch = getCompetitorResearch;
 apiClient.login = login;
 apiClient.register = register;
@@ -255,6 +257,6 @@ apiClient.getAlternativeSources = getAlternativeSources;
 apiClient.getAlternativeResult = getAlternativeResult;
 apiClient.searchCompetitor = searchCompetitor;
 apiClient.chatWithAI = chatWithAI;
-apiClient.changeStyle = changeStyle;  // 新增样式修改方法导出
+apiClient.changeStyle = changeStyle; 
 
 export default apiClient;

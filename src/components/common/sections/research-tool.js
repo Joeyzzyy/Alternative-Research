@@ -6,50 +6,46 @@ import apiClient from '../../../lib/api/index.js';
 import BrowserSimulator from '../BrowserSimulator';
 import Typewriter from 'typewriter-effect';
 import { EventSourcePolyfill } from 'event-source-polyfill';
-
-const AGENTS = [
-  {
-    id: 1,
-    name: 'Joey.Z',
-    avatar: '/images/zy.jpg',
-    role: 'Program Manager',
-    description: 'Responsible for project management, resource allocation, and overall project coordination.'
-  },
-  {
-    id: 2,
-    name: 'Youssef',
-    avatar: '/images/youssef.jpg',
-    role: 'Competitor Analyst',
-    description: 'Specializes in competitor discovery and scoring analysis. Responsible for market research and competitor evaluation.'
-  }
-];
+import MessageHandler from '../../../utils/MessageHandler';
 
 // 修改 TAG_FILTERS 字典
 const TAG_FILTERS = {
   '\\[URL_GET\\]': '',  // 过滤 [URL_GET]
+  '\\[COMPETITOR_SELECTED\\]': '',  // 过滤 [COMPETITOR_SELECTED]
 };
+
+const ALTERNATIVELY_LOGO = '/images/alternatively-logo.png'; // 假设这是Alternatively的logo路径
 
 const CodeTypingEffect = ({ code, speed = 3 }) => {
   const [displayedCode, setDisplayedCode] = useState('');
   const [currentIndex, setCurrentIndex] = useState(0);
-  
+
   useEffect(() => {
     if (currentIndex < code.length) {
       const timer = setTimeout(() => {
-        const nextChunk = code.substring(currentIndex, currentIndex + 10);
-        setDisplayedCode(prev => prev + nextChunk);
-        setCurrentIndex(prev => Math.min(prev + 10, code.length));
+        if (code[currentIndex] === '<') {
+          const tagEndIndex = code.indexOf('>', currentIndex);
+          if (tagEndIndex !== -1) {
+            const tag = code.substring(currentIndex, tagEndIndex + 1);
+            setDisplayedCode(prev => prev + tag);
+            setCurrentIndex(tagEndIndex + 1);
+            return;
+          }
+        }
+        
+        setDisplayedCode(prev => prev + code[currentIndex]);
+        setCurrentIndex(prev => prev + 1);
       }, speed);
       
       return () => clearTimeout(timer);
     }
   }, [code, currentIndex, speed]);
-  
+
   return (
     <pre className="text-[10px] text-blue-300 font-mono whitespace-pre-wrap leading-relaxed overflow-auto" 
-         style={{ maxHeight: '300px' }}>
-      {displayedCode}
-      <span className="animate-pulse">▋</span>
+         style={{ maxHeight: '600px' }}>
+      <div>{displayedCode}</div>
+      <span className="animate-blink">▋</span>
     </pre>
   );
 };
@@ -74,54 +70,22 @@ const ResearchTool = () => {
   const chatEndRef = useRef(null);
   const [showDemo, setShowDemo] = useState(true);
   const [showInitialScreen, setShowInitialScreen] = useState(true);
-  const [logs, setLogs] = useState([
-    // 错误日志
-    {
-      type: 'error',
-      message: 'Failed to connect to API endpoint: Connection timeout after 30s',
-      timestamp: new Date().toISOString()
-    },
-    {
-      type: 'error',
-      message: 'Error parsing competitor data: Invalid JSON response',
-      timestamp: new Date().toISOString()
-    },
-    // Dify 工作流日志
-    {
-      type: 'dify',
-      message: 'Successfully executed Dify workflow for competitor analysis. Processed 3 competitors in 2.3 seconds.',
-      timestamp: new Date().toISOString()
-    },
-    // API 请求日志
-    {
-      type: 'api',
-      message: 'GET request to https://api.alternatively.com/competitors returned 200 OK. Processed 5 results.',
-      timestamp: new Date().toISOString()
-    },
-    // HTML/代码日志
-    {
-      type: 'code',
-      message: `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Example Page</title>
-</head>
-<body>
-  <h1>Hello World</h1>
-  <p>This is an example HTML page.</p>
-</body>
-</html>`,
-      timestamp: new Date().toISOString()
-    },
-    // 普通信息日志
-    {
-      type: 'info',
-      message: 'Successfully retrieved website metadata',
-      timestamp: new Date().toISOString()
-    }
-  ]);
+  const [logs, setLogs] = useState([]);
+  const competitorListProcessedRef = useRef(false);
+  const [canProcessCompetitors, setCanProcessCompetitors] = useState(false);
+  const [browserTabs, setBrowserTabs] = useState([]);
+  const [activeTab, setActiveTab] = useState(null);
+
+  // Add a state to track if input should be disabled due to URL_GET
+  const [inputDisabledDueToUrlGet, setInputDisabledDueToUrlGet] = useState(false);
+
+  // Add a state for validation error
+  const [validationError, setValidationError] = useState('');
+
+  // Add a ref to store the last processed log ID
+  const lastProcessedLogIdRef = useRef(null);
+
+  const messageHandler = new MessageHandler(setMessages);
 
   const filterMessageTags = (message) => {
     let filteredMessage = message;
@@ -131,134 +95,142 @@ const ResearchTool = () => {
     return filteredMessage;
   };
 
+  // Function to validate domain format
+  const validateDomain = (input) => {
+    // Remove https:// or http:// if present
+    let domain = input.trim();
+    if (domain.startsWith('http://')) domain = domain.substring(7);
+    if (domain.startsWith('https://')) domain = domain.substring(8);
+    
+    // Remove www. if present
+    if (domain.startsWith('www.')) domain = domain.substring(4);
+    
+    // Basic domain validation regex
+    // This checks for at least one character, followed by a dot, followed by at least two characters
+    const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+    
+    return domainRegex.test(domain);
+  };
+
+  // Add a useEffect to reset inputDisabledDueToUrlGet when messages are updated
+  useEffect(() => {
+    // Only reset if there are messages and input is currently disabled
+    if (messages.length > 0 && inputDisabledDueToUrlGet) {
+      // Check if the last message is not from the system and not a thinking message
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage.source !== 'system' && !lastMessage.isThinking) {
+        setInputDisabledDueToUrlGet(false);
+      }
+    }
+  }, [messages]);
+
   const handleUserInput = async (e) => {
     if (e && e.preventDefault) {
       e.preventDefault();
       e.stopPropagation();
     }
 
-    if (!userInput.trim()) {
-      console.log('User input is empty, skipping request');
-      return;
-    }
-    
-    // 确保输入包含 https://
-    const formattedInput = userInput.trim().startsWith('http') ? userInput.trim() : `https://${userInput.trim()}`;
-    
-    console.log('Starting new chat message with input:', formattedInput);
-    const newMessages = [...messages, { 
-      type: 'user', 
-      content: formattedInput,
-      source: 'user'
-    }];
-    setMessages(newMessages);
+    if (!userInput.trim() || isMessageSending) return;
+
+    const formattedInput = showInitialScreen && !userInput.trim().startsWith('http') 
+      ? `https://${userInput.trim()}`
+      : userInput.trim();
+
+    // Add user message
+    messageHandler.addUserMessage(formattedInput);
+    // Add agent thinking message
+    const thinkingMessageId = messageHandler.addAgentThinkingMessage();
     setUserInput('');
     setIsMessageSending(true);
 
     try {
-      console.log('Sending user input to server');
-      const response = await apiClient.chatWithAI(
-        formattedInput,
-        currentWebsiteId
-      );
+      const response = await apiClient.chatWithAI(formattedInput, currentWebsiteId);
 
       if (response?.code === 200 && response.data?.answer) {
-        console.log('Received response from server:', response.data.answer);
-        const answer = filterMessageTags(response.data.answer);
-        setMessages(prev => [
-          ...prev,
-          {
-            type: 'agent',
-            agentId: 1,
-            content: answer,
-            isThinking: false,
-            source: 'agent'
+        const rawAnswer = response.data.answer;
+
+        if (rawAnswer.includes('[URL_GET]')) {
+          setInputDisabledDueToUrlGet(true);
+          // Update agent message
+          const answer = filterMessageTags(rawAnswer);
+          messageHandler.updateAgentMessage(answer, thinkingMessageId);
+          // Add system message
+          messageHandler.addSystemMessage('Searching for competitors. Please wait a moment...');
+        } else if (rawAnswer.includes('[COMPETITOR_SELECTED]')) {
+          const messageBody = rawAnswer.replace(/\[COMPETITOR_SELECTED\].*$/s, '').trim();
+          
+          messageHandler.updateAgentMessage(messageBody, thinkingMessageId);
+          
+          const competitorArrayMatch = rawAnswer.match(/\[COMPETITOR_SELECTED\]\s*(\[.*?\])$/s);
+          
+          if (competitorArrayMatch && competitorArrayMatch[1]) {
+            // Parse JSON array
+            const competitorArrayString = competitorArrayMatch[1].trim();
+            
+            try {
+              // Parse the competitor array
+              let competitors = JSON.parse(competitorArrayString);
+              
+              // Ensure competitors is an array of strings (domains only)
+              if (!Array.isArray(competitors)) {
+                competitors = [competitors];
+              }
+              
+              // Extract domain names only (no objects)
+              const domainArray = competitors.map(comp => {
+                if (typeof comp === 'string') {
+                  // Remove http/https and trailing slashes if present
+                  return comp.replace(/^https?:\/\//, '').replace(/\/$/, '');
+                }
+                return comp;
+              });
+              
+              // Call generate API with domain array
+              const generateResponse = await apiClient.generateAlternative(currentWebsiteId, domainArray);
+              
+              if (generateResponse?.code === 200) {
+                messageHandler.addSystemMessage(`We are generating alternative solutions for ${domainArray.join(', ')}. This may take some time, please wait...`);
+              } else {
+                messageHandler.addSystemMessage(`⚠️ Failed to generate alternative: Invalid server response`);
+              }
+            } catch (parseError) {
+              messageHandler.addSystemMessage(`⚠️ Failed to process competitor selection: ${parseError.message}`);
+            }
+          } else {
+            throw new Error('Could not extract competitor array from response');
           }
-        ]);
+        } else {
+          const answer = filterMessageTags(rawAnswer);
+          messageHandler.updateAgentMessage(answer, thinkingMessageId);
+        }
       } else {
-        console.warn('Received invalid response from server:', response);
-        setMessages(prev => [
-          ...prev,
-          {
-            type: 'agent',
-            agentId: 1,
-            content: '⚠️ Failed to get valid response from server',
-            isThinking: false,
-            source: 'agent'
-          }
-        ]);
+        messageHandler.updateAgentMessage('⚠️ Failed to get valid response from server', thinkingMessageId);
       }
     } catch (error) {
-      console.error('Error sending user input:', error);
-      setMessages(prev => [
-        ...prev,
-        {
-          type: 'agent',
-          agentId: 1,
-          content: `⚠️ Failed to get response: ${error.message}`,
-          isThinking: false,
-          source: 'agent'
-        }
-      ]);
+      messageHandler.handleErrorMessage(error, thinkingMessageId);
     } finally {
-      console.log('Finished processing user input');
       setIsMessageSending(false);
     }
   };
-  
-  const handleCompetitorListRequest = async () => {
+
+  const handleCompetitorListRequest = async (competitors) => {
     setIsMessageSending(true);
-    
+    const thinkingMessageId = messageHandler.addAgentThinkingMessage();
+
     try {
-      const competitors = [
-        { name: 'seo.ai', url: 'https://surferseo.com' },
-        { name: 'aiseo.ai', url: 'https://writesonic.com' }
-      ];
-
-      const announcement = `🎉 As a professional competitive analyst, I have found some potential competitors for you. I will share the list shortly and guide you through the next steps. Please hold on!`;
-
-      setMessages(prev => [
-        ...prev,
-        {
-          type: 'agent',
-          agentId: 2,
-          content: announcement,
-          isThinking: false,
-          source: 'agent'
-        }
-      ]);
-
-      const response = await apiClient.chatWithAI(
-        JSON.stringify(competitors),
-        currentWebsiteId
-      );
+      const response = await apiClient.chatWithAI(JSON.stringify(competitors), currentWebsiteId);
 
       if (response?.code === 200 && response.data?.answer) {
         const answer = filterMessageTags(response.data.answer);
-        setMessages(prev => [
-          ...prev,
-          {
-            type: 'agent',
-            agentId: 2,
-            content: answer,
-            isThinking: false,
-            source: 'agent'
-          }
-        ]);
+        messageHandler.updateAgentMessage(answer, thinkingMessageId);
+      } else {
+        messageHandler.updateAgentMessage('⚠️ Failed to generate alternatives: Invalid response from server', thinkingMessageId);
       }
     } catch (error) {
-      setMessages(prev => [
-        ...prev,
-        {
-          type: 'agent',
-          agentId: 2,
-          content: `Sorry, I encountered an error: ${error.message}`,
-          isThinking: false,
-          source: 'agent'
-        }
-      ]);
+      messageHandler.handleErrorMessage(error, thinkingMessageId);
     } finally {
       setIsMessageSending(false);
+      setInputDisabledDueToUrlGet(false); // 确保重新启用输入
     }
   };
 
@@ -301,11 +273,7 @@ const ResearchTool = () => {
         </div>
       );
     } else {
-      const agent = AGENTS.find(a => a.id === message.agentId) || AGENTS[0];
-      const hasUrlGet = message.content.includes('[URL_GET]');
       const filteredContent = filterMessageTags(message.content);
-
-      const showUrlGetAnimation = hasUrlGet && (message.isThinking || message.content.includes('Processing'));
 
       return (
         <div key={index} className="flex justify-start mb-8" style={{animation: 'fadeIn 0.5s ease-out forwards'}}>
@@ -314,7 +282,7 @@ const ResearchTool = () => {
               <div className="relative">
                 <Avatar 
                   size={40}
-                  src={agent.avatar}
+                  src={ALTERNATIVELY_LOGO}
                   className="border-2 border-transparent group-hover:border-blue-400/50 transition-colors duration-300"
                 />
                 {message.isThinking && (
@@ -325,35 +293,33 @@ const ResearchTool = () => {
               </div>
             </div>
             <div className="relative">
-              <div className="absolute -top-6 left-0">
+              <div className="absolute -top-6 left-0 w-full">
                 <div className="flex items-center space-x-2">
-                  <span className="text-xs font-medium text-blue-300">{agent.name}</span>
-                  <span className="text-[10px] px-1.5 py-0.5 bg-blue-500/20 text-blue-300 rounded-full">
-                    {agent.role}
-                  </span>
+                  <span className="text-xs font-medium text-blue-300 whitespace-nowrap">Alternatively</span>
                 </div>
               </div>
-              <div className="p-4 rounded-2xl text-sm bg-gradient-to-br from-gray-800/95 to-gray-900/95 
-                            text-gray-100 shadow-xl backdrop-blur-sm border border-white/10 
-                            hover:border-blue-500/30 transition-all duration-300
+              <div className="p-4 rounded-2xl text-sm bg-gradient-to-br from-slate-800 to-slate-900 
+                            text-white shadow-xl backdrop-blur-sm
+                            hover:shadow-slate-500/20 transition-all duration-300
                             rounded-tl-none transform hover:-translate-y-0.5">
                 <div className="relative z-10">
-                  {filteredContent.split('\n').map((line, i) => (
-                    <React.Fragment key={i}>
-                      {line}
-                      {i < filteredContent.split('\n').length - 1 && <br />}
-                    </React.Fragment>
-                  ))}
+                  {message.isThinking ? (
+                    <div className="flex space-x-1">
+                      <div className="w-2 h-2 bg-white rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                      <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+                    </div>
+                  ) : (
+                    filteredContent.split('\n').map((line, i) => (
+                      <React.Fragment key={i}>
+                        {line}
+                        {i < filteredContent.split('\n').length - 1 && <br />}
+                      </React.Fragment>
+                    ))
+                  )}
                 </div>
-                {showUrlGetAnimation && (
-                  <div className="flex space-x-1.5 mt-3 items-center">
-                    <div className="w-1.5 h-1.5 bg-blue-400/60 rounded-full animate-bounce"></div>
-                    <div className="w-1.5 h-1.5 bg-blue-400/60 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                    <div className="w-1.5 h-1.5 bg-blue-400/60 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-                  </div>
-                )}
               </div>
-              <div className="absolute -left-1 top-0 w-2 h-2 bg-gradient-to-br from-gray-800 to-gray-900 transform rotate-45"></div>
+              <div className="absolute -left-1 top-0 w-2 h-2 bg-slate-800 transform rotate-45"></div>
             </div>
           </div>
         </div>
@@ -416,104 +382,132 @@ const ResearchTool = () => {
   };
 
   const renderDetails = (details) => {
+    const reversedLogs = [...logs].reverse();
+
     return (
       <div className="h-full flex flex-col">
         <div className="p-3 space-y-2 overflow-y-auto">
-          {/* Error Messages */}
-          {logs.filter(log => log.type === 'error').length > 0 && (
-            <div className="bg-red-900/30 p-2.5 rounded border border-red-700/50 hover:border-red-600/50 transition-all duration-300">
-              <div className="flex items-center mb-2">
-                <svg className="w-4 h-4 mr-2 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <div className="text-[11px] text-red-300 font-medium">Error Messages</div>
-              </div>
-              <div className="text-[10px] text-red-200 break-words leading-relaxed">
-                {logs.filter(log => log.type === 'error').map((log, index) => (
-                  <div key={index} className="mb-1.5 pb-1.5 border-b border-red-700/30 last:border-0 last:mb-0 last:pb-0">
-                    {log.message || "Unknown error occurred"}
+          {reversedLogs.map((log, index) => {
+            // 解析Dify类型的content
+            const difyContent = log.type === 'Dify' ? JSON.parse(log.content) : null;
+            
+            return (
+              <div key={index} className="bg-gray-800/50 p-2.5 rounded border border-gray-700/50 hover:border-gray-600/50 transition-all duration-300">
+                <div className="flex items-center mb-2">
+                  {log.type === 'Dify' && (
+                    <img src="/images/dify.png" alt="Dify" className="w-4 h-4 mr-2" />
+                  )}
+                  {log.type === 'Error' && (
+                    <svg className="w-4 h-4 mr-2 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                  {log.type === 'API' && (
+                    <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                  )}
+                  {log.type === 'Codes' && (
+                    <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 4l-4 4 4 4" />
+                    </svg>
+                  )}
+                  {log.type === 'Info' && (
+                    <svg className="w-4 h-4 mr-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                  <div className="text-[11px] text-gray-300 font-medium">
+                    {log.type === 'Dify' && 'Dify Workflow'}
+                    {log.type === 'Error' && 'Error Message'}
+                    {log.type === 'API' && 'API Request'}
+                    {log.type === 'Codes' && 'Code Execution'}
+                    {log.type === 'Info' && 'Information'}
                   </div>
-                ))}
-              </div>
-              <div className="text-[9px] text-red-400/70 mt-1.5">
-                {new Date().toLocaleString()}
-              </div>
-            </div>
-          )}
+                </div>
 
-          {/* Dify Examples */}
-          {logs.filter(log => log.type === 'dify').map((log, index) => (
-            <div key={`dify-${index}`} className="bg-gray-800/50 p-2.5 rounded border border-gray-700/50 hover:border-gray-600/50 transition-all duration-300">
-              <div className="flex items-center mb-2">
-                <img src="/images/dify.png" alt="Dify" className="w-4 h-4 mr-2" />
-                <div className="text-[11px] text-gray-300 font-medium">Dify Workflow Execution</div>
-              </div>
-              <div className="text-[10px] text-gray-400 break-words leading-relaxed">
-                {log.message}
-              </div>
-              <div className="text-[9px] text-gray-500 mt-1.5">
-                {new Date(log.timestamp).toLocaleString()}
-              </div>
-            </div>
-          ))}
+                {/* 显示step字段 */}
+                {log.step && (
+                  <div className="mb-1 text-[10px] text-gray-400">
+                    <span className="font-semibold">Step:</span> {log.step}
+                  </div>
+                )}
 
-          {/* API Examples */}
-          {logs.filter(log => log.type === 'api').map((log, index) => (
-            <div key={`api-${index}`} className="bg-gray-800/50 p-2.5 rounded border border-gray-700/50 hover:border-gray-600/50 transition-all duration-300">
-              <div className="flex items-center mb-2">
-                <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                <div className="text-[11px] text-gray-300 font-medium">API Request</div>
-              </div>
-              <div className="text-[10px] text-gray-400 break-words leading-relaxed">
-                {log.message}
-              </div>
-              <div className="text-[9px] text-gray-500 mt-1.5">
-                {new Date(log.timestamp).toLocaleString()}
-              </div>
-            </div>
-          ))}
+                {log.type === 'Info' ? (
+                  <div className="text-[10px] text-gray-400 break-words leading-relaxed">
+                    {log.content.planningId && (
+                      <div className="mb-1">
+                        <span className="font-semibold">Planning ID:</span> {log.content.planningId}
+                      </div>
+                    )}
+                    <div className="mb-1">
+                      <span className="font-semibold">Status:</span> {log.content.status}
+                    </div>
+                  </div>
+                ) : log.type === 'Dify' ? (
+                  <div className="text-[10px] text-gray-400 break-words leading-relaxed">
+                    <div className="mb-1">
+                      <span className="font-semibold">Workflow ID:</span> {difyContent.workflow_id}
+                    </div>
+                    <div className="mb-1">
+                      <span className="font-semibold">Task ID:</span> {difyContent.task_id}
+                    </div>
+                    <div className="mb-1">
+                      <span className="font-semibold">Status:</span> {difyContent.data?.status || 'Started'}
+                    </div>
+                    {difyContent.data?.outputs && (
+                      <div className="mb-1">
+                        <span className="font-semibold">Outputs:</span>
+                        <pre className="mt-1 p-2 bg-gray-700/50 rounded text-xs overflow-auto">
+                          {JSON.stringify(difyContent.data.outputs, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+                    {difyContent.data?.elapsed_time > 0 && (
+                      <div className="mb-1">
+                        <span className="font-semibold">Elapsed Time:</span> {difyContent.data.elapsed_time}s
+                      </div>
+                    )}
+                  </div>
+                ) : log.type === 'API' ? (
+                  <div className="text-[10px] text-gray-400 break-words leading-relaxed">
+                    {log.content?.status && (
+                      <div className="mb-1">
+                        <span className="font-semibold">Status:</span> {log.content.status}
+                      </div>
+                    )}
+                    {log.content?.data && (
+                      <div className="mb-1">
+                        <span className="font-semibold">Data:</span>
+                        <pre className="mt-1 p-2 bg-gray-700/50 rounded text-xs overflow-auto">
+                          {JSON.stringify(log.content.data, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+                ) : log.type === 'Codes' ? (
+                  <div className="text-[10px] text-gray-400 break-words leading-relaxed">
+                    {log.content?.html && (
+                      <div className="mb-1">
+                        <span className="font-semibold">Code:</span>
+                        <div className="mt-1 p-2 bg-gray-700/50 rounded text-xs overflow-auto">
+                          <CodeTypingEffect 
+                            code={log.content.html} 
+                            speed={3}
+                            language="html"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
 
-          {/* Code Examples */}
-          {logs.filter(log => log.type === 'code').map((log, index) => (
-            <div key={`code-${index}`} className="bg-gray-800/50 p-2.5 rounded border border-gray-700/50 hover:border-gray-600/50 transition-all duration-300">
-              <div className="flex items-center mb-2">
-                <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 4l-4 4 4 4" />
-                </svg>
-                <div className="text-[11px] text-gray-300 font-medium">Code Execution</div>
+                <div className="text-[9px] text-gray-500 mt-1.5">
+                  {new Date(log.timestamp).toLocaleString()}
+                </div>
               </div>
-              <div className="text-[10px] text-blue-300 font-mono whitespace-pre-wrap leading-relaxed overflow-auto" 
-                   style={{ maxHeight: '300px' }}>
-                <pre>
-                  {log.message}
-                </pre>
-                <span className="animate-pulse">▋</span>
-              </div>
-              <div className="text-[9px] text-gray-500 mt-1.5">
-                {new Date(log.timestamp).toLocaleString()}
-              </div>
-            </div>
-          ))}
-          
-          {/* Info Messages */}
-          {logs.filter(log => log.type === 'info').map((log, index) => (
-            <div key={`info-${index}`} className="bg-gray-800/50 p-2.5 rounded border border-gray-700/50 hover:border-gray-600/50 transition-all duration-300">
-              <div className="flex items-center mb-2">
-                <svg className="w-4 h-4 mr-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <div className="text-[11px] text-gray-300 font-medium">Information</div>
-              </div>
-              <div className="text-[10px] text-gray-400 break-words leading-relaxed">
-                {log.message}
-              </div>
-              <div className="text-[9px] text-gray-500 mt-1.5">
-                {new Date(log.timestamp).toLocaleString()}
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     );
@@ -534,18 +528,34 @@ const ResearchTool = () => {
           <div className="relative max-w-3xl mx-auto">
             <form onSubmit={(e) => {
               e.preventDefault();
-              if (userInput.trim()) {
-                // 确保输入包含 https://
-                const formattedInput = userInput.trim().startsWith('http') ? userInput.trim() : `https://${userInput.trim()}`;
-                initializeChat(formattedInput);
+              
+              if (!userInput.trim()) {
+                setValidationError('Please enter a website URL');
+                return;
               }
+              
+              if (!validateDomain(userInput)) {
+                setValidationError('Please enter a valid domain (e.g., example.com)');
+                return;
+              }
+              
+              // Clear any previous validation errors
+              setValidationError('');
+              
+              // Ensure input contains https://
+              const formattedInput = userInput.trim().startsWith('http') ? userInput.trim() : `https://${userInput.trim()}`;
+              initializeChat(formattedInput);
             }}>
               <div className="relative">
                 <Input
                   placeholder="Enter product website URL (e.g., example.com)"
                   value={userInput}
-                  onChange={(e) => setUserInput(e.target.value)}
-                  className="bg-white/10 border border-gray-300/30 rounded-xl text-lg w-full"
+                  onChange={(e) => {
+                    setUserInput(e.target.value);
+                    // Clear validation error when user types
+                    if (validationError) setValidationError('');
+                  }}
+                  className={`bg-white/10 border rounded-xl text-lg w-full ${validationError ? 'border-red-500' : 'border-gray-300/30'}`}
                   style={{ 
                     color: 'black', 
                     backgroundColor: 'rgba(255, 255, 255, 0.95)',
@@ -554,18 +564,16 @@ const ResearchTool = () => {
                     transition: 'all 0.3s ease'
                   }}
                   prefix={
-                    <div className="flex items-center">
-                      <SearchOutlined 
-                        style={{ 
-                          color: 'rgba(0, 0, 0, 0.45)',
-                          fontSize: '24px',
-                          marginRight: '8px'
-                        }} 
-                      />
-                      <span className="text-gray-500 font-mono">https://</span>
-                    </div>
+                    <span className="text-gray-500 font-mono" style={{ marginLeft: '16px' }}>https://</span>
                   }
+                  status={validationError ? "error" : ""}
                 />
+                
+                {validationError && (
+                  <div className="absolute -bottom-6 left-0 text-red-500 text-sm">
+                    {validationError}
+                  </div>
+                )}
               </div>
               <button
                 type="submit"
@@ -587,77 +595,35 @@ const ResearchTool = () => {
             </form>
           </div>
           
-          <div className="mt-6 text-center text-gray-400 text-sm mb-10">
-            Enter your product website URL and we'll help you find the best competitors and create an SEO-optimized page
-          </div>
+          {validationError ? (
+            <div className="mt-10 text-center text-gray-400 text-sm mb-6">
+              {/* Space for error message */}
+            </div>
+          ) : (
+            <div className="mt-6 text-center text-gray-400 text-sm mb-10">
+              Enter your product website URL and we'll help you find the best competitors and create an SEO-optimized page
+            </div>
+          )}
           
           <div className="mt-12 max-w-4xl mx-auto">
             <h3 className="text-xl font-semibold text-white mb-6 text-center">Popular Product Analysis Examples</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-3 gap-6">
               <div 
                 onClick={() => {
-                  setUserInput("notion.so");
-                  initializeChat("https://notion.so");
+                  setUserInput("hix.ai");
+                  initializeChat("https://hix.ai");
                 }}
-                className="bg-gradient-to-br from-purple-900/40 to-purple-800/20 backdrop-blur-sm p-5 rounded-xl 
-                         border border-purple-500/30 hover:border-purple-400/50 cursor-pointer 
-                         transition-all duration-300 hover:shadow-[0_0_15px_rgba(168,85,247,0.3)] 
+                className="bg-gradient-to-br from-green-400/40 to-green-300/20 backdrop-blur-sm p-5 rounded-xl 
+                         border border-green-400/30 hover:border-green-300/50 cursor-pointer 
+                         transition-all duration-300 hover:shadow-[0_0_15px_rgba(74,222,128,0.3)] 
                          hover:-translate-y-1 group relative overflow-hidden"
               >
-                <div className="absolute -right-6 -top-6 w-16 h-16 bg-purple-500/20 rounded-full blur-xl group-hover:bg-purple-500/30 transition-all"></div>
+                <div className="absolute -right-6 -top-6 w-16 h-16 bg-green-400/20 rounded-full blur-xl group-hover:bg-green-400/30 transition-all"></div>
                 <div className="w-10 h-10 mb-3 flex items-center justify-center bg-white/90 rounded-lg">
-                  <svg viewBox="0 0 24 24" className="w-7 h-7" fill="black" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.981-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466l1.823 1.447zm1.775 2.809v13.91c0 .746.373 1.027 1.214.98l14.523-.84c.841-.046.935-.56.935-1.167V6.354c0-.606-.233-.886-.748-.84l-15.177.887c-.56.047-.747.327-.747.886zm14.337.745c.093.42 0 .84-.42.888l-.7.14v10.264c-.608.327-1.168.514-1.635.514-.748 0-.935-.234-1.495-.933l-4.577-7.186v6.952L12.21 19.1s0 .84-1.168.84l-3.222.186c-.093-.186 0-.653.327-.746l.84-.233V9.854L7.822 9.76c-.094-.42.14-1.026.793-1.073l3.456-.233 4.764 7.279v-6.44l-1.215-.139c-.093-.514.28-.887.747-.933zM1.936 1.035l13.31-.98c1.634-.14 2.055-.047 3.082.7l4.249 2.986c.7.513.934.653.934 1.213v16.378c0 1.026-.373 1.634-1.68 1.726l-15.458.934c-.98.047-1.448-.093-1.962-.747l-3.129-4.06c-.56-.747-.793-1.306-.793-1.96V2.667c0-.839.374-1.54 1.447-1.632z" />
-                  </svg>
+                  <img src="/images/hix.png" alt="HIX" className="w-7 h-7" />
                 </div>
-                <div className="text-purple-300 font-medium mb-2 group-hover:text-purple-200 text-base">Notion</div>
-                <div className="text-xs text-gray-400 group-hover:text-gray-300">Generate Notion alternatives page</div>
-                <div className="absolute bottom-3 right-3">
-                  <ArrowRightOutlined className="text-purple-400/50 group-hover:text-purple-300 transition-all" />
-                </div>
-              </div>
-              
-              <div 
-                onClick={() => {
-                  setUserInput("slack.com");
-                  initializeChat("https://slack.com");
-                }}
-                className="bg-gradient-to-br from-blue-900/40 to-blue-800/20 backdrop-blur-sm p-5 rounded-xl 
-                         border border-blue-500/30 hover:border-blue-400/50 cursor-pointer 
-                         transition-all duration-300 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] 
-                         hover:-translate-y-1 group relative overflow-hidden"
-              >
-                <div className="absolute -right-6 -top-6 w-16 h-16 bg-blue-500/20 rounded-full blur-xl group-hover:bg-blue-500/30 transition-all"></div>
-                <img src="https://cdn.worldvectorlogo.com/logos/slack-new-logo.svg" alt="Slack" className="w-10 h-10 mb-3 rounded-lg" />
-                <div className="text-blue-300 font-medium mb-2 group-hover:text-blue-200 text-base">Slack</div>
-                <div className="text-xs text-gray-400 group-hover:text-gray-300">Generate Slack alternatives page</div>
-                <div className="absolute bottom-3 right-3">
-                  <ArrowRightOutlined className="text-blue-400/50 group-hover:text-blue-300 transition-all" />
-                </div>
-              </div>
-              
-              <div 
-                onClick={() => {
-                  setUserInput("figma.com");
-                  initializeChat("https://figma.com");
-                }}
-                className="bg-gradient-to-br from-green-900/40 to-green-800/20 backdrop-blur-sm p-5 rounded-xl 
-                         border border-green-500/30 hover:border-green-400/50 cursor-pointer 
-                         transition-all duration-300 hover:shadow-[0_0_15px_rgba(34,197,94,0.3)] 
-                         hover:-translate-y-1 group relative overflow-hidden"
-              >
-                <div className="absolute -right-6 -top-6 w-16 h-16 bg-green-500/20 rounded-full blur-xl group-hover:bg-green-500/30 transition-all"></div>
-                <div className="w-10 h-10 mb-3 flex items-center justify-center bg-white/90 rounded-lg">
-                  <svg viewBox="0 0 38 57" className="w-7 h-7" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M19 28.5C19 25.9804 20.0009 23.5641 21.7825 21.7825C23.5641 20.0009 25.9804 19 28.5 19C31.0196 19 33.4359 20.0009 35.2175 21.7825C36.9991 23.5641 38 25.9804 38 28.5C38 31.0196 36.9991 33.4359 35.2175 35.2175C33.4359 36.9991 31.0196 38 28.5 38C25.9804 38 23.5641 36.9991 21.7825 35.2175C20.0009 33.4359 19 31.0196 19 28.5Z" fill="#1ABCFE"/>
-                    <path d="M0 47.5C0 44.9804 1.00089 42.5641 2.78249 40.7825C4.56408 39.0009 6.98044 38 9.5 38H19V47.5C19 50.0196 17.9991 52.4359 16.2175 54.2175C14.4359 55.9991 12.0196 57 9.5 57C6.98044 57 4.56408 55.9991 2.78249 54.2175C1.00089 52.4359 0 50.0196 0 47.5Z" fill="#0ACF83"/>
-                    <path d="M19 0V19H28.5C31.0196 19 33.4359 17.9991 35.2175 16.2175C36.9991 14.4359 38 12.0196 38 9.5C38 6.98044 36.9991 4.56408 35.2175 2.78249C33.4359 1.00089 31.0196 0 28.5 0H19Z" fill="#FF7262"/>
-                    <path d="M0 9.5C0 12.0196 1.00089 14.4359 2.78249 16.2175C4.56408 17.9991 6.98044 19 9.5 19H19V0H9.5C6.98044 0 4.56408 1.00089 2.78249 2.78249C1.00089 4.56408 0 6.98044 0 9.5Z" fill="#F24E1E"/>
-                    <path d="M0 28.5C0 31.0196 1.00089 33.4359 2.78249 35.2175C4.56408 36.9991 6.98044 38 9.5 38H19V19H9.5C6.98044 19 4.56408 20.0009 2.78249 21.7825C1.00089 23.5641 0 25.9804 0 28.5Z" fill="#A259FF"/>
-                  </svg>
-                </div>
-                <div className="text-green-300 font-medium mb-2 group-hover:text-green-200 text-base">Figma</div>
-                <div className="text-xs text-gray-400 group-hover:text-gray-300">Generate Figma alternatives page</div>
+                <div className="text-green-300 font-medium mb-2 group-hover:text-green-200 text-base">HIX</div>
+                <div className="text-xs text-gray-400 group-hover:text-gray-300">Analyze HIX alternatives</div>
                 <div className="absolute bottom-3 right-3">
                   <ArrowRightOutlined className="text-green-400/50 group-hover:text-green-300 transition-all" />
                 </div>
@@ -665,28 +631,44 @@ const ResearchTool = () => {
               
               <div 
                 onClick={() => {
-                  setUserInput("clickup.com");
-                  initializeChat("https://clickup.com");
+                  setUserInput("pipiads.com");
+                  initializeChat("https://pipiads.com");
                 }}
-                className="bg-gradient-to-br from-orange-900/40 to-orange-800/20 backdrop-blur-sm p-5 rounded-xl 
-                         border border-orange-500/30 hover:border-orange-400/50 cursor-pointer 
-                         transition-all duration-300 hover:shadow-[0_0_15px_rgba(249,115,22,0.3)] 
+                className="bg-gradient-to-br from-emerald-800/40 to-emerald-700/20 backdrop-blur-sm p-5 rounded-xl 
+                         border border-emerald-600/30 hover:border-emerald-500/50 cursor-pointer 
+                         transition-all duration-300 hover:shadow-[0_0_15px_rgba(5,150,105,0.3)] 
                          hover:-translate-y-1 group relative overflow-hidden"
               >
-                <div className="absolute -right-6 -top-6 w-16 h-16 bg-orange-500/20 rounded-full blur-xl group-hover:bg-orange-500/30 transition-all"></div>
+                <div className="absolute -right-6 -top-6 w-16 h-16 bg-emerald-600/20 rounded-full blur-xl group-hover:bg-emerald-600/30 transition-all"></div>
+                <img src="/images/pipiads.png" alt="PiPiAds" className="w-10 h-10 mb-3 rounded-lg" />
+                <div className="text-emerald-400 font-medium mb-2 group-hover:text-emerald-300 text-base">PiPiAds</div>
+                <div className="text-xs text-gray-400 group-hover:text-gray-300">Explore PiPiAds alternatives</div>
+                <div className="absolute bottom-3 right-3">
+                  <ArrowRightOutlined className="text-emerald-500/50 group-hover:text-emerald-400 transition-all" />
+                </div>
+              </div>
+              
+              <div 
+                onClick={() => {
+                  setUserInput("jtracking.io");
+                  initializeChat("https://jtracking.io");
+                }}
+                className="bg-gradient-to-br from-blue-900/40 to-blue-800/20 backdrop-blur-sm p-5 rounded-xl 
+                         border border-blue-500/30 hover:border-blue-400/50 cursor-pointer 
+                         transition-all duration-300 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] 
+                         hover:-translate-y-1 group relative overflow-hidden"
+              >
+                <div className="absolute -right-6 -top-6 w-16 h-16 bg-blue-500/20 rounded-full blur-xl group-hover:bg-blue-500/30 transition-all"></div>
                 <div className="w-10 h-10 mb-3 flex items-center justify-center bg-white/90 rounded-lg">
-                  <svg viewBox="0 0 24 24" className="w-7 h-7" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="#7B68EE"/>
-                    <path d="M2 17L12 22L22 17V7L12 12L2 7V17Z" fill="#7B68EE"/>
-                    <path d="M12 22V12" stroke="#7B68EE" strokeWidth="2"/>
-                    <path d="M17 19.5V9.5" stroke="#7B68EE" strokeWidth="2"/>
-                    <path d="M7 19.5V9.5" stroke="#7B68EE" strokeWidth="2"/>
+                  {/* Inline SVG for J icon */}
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#3B82F6" className="w-7 h-7">
+                    <path d="M16 4h-2v12c0 1.1-.9 2-2 2H8v2h4c2.21 0 4-1.79 4-4V4z"/>
                   </svg>
                 </div>
-                <div className="text-orange-300 font-medium mb-2 group-hover:text-orange-200 text-base">ClickUp</div>
-                <div className="text-xs text-gray-400 group-hover:text-gray-300">Generate ClickUp alternatives page</div>
+                <div className="text-blue-300 font-medium mb-2 group-hover:text-blue-200 text-base">JTracking</div>
+                <div className="text-xs text-gray-400 group-hover:text-gray-300">View JTracking alternatives</div>
                 <div className="absolute bottom-3 right-3">
-                  <ArrowRightOutlined className="text-orange-400/50 group-hover:text-orange-300 transition-all" />
+                  <ArrowRightOutlined className="text-blue-400/50 group-hover:text-blue-300 transition-all" />
                 </div>
               </div>
             </div>
@@ -694,7 +676,7 @@ const ResearchTool = () => {
             <div className="mt-8 text-center">
               <div className="inline-flex items-center px-4 py-2 bg-white/10 rounded-full text-xs text-gray-300">
                 <InfoCircleOutlined className="mr-2 text-blue-400" />
-                Click any card to start analyzing that product
+                Click any card to view alternative page performance of that product
               </div>
             </div>
           </div>
@@ -702,13 +684,6 @@ const ResearchTool = () => {
       </div>
     );
   };
-
-  useEffect(() => {
-    if (!initialLoading) {
-      // 移除自动初始化
-      // initializeChat(); // 注释掉这行
-    }
-  }, [initialLoading]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -801,13 +776,13 @@ const ResearchTool = () => {
 
   const initializeChat = async (userInput) => {
     try {
-      // 1. 淡出表单
+      // 1. Fade out form
       const formElement = document.querySelector('.initial-screen-content form');
       if (formElement) {
         formElement.classList.add('form-transition', 'fade-out');
       }
       
-      // 2. 淡出初始屏幕
+      // 2. Fade out initial screen
       setTimeout(() => {
         const initialScreenElement = document.querySelector('.initial-screen-container');
         if (initialScreenElement) {
@@ -816,7 +791,7 @@ const ResearchTool = () => {
           setTimeout(() => {
             setShowInitialScreen(false);
             
-            // 3. 显示加载动画
+            // 3. Show loading animation
             const loadingContainer = document.createElement('div');
             loadingContainer.className = 'loading-container';
             
@@ -831,7 +806,7 @@ const ResearchTool = () => {
             
             document.body.appendChild(loadingContainer);
             
-            // 4. 移除加载动画，进入聊天界面
+            // 4. Remove loading animation, enter chat interface
             setTimeout(() => {
               document.body.removeChild(loadingContainer);
             }, 1200);
@@ -843,20 +818,34 @@ const ResearchTool = () => {
       
       setLoading(true);
 
-      // 添加用户输入作为第一条消息
-      setMessages([
-        {
-          type: 'user',
-          content: userInput,
-          source: 'user'
-        }
-      ]);
+      const formattedInput = showInitialScreen && !userInput.trim().startsWith('http') 
+        ? `https://${userInput.trim()}`
+        : userInput.trim();
       
-      // 清空输入框
+      // 保存用户输入的内容用于API请求
+      const inputForAPI = formattedInput;
+      
+      // 清除输入框
       setUserInput('');
-
+      
+      // 添加用户消息
+      messageHandler.addUserMessage(formattedInput);
+      
+      // 等待用户消息处理完成
+      while (messageHandler.isProcessing) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      // 添加思考消息
+      const thinkingMessageId = messageHandler.addAgentThinkingMessage();
+      
+      // 等待思考消息处理完成
+      while (messageHandler.isProcessing) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
       const searchResponse = await apiClient.searchCompetitor(
-        userInput,
+        inputForAPI,
         deepResearchMode
       );
 
@@ -865,34 +854,34 @@ const ResearchTool = () => {
         setCurrentWebsiteId(websiteId);
         
         const greetingResponse = await apiClient.chatWithAI(
-          userInput,
+          formattedInput,
           websiteId,
         );
         
         if (greetingResponse?.code === 200 && greetingResponse.data?.answer) {
           const answer = filterMessageTags(greetingResponse.data.answer);
-          setMessages(prevMessages => [
-            ...prevMessages,
-            {
-              type: 'agent',
-              agentId: 1,
-              content: answer,
-              isThinking: false
+          
+          if (greetingResponse.data.answer.includes('[URL_GET]')) {
+            setInputDisabledDueToUrlGet(true);
+            messageHandler.updateAgentMessage(answer, thinkingMessageId);
+
+            while (messageHandler.isProcessing) {
+              await new Promise(resolve => setTimeout(resolve, 100));
             }
-          ]);
+            
+            messageHandler.addSystemMessage('Searching for competitors. Please wait a moment...');
+
+            while (messageHandler.isProcessing) {
+              await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            setCanProcessCompetitors(true);
+          } else {
+            messageHandler.updateAgentMessage(answer, thinkingMessageId);
+          }
         }
       }
     } catch (error) {
-      console.error('Initialize chat failed:', error);
-      setMessages(prevMessages => [
-        ...prevMessages,
-        {
-          type: 'agent',
-          agentId: 1,
-          content: `⚠️ Failed to initialize chat: ${error.message}`,
-          isThinking: false
-        }
-      ]);
+      messageHandler.updateAgentMessage(`⚠️ Failed to initialize chat: ${error.message}`, thinkingMessageId);
     } finally {
       setLoading(false);
     }
@@ -900,38 +889,106 @@ const ResearchTool = () => {
 
   // 初始化 SSE 连接以接收日志
   useEffect(() => {
-    console.log('Initializing SSE connection for logs');
-    const eventSource = new EventSourcePolyfill(`http://192.168.10.89:9091/events/67c6ceb6bc0093c9c79fb932-chat`, {
+    const customerId = localStorage.getItem('alternativelyCustomerId');
+    if (!customerId) {
+      return;
+    }
+    
+    const eventSource = new EventSourcePolyfill(`http://192.168.10.89:9091/events/${customerId}-chat`, {
       headers: {
         'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDM1ODIxNzYsImlhdCI6MTc0Mjk3NzM3NiwiaWQiOiI2N2M2Y2ViNmJjMDA5M2M5Yzc5ZmI5MzIiLCJyb2xlIjoiYWRtaW4iLCJ1c2VyX25hbWUiOiJoYW55dUB0ZWNoYWNjLmNvbSJ9.h-xn4pamjqyLOkOL30DbMLy4dxf5lzb34o-xcWVEqxw`
       },
-      heartbeatTimeout: 5 * 45000
+      heartbeatTimeout: 15 * 45000
     });
 
     eventSource.onopen = () => {
-      console.log('SSE connection for logs opened');
     };
 
     eventSource.onmessage = (event) => {
-      console.log('Received log from server:', event.data);
       try {
         const logData = JSON.parse(event.data);
+        console.log('Received log from server:', logData);
         setLogs(prevLogs => [...prevLogs, logData]);
       } catch (error) {
-        console.error('Error parsing log data:', error);
       }
     };
 
     eventSource.onerror = (error) => {
-      console.error('SSE connection for logs failed:', error);
       eventSource.close();
     };
 
     return () => {
-      console.log('Closing SSE connection for logs');
       eventSource.close();
     };
   }, []);
+
+  useEffect(() => {
+    // 检查是否有符合条件的 API 请求
+    const apiLog = logs.find(log => 
+      log.type === 'API' && 
+      log.step === 'GET_RESULT_COMPETITORS_SEMRUSH_API' &&
+      log.content?.status === 'finished'
+    );
+
+    if (apiLog && apiLog.content?.data && !competitorListProcessedRef.current && canProcessCompetitors) {
+      competitorListProcessedRef.current = true; 
+      const competitors = apiLog.content.data.map(domain => ({
+        name: domain,
+        url: `https://${domain}`
+      }));
+
+      handleCompetitorListRequest(competitors);
+    }
+  }, [logs, canProcessCompetitors]);
+  // 组件卸载时重置标记
+  useEffect(() => {
+    return () => {
+      competitorListProcessedRef.current = false;
+    };
+  }, []);
+
+  // 修改 useEffect 来检查日志中的 resultId
+  useEffect(() => {
+    // 找到最新的包含 resultId 的 Codes 类型日志
+    const codesLog = logs.find(log => 
+      log.type === 'Codes' && 
+      log.content?.resultId &&
+      log.id !== lastProcessedLogIdRef.current // 确保不是已处理的日志
+    );
+
+    if (codesLog && codesLog.content?.resultId) {
+      // 记录这个日志 ID 已经被处理过
+      lastProcessedLogIdRef.current = codesLog.id;
+      
+      console.log('Opening result page for log ID:', codesLog.id, 'with resultId:', codesLog.content.resultId);
+      
+      // 使用您原有的 URL 拼接方法
+      const resultPageUrl = `http://localhost:3001/en/${codesLog.content.resultId}`;
+      
+      // 检查是否已经有相同 URL 的标签页
+      const existingTab = browserTabs.find(tab => tab.url === resultPageUrl);
+      if (existingTab) {
+        // 如果已存在，只切换到该标签页
+        setActiveTab(existingTab.id);
+        setShowBrowser(true);
+        return;
+      }
+      
+      // 创建新标签页
+      const newTab = {
+        id: `result-${Date.now()}`,
+        title: `Result Page`,
+        url: resultPageUrl
+      };
+      
+      // 添加新标签页并设置为活动标签
+      setBrowserTabs(prev => [...prev, newTab]);
+      setActiveTab(newTab.id);
+      
+      // 自动切换到浏览器界面
+      setShowBrowser(true);
+    }
+  }, [logs, browserTabs]);
 
   if (initialLoading) {
     return (
@@ -1016,7 +1073,7 @@ const ResearchTool = () => {
                       : "Enter your product URL (e.g., example.com)"}
                     value={userInput}
                     onChange={(e) => setUserInput(e.target.value)}
-                    disabled={loading || isMessageSending}
+                    disabled={loading || isMessageSending || inputDisabledDueToUrlGet}
                     className="bg-white/10 border border-gray-300/30 rounded-xl text-sm"
                     style={{ 
                       color: 'black', 
@@ -1024,22 +1081,10 @@ const ResearchTool = () => {
                       height: '48px',
                       transition: 'all 0.3s ease'
                     }}
-                    prefix={
-                      <div className="flex items-center">
-                        <SearchOutlined 
-                          style={{ 
-                            color: 'rgba(0, 0, 0, 0.45)',
-                            fontSize: '16px',
-                            marginRight: '4px'
-                          }} 
-                        />
-                        <span className="text-gray-500 font-mono text-xs">https://</span>
-                      </div>
-                    }
                     onPressEnter={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      if (userInput.trim()) {
+                      if (userInput.trim() && !inputDisabledDueToUrlGet) {
                         handleUserInput(e);
                       }
                     }}
@@ -1069,16 +1114,6 @@ const ResearchTool = () => {
                       }`}></span>
                       Deep
                     </button>
-
-                    <button
-                    onClick={handleCompetitorListRequest}
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 px-3 py-1.5 text-xs bg-green-500/20 hover:bg-green-500/30 text-green-300 rounded-full 
-                             backdrop-blur-sm transition-all flex items-center gap-1.5 border border-green-500/30"
-                    disabled={isMessageSending}
-                  >
-                    <SendOutlined className="w-3.5 h-3.5" />
-                    Mock Getting Competitors
-                  </button>
 
                     <span className="text-xs text-purple-300/80">
                       {deepResearchMode ? (
@@ -1114,7 +1149,9 @@ const ResearchTool = () => {
               </button>
             </div>
             <BrowserSimulator 
-              style={{ height: '600px' }}
+              tabs={browserTabs}
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
             />
           </div>
           
