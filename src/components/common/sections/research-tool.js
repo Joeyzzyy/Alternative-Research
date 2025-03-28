@@ -887,10 +887,13 @@ const ResearchTool = () => {
     }
   };
 
-  // 初始化 SSE 连接以接收日志
+  // Initialize SSE connection to receive logs only when user is logged in
   useEffect(() => {
     const customerId = localStorage.getItem('alternativelyCustomerId');
-    if (!customerId) {
+    const isLoggedIn = localStorage.getItem('alternativelyIsLoggedIn') === 'true';
+    
+    // Only connect to SSE if user is logged in and has a customer ID
+    if (!isLoggedIn || !customerId) {
       return;
     }
     
@@ -902,6 +905,7 @@ const ResearchTool = () => {
     });
 
     eventSource.onopen = () => {
+      console.log('SSE connection established');
     };
 
     eventSource.onmessage = (event) => {
@@ -910,14 +914,17 @@ const ResearchTool = () => {
         console.log('Received log from server:', logData);
         setLogs(prevLogs => [...prevLogs, logData]);
       } catch (error) {
+        console.error('Error parsing SSE message:', error);
       }
     };
 
     eventSource.onerror = (error) => {
+      console.error('SSE connection error:', error);
       eventSource.close();
     };
 
     return () => {
+      console.log('Closing SSE connection');
       eventSource.close();
     };
   }, []);
