@@ -121,18 +121,17 @@ export default function Header() {
     
     if (googleAuthCode && googleAuthState === 'login_alternatively') {
       // Handle Google login callback
-      handleGoogleLoginCallback(googleAuthCode);
+      handleGoogleLoginCallback(googleAuthCode, googleAuthState);
     }
   }, []);
 
   // Handle Google login callback
-  const handleGoogleLoginCallback = async (code) => {
+  const handleGoogleLoginCallback = async (code, state) => {
     try {
       setLoading(true);
       showNotification('Completing Google login...', 'info');
       
-      // Call API to verify Google login
-      const response = await apiClient.googleLoginCallback(code);
+      const response = await apiClient.googleCallback(code, state);
       
       if (response && response.accessToken) {
         // Store user data
