@@ -129,7 +129,7 @@ export default function Header() {
   const handleGoogleLoginCallback = async (code, state) => {
     try {
       setLoading(true);
-      showNotification('正在完成谷歌登录...', 'info');
+      showNotification('Completing Google login...', 'info');
       
       const response = await apiClient.googleCallback(code, state);
       
@@ -147,7 +147,7 @@ export default function Header() {
         // 使用 setTimeout 确保数据已保存后再刷新
         setTimeout(() => {
           window.history.replaceState({}, document.title, window.location.pathname);
-          window.location.href = window.location.pathname; // 使用 href 而不是 reload
+          window.location.href = window.location.pathname; 
         }, 500);
       } else {
         showNotification('Google login verification failed', 'error');
