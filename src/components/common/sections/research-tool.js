@@ -963,7 +963,7 @@ const ResearchTool = () => {
       console.log('Opening result page for log ID:', codesLog.id, 'with resultId:', codesLog.content.resultId);
       
       // 使用您原有的 URL 拼接方法
-      const resultPageUrl = `http://localhost:3001/en/${codesLog.content.resultId}`;
+      const resultPageUrl = `http://preview.websitelm.site/en/${codesLog.content.resultId}`;
       
       // 检查是否已经有相同 URL 的标签页
       const existingTab = browserTabs.find(tab => tab.url === resultPageUrl);
