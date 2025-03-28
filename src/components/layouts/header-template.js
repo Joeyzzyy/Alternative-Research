@@ -129,11 +129,12 @@ export default function Header() {
   const handleGoogleLoginCallback = async (code, state) => {
     try {
       setLoading(true);
-      showNotification('Completing Google login...', 'info');
+      showNotification('正在完成谷歌登录...', 'info');
       
       const response = await apiClient.googleCallback(code, state);
       
-      if (response) {
+      if (response && response.accessToken) {
+        // 确保先保存数据再刷新页面
         localStorage.setItem('alternativelyAccessToken', response.accessToken);
         localStorage.setItem('alternativelyIsLoggedIn', 'true');
         localStorage.setItem('alternativelyCustomerEmail', response.data.email);
@@ -142,14 +143,18 @@ export default function Header() {
         setIsLoggedIn(true);
         setUserEmail(response.data.email);
         showNotification('Google login successful!', 'success');
-        window.history.replaceState({}, document.title, window.location.pathname);
-        window.location.reload();
+        
+        // 使用 setTimeout 确保数据已保存后再刷新
+        setTimeout(() => {
+          window.history.replaceState({}, document.title, window.location.pathname);
+          window.location.href = window.location.pathname; // 使用 href 而不是 reload
+        }, 500);
       } else {
         showNotification('Google login verification failed', 'error');
       }
     } catch (error) {
       console.error("Google login callback handling failed:", error);
-      showNotification('Google login verification failed, please try again later', 'error');
+      showNotification('Google login verification failed', 'error');
     } finally {
       setLoading(false);
     }
