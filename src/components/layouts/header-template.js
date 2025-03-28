@@ -140,16 +140,10 @@ export default function Header() {
         localStorage.setItem('alternativelyCustomerEmail', response.data.email);
         localStorage.setItem('alternativelyCustomerId', response.data.customerId);
         
-        // Update state
         setIsLoggedIn(true);
         setUserEmail(response.data.email);
-        
         showNotification('Google login successful!', 'success');
-        
-        // Clear URL parameters
         window.history.replaceState({}, document.title, window.location.pathname);
-        
-        // Refresh page to apply new login state
         window.location.reload();
       } else {
         showNotification('Google login verification failed', 'error');
