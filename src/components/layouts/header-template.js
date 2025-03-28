@@ -134,7 +134,6 @@ export default function Header() {
       const response = await apiClient.googleCallback(code, state);
       
       if (response) {
-        // Store user data
         localStorage.setItem('alternativelyAccessToken', response.accessToken);
         localStorage.setItem('alternativelyIsLoggedIn', 'true');
         localStorage.setItem('alternativelyCustomerEmail', response.data.email);
@@ -157,7 +156,6 @@ export default function Header() {
   };
 
   const handleLogout = () => {
-    // Clear login status with alternatively prefix
     localStorage.removeItem('alternativelyAccessToken');
     localStorage.removeItem('alternativelyIsLoggedIn');
     localStorage.removeItem('alternativelyCustomerEmail');

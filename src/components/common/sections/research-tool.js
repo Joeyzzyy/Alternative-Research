@@ -887,45 +887,82 @@ const ResearchTool = () => {
     }
   };
 
-  // Initialize SSE connection to receive logs only when user is logged in
+  // 修改 SSE 连接的 useEffect
   useEffect(() => {
     const customerId = localStorage.getItem('alternativelyCustomerId');
+    const token = localStorage.getItem('alternativelyAccessToken');
     const isLoggedIn = localStorage.getItem('alternativelyIsLoggedIn') === 'true';
     
-    // Only connect to SSE if user is logged in and has a customer ID
-    if (!isLoggedIn || !customerId) {
+    // 只有在用户登录且有token和customerId时才连接
+    if (!isLoggedIn || !customerId || !token) {
       return;
     }
     
-    const eventSource = new EventSourcePolyfill(`https://api.websitelm.com/events/${customerId}-chat`, {
-      headers: {
-        'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDM1ODIxNzYsImlhdCI6MTc0Mjk3NzM3NiwiaWQiOiI2N2M2Y2ViNmJjMDA5M2M5Yzc5ZmI5MzIiLCJyb2xlIjoiYWRtaW4iLCJ1c2VyX25hbWUiOiJoYW55dUB0ZWNoYWNjLmNvbSJ9.h-xn4pamjqyLOkOL30DbMLy4dxf5lzb34o-xcWVEqxw`
-      },
-      heartbeatTimeout: 15 * 45000
-    });
+    let eventSource = null;
+    
+    const connectSSE = () => {
+      // 关闭现有连接
+      if (eventSource) {
+        eventSource.close();
+      }
+      
+      // 获取最新token
+      const currentToken = localStorage.getItem('alternativelyAccessToken');
+      if (!currentToken) return;
+      
+      eventSource = new EventSourcePolyfill(`https://api.websitelm.com/events/${customerId}-chat`, {
+        headers: {
+          'Authorization': `Bearer ${currentToken}`
+        },
+        heartbeatTimeout: 15 * 45000
+      });
 
-    eventSource.onopen = () => {
-      console.log('SSE connection established');
+      eventSource.onopen = () => {
+        console.log('SSE connection established');
+      };
+
+      eventSource.onmessage = (event) => {
+        try {
+          const logData = JSON.parse(event.data);
+          console.log('Received log from server:', logData);
+          setLogs(prevLogs => [...prevLogs, logData]);
+        } catch (error) {
+          console.error('Error parsing SSE message:', error);
+        }
+      };
+
+      eventSource.onerror = (error) => {
+        console.error('SSE connection error:', error);
+        
+        // 检查是否是401错误
+        if (error.status === 401) {
+          console.log('SSE connection unauthorized, token may be invalid');
+          // 不需要额外处理，因为API拦截器会清除token
+        }
+        
+        eventSource.close();
+      };
     };
-
-    eventSource.onmessage = (event) => {
-      try {
-        const logData = JSON.parse(event.data);
-        console.log('Received log from server:', logData);
-        setLogs(prevLogs => [...prevLogs, logData]);
-      } catch (error) {
-        console.error('Error parsing SSE message:', error);
+    
+    // 初始连接
+    connectSSE();
+    
+    // 监听token过期事件
+    const handleTokenExpired = () => {
+      console.log('Token expired, closing SSE connection');
+      if (eventSource) {
+        eventSource.close();
       }
     };
-
-    eventSource.onerror = (error) => {
-      console.error('SSE connection error:', error);
-      eventSource.close();
-    };
-
+    
+    window.addEventListener('tokenExpired', handleTokenExpired);
+    
     return () => {
       console.log('Closing SSE connection');
-      eventSource.close();
+      if (eventSource) {
+        eventSource.close();
+      }
+      window.removeEventListener('tokenExpired', handleTokenExpired);
     };
   }, []);
 
