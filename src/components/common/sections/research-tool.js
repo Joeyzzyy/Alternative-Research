@@ -899,6 +899,9 @@ const ResearchTool = () => {
     }
     
     let eventSource = null;
+    let retryCount = 0;
+    let retryTimeout = null;
+    const MAX_RETRY_COUNT = 5;
     
     const connectSSE = () => {
       // 关闭现有连接
@@ -919,6 +922,8 @@ const ResearchTool = () => {
 
       eventSource.onopen = () => {
         console.log('SSE connection established');
+        // 连接成功后重置重试计数
+        retryCount = 0;
       };
 
       eventSource.onmessage = (event) => {
@@ -934,13 +939,29 @@ const ResearchTool = () => {
       eventSource.onerror = (error) => {
         console.error('SSE connection error:', error);
         
+        // 关闭当前连接
+        eventSource.close();
+        
         // 检查是否是401错误
         if (error.status === 401) {
           console.log('SSE connection unauthorized, token may be invalid');
           // 不需要额外处理，因为API拦截器会清除token
+          return;
         }
         
-        eventSource.close();
+        // 实现指数退避重试策略
+        if (retryCount < MAX_RETRY_COUNT) {
+          const delay = Math.min(1000 * Math.pow(2, retryCount), 30000); // 最大30秒
+          console.log(`Retrying SSE connection in ${delay}ms (attempt ${retryCount + 1}/${MAX_RETRY_COUNT})`);
+          
+          clearTimeout(retryTimeout);
+          retryTimeout = setTimeout(() => {
+            retryCount++;
+            connectSSE();
+          }, delay);
+        } else {
+          console.log(`Maximum retry attempts (${MAX_RETRY_COUNT}) reached. Giving up.`);
+        }
       };
     };
     
@@ -955,14 +976,32 @@ const ResearchTool = () => {
       }
     };
     
+    // 添加网络状态监听，在网络恢复时重连
+    const handleNetworkChange = () => {
+      if (navigator.onLine) {
+        console.log('Network connection restored, reconnecting SSE');
+        connectSSE();
+      } else {
+        console.log('Network connection lost, SSE will reconnect when online');
+        if (eventSource) {
+          eventSource.close();
+        }
+      }
+    };
+    
     window.addEventListener('tokenExpired', handleTokenExpired);
+    window.addEventListener('online', handleNetworkChange);
+    window.addEventListener('offline', handleNetworkChange);
     
     return () => {
       console.log('Closing SSE connection');
       if (eventSource) {
         eventSource.close();
       }
+      clearTimeout(retryTimeout);
       window.removeEventListener('tokenExpired', handleTokenExpired);
+      window.removeEventListener('online', handleNetworkChange);
+      window.removeEventListener('offline', handleNetworkChange);
     };
   }, []);
 
