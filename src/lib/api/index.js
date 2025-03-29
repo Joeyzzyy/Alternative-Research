@@ -253,6 +253,19 @@ const getAlternativeWebsiteList = async () => {
   }
 };
 
+// 新增获取生成信息历史记录接口
+const getAlternativeWebsiteHistory = async (websiteId) => {
+  try {
+    const response = await apiClient.get('/alternatively/website/history', {
+      params: { websiteId }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Failed to get alternative website history:', error);
+    throw error;
+  }
+};
+
 apiClient.getCompetitorResearch = getCompetitorResearch;
 apiClient.login = login;
 apiClient.register = register;
@@ -269,5 +282,6 @@ apiClient.searchCompetitor = searchCompetitor;
 apiClient.chatWithAI = chatWithAI;
 apiClient.changeStyle = changeStyle;
 apiClient.getAlternativeWebsiteList = getAlternativeWebsiteList;
+apiClient.getAlternativeWebsiteHistory = getAlternativeWebsiteHistory;
 
 export default apiClient;
