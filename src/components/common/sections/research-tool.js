@@ -16,7 +16,7 @@ const TAG_FILTERS = {
 
 const ALTERNATIVELY_LOGO = '/images/alternatively-logo.png'; // 假设这是Alternatively的logo路径
 
-// 背景配置
+// 修改背景配置，增强吉卜力风格
 const BACKGROUNDS = {
   DEFAULT: {
     type: 'gradient',
@@ -26,7 +26,10 @@ const BACKGROUNDS = {
   GHIBLI: {
     type: 'image',
     value: 'url("/images/GHIBLI.png")',
-    overlay: 'bg-slate-950/70 backdrop-blur-sm'
+    overlay: 'bg-slate-950/60 backdrop-blur-sm',
+    buttonStyle: 'bg-amber-500/30 hover:bg-amber-500/40 text-amber-200 border-amber-500/40 hover:border-amber-400/60',
+    inputStyle: 'border-amber-400/30 focus:border-amber-300/50 shadow-amber-700/20',
+    cardStyle: 'border-amber-500/30 hover:border-amber-400/50 shadow-amber-700/20'
   }
 };
 
@@ -946,6 +949,27 @@ const ResearchTool = () => {
     }
   }, [logs, browserTabs]);
 
+  // 获取当前主题的按钮样式
+  const getButtonStyle = () => {
+    return currentBackground === 'GHIBLI' 
+      ? BACKGROUNDS.GHIBLI.buttonStyle 
+      : 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border-blue-500/30';
+  };
+  
+  // 获取当前主题的输入框样式
+  const getInputStyle = () => {
+    return currentBackground === 'GHIBLI'
+      ? BACKGROUNDS.GHIBLI.inputStyle
+      : 'border-gray-300/30';
+  };
+  
+  // 获取当前主题的卡片样式
+  const getCardStyle = () => {
+    return currentBackground === 'GHIBLI'
+      ? BACKGROUNDS.GHIBLI.cardStyle
+      : '';
+  };
+
   if (initialLoading) {
     return (
       <div className="w-full min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 
@@ -978,14 +1002,14 @@ const ResearchTool = () => {
           currentBackground === 'GHIBLI' ? 'bg-transparent' : 'bg-slate-900/80 backdrop-blur-md'
         }`}>
           <div className={`text-center mb-8 ${currentBackground === 'GHIBLI' ? 'text-shadow' : ''}`}>
-            <h1 className={`text-4xl font-bold text-white mb-6 ${currentBackground === 'GHIBLI' ? 'drop-shadow-lg' : ''}`}>
-              Welcome to <span className="text-blue-400">Alternatively</span>
+            <h1 className={`text-4xl font-bold ${currentBackground === 'GHIBLI' ? 'text-amber-100' : 'text-white'} mb-6 ${currentBackground === 'GHIBLI' ? 'drop-shadow-lg' : ''}`}>
+              Welcome to <span className={currentBackground === 'GHIBLI' ? 'text-amber-400' : 'text-blue-400'}>Alternatively</span>
               
               <button 
                 onClick={toggleBackground}
-                className="ml-4 inline-flex items-center px-3 py-1.5 text-xs bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-full 
-                         backdrop-blur-sm transition-all gap-1.5 border border-blue-500/30
-                         shadow-lg hover:bg-blue-500/50 align-middle"
+                className={`ml-4 inline-flex items-center px-3 py-1.5 text-xs ${getButtonStyle()} rounded-full 
+                         backdrop-blur-sm transition-all gap-1.5 border
+                         shadow-lg hover:bg-blue-500/50 align-middle`}
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
@@ -993,7 +1017,7 @@ const ResearchTool = () => {
                 {currentBackground === 'GHIBLI' ? 'Switch to Default' : 'Switch to Ghibli'}
               </button>
             </h1>
-            <p className={`text-lg text-gray-300 mb-8 ${currentBackground === 'GHIBLI' ? 'drop-shadow-md' : ''}`}>
+            <p className={`text-lg ${currentBackground === 'GHIBLI' ? 'text-amber-200/90' : 'text-gray-300'} mb-8 ${currentBackground === 'GHIBLI' ? 'drop-shadow-md' : ''}`}>
               Which product would you like to analyze and create an SEO-friendly Alternatively page for?
             </p>
           </div>
@@ -1028,17 +1052,17 @@ const ResearchTool = () => {
                     // Clear validation error when user types
                     if (validationError) setValidationError('');
                   }}
-                  className={`bg-white/10 border rounded-xl text-lg w-full ${validationError ? 'border-red-500' : 'border-gray-300/30'} ${currentBackground === 'GHIBLI' ? 'shadow-xl' : ''}`}
+                  className={`bg-white/10 border rounded-xl text-lg w-full ${validationError ? 'border-red-500' : getInputStyle()} ${currentBackground === 'GHIBLI' ? 'shadow-xl' : ''}`}
                   style={{ 
-                    color: 'black', 
-                    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                    color: currentBackground === 'GHIBLI' ? '#433422' : 'black', 
+                    backgroundColor: currentBackground === 'GHIBLI' ? 'rgba(253, 230, 190, 0.85)' : 'rgba(255, 255, 255, 0.8)',
                     height: '80px',
                     paddingRight: '120px',
                     transition: 'all 0.3s ease',
-                    boxShadow: currentBackground === 'GHIBLI' ? '0 10px 25px -5px rgba(0, 0, 0, 0.3)' : ''
+                    boxShadow: currentBackground === 'GHIBLI' ? '0 10px 25px -5px rgba(120, 80, 40, 0.3)' : ''
                   }}
                   prefix={
-                    <span className="text-gray-500 font-mono" style={{ marginLeft: '16px' }}>https://</span>
+                    <span className={`font-mono ${currentBackground === 'GHIBLI' ? 'text-amber-800/70' : 'text-gray-500'}`} style={{ marginLeft: '16px' }}>https://</span>
                   }
                   status={validationError ? "error" : ""}
                 />
@@ -1052,11 +1076,16 @@ const ResearchTool = () => {
               <button
                 type="submit"
                 className={`absolute right-2 top-1/2 transform -translate-y-1/2 z-10 px-6 py-4 text-base 
-                         bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-xl 
+                         ${currentBackground === 'GHIBLI' 
+                           ? 'bg-gradient-to-r from-amber-600 to-amber-700 text-amber-100 border-amber-400/50 hover:border-amber-300 shadow-[0_0_15px_rgba(217,119,6,0.5)] hover:shadow-[0_0_25px_rgba(217,119,6,0.7)]' 
+                           : 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white border-blue-400/50 hover:border-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.5)] hover:shadow-[0_0_25px_rgba(59,130,246,0.7)]'
+                         } rounded-xl 
                          transition-all duration-300 flex items-center gap-2 
-                         border border-blue-400/50 hover:border-blue-300
-                         shadow-[0_0_15px_rgba(59,130,246,0.5)] hover:shadow-[0_0_25px_rgba(59,130,246,0.7)]
-                         hover:scale-105 hover:from-blue-500 hover:to-indigo-600
+                         border hover:scale-105 
+                         ${currentBackground === 'GHIBLI' 
+                           ? 'hover:from-amber-500 hover:to-amber-600' 
+                           : 'hover:from-blue-500 hover:to-indigo-600'
+                         }
                          after:content-[''] after:absolute after:inset-0 after:bg-gradient-to-r 
                          after:from-transparent after:via-white/20 after:to-transparent 
                          after:translate-x-[-200%] hover:after:translate-x-[200%] after:transition-all after:duration-1000
@@ -1080,26 +1109,29 @@ const ResearchTool = () => {
           )}
           
           <div className="mt-12 max-w-4xl mx-auto">
-            <h3 className={`text-xl font-semibold text-white mb-6 text-center ${currentBackground === 'GHIBLI' ? 'drop-shadow-lg' : ''}`}>Popular Product Analysis Examples</h3>
+            <h3 className={`text-xl font-semibold ${currentBackground === 'GHIBLI' ? 'text-amber-100' : 'text-white'} mb-6 text-center ${currentBackground === 'GHIBLI' ? 'drop-shadow-lg' : ''}`}>Popular Product Analysis Examples</h3>
             <div className="grid grid-cols-3 gap-6">
               <div 
                 onClick={() => {
                   setUserInput("hix.ai");
                   initializeChat("https://hix.ai");
                 }}
-                className="bg-gradient-to-br from-green-400/40 to-green-300/20 backdrop-blur-sm p-5 rounded-xl 
-                         border border-green-400/30 hover:border-green-300/50 cursor-pointer 
-                         transition-all duration-300 hover:shadow-[0_0_15px_rgba(74,222,128,0.3)] 
-                         hover:-translate-y-1 group relative overflow-hidden"
+                className={`${currentBackground === 'GHIBLI' 
+                  ? 'bg-gradient-to-br from-amber-400/40 to-amber-300/20 border-amber-400/30 hover:border-amber-300/50 hover:shadow-[0_0_15px_rgba(217,119,6,0.3)]' 
+                  : 'bg-gradient-to-br from-green-400/40 to-green-300/20 border-green-400/30 hover:border-green-300/50 hover:shadow-[0_0_15px_rgba(74,222,128,0.3)]'
+                } backdrop-blur-sm p-5 rounded-xl 
+                         border cursor-pointer 
+                         transition-all duration-300 
+                         hover:-translate-y-1 group relative overflow-hidden`}
               >
-                <div className="absolute -right-6 -top-6 w-16 h-16 bg-green-400/20 rounded-full blur-xl group-hover:bg-green-400/30 transition-all"></div>
+                <div className="absolute -right-6 -top-6 w-16 h-16 bg-amber-400/20 rounded-full blur-xl group-hover:bg-amber-400/30 transition-all"></div>
                 <div className="w-10 h-10 mb-3 flex items-center justify-center bg-white/90 rounded-lg">
                   <img src="/images/hix.png" alt="HIX" className="w-7 h-7" />
                 </div>
-                <div className="text-green-300 font-medium mb-2 group-hover:text-green-200 text-base">HIX</div>
+                <div className="text-amber-300 font-medium mb-2 group-hover:text-amber-200 text-base">HIX</div>
                 <div className="text-xs text-gray-400 group-hover:text-gray-300">Analyze HIX alternatives</div>
                 <div className="absolute bottom-3 right-3">
-                  <ArrowRightOutlined className="text-green-400/50 group-hover:text-green-300 transition-all" />
+                  <ArrowRightOutlined className="text-amber-400/50 group-hover:text-amber-300 transition-all" />
                 </div>
               </div>
               
@@ -1108,17 +1140,20 @@ const ResearchTool = () => {
                   setUserInput("pipiads.com");
                   initializeChat("https://pipiads.com");
                 }}
-                className="bg-gradient-to-br from-emerald-800/40 to-emerald-700/20 backdrop-blur-sm p-5 rounded-xl 
-                         border border-emerald-600/30 hover:border-emerald-500/50 cursor-pointer 
-                         transition-all duration-300 hover:shadow-[0_0_15px_rgba(5,150,105,0.3)] 
-                         hover:-translate-y-1 group relative overflow-hidden"
+                className={`${currentBackground === 'GHIBLI' 
+                  ? 'bg-gradient-to-br from-amber-800/40 to-amber-700/20 border-amber-600/30 hover:border-amber-500/50 hover:shadow-[0_0_15px_rgba(217,119,6,0.3)]' 
+                  : 'bg-gradient-to-br from-emerald-800/40 to-emerald-700/20 border-emerald-600/30 hover:border-emerald-500/50 hover:shadow-[0_0_15px_rgba(5,150,105,0.3)]'
+                } backdrop-blur-sm p-5 rounded-xl 
+                         border cursor-pointer 
+                         transition-all duration-300 
+                         hover:-translate-y-1 group relative overflow-hidden`}
               >
-                <div className="absolute -right-6 -top-6 w-16 h-16 bg-emerald-600/20 rounded-full blur-xl group-hover:bg-emerald-600/30 transition-all"></div>
+                <div className="absolute -right-6 -top-6 w-16 h-16 bg-amber-800/20 rounded-full blur-xl group-hover:bg-amber-800/30 transition-all"></div>
                 <img src="/images/pipiads.png" alt="PiPiAds" className="w-10 h-10 mb-3 rounded-lg" />
-                <div className="text-emerald-400 font-medium mb-2 group-hover:text-emerald-300 text-base">PiPiAds</div>
+                <div className="text-amber-400 font-medium mb-2 group-hover:text-amber-300 text-base">PiPiAds</div>
                 <div className="text-xs text-gray-400 group-hover:text-gray-300">Explore PiPiAds alternatives</div>
                 <div className="absolute bottom-3 right-3">
-                  <ArrowRightOutlined className="text-emerald-500/50 group-hover:text-emerald-400 transition-all" />
+                  <ArrowRightOutlined className="text-amber-500/50 group-hover:text-amber-400 transition-all" />
                 </div>
               </div>
               
@@ -1127,22 +1162,25 @@ const ResearchTool = () => {
                   setUserInput("jtracking.io");
                   initializeChat("https://jtracking.io");
                 }}
-                className="bg-gradient-to-br from-blue-900/40 to-blue-800/20 backdrop-blur-sm p-5 rounded-xl 
-                         border border-blue-500/30 hover:border-blue-400/50 cursor-pointer 
-                         transition-all duration-300 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] 
-                         hover:-translate-y-1 group relative overflow-hidden"
+                className={`${currentBackground === 'GHIBLI' 
+                  ? 'bg-gradient-to-br from-amber-900/40 to-amber-800/20 border-amber-500/30 hover:border-amber-400/50 hover:shadow-[0_0_15px_rgba(217,119,6,0.3)]' 
+                  : 'bg-gradient-to-br from-blue-900/40 to-blue-800/20 border-blue-500/30 hover:border-blue-400/50 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)]'
+                } backdrop-blur-sm p-5 rounded-xl 
+                         border cursor-pointer 
+                         transition-all duration-300 
+                         hover:-translate-y-1 group relative overflow-hidden`}
               >
-                <div className="absolute -right-6 -top-6 w-16 h-16 bg-blue-500/20 rounded-full blur-xl group-hover:bg-blue-500/30 transition-all"></div>
+                <div className="absolute -right-6 -top-6 w-16 h-16 bg-amber-900/20 rounded-full blur-xl group-hover:bg-amber-900/30 transition-all"></div>
                 <div className="w-10 h-10 mb-3 flex items-center justify-center bg-white/90 rounded-lg">
                   {/* Inline SVG for J icon */}
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#3B82F6" className="w-7 h-7">
                     <path d="M16 4h-2v12c0 1.1-.9 2-2 2H8v2h4c2.21 0 4-1.79 4-4V4z"/>
                   </svg>
                 </div>
-                <div className="text-blue-300 font-medium mb-2 group-hover:text-blue-200 text-base">JTracking</div>
+                <div className="text-amber-300 font-medium mb-2 group-hover:text-amber-200 text-base">JTracking</div>
                 <div className="text-xs text-gray-400 group-hover:text-gray-300">View JTracking alternatives</div>
                 <div className="absolute bottom-3 right-3">
-                  <ArrowRightOutlined className="text-blue-400/50 group-hover:text-blue-300 transition-all" />
+                  <ArrowRightOutlined className="text-amber-400/50 group-hover:text-amber-300 transition-all" />
                 </div>
               </div>
             </div>
@@ -1160,7 +1198,14 @@ const ResearchTool = () => {
   }
 
   return (
-    <ConfigProvider wave={{ disabled: true }}>
+    <ConfigProvider 
+      theme={{
+        token: {
+          colorPrimary: currentBackground === 'GHIBLI' ? '#d97706' : '#3b82f6',
+        },
+      }}
+      wave={{ disabled: true }}
+    >
       {contextHolder}
       <div className={`w-full min-h-screen ${
         currentBackground === 'GHIBLI' ? 'bg-cover bg-center bg-no-repeat' : getBackgroundClass()
@@ -1172,6 +1217,15 @@ const ResearchTool = () => {
         
         {/* 背景覆盖层 */}
         <div className={`absolute inset-0 ${getOverlayClass()}`} style={{ paddingTop: "80px" }}></div>
+        
+        {/* 添加吉卜力风格的漂浮元素 */}
+        {currentBackground === 'GHIBLI' && (
+          <>
+            <div className="absolute top-[15%] left-[10%] w-8 h-8 rounded-full bg-amber-400/20 animate-float" style={{animationDuration: '8s'}}></div>
+            <div className="absolute top-[30%] right-[15%] w-6 h-6 rounded-full bg-amber-300/30 animate-float" style={{animationDuration: '12s', animationDelay: '2s'}}></div>
+            <div className="absolute bottom-[20%] left-[20%] w-10 h-10 rounded-full bg-amber-500/20 animate-float" style={{animationDuration: '10s', animationDelay: '1s'}}></div>
+          </>
+        )}
         
         <div className="relative z-10 w-full flex flex-row gap-6 h-[calc(100vh-140px)] px-4 text-sm">
           <div className={`${showBrowser ? 'hidden' : 'w-[70%]'} relative flex flex-col`}>
@@ -1300,8 +1354,11 @@ const ResearchTool = () => {
             />
           </div>
           
-          <div className="w-[30%] bg-white/5 backdrop-blur-lg rounded-2xl border border-gray-300/20 shadow-xl 
-                          flex flex-col h-full relative">
+          <div className={`w-[30%] ${currentBackground === 'GHIBLI' 
+            ? 'bg-amber-900/10 border-amber-700/30' 
+            : 'bg-white/5 border-gray-300/20'
+          } backdrop-blur-lg rounded-2xl border shadow-xl 
+                          flex flex-col h-full relative`}>
             <div className="border-b border-gray-300/20 p-3">
               <div className="flex justify-between items-center">
                 <div className="flex space-x-4">
@@ -1345,5 +1402,20 @@ const ResearchTool = () => {
     </ConfigProvider>
   );
 };
+
+// 添加浮动动画
+const style = document.createElement('style');
+style.innerHTML = `
+  @keyframes float {
+    0% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-15px) rotate(5deg); }
+    100% { transform: translateY(0px) rotate(0deg); }
+  }
+  
+  .animate-float {
+    animation: float 8s ease-in-out infinite;
+  }
+`;
+document.head.appendChild(style);
 
 export default ResearchTool;
