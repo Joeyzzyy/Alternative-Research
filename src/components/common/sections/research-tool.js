@@ -16,6 +16,20 @@ const TAG_FILTERS = {
 
 const ALTERNATIVELY_LOGO = '/images/alternatively-logo.png'; // 假设这是Alternatively的logo路径
 
+// 背景配置
+const BACKGROUNDS = {
+  DEFAULT: {
+    type: 'gradient',
+    value: 'bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950',
+    overlay: 'bg-transparent'
+  },
+  GHIBLI: {
+    type: 'image',
+    value: 'url("/images/GHIBLI.png")',
+    overlay: 'bg-slate-950/70 backdrop-blur-sm'
+  }
+};
+
 const CodeTypingEffect = ({ code, speed = 3 }) => {
   const [displayedCode, setDisplayedCode] = useState('');
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -85,6 +99,8 @@ const ResearchTool = () => {
   // Add a ref to store the last processed log ID
   const lastProcessedLogIdRef = useRef(null);
 
+  const [currentBackground, setCurrentBackground] = useState('DEFAULT'); // 默认使用吉卜力背景
+  
   const messageHandler = new MessageHandler(setMessages);
 
   const filterMessageTags = (message) => {
@@ -513,176 +529,29 @@ const ResearchTool = () => {
     );
   };
 
-  const renderInitialScreen = () => {
-    return (
-      <div className="w-full h-screen flex items-center justify-center bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 initial-screen-container">
-        <div className="w-full max-w-4xl px-8 py-12 initial-screen-content rounded-xl">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-white mb-6">
-              Welcome to <span className="text-blue-400">Alternatively</span>
-            </h1>
-            <p className="text-lg text-gray-300 mb-8">
-              Which product would you like to analyze and create an SEO-friendly Alternatively page for?
-            </p>
-          </div>
-          <div className="relative max-w-3xl mx-auto">
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              
-              if (!userInput.trim()) {
-                setValidationError('Please enter a website URL');
-                return;
-              }
-              
-              if (!validateDomain(userInput)) {
-                setValidationError('Please enter a valid domain (e.g., example.com)');
-                return;
-              }
-              
-              // Clear any previous validation errors
-              setValidationError('');
-              
-              // Ensure input contains https://
-              const formattedInput = userInput.trim().startsWith('http') ? userInput.trim() : `https://${userInput.trim()}`;
-              initializeChat(formattedInput);
-            }}>
-              <div className="relative">
-                <Input
-                  placeholder="Enter product website URL (e.g., example.com)"
-                  value={userInput}
-                  onChange={(e) => {
-                    setUserInput(e.target.value);
-                    // Clear validation error when user types
-                    if (validationError) setValidationError('');
-                  }}
-                  className={`bg-white/10 border rounded-xl text-lg w-full ${validationError ? 'border-red-500' : 'border-gray-300/30'}`}
-                  style={{ 
-                    color: 'black', 
-                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                    height: '80px',
-                    paddingRight: '120px',
-                    transition: 'all 0.3s ease'
-                  }}
-                  prefix={
-                    <span className="text-gray-500 font-mono" style={{ marginLeft: '16px' }}>https://</span>
-                  }
-                  status={validationError ? "error" : ""}
-                />
-                
-                {validationError && (
-                  <div className="absolute -bottom-6 left-0 text-red-500 text-sm">
-                    {validationError}
-                  </div>
-                )}
-              </div>
-              <button
-                type="submit"
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 z-10 px-6 py-4 text-base 
-                         bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-xl 
-                         transition-all duration-300 flex items-center gap-2 
-                         border border-blue-400/50 hover:border-blue-300
-                         shadow-[0_0_15px_rgba(59,130,246,0.5)] hover:shadow-[0_0_25px_rgba(59,130,246,0.7)]
-                         hover:scale-105 hover:from-blue-500 hover:to-indigo-600
-                         after:content-[''] after:absolute after:inset-0 after:bg-gradient-to-r 
-                         after:from-transparent after:via-white/20 after:to-transparent 
-                         after:translate-x-[-200%] hover:after:translate-x-[200%] after:transition-all after:duration-1000
-                         after:rounded-xl overflow-hidden"
-                style={{ height: '64px' }}
-              >
-                <ArrowRightOutlined className="w-6 h-6" />
-                <span className="relative z-10">Analyze Now</span>
-              </button>
-            </form>
-          </div>
-          
-          {validationError ? (
-            <div className="mt-10 text-center text-gray-400 text-sm mb-6">
-              {/* Space for error message */}
-            </div>
-          ) : (
-            <div className="mt-6 text-center text-gray-400 text-sm mb-10">
-              Enter your product website URL and we'll help you find the best competitors and create an SEO-optimized page
-            </div>
-          )}
-          
-          <div className="mt-12 max-w-4xl mx-auto">
-            <h3 className="text-xl font-semibold text-white mb-6 text-center">Popular Product Analysis Examples</h3>
-            <div className="grid grid-cols-3 gap-6">
-              <div 
-                onClick={() => {
-                  setUserInput("hix.ai");
-                  initializeChat("https://hix.ai");
-                }}
-                className="bg-gradient-to-br from-green-400/40 to-green-300/20 backdrop-blur-sm p-5 rounded-xl 
-                         border border-green-400/30 hover:border-green-300/50 cursor-pointer 
-                         transition-all duration-300 hover:shadow-[0_0_15px_rgba(74,222,128,0.3)] 
-                         hover:-translate-y-1 group relative overflow-hidden"
-              >
-                <div className="absolute -right-6 -top-6 w-16 h-16 bg-green-400/20 rounded-full blur-xl group-hover:bg-green-400/30 transition-all"></div>
-                <div className="w-10 h-10 mb-3 flex items-center justify-center bg-white/90 rounded-lg">
-                  <img src="/images/hix.png" alt="HIX" className="w-7 h-7" />
-                </div>
-                <div className="text-green-300 font-medium mb-2 group-hover:text-green-200 text-base">HIX</div>
-                <div className="text-xs text-gray-400 group-hover:text-gray-300">Analyze HIX alternatives</div>
-                <div className="absolute bottom-3 right-3">
-                  <ArrowRightOutlined className="text-green-400/50 group-hover:text-green-300 transition-all" />
-                </div>
-              </div>
-              
-              <div 
-                onClick={() => {
-                  setUserInput("pipiads.com");
-                  initializeChat("https://pipiads.com");
-                }}
-                className="bg-gradient-to-br from-emerald-800/40 to-emerald-700/20 backdrop-blur-sm p-5 rounded-xl 
-                         border border-emerald-600/30 hover:border-emerald-500/50 cursor-pointer 
-                         transition-all duration-300 hover:shadow-[0_0_15px_rgba(5,150,105,0.3)] 
-                         hover:-translate-y-1 group relative overflow-hidden"
-              >
-                <div className="absolute -right-6 -top-6 w-16 h-16 bg-emerald-600/20 rounded-full blur-xl group-hover:bg-emerald-600/30 transition-all"></div>
-                <img src="/images/pipiads.png" alt="PiPiAds" className="w-10 h-10 mb-3 rounded-lg" />
-                <div className="text-emerald-400 font-medium mb-2 group-hover:text-emerald-300 text-base">PiPiAds</div>
-                <div className="text-xs text-gray-400 group-hover:text-gray-300">Explore PiPiAds alternatives</div>
-                <div className="absolute bottom-3 right-3">
-                  <ArrowRightOutlined className="text-emerald-500/50 group-hover:text-emerald-400 transition-all" />
-                </div>
-              </div>
-              
-              <div 
-                onClick={() => {
-                  setUserInput("jtracking.io");
-                  initializeChat("https://jtracking.io");
-                }}
-                className="bg-gradient-to-br from-blue-900/40 to-blue-800/20 backdrop-blur-sm p-5 rounded-xl 
-                         border border-blue-500/30 hover:border-blue-400/50 cursor-pointer 
-                         transition-all duration-300 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] 
-                         hover:-translate-y-1 group relative overflow-hidden"
-              >
-                <div className="absolute -right-6 -top-6 w-16 h-16 bg-blue-500/20 rounded-full blur-xl group-hover:bg-blue-500/30 transition-all"></div>
-                <div className="w-10 h-10 mb-3 flex items-center justify-center bg-white/90 rounded-lg">
-                  {/* Inline SVG for J icon */}
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#3B82F6" className="w-7 h-7">
-                    <path d="M16 4h-2v12c0 1.1-.9 2-2 2H8v2h4c2.21 0 4-1.79 4-4V4z"/>
-                  </svg>
-                </div>
-                <div className="text-blue-300 font-medium mb-2 group-hover:text-blue-200 text-base">JTracking</div>
-                <div className="text-xs text-gray-400 group-hover:text-gray-300">View JTracking alternatives</div>
-                <div className="absolute bottom-3 right-3">
-                  <ArrowRightOutlined className="text-blue-400/50 group-hover:text-blue-300 transition-all" />
-                </div>
-              </div>
-            </div>
-            
-            <div className="mt-8 text-center">
-              <div className="inline-flex items-center px-4 py-2 bg-white/10 rounded-full text-xs text-gray-300">
-                <InfoCircleOutlined className="mr-2 text-blue-400" />
-                Click any card to view alternative page performance of that product
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+  // 切换背景函数
+  const toggleBackground = () => {
+    setCurrentBackground(prev => prev === 'GHIBLI' ? 'DEFAULT' : 'GHIBLI');
+  };
+
+  // 获取当前背景配置
+  const getBackgroundStyle = () => {
+    const bg = BACKGROUNDS[currentBackground];
+    if (bg.type === 'image') {
+      return { backgroundImage: bg.value };
+    }
+    return {};
+  };
+
+  // 获取当前背景类名
+  const getBackgroundClass = () => {
+    const bg = BACKGROUNDS[currentBackground];
+    return bg.type === 'gradient' ? bg.value : '';
+  };
+
+  // 获取覆盖层类名
+  const getOverlayClass = () => {
+    return BACKGROUNDS[currentBackground].overlay;
   };
 
   useEffect(() => {
@@ -1096,19 +965,220 @@ const ResearchTool = () => {
   }
 
   if (showInitialScreen) {
-    return renderInitialScreen();
+    return (
+      <div className={`w-full h-screen flex items-center justify-center ${
+        currentBackground === 'GHIBLI' ? 'bg-cover bg-center bg-no-repeat' : getBackgroundClass()
+      }`} 
+           style={getBackgroundStyle()}>
+        <div className="w-full max-w-4xl px-8 py-12 initial-screen-content rounded-xl bg-slate-900/80 backdrop-blur-md">
+          <div className="absolute top-4 right-4">
+            <button 
+              onClick={toggleBackground}
+              className="px-3 py-1.5 text-xs bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-full 
+                       backdrop-blur-sm transition-all flex items-center gap-1.5 border border-blue-500/30"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+              </svg>
+              {currentBackground === 'GHIBLI' ? 'Switch to Default' : 'Switch to Ghibli'}
+            </button>
+          </div>
+          
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold text-white mb-6">
+              Welcome to <span className="text-blue-400">Alternatively</span>
+            </h1>
+            <p className="text-lg text-gray-300 mb-8">
+              Which product would you like to analyze and create an SEO-friendly Alternatively page for?
+            </p>
+          </div>
+          
+          <div className="relative max-w-3xl mx-auto">
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              
+              if (!userInput.trim()) {
+                setValidationError('Please enter a website URL');
+                return;
+              }
+              
+              if (!validateDomain(userInput)) {
+                setValidationError('Please enter a valid domain (e.g., example.com)');
+                return;
+              }
+              
+              // Clear any previous validation errors
+              setValidationError('');
+              
+              // Ensure input contains https://
+              const formattedInput = userInput.trim().startsWith('http') ? userInput.trim() : `https://${userInput.trim()}`;
+              initializeChat(formattedInput);
+            }}>
+              <div className="relative">
+                <Input
+                  placeholder="Enter product website URL (e.g., example.com)"
+                  value={userInput}
+                  onChange={(e) => {
+                    setUserInput(e.target.value);
+                    // Clear validation error when user types
+                    if (validationError) setValidationError('');
+                  }}
+                  className={`bg-white/10 border rounded-xl text-lg w-full ${validationError ? 'border-red-500' : 'border-gray-300/30'}`}
+                  style={{ 
+                    color: 'black', 
+                    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                    height: '80px',
+                    paddingRight: '120px',
+                    transition: 'all 0.3s ease'
+                  }}
+                  prefix={
+                    <span className="text-gray-500 font-mono" style={{ marginLeft: '16px' }}>https://</span>
+                  }
+                  status={validationError ? "error" : ""}
+                />
+                
+                {validationError && (
+                  <div className="absolute -bottom-6 left-0 text-red-500 text-sm">
+                    {validationError}
+                  </div>
+                )}
+              </div>
+              <button
+                type="submit"
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 z-10 px-6 py-4 text-base 
+                         bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-xl 
+                         transition-all duration-300 flex items-center gap-2 
+                         border border-blue-400/50 hover:border-blue-300
+                         shadow-[0_0_15px_rgba(59,130,246,0.5)] hover:shadow-[0_0_25px_rgba(59,130,246,0.7)]
+                         hover:scale-105 hover:from-blue-500 hover:to-indigo-600
+                         after:content-[''] after:absolute after:inset-0 after:bg-gradient-to-r 
+                         after:from-transparent after:via-white/20 after:to-transparent 
+                         after:translate-x-[-200%] hover:after:translate-x-[200%] after:transition-all after:duration-1000
+                         after:rounded-xl overflow-hidden"
+                style={{ height: '64px' }}
+              >
+                <ArrowRightOutlined className="w-6 h-6" />
+                <span className="relative z-10">Analyze Now</span>
+              </button>
+            </form>
+          </div>
+          
+          {validationError ? (
+            <div className="mt-10 text-center text-gray-400 text-sm mb-6">
+              {/* Space for error message */}
+            </div>
+          ) : (
+            <div className="mt-6 text-center text-gray-400 text-sm mb-10">
+              Enter your product website URL and we'll help you find the best competitors and create an SEO-optimized page
+            </div>
+          )}
+          
+          <div className="mt-12 max-w-4xl mx-auto">
+            <h3 className="text-xl font-semibold text-white mb-6 text-center">Popular Product Analysis Examples</h3>
+            <div className="grid grid-cols-3 gap-6">
+              <div 
+                onClick={() => {
+                  setUserInput("hix.ai");
+                  initializeChat("https://hix.ai");
+                }}
+                className="bg-gradient-to-br from-green-400/40 to-green-300/20 backdrop-blur-sm p-5 rounded-xl 
+                         border border-green-400/30 hover:border-green-300/50 cursor-pointer 
+                         transition-all duration-300 hover:shadow-[0_0_15px_rgba(74,222,128,0.3)] 
+                         hover:-translate-y-1 group relative overflow-hidden"
+              >
+                <div className="absolute -right-6 -top-6 w-16 h-16 bg-green-400/20 rounded-full blur-xl group-hover:bg-green-400/30 transition-all"></div>
+                <div className="w-10 h-10 mb-3 flex items-center justify-center bg-white/90 rounded-lg">
+                  <img src="/images/hix.png" alt="HIX" className="w-7 h-7" />
+                </div>
+                <div className="text-green-300 font-medium mb-2 group-hover:text-green-200 text-base">HIX</div>
+                <div className="text-xs text-gray-400 group-hover:text-gray-300">Analyze HIX alternatives</div>
+                <div className="absolute bottom-3 right-3">
+                  <ArrowRightOutlined className="text-green-400/50 group-hover:text-green-300 transition-all" />
+                </div>
+              </div>
+              
+              <div 
+                onClick={() => {
+                  setUserInput("pipiads.com");
+                  initializeChat("https://pipiads.com");
+                }}
+                className="bg-gradient-to-br from-emerald-800/40 to-emerald-700/20 backdrop-blur-sm p-5 rounded-xl 
+                         border border-emerald-600/30 hover:border-emerald-500/50 cursor-pointer 
+                         transition-all duration-300 hover:shadow-[0_0_15px_rgba(5,150,105,0.3)] 
+                         hover:-translate-y-1 group relative overflow-hidden"
+              >
+                <div className="absolute -right-6 -top-6 w-16 h-16 bg-emerald-600/20 rounded-full blur-xl group-hover:bg-emerald-600/30 transition-all"></div>
+                <img src="/images/pipiads.png" alt="PiPiAds" className="w-10 h-10 mb-3 rounded-lg" />
+                <div className="text-emerald-400 font-medium mb-2 group-hover:text-emerald-300 text-base">PiPiAds</div>
+                <div className="text-xs text-gray-400 group-hover:text-gray-300">Explore PiPiAds alternatives</div>
+                <div className="absolute bottom-3 right-3">
+                  <ArrowRightOutlined className="text-emerald-500/50 group-hover:text-emerald-400 transition-all" />
+                </div>
+              </div>
+              
+              <div 
+                onClick={() => {
+                  setUserInput("jtracking.io");
+                  initializeChat("https://jtracking.io");
+                }}
+                className="bg-gradient-to-br from-blue-900/40 to-blue-800/20 backdrop-blur-sm p-5 rounded-xl 
+                         border border-blue-500/30 hover:border-blue-400/50 cursor-pointer 
+                         transition-all duration-300 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)] 
+                         hover:-translate-y-1 group relative overflow-hidden"
+              >
+                <div className="absolute -right-6 -top-6 w-16 h-16 bg-blue-500/20 rounded-full blur-xl group-hover:bg-blue-500/30 transition-all"></div>
+                <div className="w-10 h-10 mb-3 flex items-center justify-center bg-white/90 rounded-lg">
+                  {/* Inline SVG for J icon */}
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#3B82F6" className="w-7 h-7">
+                    <path d="M16 4h-2v12c0 1.1-.9 2-2 2H8v2h4c2.21 0 4-1.79 4-4V4z"/>
+                  </svg>
+                </div>
+                <div className="text-blue-300 font-medium mb-2 group-hover:text-blue-200 text-base">JTracking</div>
+                <div className="text-xs text-gray-400 group-hover:text-gray-300">View JTracking alternatives</div>
+                <div className="absolute bottom-3 right-3">
+                  <ArrowRightOutlined className="text-blue-400/50 group-hover:text-blue-300 transition-all" />
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-8 text-center">
+              <div className="inline-flex items-center px-4 py-2 bg-white/10 rounded-full text-xs text-gray-300">
+                <InfoCircleOutlined className="mr-2 text-blue-400" />
+                Click any card to view alternative page performance of that product
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
     <ConfigProvider wave={{ disabled: true }}>
       {contextHolder}
-      <div className="w-full min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 
-                    text-white flex items-center justify-center p-4 relative overflow-hidden" 
-           style={{ paddingTop: "80px" }}>
+      <div className={`w-full min-h-screen ${
+        currentBackground === 'GHIBLI' ? 'bg-cover bg-center bg-no-repeat' : getBackgroundClass()
+      } text-white flex items-center justify-center p-4 relative overflow-hidden`} 
+           style={{ 
+             paddingTop: "80px",
+             ...getBackgroundStyle()
+           }}>
         
-        <div className="absolute inset-0" style={{ paddingTop: "80px" }}>
-          <div className="absolute w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl -top-20 -left-20 animate-pulse"></div>
-          <div className="absolute w-96 h-96 bg-purple-500/10 rounded-full blur-3xl -bottom-20 -right-20 animate-pulse delay-1000"></div>
+        {/* 背景覆盖层 */}
+        <div className={`absolute inset-0 ${getOverlayClass()}`} style={{ paddingTop: "80px" }}></div>
+        
+        {/* 添加背景切换按钮 */}
+        <div className="absolute top-20 right-8 z-50">
+          <button 
+            onClick={toggleBackground}
+            className="px-3 py-1.5 text-xs bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-full 
+                     backdrop-blur-sm transition-all flex items-center gap-1.5 border border-blue-500/30"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+            </svg>
+            {currentBackground === 'GHIBLI' ? 'Switch to Default' : 'Switch to Ghibli'}
+          </button>
         </div>
         
         <div className="relative z-10 w-full flex flex-row gap-6 h-[calc(100vh-140px)] px-4 text-sm">
@@ -1160,7 +1230,7 @@ const ResearchTool = () => {
                     className="bg-white/10 border border-gray-300/30 rounded-xl text-sm"
                     style={{ 
                       color: 'black', 
-                      backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                      backgroundColor: 'rgba(255, 255, 255, 0.8)',
                       height: '48px',
                       transition: 'all 0.3s ease'
                     }}
