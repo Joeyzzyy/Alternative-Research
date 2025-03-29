@@ -986,6 +986,10 @@ const ResearchTool = () => {
           status: item.generatorStatus || 'unknown',
           // 其他可能需要的字段
         }));
+        
+        // 按创建时间倒序排列
+        formattedHistory.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        
         setHistoryList(formattedHistory);
       } else {
         messageApi.error('Failed to load history');
@@ -1075,7 +1079,7 @@ const ResearchTool = () => {
                   })}
                   {item.status && (
                     <span className={`ml-2 px-1.5 py-0.5 rounded-full text-[10px] ${
-                      item.status === 'success' ? 'bg-green-500/20 text-green-300' :
+                      item.status === 'success' || item.status === 'finished' ? 'bg-green-500/20 text-green-300' :
                       item.status === 'failed' ? 'bg-red-500/20 text-red-300' :
                       'bg-yellow-500/20 text-yellow-300'
                     }`}>
