@@ -99,7 +99,7 @@ const ResearchTool = () => {
   // Add a ref to store the last processed log ID
   const lastProcessedLogIdRef = useRef(null);
 
-  const [currentBackground, setCurrentBackground] = useState('DEFAULT'); // 默认使用吉卜力背景
+  const [currentBackground, setCurrentBackground] = useState('GHIBLI'); // 默认使用普通背景
   
   const messageHandler = new MessageHandler(setMessages);
 
@@ -635,6 +635,10 @@ const ResearchTool = () => {
         color: white;
         font-size: 16px;
       }
+      
+      .text-shadow {
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+      }
     `;
     document.head.appendChild(style);
     
@@ -970,25 +974,26 @@ const ResearchTool = () => {
         currentBackground === 'GHIBLI' ? 'bg-cover bg-center bg-no-repeat' : getBackgroundClass()
       }`} 
            style={getBackgroundStyle()}>
-        <div className="w-full max-w-4xl px-8 py-12 initial-screen-content rounded-xl bg-slate-900/80 backdrop-blur-md">
-          <div className="absolute top-4 right-4">
-            <button 
-              onClick={toggleBackground}
-              className="px-3 py-1.5 text-xs bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-full 
-                       backdrop-blur-sm transition-all flex items-center gap-1.5 border border-blue-500/30"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
-              </svg>
-              {currentBackground === 'GHIBLI' ? 'Switch to Default' : 'Switch to Ghibli'}
-            </button>
-          </div>
-          
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-white mb-6">
+        <div className={`w-full max-w-4xl px-8 py-12 initial-screen-content rounded-xl ${
+          currentBackground === 'GHIBLI' ? 'bg-transparent' : 'bg-slate-900/80 backdrop-blur-md'
+        }`}>
+          <div className={`text-center mb-8 ${currentBackground === 'GHIBLI' ? 'text-shadow' : ''}`}>
+            <h1 className={`text-4xl font-bold text-white mb-6 ${currentBackground === 'GHIBLI' ? 'drop-shadow-lg' : ''}`}>
               Welcome to <span className="text-blue-400">Alternatively</span>
+              
+              <button 
+                onClick={toggleBackground}
+                className="ml-4 inline-flex items-center px-3 py-1.5 text-xs bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-full 
+                         backdrop-blur-sm transition-all gap-1.5 border border-blue-500/30
+                         shadow-lg hover:bg-blue-500/50 align-middle"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
+                </svg>
+                {currentBackground === 'GHIBLI' ? 'Switch to Default' : 'Switch to Ghibli'}
+              </button>
             </h1>
-            <p className="text-lg text-gray-300 mb-8">
+            <p className={`text-lg text-gray-300 mb-8 ${currentBackground === 'GHIBLI' ? 'drop-shadow-md' : ''}`}>
               Which product would you like to analyze and create an SEO-friendly Alternatively page for?
             </p>
           </div>
@@ -1023,13 +1028,14 @@ const ResearchTool = () => {
                     // Clear validation error when user types
                     if (validationError) setValidationError('');
                   }}
-                  className={`bg-white/10 border rounded-xl text-lg w-full ${validationError ? 'border-red-500' : 'border-gray-300/30'}`}
+                  className={`bg-white/10 border rounded-xl text-lg w-full ${validationError ? 'border-red-500' : 'border-gray-300/30'} ${currentBackground === 'GHIBLI' ? 'shadow-xl' : ''}`}
                   style={{ 
                     color: 'black', 
                     backgroundColor: 'rgba(255, 255, 255, 0.8)',
                     height: '80px',
                     paddingRight: '120px',
-                    transition: 'all 0.3s ease'
+                    transition: 'all 0.3s ease',
+                    boxShadow: currentBackground === 'GHIBLI' ? '0 10px 25px -5px rgba(0, 0, 0, 0.3)' : ''
                   }}
                   prefix={
                     <span className="text-gray-500 font-mono" style={{ marginLeft: '16px' }}>https://</span>
@@ -1038,14 +1044,14 @@ const ResearchTool = () => {
                 />
                 
                 {validationError && (
-                  <div className="absolute -bottom-6 left-0 text-red-500 text-sm">
+                  <div className={`absolute -bottom-6 left-0 text-red-500 text-sm ${currentBackground === 'GHIBLI' ? 'drop-shadow-md' : ''}`}>
                     {validationError}
                   </div>
                 )}
               </div>
               <button
                 type="submit"
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 z-10 px-6 py-4 text-base 
+                className={`absolute right-2 top-1/2 transform -translate-y-1/2 z-10 px-6 py-4 text-base 
                          bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-xl 
                          transition-all duration-300 flex items-center gap-2 
                          border border-blue-400/50 hover:border-blue-300
@@ -1054,7 +1060,7 @@ const ResearchTool = () => {
                          after:content-[''] after:absolute after:inset-0 after:bg-gradient-to-r 
                          after:from-transparent after:via-white/20 after:to-transparent 
                          after:translate-x-[-200%] hover:after:translate-x-[200%] after:transition-all after:duration-1000
-                         after:rounded-xl overflow-hidden"
+                         after:rounded-xl overflow-hidden ${currentBackground === 'GHIBLI' ? 'shadow-lg' : ''}`}
                 style={{ height: '64px' }}
               >
                 <ArrowRightOutlined className="w-6 h-6" />
@@ -1068,13 +1074,13 @@ const ResearchTool = () => {
               {/* Space for error message */}
             </div>
           ) : (
-            <div className="mt-6 text-center text-gray-400 text-sm mb-10">
+            <div className={`mt-6 text-center text-gray-400 text-sm mb-10 ${currentBackground === 'GHIBLI' ? 'drop-shadow-md' : ''}`}>
               Enter your product website URL and we'll help you find the best competitors and create an SEO-optimized page
             </div>
           )}
           
           <div className="mt-12 max-w-4xl mx-auto">
-            <h3 className="text-xl font-semibold text-white mb-6 text-center">Popular Product Analysis Examples</h3>
+            <h3 className={`text-xl font-semibold text-white mb-6 text-center ${currentBackground === 'GHIBLI' ? 'drop-shadow-lg' : ''}`}>Popular Product Analysis Examples</h3>
             <div className="grid grid-cols-3 gap-6">
               <div 
                 onClick={() => {
@@ -1142,7 +1148,7 @@ const ResearchTool = () => {
             </div>
             
             <div className="mt-8 text-center">
-              <div className="inline-flex items-center px-4 py-2 bg-white/10 rounded-full text-xs text-gray-300">
+              <div className={`inline-flex items-center px-4 py-2 bg-white/10 rounded-full text-xs text-gray-300 ${currentBackground === 'GHIBLI' ? 'shadow-md' : ''}`}>
                 <InfoCircleOutlined className="mr-2 text-blue-400" />
                 Click any card to view alternative page performance of that product
               </div>
@@ -1166,20 +1172,6 @@ const ResearchTool = () => {
         
         {/* 背景覆盖层 */}
         <div className={`absolute inset-0 ${getOverlayClass()}`} style={{ paddingTop: "80px" }}></div>
-        
-        {/* 添加背景切换按钮 */}
-        <div className="absolute top-20 right-8 z-50">
-          <button 
-            onClick={toggleBackground}
-            className="px-3 py-1.5 text-xs bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-full 
-                     backdrop-blur-sm transition-all flex items-center gap-1.5 border border-blue-500/30"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
-            </svg>
-            {currentBackground === 'GHIBLI' ? 'Switch to Default' : 'Switch to Ghibli'}
-          </button>
-        </div>
         
         <div className="relative z-10 w-full flex flex-row gap-6 h-[calc(100vh-140px)] px-4 text-sm">
           <div className={`${showBrowser ? 'hidden' : 'w-[70%]'} relative flex flex-col`}>
