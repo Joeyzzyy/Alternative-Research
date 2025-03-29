@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useRef } from 'react';
-import { Input, Button, Card, Spin, message, Tag, Tooltip, Avatar, ConfigProvider, Pagination } from 'antd';
-import { SearchOutlined, ClearOutlined, ArrowRightOutlined, InfoCircleOutlined, SendOutlined, UserOutlined, RobotOutlined } from '@ant-design/icons';
+import { Input, Button, Card, Spin, message, Tag, Tooltip, Avatar, ConfigProvider, Pagination, Dropdown, Menu } from 'antd';
+import { SearchOutlined, ClearOutlined, ArrowRightOutlined, InfoCircleOutlined, SendOutlined, UserOutlined, RobotOutlined, HistoryOutlined, LoadingOutlined } from '@ant-design/icons';
 import apiClient from '../../../lib/api/index.js';
 import BrowserSimulator from '../BrowserSimulator';
 import Typewriter from 'typewriter-effect';
@@ -92,6 +92,8 @@ const ResearchTool = () => {
   const [canProcessCompetitors, setCanProcessCompetitors] = useState(false);
   const [browserTabs, setBrowserTabs] = useState([]);
   const [activeTab, setActiveTab] = useState(null);
+  const [historyList, setHistoryList] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   // Add a state to track if input should be disabled due to URL_GET
   const [inputDisabledDueToUrlGet, setInputDisabledDueToUrlGet] = useState(false);
@@ -970,6 +972,158 @@ const ResearchTool = () => {
       : '';
   };
 
+  // 修改 fetchHistoryList 函数来处理新的数据格式
+  const fetchHistoryList = async () => {
+    setLoadingHistory(true);
+    try {
+      const response = await apiClient.getAlternativeWebsiteList();
+      if (response?.code === 200 && response.data) {
+        // 转换数据格式以适配新的API响应
+        const formattedHistory = response.data.map(item => ({
+          websiteId: item.websiteId,
+          domain: item.website || 'Unknown website',
+          createdAt: item.generatedStart || new Date().toISOString(),
+          status: item.generatorStatus || 'unknown',
+          // 其他可能需要的字段
+        }));
+        setHistoryList(formattedHistory);
+      } else {
+        messageApi.error('Failed to load history');
+      }
+    } catch (error) {
+      console.error('Error fetching history:', error);
+      messageApi.error('Error loading history');
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+  
+  // 选择历史记录项
+  const handleHistoryItemClick = (item) => {
+    if (item.websiteId) {
+      setCurrentWebsiteId(item.websiteId);
+      // 可以添加其他处理逻辑，例如加载该网站的聊天记录等
+      messageApi.success(`Loaded ${item.domain || 'website'}`);
+    }
+  };
+  
+  // 完全重新设计的历史记录下拉菜单
+  const historyMenu = (
+    <div className="bg-gradient-to-b from-slate-800 to-slate-900 border border-slate-700/70 rounded-xl shadow-2xl p-4 max-h-[500px] overflow-y-auto" 
+         style={{ minWidth: '380px' }}>
+      <div className="flex justify-between items-center mb-4 pb-3 border-b border-slate-700/70">
+        <div className="flex items-center">
+          <HistoryOutlined className="text-blue-400 mr-2" style={{ fontSize: '18px' }} />
+          <span className="text-gray-200 font-medium text-base">Recent Analyses</span>
+        </div>
+        <Button 
+          type="text" 
+          size="small"
+          icon={loadingHistory ? <LoadingOutlined spin /> : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>}
+          className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/20 rounded-lg transition-all"
+          onClick={(e) => {
+            e.stopPropagation();
+            fetchHistoryList();
+          }}
+        />
+      </div>
+      
+      {loadingHistory ? (
+        <div className="flex flex-col items-center justify-center py-12">
+          <div className="w-12 h-12 rounded-full border-2 border-blue-400 border-t-transparent animate-spin mb-4"></div>
+          <span className="text-gray-400">Loading your history...</span>
+        </div>
+      ) : historyList.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-12 px-4">
+          <svg className="w-16 h-16 text-slate-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p className="text-gray-400 text-center mb-2">No history found</p>
+          <p className="text-gray-500 text-sm text-center">Your analyzed websites will appear here</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {historyList.map((item, index) => (
+            <div 
+              key={item.websiteId || index} 
+              onClick={() => handleHistoryItemClick(item)}
+              className="flex items-center p-3 rounded-lg hover:bg-slate-700/50 cursor-pointer transition-all group border border-transparent hover:border-slate-600/70"
+            >
+              <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center mr-4 shadow-lg group-hover:shadow-blue-500/10 transition-all">
+                {item.favicon ? (
+                  <img src={item.favicon} alt="" className="w-7 h-7 rounded" />
+                ) : (
+                  <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-gray-200 font-medium truncate group-hover:text-blue-300 transition-colors">
+                  {item.domain || 'Unknown website'}
+                </div>
+                <div className="flex items-center text-xs text-gray-500 mt-1">
+                  <svg className="w-3.5 h-3.5 mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  {new Date(item.createdAt || Date.now()).toLocaleDateString(undefined, {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                  })}
+                  {item.status && (
+                    <span className={`ml-2 px-1.5 py-0.5 rounded-full text-[10px] ${
+                      item.status === 'success' ? 'bg-green-500/20 text-green-300' :
+                      item.status === 'failed' ? 'bg-red-500/20 text-red-300' :
+                      'bg-yellow-500/20 text-yellow-300'
+                    }`}>
+                      {item.status}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      
+      {historyList.length > 0 && (
+        <div className="mt-4 pt-3 border-t border-slate-700/70 flex justify-between items-center">
+          <span className="text-xs text-gray-500">
+            {historyList.length} {historyList.length === 1 ? 'item' : 'items'} found
+          </span>
+          <button 
+            className="text-xs text-blue-400 hover:text-blue-300 transition-colors flex items-center"
+            onClick={(e) => {
+              e.stopPropagation();
+              fetchHistoryList();
+            }}
+          >
+            Refresh
+            <svg className="w-3.5 h-3.5 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+  
+  // 在组件加载时获取历史记录
+  useEffect(() => {
+    const isLoggedIn = localStorage.getItem('alternativelyIsLoggedIn') === 'true';
+    if (isLoggedIn) {
+      fetchHistoryList();
+    }
+  }, []);
+
   if (initialLoading) {
     return (
       <div className="w-full min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 
@@ -1193,6 +1347,27 @@ const ResearchTool = () => {
             </div>
           </div>
         </div>
+        
+        {/* 添加历史按钮到左下角 */}
+        <div className="fixed bottom-6 left-6 z-50">
+          <Dropdown 
+            overlay={historyMenu} 
+            trigger={['click']} 
+            placement="topLeft"
+            overlayClassName="history-dropdown"
+          >
+            <button
+              className={`px-4 py-2.5 text-sm ${
+                currentBackground === 'GHIBLI' 
+                  ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border-amber-500/30' 
+                  : 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border-blue-500/30'
+              } rounded-full backdrop-blur-sm transition-all flex items-center gap-2 border shadow-lg hover:shadow-xl`}
+            >
+              <HistoryOutlined style={{ fontSize: '16px' }} />
+              <span>History</span>
+            </button>
+          </Dropdown>
+        </div>
       </div>
     );
   }
@@ -1397,6 +1572,27 @@ const ResearchTool = () => {
               {rightPanelTab === 'sources' && renderSources()}
             </div>
           </div>
+        </div>
+        
+        {/* 添加历史按钮到左下角 */}
+        <div className="fixed bottom-6 left-6 z-50">
+          <Dropdown 
+            overlay={historyMenu} 
+            trigger={['click']} 
+            placement="topLeft"
+            overlayClassName="history-dropdown"
+          >
+            <button
+              className={`px-4 py-2.5 text-sm ${
+                currentBackground === 'GHIBLI' 
+                  ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border-amber-500/30' 
+                  : 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border-blue-500/30'
+              } rounded-full backdrop-blur-sm transition-all flex items-center gap-2 border shadow-lg hover:shadow-xl`}
+            >
+              <HistoryOutlined style={{ fontSize: '16px' }} />
+              <span>History</span>
+            </button>
+          </Dropdown>
         </div>
       </div>
     </ConfigProvider>

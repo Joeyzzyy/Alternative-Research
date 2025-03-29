@@ -242,6 +242,16 @@ const changeStyle = async (styleColor, websiteId) => {
   }
 };
 
+// 新增获取客户生成信息列表接口
+const getAlternativeWebsiteList = async () => {
+  try {
+    const response = await apiClient.get('/alternatively/website');
+    return response.data;
+  } catch (error) {
+    console.error('Failed to get alternative website list:', error);
+    throw error;
+  }
+};
 
 apiClient.getCompetitorResearch = getCompetitorResearch;
 apiClient.login = login;
@@ -257,6 +267,7 @@ apiClient.getAlternativeSources = getAlternativeSources;
 apiClient.getAlternativeResult = getAlternativeResult;
 apiClient.searchCompetitor = searchCompetitor;
 apiClient.chatWithAI = chatWithAI;
-apiClient.changeStyle = changeStyle; 
+apiClient.changeStyle = changeStyle;
+apiClient.getAlternativeWebsiteList = getAlternativeWebsiteList;
 
 export default apiClient;
