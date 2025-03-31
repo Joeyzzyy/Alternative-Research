@@ -1028,49 +1028,83 @@ const ResearchTool = () => {
     };
   }, []);
 
-  // 修改 useEffect 来检查日志中的 resultId
+  // 完全重写标签页创建逻辑
   useEffect(() => {
-    // 找到所有包含 resultId 的 Codes 类型日志
-    const codesLogs = logs.filter(log => 
-      log.type === 'Codes' && 
-      log.content?.resultId &&
-      !processedLogIdsRef.current.includes(log.id) // 确保只处理未处理过的日志
-    );
-
-    codesLogs.forEach(codesLog => {
-      // 记录这个日志 ID 已经被处理过
-      processedLogIdsRef.current.push(codesLog.id);
+    console.log('useEffect 触发 - 当前日志数量:', logs.length);
+    console.log('当前标签页:', browserTabs);
+    console.log('当前已处理日志IDs:', processedLogIdsRef.current);
+    
+    // 获取所有 Codes 类型日志，无论是否处理过
+    const allCodesLogs = logs.filter(log => log.type === 'Codes' && log.content?.resultId);
+    console.log('所有 Codes 日志:', allCodesLogs);
+    
+    // 打印每个Codes日志的ID和resultId，帮助调试
+    allCodesLogs.forEach((log, index) => {
+      console.log(`Codes日志 ${index+1}:`, {
+        id: log.id,
+        resultId: log.content.resultId,
+        已处理: processedLogIdsRef.current.includes(log.id)
+      });
+    });
+    
+    // 重置已处理日志ID列表，强制重新处理所有Codes日志
+    processedLogIdsRef.current = [];
+    
+    // 现在所有Codes日志都会被视为未处理
+    const newCodesLogs = allCodesLogs;
+    console.log('将处理的 Codes 日志:', newCodesLogs);
+    
+    if (newCodesLogs.length === 0) {
+      console.log('没有 Codes 日志需要处理');
+      return;
+    }
+    
+    // 收集所有需要添加的新标签页
+    const newTabsToAdd = [];
+    
+    newCodesLogs.forEach(log => {
+      const tabId = `result-${log.content.resultId}`;
+      console.log(`处理 resultId: ${log.content.resultId}`);
       
-      console.log('Opening result page for log ID:', codesLog.id, 'with resultId:', codesLog.content.resultId);
+      // 检查是否已经有相同 ID 的标签页
+      const existingTab = browserTabs.find(tab => tab.id === tabId);
       
-      const resultPageUrl = `https://preview.websitelm.site/en/${codesLog.content.resultId}`;
-      
-      // 检查是否已经有相同 resultId 的标签页（而不是相同URL）
-      const existingTab = browserTabs.find(tab => tab.id === `result-${codesLog.content.resultId}`);
-      if (existingTab) {
-        setActiveTab(existingTab.id);
-        setShowBrowser(true);
-        return;
+      if (!existingTab) {
+        console.log(`为 resultId ${log.content.resultId} 创建新标签页`);
+        newTabsToAdd.push({
+          id: tabId,
+          title: `Result ${log.content.resultId}`,
+          url: `https://preview.websitelm.site/en/${log.content.resultId}`
+        });
+      } else {
+        console.log(`标签页已存在，resultId: ${log.content.resultId}`);
       }
       
-      // 创建新标签页，确保每个resultId都有唯一的标签页
-      const newTab = {
-        id: `result-${codesLog.content.resultId}`,
-        title: `Result ${codesLog.content.resultId}`,
-        url: resultPageUrl
-      };
-      
-      // 添加新标签页并设置为活动标签
-      setBrowserTabs(prev => [...prev, newTab]);
-      setActiveTab(newTab.id);
-      
-      // 自动切换到浏览器界面
-      setShowBrowser(true);
+      // 标记这个日志为已处理
+      processedLogIdsRef.current.push(log.id);
     });
-  }, [logs, browserTabs]);
+    
+    if (newTabsToAdd.length > 0) {
+      console.log(`添加 ${newTabsToAdd.length} 个新标签页:`, newTabsToAdd);
+      
+      // 使用函数式更新，确保基于最新状态
+      setBrowserTabs(prevTabs => {
+        const updatedTabs = [...prevTabs, ...newTabsToAdd];
+        console.log('更新后的标签页:', updatedTabs);
+        return updatedTabs;
+      });
+      
+      // 设置最后一个新标签页为活动标签
+      const lastNewTab = newTabsToAdd[newTabsToAdd.length - 1];
+      setActiveTab(lastNewTab.id);
+      setShowBrowser(true);
+    }
+  }, [logs]); // 只依赖 logs
 
+  // 确保 processedLogIdsRef 被正确初始化
   const processedLogIdsRef = useRef([]);
 
+  // 组件卸载时清理
   useEffect(() => {
     return () => {
       processedLogIdsRef.current = [];
