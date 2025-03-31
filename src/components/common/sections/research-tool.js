@@ -405,14 +405,15 @@ const ResearchTool = () => {
   );
 
   useEffect(() => {
-    if (chatEndRef.current && messages.length > 1) {
-      // 使用更具体的选择器，确保只选中聊天容器
-      const chatContainer = document.querySelector('.main-chat-container .chat-messages-container');
+    if (chatEndRef.current && messages.length > 0) {
+      // 使用更精确的选择器找到聊天消息容器
+      const chatContainer = document.querySelector('.chat-messages-container');
       if (chatContainer) {
+        // 设置滚动位置到底部
         chatContainer.scrollTop = chatContainer.scrollHeight;
       }
     }
-  }, [messages]);
+  }, [messages]); // 当消息数组变化时触发
 
   useEffect(() => {
       const timer = setTimeout(() => {
@@ -1033,9 +1034,9 @@ const ResearchTool = () => {
     const codesLogs = logs.filter(log => 
       log.type === 'Codes' && 
       log.content?.resultId &&
-      !processedLogIdsRef.current.includes(log.id) // 使用 Set 或数组来跟踪已处理的日志
+      !processedLogIdsRef.current.includes(log.id) // 确保只处理未处理过的日志
     );
-  
+
     codesLogs.forEach(codesLog => {
       // 记录这个日志 ID 已经被处理过
       processedLogIdsRef.current.push(codesLog.id);
@@ -1044,17 +1045,17 @@ const ResearchTool = () => {
       
       const resultPageUrl = `https://preview.websitelm.site/en/${codesLog.content.resultId}`;
       
-      // 检查是否已经有相同 URL 的标签页
-      const existingTab = browserTabs.find(tab => tab.url === resultPageUrl);
+      // 检查是否已经有相同 resultId 的标签页（而不是相同URL）
+      const existingTab = browserTabs.find(tab => tab.id === `result-${codesLog.content.resultId}`);
       if (existingTab) {
         setActiveTab(existingTab.id);
         setShowBrowser(true);
         return;
       }
       
-      // 创建新标签页
+      // 创建新标签页，确保每个resultId都有唯一的标签页
       const newTab = {
-        id: `result-${codesLog.content.resultId}`, // 使用 resultId 作为标签页 ID 的一部分
+        id: `result-${codesLog.content.resultId}`,
         title: `Result ${codesLog.content.resultId}`,
         url: resultPageUrl
       };
@@ -1066,7 +1067,7 @@ const ResearchTool = () => {
       // 自动切换到浏览器界面
       setShowBrowser(true);
     });
-  }, [logs, browserTabs]);;
+  }, [logs, browserTabs]);
 
   const processedLogIdsRef = useRef([]);
 
