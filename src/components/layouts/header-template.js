@@ -1,13 +1,41 @@
 "use client";
+import React from 'react';
 import { useState, useEffect } from "react";
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import apiClient from '../../lib/api/index.js';
+import { Dropdown, Modal, Button, Spin, Menu } from 'antd';
+import { HistoryOutlined } from '@ant-design/icons';
 
 const animationStyles = `
   @keyframes fadeIn {
     from { opacity: 0; transform: translateY(-5px); }
     to { opacity: 1; transform: translateY(0); }
+  }
+  
+  .result-ids-modal .ant-modal-content {
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(100, 116, 139, 0.2);
+  }
+  .result-ids-modal .ant-modal-header {
+    background: transparent;
+    border-bottom: 1px solid rgba(100, 116, 139, 0.2);
+  }
+  .result-ids-modal .ant-modal-title {
+    color: white;
+  }
+  .result-ids-modal .ant-modal-close {
+    color: rgba(255, 255, 255, 0.45);
+  }
+  .result-ids-modal .ant-modal-close:hover {
+    color: rgba(255, 255, 255, 0.85);
+  }
+  .result-ids-modal {
+    pointer-events: auto !important;
+  }
+  .result-ids-modal .ant-modal-wrap {
+    z-index: 1500;
   }
 `;
 
@@ -55,6 +83,16 @@ export default function Header() {
   });
   const [showCreditsTooltip, setShowCreditsTooltip] = useState(false);
   const [credits, setCredits] = useState(150); // 从API获取实际值
+  
+  // 添加历史记录相关状态
+  const [historyList, setHistoryList] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [showResultIdsModal, setShowResultIdsModal] = useState(false);
+  const [resultIds, setResultIds] = useState([]);
+
+  // 添加点击任务时的加载状态
+  const [loadingResultIds, setLoadingResultIds] = useState(false);
+  const [currentWebsiteId, setCurrentWebsiteId] = useState(null);
 
   useEffect(() => {
     // Check if user is logged in with alternatively prefix
@@ -90,6 +128,84 @@ export default function Header() {
       window.removeEventListener('tokenExpired', handleTokenExpired);
     };
   }, []);
+
+  // 在组件加载时获取历史记录
+  useEffect(() => {
+    if (isLoggedIn) {
+      fetchHistoryList();
+    }
+  }, [isLoggedIn]);
+
+  // 获取历史记录
+  const fetchHistoryList = async () => {
+    if (!isLoggedIn) return;
+    
+    setLoadingHistory(true);
+    try {
+      const response = await apiClient.getAlternativeWebsiteList();
+      console.log('获取历史记录响应:', response);
+      
+      if (response?.code === 200 && response.data) {
+        const formattedHistory = response.data.map(item => ({
+          websiteId: item.websiteId,
+          domain: item.website || 'Unknown website',
+          createdAt: item.generatedStart || new Date().toISOString(),
+          status: item.generatorStatus || 'unknown',
+        }));
+        
+        // 按创建时间倒序排列
+        formattedHistory.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        setHistoryList(formattedHistory);
+        console.log('格式化后的历史记录:', formattedHistory);
+      } else {
+        showNotification('Failed to load history', 'error');
+      }
+    } catch (error) {
+      console.error('Error fetching history:', error);
+      showNotification('Error loading history', 'error');
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  // 处理历史记录点击
+  const handleHistoryItemClick = async (item) => {
+    if (item.websiteId) {
+      console.log('处理历史记录点击，websiteId:', item.websiteId);
+      
+      // 设置当前选中的websiteId和加载状态
+      setCurrentWebsiteId(item.websiteId);
+      setLoadingResultIds(true);
+      
+      try {
+        const historyResponse = await apiClient.getAlternativeWebsiteHistory(item.websiteId);
+        console.log('历史记录请求返回:', historyResponse);
+        
+        if (historyResponse?.code === 200 && historyResponse.data) {
+          const codesResultIds = historyResponse.data
+            .filter(record => record.type === 'Codes' && record.content?.resultId)
+            .map(record => record.content.resultId);
+          
+          console.log('提取到的 resultIds:', codesResultIds);
+          
+          if (codesResultIds.length > 0) {
+            setResultIds(codesResultIds);
+            setTimeout(() => {
+              setShowResultIdsModal(true);
+              console.log('showResultIdsModal 状态:', true);
+            }, 0);
+          } else {
+            showNotification('No generated results found for this item', 'info');
+          }
+        }
+      } catch (error) {
+        console.error('加载历史记录详情时出错:', error);
+        showNotification('Failed to load history details', 'error');
+      } finally {
+        setLoadingResultIds(false);
+      }
+    }
+  };
 
   const handleGoogleLogin = async () => {
     try {
@@ -194,6 +310,68 @@ export default function Header() {
     setTimeout(() => {
       setNotification(prev => ({...prev, show: false}));
     }, 3000);
+  };
+
+  // 历史记录菜单
+  const historyMenu = {
+    items: [
+      {
+        key: 'history-title',
+        label: (
+          <div className="flex items-center justify-between py-2 px-3 border-b border-slate-700/50">
+            <span className="font-medium text-white text-sm">Your Generation History</span>
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                fetchHistoryList();
+              }}
+              className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1.5 bg-slate-700/30 px-2 py-1 rounded"
+            >
+              {loadingHistory ? <Spin size="small" /> : (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Refresh
+                </>
+              )}
+            </button>
+          </div>
+        ),
+      },
+      // 所有历史记录项
+      ...historyList.map(item => ({
+        key: item.websiteId,
+        label: (
+          <div className="flex items-center justify-between py-2 px-3 hover:bg-slate-700/50 rounded-md transition-colors">
+            <div className="flex items-center max-w-[180px]">
+              <div className="flex-shrink-0 mr-2.5">
+                {item.status === 'finished' ? (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                    Completed
+                  </span>
+                ) : item.status === 'failed' ? (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                    Failed
+                  </span>
+                ) : item.status === 'processing' ? (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                    In Progress
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                    {item.status || 'Unknown'}
+                  </span>
+                )}
+              </div>
+              <span className="truncate text-sm text-gray-200">{item.domain}</span>
+            </div>
+            <span className="text-xs text-gray-400 ml-2 flex-shrink-0">{new Date(item.createdAt).toLocaleDateString()}</span>
+          </div>
+        ),
+        onClick: () => handleHistoryItemClick(item),
+      })),
+    ],
   };
 
   // 发送验证码
@@ -612,6 +790,61 @@ export default function Header() {
                     )}
                   </div>
 
+                  {/* 历史记录按钮 */}
+                  <Dropdown 
+                    menu={{ 
+                      items: historyList.map((item, index) => ({
+                        key: item.websiteId || index,
+                        label: (
+                          <div className="py-2 px-3">
+                            <div className="flex items-center justify-between">
+                              <span className="truncate max-w-[200px] text-sm font-medium text-gray-200">{item.domain}</span>
+                              <span className="text-xs text-gray-400">{new Date(item.createdAt).toLocaleDateString()}</span>
+                            </div>
+                            <div className="flex items-center mt-1">
+                              {item.status === 'finished' ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                  Completed
+                                </span>
+                              ) : item.status === 'failed' ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                                  Failed
+                                </span>
+                              ) : item.status === 'processing' ? (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                                  In Progress
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                                  {item.status || 'Unknown'}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ),
+                        onClick: () => handleHistoryItemClick(item)
+                      })),
+                      style: { 
+                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                        backdropFilter: 'blur(12px)',
+                        borderRadius: '0.75rem',
+                        border: '1px solid rgba(100, 116, 139, 0.2)',
+                        padding: '0.5rem 0',
+                        width: '350px',
+                        maxHeight: '400px', // 限制最大高度
+                        overflowY: 'auto' // 添加滚动条
+                      }
+                    }}
+                    trigger={['click']} 
+                    placement="bottomRight"
+                    overlayClassName="history-dropdown"
+                  >
+                    <button className="px-4 py-2.5 text-sm bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border-blue-500/30 rounded-full backdrop-blur-sm transition-all flex items-center gap-2 border shadow-lg hover:shadow-xl hover:-translate-y-0.5 duration-300">
+                      <HistoryOutlined style={{ fontSize: '16px' }} />
+                      <span className="font-medium">History</span>
+                    </button>
+                  </Dropdown>
+
                   {/* 原有登出按钮 */}
                   <button
                     onClick={handleLogout}
@@ -984,6 +1217,39 @@ export default function Header() {
         </div>
       )}
 
+      {/* 结果弹窗 */}
+      <Modal
+        title="Generated Results"
+        open={showResultIdsModal}
+        onCancel={() => {
+          setShowResultIdsModal(false);
+          console.log('弹窗关闭，showResultIdsModal 状态:', false);
+        }}
+        footer={null}
+        width={400}
+        className="result-ids-modal"
+        zIndex={1500}
+        styles={{
+          mask: { backgroundColor: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(8px)' }
+        }}
+      >
+        {console.log('弹窗状态:', showResultIdsModal)}
+        <div className="space-y-3">
+          {resultIds.map((id, index) => (
+            <div key={index} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
+              <span className="text-gray-300">Result #{index + 1}</span>
+              <Button 
+                type="primary"
+                onClick={() => window.open(`https://preview.websitelm.site/en/${id}`, '_blank')}
+                className="bg-blue-500 hover:bg-blue-600"
+              >
+                View Preview
+              </Button>
+            </div>
+          ))}
+        </div>
+      </Modal>
+
       {/* 通知组件 */}
       {notification.show && (
         <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 ${
@@ -1012,6 +1278,21 @@ export default function Header() {
       )}
 
       <style>{animationStyles}</style>
+      <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: rgba(15, 23, 42, 0.3);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background-color: rgba(100, 116, 139, 0.5);
+          border-radius: 20px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background-color: rgba(100, 116, 139, 0.7);
+        }
+      `}</style>
     </>
   );
 }
