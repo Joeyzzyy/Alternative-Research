@@ -36,22 +36,35 @@ const BACKGROUNDS = {
 const CodeTypingEffect = ({ code, speed = 3 }) => {
   const [displayedCode, setDisplayedCode] = useState('');
   const [currentIndex, setCurrentIndex] = useState(0);
+  const codeContainerRef = useRef(null);
+  const previousCodeRef = useRef('');
 
   useEffect(() => {
+    // 如果是新的代码内容，只追加新增部分
+    if (code !== previousCodeRef.current) {
+      const newContent = code.slice(previousCodeRef.current.length);
+      previousCodeRef.current = code;
+      setDisplayedCode(prev => prev + newContent);
+      return;
+    }
+
+    // 正常打字效果
     if (currentIndex < code.length) {
       const timer = setTimeout(() => {
         if (code[currentIndex] === '<') {
           const tagEndIndex = code.indexOf('>', currentIndex);
           if (tagEndIndex !== -1) {
-            const tag = code.substring(currentIndex, tagEndIndex + 1);
-            setDisplayedCode(prev => prev + tag);
+            // 一次性打印整个 HTML 标签
+            setDisplayedCode(prev => prev + code.slice(currentIndex, tagEndIndex + 1));
             setCurrentIndex(tagEndIndex + 1);
-            return;
+          } else {
+            setDisplayedCode(prev => prev + code[currentIndex]);
+            setCurrentIndex(prev => prev + 1);
           }
+        } else {
+          setDisplayedCode(prev => prev + code[currentIndex]);
+          setCurrentIndex(prev => prev + 1);
         }
-        
-        setDisplayedCode(prev => prev + code[currentIndex]);
-        setCurrentIndex(prev => prev + 1);
       }, speed);
       
       return () => clearTimeout(timer);
@@ -59,10 +72,15 @@ const CodeTypingEffect = ({ code, speed = 3 }) => {
   }, [code, currentIndex, speed]);
 
   return (
-    <pre className="text-[10px] text-blue-300 font-mono whitespace-pre-wrap leading-relaxed overflow-auto" 
-         style={{ maxHeight: '600px' }}>
+    <pre 
+      ref={codeContainerRef}
+      className="text-[10px] text-blue-300 font-mono whitespace-pre-wrap leading-relaxed overflow-auto" 
+      style={{ maxHeight: '600px' }}
+    >
       <div>{displayedCode}</div>
-      <span className="animate-blink">▋</span>
+      {currentIndex < code.length && (
+        <span className="animate-blink">▋</span>
+      )}
     </pre>
   );
 };
@@ -113,6 +131,11 @@ const ResearchTool = () => {
   const retryCountRef = useRef(0);
   const retryTimeoutRef = useRef(null);
   const MAX_RETRY_COUNT = 5;
+
+  const [htmlStream, setHtmlStream] = useState('');
+  const htmlStreamRef = useRef('');  // 用于累积 HTML 流
+  const isStreamingRef = useRef(false);
+  const currentStreamIdRef = useRef(null);  // 添加一个 ref 来跟踪当前正在流式输出的日志 ID
 
   const filterMessageTags = (message) => {
     let filteredMessage = message;
@@ -191,8 +214,10 @@ const ResearchTool = () => {
           const competitorArrayMatch = rawAnswer.match(/\[COMPETITOR_SELECTED\]\s*(\[.*?\])$/s);
           
           if (competitorArrayMatch && competitorArrayMatch[1]) {
-            // Parse JSON array
-            const competitorArrayString = competitorArrayMatch[1].trim();
+            // Parse JSON array - 修改这部分来处理单引号
+            const competitorArrayString = competitorArrayMatch[1]
+              .trim()
+              .replace(/'/g, '"'); // 将单引号替换为双引号
             
             try {
               // Parse the competitor array
@@ -381,7 +406,8 @@ const ResearchTool = () => {
 
   useEffect(() => {
     if (chatEndRef.current && messages.length > 1) {
-      const chatContainer = document.querySelector('.chat-messages-container');
+      // 使用更具体的选择器，确保只选中聊天容器
+      const chatContainer = document.querySelector('.main-chat-container .chat-messages-container');
       if (chatContainer) {
         chatContainer.scrollTop = chatContainer.scrollHeight;
       }
@@ -389,7 +415,7 @@ const ResearchTool = () => {
   }, [messages]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
+      const timer = setTimeout(() => {
       setInitialLoading(false);
     }, 1500);
     
@@ -408,16 +434,34 @@ const ResearchTool = () => {
     setDeepResearchMode(!deepResearchMode);
   };
 
+  const detailsRef = useRef(null);
+  const htmlCodeRef = useRef(null);
+
+  // 添加一个 ref 来引用代码容器
+  const codeContainerRef = useRef(null);
+
   const renderDetails = (details) => {
     const reversedLogs = [...logs].reverse();
-
+    
     return (
-      <div className="h-full flex flex-col">
+      <div className="h-full flex flex-col" ref={detailsRef}>
         <div className="p-3 space-y-2 overflow-y-auto">
           {reversedLogs.map((log, index) => {
-            // 解析Dify类型的content
-            const difyContent = log.type === 'Dify' ? JSON.parse(log.content) : null;
-            
+            // 解析 Dify 日志的 content
+            let difyContent = null;
+            if (log.type === 'Dify' && typeof log.content === 'string') {
+              try {
+                difyContent = JSON.parse(log.content);
+              } catch (e) {
+                console.error('Failed to parse Dify content:', e);
+              }
+            }
+
+            // 获取当前日志的累积内容
+            const currentHtmlContent = log.id === currentStreamIdRef.current 
+              ? htmlStreamRef.current 
+              : log.content;
+
             return (
               <div key={index} className="bg-gray-800/50 p-2.5 rounded border border-gray-700/50 hover:border-gray-600/50 transition-all duration-300">
                 <div className="flex items-center mb-2">
@@ -453,25 +497,8 @@ const ResearchTool = () => {
                   </div>
                 </div>
 
-                {/* 显示step字段 */}
-                {log.step && (
-                  <div className="mb-1 text-[10px] text-gray-400">
-                    <span className="font-semibold">Step:</span> {log.step}
-                  </div>
-                )}
-
-                {log.type === 'Info' ? (
-                  <div className="text-[10px] text-gray-400 break-words leading-relaxed">
-                    {log.content.planningId && (
-                      <div className="mb-1">
-                        <span className="font-semibold">Planning ID:</span> {log.content.planningId}
-                      </div>
-                    )}
-                    <div className="mb-1">
-                      <span className="font-semibold">Status:</span> {log.content.status}
-                    </div>
-                  </div>
-                ) : log.type === 'Dify' ? (
+                {/* Dify 日志内容渲染 */}
+                {log.type === 'Dify' && difyContent && (
                   <div className="text-[10px] text-gray-400 break-words leading-relaxed">
                     <div className="mb-1">
                       <span className="font-semibold">Workflow ID:</span> {difyContent.workflow_id}
@@ -480,19 +507,53 @@ const ResearchTool = () => {
                       <span className="font-semibold">Task ID:</span> {difyContent.task_id}
                     </div>
                     <div className="mb-1">
-                      <span className="font-semibold">Status:</span> {difyContent.data?.status || 'Started'}
+                      <span className="font-semibold">Step:</span> {difyContent.step}
                     </div>
-                    {difyContent.data?.outputs && (
+                    <div className="mb-1">
+                      <span className="font-semibold">Status:</span> {difyContent.event}
+                    </div>
+                    {difyContent.data && (
                       <div className="mb-1">
-                        <span className="font-semibold">Outputs:</span>
+                        <span className="font-semibold">Node Info:</span>
                         <pre className="mt-1 p-2 bg-gray-700/50 rounded text-xs overflow-auto">
-                          {JSON.stringify(difyContent.data.outputs, null, 2)}
+                          {JSON.stringify({
+                            id: difyContent.data.id,
+                            title: difyContent.data.title,
+                            status: difyContent.data.status,
+                            elapsed_time: difyContent.data.elapsed_time
+                          }, null, 2)}
                         </pre>
                       </div>
                     )}
-                    {difyContent.data?.elapsed_time > 0 && (
+                  </div>
+                )}
+
+                {/* HTML 日志内容渲染 - 修改这部分 */}
+                {log.type === 'Html' && (
+                  <div className="text-[10px] text-gray-400 break-words leading-relaxed">
+                    <div className="mb-1">
+                      <span className="font-semibold">HTML Code:</span>
+                      <pre 
+                        ref={log.id === currentStreamIdRef.current ? codeContainerRef : null}
+                        className="mt-1 p-2 bg-gray-700/50 rounded text-xs whitespace-pre-wrap break-words"
+                        style={{ 
+                          maxHeight: '400px', 
+                          overflowY: 'auto',
+                          color: '#a5d6ff' // 使用浅蓝色显示代码
+                        }}
+                      >
+                        {currentHtmlContent}
+                      </pre>
+                    </div>
+                  </div>
+                )}
+
+                {/* 其他日志类型的渲染逻辑 */}
+                {log.type === 'Error' ? (
+                  <div className="text-[10px] text-red-400 break-words leading-relaxed">
+                    {log.content?.error && (
                       <div className="mb-1">
-                        <span className="font-semibold">Elapsed Time:</span> {difyContent.data.elapsed_time}s
+                        <span className="font-semibold">Error Message:</span> {log.content.error}
                       </div>
                     )}
                   </div>
@@ -516,16 +577,21 @@ const ResearchTool = () => {
                   <div className="text-[10px] text-gray-400 break-words leading-relaxed">
                     {log.content?.html && (
                       <div className="mb-1">
-                        <span className="font-semibold">Code:</span>
-                        <div className="mt-1 p-2 bg-gray-700/50 rounded text-xs overflow-auto">
-                          <CodeTypingEffect 
-                            code={log.content.html} 
-                            speed={3}
-                            language="html"
-                          />
-                        </div>
+                        <span className="font-semibold">Result ID:</span>
+                        {log.content.resultId}
                       </div>
                     )}
+                  </div>
+                ) : log.type === 'Info' ? (
+                  <div className="text-[10px] text-gray-400 break-words leading-relaxed">
+                    {log.content?.planningId && (
+                      <div className="mb-1">
+                        <span className="font-semibold">Planning ID:</span> {log.content.planningId}
+                      </div>
+                    )}
+                    <div className="mb-1">
+                      <span className="font-semibold">Status:</span> {log.content.status}
+                    </div>
                   </div>
                 ) : null}
 
@@ -826,20 +892,58 @@ const ResearchTool = () => {
 
       eventSource.onopen = () => {
         setSseConnected(true);
-        retryCountRef.current = 0; // 重置重试计数
+        retryCountRef.current = 0;
+        
+        if (retryTimeoutRef.current) {
+          clearTimeout(retryTimeoutRef.current);
+          retryTimeoutRef.current = null;
+        }
       };
 
       eventSource.onmessage = (event) => {
         try {
           const logData = JSON.parse(event.data);
-          console.log('Received log from server:', logData);
-          console.log('Log details:', {
-            type: logData.type,
-            step: logData.step,
-            status: logData.content?.status,
-            timestamp: logData.timestamp
-          });
-          setLogs(prevLogs => [...prevLogs, logData]);
+          
+          // 打印每个数据包
+          console.log('logData', logData);
+          
+          if (logData.type === 'Html') {
+            // 如果是新的流式输出开始，重置累积的内容
+            if (!isStreamingRef.current || currentStreamIdRef.current !== logData.id) {
+              htmlStreamRef.current = '';
+              currentStreamIdRef.current = logData.id;
+              isStreamingRef.current = true;
+              
+              // 添加新的日志项
+              setLogs(prevLogs => [...prevLogs, {
+                id: logData.id,
+                type: 'Html',
+                content: '',
+                timestamp: new Date().toISOString()
+              }]);
+            }
+            
+            // 累积 HTML 内容
+            htmlStreamRef.current += logData.content;
+            
+            // 更新对应的日志项
+            setLogs(prevLogs => prevLogs.map(log => 
+              log.id === currentStreamIdRef.current 
+                ? {...log, content: htmlStreamRef.current} 
+                : log
+            ));
+          } 
+          else if (logData.type === 'Codes') {
+            // 收到 Codes 类型，表示流式输出结束
+            isStreamingRef.current = false;
+            currentStreamIdRef.current = null;
+            // 正常添加 Codes 日志
+            setLogs(prevLogs => [...prevLogs, logData]);
+          }
+          else {
+            // 其他类型的日志正常添加
+            setLogs(prevLogs => [...prevLogs, logData]);
+          }
         } catch (error) {
           console.error('Error parsing SSE message:', error);
         }
@@ -892,7 +996,9 @@ const ResearchTool = () => {
       }
       if (retryTimeoutRef.current) {
         clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
       }
+      retryCountRef.current = 0;
     };
   }, []);
 
@@ -923,26 +1029,24 @@ const ResearchTool = () => {
 
   // 修改 useEffect 来检查日志中的 resultId
   useEffect(() => {
-    // 找到最新的包含 resultId 的 Codes 类型日志
-    const codesLog = logs.find(log => 
+    // 找到所有包含 resultId 的 Codes 类型日志
+    const codesLogs = logs.filter(log => 
       log.type === 'Codes' && 
       log.content?.resultId &&
-      log.id !== lastProcessedLogIdRef.current // 确保不是已处理的日志
+      !processedLogIdsRef.current.includes(log.id) // 使用 Set 或数组来跟踪已处理的日志
     );
-
-    if (codesLog && codesLog.content?.resultId) {
+  
+    codesLogs.forEach(codesLog => {
       // 记录这个日志 ID 已经被处理过
-      lastProcessedLogIdRef.current = codesLog.id;
+      processedLogIdsRef.current.push(codesLog.id);
       
       console.log('Opening result page for log ID:', codesLog.id, 'with resultId:', codesLog.content.resultId);
       
-      // 使用您原有的 URL 拼接方法
       const resultPageUrl = `https://preview.websitelm.site/en/${codesLog.content.resultId}`;
       
       // 检查是否已经有相同 URL 的标签页
       const existingTab = browserTabs.find(tab => tab.url === resultPageUrl);
       if (existingTab) {
-        // 如果已存在，只切换到该标签页
         setActiveTab(existingTab.id);
         setShowBrowser(true);
         return;
@@ -950,8 +1054,8 @@ const ResearchTool = () => {
       
       // 创建新标签页
       const newTab = {
-        id: `result-${Date.now()}`,
-        title: `Result Page`,
+        id: `result-${codesLog.content.resultId}`, // 使用 resultId 作为标签页 ID 的一部分
+        title: `Result ${codesLog.content.resultId}`,
         url: resultPageUrl
       };
       
@@ -961,8 +1065,16 @@ const ResearchTool = () => {
       
       // 自动切换到浏览器界面
       setShowBrowser(true);
-    }
-  }, [logs, browserTabs]);
+    });
+  }, [logs, browserTabs]);;
+
+  const processedLogIdsRef = useRef([]);
+
+  useEffect(() => {
+    return () => {
+      processedLogIdsRef.current = [];
+    };
+  }, []);
 
   // 获取当前主题的按钮样式
   const getButtonStyle = () => {
@@ -1195,6 +1307,24 @@ const ResearchTool = () => {
       fetchHistoryList();
     }
   }, []);
+
+  // 在组件卸载时清理
+  useEffect(() => {
+    return () => {
+      htmlStreamRef.current = '';
+      isStreamingRef.current = false;
+    };
+  }, []);
+
+  // 添加一个 useEffect 来处理自动滚动
+  useEffect(() => {
+    if (codeContainerRef.current && isStreamingRef.current) {
+      const container = codeContainerRef.current;
+      requestAnimationFrame(() => {
+        container.scrollTop = container.scrollHeight;
+      });
+    }
+  }, [logs]); // 当日志更新时触发
 
   if (initialLoading) {
     return (
