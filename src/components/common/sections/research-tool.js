@@ -108,6 +108,12 @@ const ResearchTool = () => {
   
   const messageHandler = new MessageHandler(setMessages);
 
+  // 添加 SSE 连接状态和重试相关变量
+  const [sseConnected, setSseConnected] = useState(false);
+  const retryCountRef = useRef(0);
+  const retryTimeoutRef = useRef(null);
+  const MAX_RETRY_COUNT = 5;
+
   const filterMessageTags = (message) => {
     let filteredMessage = message;
     Object.entries(TAG_FILTERS).forEach(([tag, replacement]) => {
@@ -793,25 +799,23 @@ const ResearchTool = () => {
     const token = localStorage.getItem('alternativelyAccessToken');
     const isLoggedIn = localStorage.getItem('alternativelyIsLoggedIn') === 'true';
     
-    // 只有在用户登录且有token和customerId时才连接
     if (!isLoggedIn || !customerId || !token) {
+      setSseConnected(false);
       return;
     }
     
     let eventSource = null;
-    let retryCount = 0;
-    let retryTimeout = null;
-    const MAX_RETRY_COUNT = 5;
     
     const connectSSE = () => {
-      // 关闭现有连接
       if (eventSource) {
         eventSource.close();
       }
       
-      // 获取最新token
       const currentToken = localStorage.getItem('alternativelyAccessToken');
-      if (!currentToken) return;
+      if (!currentToken) {
+        setSseConnected(false);
+        return;
+      }
       
       eventSource = new EventSourcePolyfill(`https://api.websitelm.com/events/${customerId}-chat`, {
         headers: {
@@ -821,15 +825,20 @@ const ResearchTool = () => {
       });
 
       eventSource.onopen = () => {
-        console.log('SSE connection established');
-        // 连接成功后重置重试计数
-        retryCount = 0;
+        setSseConnected(true);
+        retryCountRef.current = 0; // 重置重试计数
       };
 
       eventSource.onmessage = (event) => {
         try {
           const logData = JSON.parse(event.data);
           console.log('Received log from server:', logData);
+          console.log('Log details:', {
+            type: logData.type,
+            step: logData.step,
+            status: logData.content?.status,
+            timestamp: logData.timestamp
+          });
           setLogs(prevLogs => [...prevLogs, logData]);
         } catch (error) {
           console.error('Error parsing SSE message:', error);
@@ -837,7 +846,14 @@ const ResearchTool = () => {
       };
 
       eventSource.onerror = (error) => {
-        console.error('SSE connection error:', error);
+        setSseConnected(false);
+        console.error('SSE Connection Error:', {
+          error,
+          status: error.status,
+          statusText: error.statusText,
+          readyState: eventSource.readyState,
+          timestamp: new Date().toISOString()
+        });
         
         // 关闭当前连接
         eventSource.close();
@@ -845,18 +861,20 @@ const ResearchTool = () => {
         // 检查是否是401错误
         if (error.status === 401) {
           console.log('SSE connection unauthorized, token may be invalid');
-          // 不需要额外处理，因为API拦截器会清除token
           return;
         }
         
         // 实现指数退避重试策略
-        if (retryCount < MAX_RETRY_COUNT) {
-          const delay = Math.min(1000 * Math.pow(2, retryCount), 30000); // 最大30秒
-          console.log(`Retrying SSE connection in ${delay}ms (attempt ${retryCount + 1}/${MAX_RETRY_COUNT})`);
+        if (retryCountRef.current < MAX_RETRY_COUNT) {
+          const delay = Math.min(1000 * Math.pow(2, retryCountRef.current), 30000);
+          console.log(`Retrying SSE connection in ${delay}ms (attempt ${retryCountRef.current + 1}/${MAX_RETRY_COUNT})`);
           
-          clearTimeout(retryTimeout);
-          retryTimeout = setTimeout(() => {
-            retryCount++;
+          if (retryTimeoutRef.current) {
+            clearTimeout(retryTimeoutRef.current);
+          }
+          
+          retryTimeoutRef.current = setTimeout(() => {
+            retryCountRef.current += 1;
             connectSSE();
           }, delay);
         } else {
@@ -865,43 +883,16 @@ const ResearchTool = () => {
       };
     };
     
-    // 初始连接
     connectSSE();
     
-    // 监听token过期事件
-    const handleTokenExpired = () => {
-      console.log('Token expired, closing SSE connection');
-      if (eventSource) {
-        eventSource.close();
-      }
-    };
-    
-    // 添加网络状态监听，在网络恢复时重连
-    const handleNetworkChange = () => {
-      if (navigator.onLine) {
-        console.log('Network connection restored, reconnecting SSE');
-        connectSSE();
-      } else {
-        console.log('Network connection lost, SSE will reconnect when online');
-        if (eventSource) {
-          eventSource.close();
-        }
-      }
-    };
-    
-    window.addEventListener('tokenExpired', handleTokenExpired);
-    window.addEventListener('online', handleNetworkChange);
-    window.addEventListener('offline', handleNetworkChange);
-    
     return () => {
-      console.log('Closing SSE connection');
       if (eventSource) {
         eventSource.close();
+        setSseConnected(false);
       }
-      clearTimeout(retryTimeout);
-      window.removeEventListener('tokenExpired', handleTokenExpired);
-      window.removeEventListener('online', handleNetworkChange);
-      window.removeEventListener('offline', handleNetworkChange);
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -1641,9 +1632,9 @@ const ResearchTool = () => {
                 </div>
                 <div className="flex items-center text-xs">
                   <div className={`w-2 h-2 rounded-full mr-2 ${
-                    logs.length > 0 ? 'bg-green-500 animate-pulse' : 'bg-red-500'
+                    sseConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
                   }`}></div>
-                  <span>SSE {logs.length > 0 ? 'Connected' : 'Disconnected'}</span>
+                  <span>SSE {sseConnected ? 'Connected' : 'Disconnected'}</span>
                 </div>
               </div>
             </div>
