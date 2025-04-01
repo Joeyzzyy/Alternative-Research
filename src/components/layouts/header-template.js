@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import apiClient from '../../lib/api/index.js';
 import { Dropdown, Modal, Button, Spin, Menu } from 'antd';
 import { HistoryOutlined } from '@ant-design/icons';
+import { useUser } from '../../contexts/UserContext';
 
 const animationStyles = `
   @keyframes fadeIn {
@@ -40,6 +41,7 @@ const animationStyles = `
 `;
 
 export default function Header() {
+  const { userCredits, loading: userCreditsLoading } = useUser();
   const router = useRouter();
   const [state, setState] = useState({
     isOpen: false,
@@ -82,8 +84,7 @@ export default function Header() {
     confirmPassword: false
   });
   const [showCreditsTooltip, setShowCreditsTooltip] = useState(false);
-  const [credits, setCredits] = useState(150); // 从API获取实际值
-  
+
   // 添加历史记录相关状态
   const [historyList, setHistoryList] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
@@ -771,16 +772,21 @@ export default function Header() {
                       <div className="w-8 h-8 rounded-full bg-purple-500/30 flex items-center justify-center">
                         <span className="text-sm font-medium">💎</span>
                       </div>
-                      <span className="ml-1.5 text-sm font-medium">{credits}</span>
+                      <span className="ml-1.5 text-sm font-medium">
+                        {userCreditsLoading ? (
+                          <Spin size="small" />
+                        ) : (
+                          `${userCredits.pageGeneratorLimit - userCredits.pageGeneratorUsage}/${userCredits.pageGeneratorLimit}`
+                        )}
+                      </span>
                     </div>
 
                     {/* 积分工具提示 */}
                     {showCreditsTooltip && (
                       <div className="absolute right-0 top-10 w-56 bg-gray-800 border border-gray-700 rounded-lg shadow-xl p-4 z-50 text-xs"
                            style={{animation: 'fadeIn 0.2s ease-out forwards'}}>
-                        {/* 保持原有工具提示内容 */}
                         <div className="flex items-center justify-between mb-3">
-                          <span className="font-medium text-purple-300">Account Balance</span>
+                          <span className="font-medium text-purple-300">Generation Credits</span>
                           <button 
                             onClick={() => setShowCreditsTooltip(false)}
                             className="text-gray-400 hover:text-white transition-colors"
@@ -789,18 +795,24 @@ export default function Header() {
                           </button>
                         </div>
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-white font-bold text-lg">{credits} Credits</span>
+                          <span className="text-white font-bold text-lg">
+                            {userCreditsLoading ? (
+                              <Spin size="small" />
+                            ) : (
+                              `${userCredits.pageGeneratorLimit - userCredits.pageGeneratorUsage} Available`
+                            )}
+                          </span>
                         </div>
                         <div className="h-2 bg-gray-700 rounded-full overflow-hidden mb-3">
                           <div 
                             className="h-full bg-gradient-to-r from-purple-500 to-blue-500" 
-                            style={{width: `${Math.min(100, (credits/200)*100)}%`}}
+                            style={{
+                              width: `${Math.min(100, ((userCredits.pageGeneratorLimit - userCredits.pageGeneratorUsage) / userCredits.pageGeneratorLimit) * 100)}%`
+                            }}
                           ></div>
                         </div>
-                        <p className="mb-3 text-gray-300">Each research consumes 10-20 Credits</p>
-                        <button className="w-full py-1.5 bg-purple-600 hover:bg-purple-700 rounded text-white text-xs transition-colors">
-                          Recharge Credits
-                        </button>
+                        <p className="mb-3 text-gray-300">Total Limit: {userCredits.pageGeneratorLimit}</p>
+                        <p className="mb-3 text-gray-300">Used: {userCredits.pageGeneratorUsage}</p>
                       </div>
                     )}
                   </div>

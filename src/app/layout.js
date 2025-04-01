@@ -1,4 +1,5 @@
 import './globals.css'
+import { UserProvider } from '../contexts/UserContext';
 
 export default async function RootLayout({ children, keywords }) {
   let faviconUrl = '/images/alternatively-favicon.png'; 
@@ -20,7 +21,9 @@ export default async function RootLayout({ children, keywords }) {
         />
       </head>
       <body suppressHydrationWarning={true} className="w-full min-w-full overflow-x-hidden">
-        {children}
+        <UserProvider>
+          {children}
+        </UserProvider>
       </body>
     </html>
   )

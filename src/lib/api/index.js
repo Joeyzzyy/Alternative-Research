@@ -266,6 +266,17 @@ const getAlternativeWebsiteHistory = async (websiteId) => {
   }
 };
 
+// 新增：获取客户Package的方法
+const getCustomerPackage = async () => {
+  try {
+    const response = await apiClient.get('/customer/package');
+    return response.data;
+  } catch (error) {
+    console.error('Failed to get customer package:', error);
+    return null;
+  }
+};
+
 apiClient.getCompetitorResearch = getCompetitorResearch;
 apiClient.login = login;
 apiClient.register = register;
@@ -283,5 +294,6 @@ apiClient.chatWithAI = chatWithAI;
 apiClient.changeStyle = changeStyle;
 apiClient.getAlternativeWebsiteList = getAlternativeWebsiteList;
 apiClient.getAlternativeWebsiteHistory = getAlternativeWebsiteHistory;
+apiClient.getCustomerPackage = getCustomerPackage;
 
 export default apiClient;

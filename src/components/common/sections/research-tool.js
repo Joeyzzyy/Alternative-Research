@@ -12,6 +12,7 @@ import MessageHandler from '../../../utils/MessageHandler';
 const TAG_FILTERS = {
   '\\[URL_GET\\]': '',  // 过滤 [URL_GET]
   '\\[COMPETITOR_SELECTED\\]': '',  // 过滤 [COMPETITOR_SELECTED]
+  '\\[END\\]': '',  // 过滤 [END]
 };
 
 const ALTERNATIVELY_LOGO = '/images/alternatively-logo.png'; // 假设这是Alternatively的logo路径
@@ -95,11 +96,9 @@ const ResearchTool = () => {
   const [isMessageSending, setIsMessageSending] = useState(false);
   const [deepResearchMode, setDeepResearchMode] = useState(false);
   const [rightPanelTab, setRightPanelTab] = useState('details');
-  const [showBrowser, setShowBrowser] = useState(false);
   const [customerId, setCustomerId] = useState(null);
   const [currentWebsiteId, setCurrentWebsiteId] = useState(null);
   const [detailsData, setDetailsData] = useState([]);
-  const [sourcesData, setSourcesData] = useState([]);
   const [activeAgentId, setActiveAgentId] = useState(null);
   const inputRef = useRef(null);
   const chatEndRef = useRef(null);
@@ -132,6 +131,9 @@ const ResearchTool = () => {
   const [resultIds, setResultIds] = useState([]);
   // 添加一个新的 state 来控制弹窗的显示
   const [showResultIdsModal, setShowResultIdsModal] = useState(false);
+
+  // 添加一个 ref 来跟踪最后一次看到的日志数量
+  const lastLogCountRef = useRef(0);
 
   const filterMessageTags = (message) => {
     let filteredMessage = message;
@@ -204,48 +206,100 @@ const ResearchTool = () => {
           messageHandler.addSystemMessage('Searching for competitors. Please wait a moment...');
         } else if (rawAnswer.includes('[COMPETITOR_SELECTED]')) {
           const messageBody = rawAnswer.replace(/\[COMPETITOR_SELECTED\].*$/s, '').trim();
+          console.log('1. Message body:', messageBody);
           
           messageHandler.updateAgentMessage(messageBody, thinkingMessageId);
           
-          const competitorArrayMatch = rawAnswer.match(/\[COMPETITOR_SELECTED\]\s*(\[.*?\])$/s);
+          // 提取竞品数组部分
+          const competitorArrayMatch = rawAnswer.match(/\[COMPETITOR_SELECTED\]\s*\[(.*?)\]$/s);
+          console.log('2. Competitor array match:', competitorArrayMatch);
           
           if (competitorArrayMatch && competitorArrayMatch[1]) {
-            // Parse JSON array - 修改这部分来处理单引号
-            const competitorArrayString = competitorArrayMatch[1]
-              .trim()
-              .replace(/'/g, '"'); // 将单引号替换为双引号
-            
             try {
-              // Parse the competitor array
-              let competitors = JSON.parse(competitorArrayString);
+              // 清理字符串，处理引号和转义字符
+              const cleanedString = competitorArrayMatch[1]
+                .replace(/\\'/g, "'")  // 处理转义的单引号
+                .replace(/\\"/g, '"')  // 处理转义的双引号
+                .replace(/'/g, '"')    // 将单引号替换为双引号
+                .trim();
+              console.log('3. Cleaned string:', cleanedString);
               
-              // Ensure competitors is an array of strings (domains only)
-              if (!Array.isArray(competitors)) {
-                competitors = [competitors];
+              let competitors;
+              try {
+                // 尝试解析 JSON
+                console.log('4. Attempting to parse JSON:', `[${cleanedString}]`);
+                competitors = JSON.parse(`[${cleanedString}]`);
+                console.log('5. Parsed competitors:', competitors);
+              } catch (e) {
+                console.log('6. JSON parse failed:', e.message);
+                // 如果 JSON 解析失败，使用更智能的字符串分割
+                competitors = cleanedString
+                  .replace(/[\[\]'"`]/g, '') // 移除所有引号和方括号
+                  .split(',')
+                  .map(s => s.trim())
+                  .filter(s => s.length > 0); // 过滤空字符串
+                console.log('7. Fallback competitors:', competitors);
               }
               
-              // Extract domain names only (no objects)
-              const domainArray = competitors.map(comp => {
-                if (typeof comp === 'string') {
-                  // Remove http/https and trailing slashes if present
-                  return comp.replace(/^https?:\/\//, '').replace(/\/$/, '');
+              // 确保结果是数组并且每个元素都是有效的
+              if (Array.isArray(competitors) && competitors.length > 0) {
+                // 清理域名格式
+                const domainArray = competitors.map(comp => 
+                  String(comp)
+                    .trim()
+                    .replace(/^https?:\/\//, '')  // 移除协议
+                    .replace(/\/$/, '')           // 移除末尾斜杠
+                    .replace(/\s+/g, '')          // 移除所有空格
+                ).filter(domain => domain.length > 0);  // 过滤掉空域名
+
+                console.log('8. Final domain array:', domainArray);
+                
+                if (domainArray.length > 0) {
+                  const generateResponse = await apiClient.generateAlternative(currentWebsiteId, domainArray);
+                  console.log('9. Generate response:', generateResponse);
+                  
+                  if (generateResponse?.code === 200) {
+                    messageHandler.addSystemMessage(
+                      `We are generating alternative solutions for ${domainArray.join(', ')}. This may take some time, please wait...`
+                    );
+                    setInputDisabledDueToUrlGet(true);
+                  } else {
+                    messageHandler.addSystemMessage(`⚠️ Failed to generate alternative: Invalid server response`);
+                  }
+                } else {
+                  throw new Error('No valid competitors found after processing');
                 }
-                return comp;
-              });
-              
-              // Call generate API with domain array
-              const generateResponse = await apiClient.generateAlternative(currentWebsiteId, domainArray);
-              
-              if (generateResponse?.code === 200) {
-                messageHandler.addSystemMessage(`We are generating alternative solutions for ${domainArray.join(', ')}. This may take some time, please wait...`);
               } else {
-                messageHandler.addSystemMessage(`⚠️ Failed to generate alternative: Invalid server response`);
+                throw new Error('No valid competitors found in the response');
               }
-            } catch (parseError) {
-              messageHandler.addSystemMessage(`⚠️ Failed to process competitor selection: ${parseError.message}`);
+            } catch (error) {
+              console.error('10. Competitor processing error:', error);
+              messageHandler.addSystemMessage(`⚠️ Failed to process competitor selection: ${error.message}`);
             }
           } else {
-            throw new Error('Could not extract competitor array from response');
+            console.error('11. Failed to extract competitor array from response');
+            messageHandler.addSystemMessage(`⚠️ Failed to extract competitor information from the response`);
+          }
+        } else if (rawAnswer.includes('[END]')) {
+          // 处理 [END] 标记
+          // 1. 过滤掉 [END] 标记
+          const answer = filterMessageTags(rawAnswer);
+          messageHandler.updateAgentMessage(answer, thinkingMessageId);
+          
+          // 2. 提取样式要求（即过滤后的消息内容）
+          const styleRequirement = answer.trim();
+          
+          // 3. 调用 changeStyle API
+          try {
+            const styleResponse = await apiClient.changeStyle(styleRequirement, currentWebsiteId);
+            if (styleResponse?.code === 200) {
+              // 可以添加一个系统消息表示样式已更新
+              messageHandler.addSystemMessage('I am updating the style, please wait a moment...');
+            } else {
+              messageHandler.addSystemMessage('⚠️ Failed to update style: Invalid server response');
+            }
+          } catch (styleError) {
+            messageHandler.addSystemMessage(`⚠️ Failed to update style: ${styleError.message}`);
           }
         } else {
           const answer = filterMessageTags(rawAnswer);
@@ -375,31 +429,6 @@ const ResearchTool = () => {
     }
   };
 
-  const renderSources = () => (
-    <div className="space-y-2">
-      {sourcesData.length === 0 ? (
-        <div className="text-gray-500 text-center py-4 text-xs">
-          No sources available yet
-        </div>
-      ) : (
-        sourcesData.map((source, index) => (
-          <div key={index} className="bg-white/5 rounded-lg p-3">
-            <div className="flex items-center justify-between">
-              <a 
-                href={source.sourceURL}
-                target="_blank" 
-                rel="noopener noreferrer" 
-                className="text-xs text-purple-100 hover:text-purple-300 transition-colors truncate flex-1"
-              >
-                {source.sourceURL}
-              </a>
-            </div>
-          </div>
-        ))
-      )}
-    </div>
-  );
-
   useEffect(() => {
     if (chatEndRef.current && messages.length > 0) {
       // 使用更精确的选择器找到聊天消息容器
@@ -460,10 +489,16 @@ const ResearchTool = () => {
               : log.content;
 
             return (
-              <div key={index} className="bg-gray-800/50 p-2.5 rounded border border-gray-700/50 hover:border-gray-600/50 transition-all duration-300">
+              <div 
+                key={index} 
+                className="bg-gray-800/50 p-2.5 rounded border border-gray-700/50 hover:border-gray-600/50 transition-all duration-300 animate-fadeIn"
+                style={{
+                  animationDelay: '0.5s'
+                }}
+              >
                 <div className="flex items-center mb-2">
                   {log.type === 'Dify' && (
-                    <img src="/images/dify.png" alt="Dify" className="w-4 h-4 mr-2" />
+                    <img src="/images/alternatively-logo.png" alt="Alternatively" className="w-4 h-4 mr-2" />
                   )}
                   {log.type === 'Error' && (
                     <svg className="w-4 h-4 mr-2 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -486,7 +521,7 @@ const ResearchTool = () => {
                     </svg>
                   )}
                   <div className="text-[11px] text-gray-300 font-medium">
-                    {log.type === 'Dify' && 'Dify Workflow'}
+                    {log.type === 'Dify' && 'Running Page Content Generation Workflow'}
                     {log.type === 'Error' && 'Error Message'}
                     {log.type === 'API' && 'API Request'}
                     {log.type === 'Codes' && 'Code Execution'}
@@ -734,6 +769,22 @@ const ResearchTool = () => {
       
       .history-dropdown .ant-dropdown-menu-item-active {
         background: transparent !important;
+      }
+      
+      .animate-fadeIn {
+        animation: fadeIn 0.5s ease-out forwards;
+        opacity: 0;
+      }
+      
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(5px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
     `;
     document.head.appendChild(style);
@@ -1016,6 +1067,25 @@ const ResearchTool = () => {
 
       handleCompetitorListRequest(competitors);
     }
+
+    // 检查改色任务完成
+    const styleChangeFinishedLog = logs.find(log => 
+      log.type === 'Info' && 
+      log.step === 'GENERATION_CHANGE_FINISHED' &&
+      !log.processed
+    );
+
+    if (styleChangeFinishedLog) {
+      // 标记该日志已处理，避免重复添加消息
+      setLogs(prevLogs => prevLogs.map(log => 
+        log.id === styleChangeFinishedLog.id ? {...log, processed: true} : log
+      ));
+      
+      // 处理改色任务完成 - 告知用户任务已完成
+      messageHandler.addSystemMessage("Task completed! Thank you for using our service. You can find your generated page in the history records in the upper right corner of the page, where you can deploy and adjust it further.");
+      // 保持输入框禁用
+      // setInputDisabledDueToUrlGet(false); - 移除这行代码，保持输入框禁用
+    }
     
     // 添加检测任务完成的逻辑
     const finishedLog = logs.find(log => 
@@ -1029,13 +1099,32 @@ const ResearchTool = () => {
         log.id === finishedLog.id ? {...log, processed: true} : log
       ));
       
-      // 添加任务完成的系统消息
-      messageHandler.addSystemMessage(
-        "Task completed successfully! You can now input colors to change the style, or start a new task by entering a different URL."
-      );
-      
-      // 确保重新启用输入
-      setInputDisabledDueToUrlGet(false);
+      // 向chat接口发送任务完成消息，带有[PAGES_GENERATED]标记
+      (async () => {
+        try {
+          const completionMessage = "Task completed successfully! You can now input colors and style preferences to change the page. [PAGES_GENERATED]";
+          const response = await apiClient.chatWithAI(completionMessage, currentWebsiteId);
+          
+          if (response?.code === 200 && response.data?.answer) {
+            const answer = filterMessageTags(response.data.answer);
+            messageHandler.addAgentMessage(answer);
+          } else {
+            // 如果API调用失败，仍然添加系统消息
+            messageHandler.addSystemMessage(
+              "Failed to send completion message. Please try again later."
+            );
+          }
+        } catch (error) {
+          console.error("Error sending completion message:", error);
+          // 出错时也添加系统消息
+          messageHandler.addSystemMessage(
+            "Failed to send completion message. Please try again later."
+          );
+        } finally {
+          // 确保重新启用输入
+          setInputDisabledDueToUrlGet(false);
+        }
+      })();
     }
   }, [logs, canProcessCompetitors]); // 当日志更新时检查
 
@@ -1046,29 +1135,17 @@ const ResearchTool = () => {
     };
   }, []);
 
-  // 完全重写标签页创建逻辑
+  // 修改标签页处理逻辑
   useEffect(() => {
     console.log('useEffect 触发 - 当前日志数量:', logs.length);
     console.log('当前标签页:', browserTabs);
-    console.log('当前已处理日志IDs:', processedLogIdsRef.current);
     
-    // 获取所有 Codes 类型日志，无论是否处理过
     const allCodesLogs = logs.filter(log => log.type === 'Codes' && log.content?.resultId);
     console.log('所有 Codes 日志:', allCodesLogs);
     
-    // 打印每个Codes日志的ID和resultId，帮助调试
-    allCodesLogs.forEach((log, index) => {
-      console.log(`Codes日志 ${index+1}:`, {
-        id: log.id,
-        resultId: log.content.resultId,
-        已处理: processedLogIdsRef.current.includes(log.id)
-      });
-    });
-    
-    // 重置已处理日志ID列表，强制重新处理所有Codes日志
+    // 重置已处理日志ID列表
     processedLogIdsRef.current = [];
     
-    // 现在所有Codes日志都会被视为未处理
     const newCodesLogs = allCodesLogs;
     console.log('将处理的 Codes 日志:', newCodesLogs);
     
@@ -1077,14 +1154,12 @@ const ResearchTool = () => {
       return;
     }
     
-    // 收集所有需要添加的新标签页
     const newTabsToAdd = [];
     
     newCodesLogs.forEach(log => {
       const tabId = `result-${log.content.resultId}`;
       console.log(`处理 resultId: ${log.content.resultId}`);
       
-      // 检查是否已经有相同 ID 的标签页
       const existingTab = browserTabs.find(tab => tab.id === tabId);
       
       if (!existingTab) {
@@ -1094,28 +1169,24 @@ const ResearchTool = () => {
           title: `Result ${log.content.resultId}`,
           url: `https://preview.websitelm.site/en/${log.content.resultId}`
         });
-      } else {
-        console.log(`标签页已存在，resultId: ${log.content.resultId}`);
       }
       
-      // 标记这个日志为已处理
       processedLogIdsRef.current.push(log.id);
     });
     
     if (newTabsToAdd.length > 0) {
       console.log(`添加 ${newTabsToAdd.length} 个新标签页:`, newTabsToAdd);
       
-      // 使用函数式更新，确保基于最新状态
       setBrowserTabs(prevTabs => {
         const updatedTabs = [...prevTabs, ...newTabsToAdd];
         console.log('更新后的标签页:', updatedTabs);
         return updatedTabs;
       });
       
-      // 设置最后一个新标签页为活动标签
+      // 设置最后一个新标签页为活动标签并切换到浏览器视图
       const lastNewTab = newTabsToAdd[newTabsToAdd.length - 1];
       setActiveTab(lastNewTab.id);
-      setShowBrowser(true);
+      setRightPanelTab('browser'); // 替换 setShowBrowser(true)
     }
   }, [logs]); // 只依赖 logs
 
@@ -1438,27 +1509,17 @@ const ResearchTool = () => {
         )}
         
         <div className="relative z-10 w-full flex flex-row gap-6 h-[calc(100vh-140px)] px-4 text-sm">
-          <div className={`${showBrowser ? 'hidden' : 'w-[70%]'} relative flex flex-col`}>
-            <div className="absolute top-0 right-8 z-50 flex gap-2 mt-2">
-              <button
-                onClick={() => setShowBrowser(true)}
-                className="px-3 py-1.5 text-xs bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 rounded-full 
-                         backdrop-blur-sm transition-all flex items-center gap-1.5 border border-purple-500/30"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 4l-4 4 4 4"/>
-                </svg>
-                Open Browser
-              </button>
-            </div>
-
+          {/* 移除 showBrowser 条件判断，直接使用固定宽度 */}
+          <div className="w-[35%] relative flex flex-col">
+            {/* 移除 Browser 切换按钮 */}
             <div className="h-10 px-4 border-b border-gray-300/20 flex-shrink-0">
               <div className="flex items-center">
                 <img src="/images/alternatively-logo.png" alt="Alternatively" className="w-5 h-5 mr-1.5" />
                 <h2 className="text-sm font-semibold text-gray-100">Copilot</h2>
               </div>
             </div>
-
+            
+            {/* 其他聊天区域内容 */}
             <div className="flex-1 overflow-y-auto pt-12 px-4 pb-4 chat-messages-container">
               {initialLoading ? (
                 <div className="flex items-center justify-center h-full">
@@ -1477,9 +1538,7 @@ const ResearchTool = () => {
                 <div className="relative">
                   <Input
                     ref={inputRef}
-                    placeholder={deepResearchMode 
-                      ? "Enter website for comprehensive analysis..." 
-                      : "Enter your product URL (e.g., example.com)"}
+                    placeholder="Enter your product URL (e.g., example.com)"
                     value={userInput}
                     onChange={(e) => setUserInput(e.target.value)}
                     disabled={loading || isMessageSending || inputDisabledDueToUrlGet}
@@ -1498,44 +1557,9 @@ const ResearchTool = () => {
                       }
                     }}
                   />
-                  
                 </div>
 
-                <div className="flex items-center justify-between mt-3 px-1">
-                  <div className="flex items-center space-x-4">
-                    <button 
-                      type="button"
-                      className={`flex items-center px-2 py-1 rounded-full text-xs transition-all duration-200 
-                        ${loading || isMessageSending 
-                          ? 'opacity-50 cursor-not-allowed bg-gray-200 text-gray-600' 
-                          : deepResearchMode
-                            ? 'bg-purple-500 text-white hover:bg-purple-600' 
-                            : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                        }`}
-                      onClick={() => {
-                        if (!loading && !isMessageSending) {
-                          toggleDeepResearchMode();
-                        }
-                      }}
-                    >
-                      <span className={`w-2 h-2 rounded-full mr-1.5 transition-colors ${
-                        deepResearchMode ? 'bg-white' : 'bg-gray-500'
-                      }`}></span>
-                      Deep
-                    </button>
-
-                    <span className="text-xs text-purple-300/80">
-                      {deepResearchMode ? (
-                        <span className="flex items-center">
-                          <span className="inline-block w-2 h-2 bg-purple-400 rounded-full mr-1.5 animate-pulse"></span>
-                          Comprehensive analysis mode
-                        </span>
-                      ) : (
-                        "Quick search mode"
-                      )}
-                    </span>
-                  </div>
-
+                <div className="flex justify-end mt-3 px-1">
                   <div className="text-xs text-gray-400">
                     Press Enter ↵ to search
                   </div>
@@ -1544,31 +1568,11 @@ const ResearchTool = () => {
             </div>
           </div>
           
-          <div className={`${showBrowser ? 'flex-1' : 'hidden'} relative flex flex-col`}>
-            <div className="absolute top-0 right-8 z-50 flex gap-2 mt-2">
-              <button
-                onClick={() => setShowBrowser(false)}
-                className="px-3 py-1.5 text-xs bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 rounded-full 
-                         backdrop-blur-sm transition-all flex items-center gap-1.5 border border-blue-500/30"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h10a8 8 0 018 8v0M3 10l6 6m-6-6l6-6"/>
-                </svg>
-                Back to Chat
-              </button>
-            </div>
-            <BrowserSimulator 
-              tabs={browserTabs}
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
-            />
-          </div>
-          
-          <div className={`w-[30%] ${currentBackground === 'GHIBLI' 
+          {/* 右侧面板保持不变 */}
+          <div className={`w-[65%] ${currentBackground === 'GHIBLI' 
             ? 'bg-amber-900/10 border-amber-700/30' 
             : 'bg-white/5 border-gray-300/20'
-          } backdrop-blur-lg rounded-2xl border shadow-xl 
-                          flex flex-col h-full relative`}>
+          } backdrop-blur-lg rounded-2xl border shadow-xl flex flex-col h-full relative`}>
             <div className="border-b border-gray-300/20 p-3">
               <div className="flex justify-between items-center">
                 <div className="flex space-x-4">
@@ -1580,17 +1584,17 @@ const ResearchTool = () => {
                         : 'text-gray-400 hover:text-gray-200'
                     }`}
                   >
-                    Details
+                    Execution Log
                   </button>
                   <button 
-                    onClick={() => setRightPanelTab('sources')} 
+                    onClick={() => setRightPanelTab('browser')} 
                     className={`text-sm ${
-                      rightPanelTab === 'sources' 
+                      rightPanelTab === 'browser' 
                         ? 'text-blue-400 font-medium' 
                         : 'text-gray-400 hover:text-gray-200'
                     }`}
                   >
-                    Sources
+                    Browser
                   </button>
                 </div>
                 <div className="flex items-center text-xs">
@@ -1604,7 +1608,74 @@ const ResearchTool = () => {
             
             <div className="flex-1 overflow-y-auto">
               {rightPanelTab === 'details' && renderDetails(detailsData)}
-              {rightPanelTab === 'sources' && renderSources()}
+              {rightPanelTab === 'browser' && (
+                <div className="space-y-2">
+                  {browserTabs.length === 0 ? (
+                    <div className="text-gray-500 text-center py-4 text-xs">
+                      No browser tabs available yet
+                    </div>
+                  ) : (
+                    <div className="p-3">
+                      {/* 标签栏 */}
+                      <div className="flex items-center space-x-2 mb-3 overflow-x-auto">
+                        {browserTabs.map((tab) => (
+                          <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`px-3 py-1.5 text-xs rounded-full whitespace-nowrap ${
+                              activeTab === tab.id
+                                ? 'bg-blue-500/20 text-blue-300'
+                                : 'bg-gray-500/20 text-gray-400 hover:text-gray-300'
+                            }`}
+                          >
+                            {tab.title}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* 地址栏和预览区域 */}
+                      {activeTab && (
+                        <div>
+                          {/* 地址栏 */}
+                          <div className="flex items-center mb-2 bg-gray-800/50 rounded-lg p-2">
+                            <div className="flex-1 px-3 py-1.5 text-xs text-gray-300 bg-gray-700/50 rounded mr-2 overflow-hidden overflow-ellipsis whitespace-nowrap">
+                              {browserTabs.find(tab => tab.id === activeTab)?.url}
+                            </div>
+                            <button
+                              onClick={() => window.open(browserTabs.find(tab => tab.id === activeTab)?.url, '_blank')}
+                              className="p-1.5 hover:bg-gray-700/50 rounded-md transition-colors duration-200 group"
+                              title="Open in new tab"
+                            >
+                              <svg 
+                                className="w-4 h-4 text-gray-400 group-hover:text-blue-400 transition-colors duration-200" 
+                                fill="none" 
+                                stroke="currentColor" 
+                                viewBox="0 0 24 24"
+                              >
+                                <path 
+                                  strokeLinecap="round" 
+                                  strokeLinejoin="round" 
+                                  strokeWidth="2" 
+                                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                                />
+                              </svg>
+                            </button>
+                          </div>
+
+                          {/* iframe 预览区域 */}
+                          <div className="bg-white rounded-lg overflow-hidden">
+                            <iframe
+                              src={browserTabs.find(tab => tab.id === activeTab)?.url}
+                              className="w-full h-[calc(100vh-280px)]"
+                              title="Preview"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
