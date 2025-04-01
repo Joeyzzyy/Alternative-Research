@@ -2,7 +2,7 @@
 import React from 'react';
 import themeConfig from '../../../styles/themeConfig';
 
-const SubscriptionCard = ({ data, theme = 'normal' }) => {
+const SubscriptionCard = () => {
   const [selectedPeriod, setSelectedPeriod] = React.useState('yearly');
   
   const billingPeriods = [
@@ -10,30 +10,31 @@ const SubscriptionCard = ({ data, theme = 'normal' }) => {
     { id: 'monthly', label: 'Monthly' }
   ];
 
-  // Sample data for demonstration - in a real app this would come from props
-  const sampleData = {
-    title: "Choose Your Plan",
-    subTitle: "Start free and scale as you grow. All plans come with a 14-day trial.",
+  const displayData = {
+    title: "While You Enjoy Your Free Pro Trial, Explore Our Plans",
+    subTitle: "Compare our plans and features to see how Pro plan benefits can help grow your business.",
     bottomContent: {
       plans: [
         {
-          name: "Basic",
+          name: "Standard",
           price: { 
-            monthly: "29",
-            yearly: "23"
+            monthly: "45",
+            yearly: "36"
           },
           discount: "20%",
-          description: "Perfect for individuals and small teams",
-          buttonText: "Start Free Trial",
+          description: "Everything you need to start creating alternative pages",
+          buttonText: "Coming Soon...",
           popular: false,
           features: [
             {
-              title: "Core Features",
+              title: "Features include:",
               items: [
-                "Up to 5 AI tool comparisons",
-                "Basic analytics",
-                "Email support",
-                "Access to basic templates"
+                "30 alternative pages generation & style change/month",
+                "Auto AI images generation",
+                "Auto internal links insertion",
+                "AI page design and generation",
+                "Standard support",
+                "1 Free onboarding call"
               ]
             }
           ]
@@ -41,22 +42,31 @@ const SubscriptionCard = ({ data, theme = 'normal' }) => {
         {
           name: "Professional",
           price: {
-            monthly: "79",
-            yearly: "63"
+            monthly: "129",
+            yearly: "99"
           },
-          discount: "20%",
-          description: "Ideal for growing businesses",
-          buttonText: "Start Free Trial",
+          discount: "23%",
+          description: "Perfect for teams scaling alternative page production",
+          buttonText: "Coming Soon...",
           popular: true,
           features: [
             {
-              title: "Everything in Basic, plus",
+              title: "Everything in Standard, plus:",
               items: [
-                "Unlimited AI tool comparisons",
-                "Advanced analytics",
-                "Priority support",
-                "Custom templates",
-                "API access"
+                "100 alternative pages generation/month",
+                "Auto AI images generation",
+                "Auto internal links insertion",
+                "AI page design and generation",
+                "Priority page generation"
+              ]
+            },
+            {
+              title: "Pro features:",
+              items: [
+                "More alternative pages generation",
+                "Unlimited Page Section Re-generation",
+                "Unlimited onboarding calls",
+                "Priority support"
               ]
             }
           ]
@@ -64,9 +74,6 @@ const SubscriptionCard = ({ data, theme = 'normal' }) => {
       ]
     }
   };
-
-  // Use either provided data or sample data
-  const displayData = data || sampleData;
 
   return (
     <div className="bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 py-24 relative overflow-hidden">

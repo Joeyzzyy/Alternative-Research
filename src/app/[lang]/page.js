@@ -296,59 +296,8 @@ async function getPageData() {
           sectionId: "research-tool",
         },
         {
-          componentName: "SubscriptionCard",
+          componentName: "SubscriptionCard", 
           sectionId: "pricing-1",
-          title: "Choose Your Plan",
-          subTitle: "Start free and scale as you grow. All plans come with a 14-day trial.",
-          bottomContent: {
-            plans: [
-              {
-                id: "basic",
-                name: "Basic",
-                price: {
-                  monthly: "59",
-                  yearly: "39"
-                },
-                discount: "20%",
-                description: "Perfect for individuals and small teams",
-                buttonText: "Start Free Trial",
-                features: [
-                  {
-                    title: "Core Features",
-                    items: [
-                      "Up to 5 times tool comparisons",
-                      "Compare 3 tools at a time",
-                      "Access to basic templates from your own site"
-                    ]
-                  }
-                ]
-              },
-              {
-                id: "pro",
-                name: "Professional",
-                price: {
-                  monthly: "99",
-                  yearly: "79"
-                },
-                discount: "20%",
-                popular: true,
-                description: "Ideal for growing businesses",
-                buttonText: "Start Free Trial",
-                features: [
-                  {
-                    title: "Everything in Basic, plus",
-                    items: [
-                      "Up to 10 times tool comparisons",
-                      "Compare 5 tools at a time",
-                      "Access to basic templates from your own site",
-                      "Copilot template change",
-                      "Priority support",
-                    ]
-                  }
-                ]
-              }
-            ]
-          }
         },
         {
           componentName: "AIModelShowcase",
@@ -425,7 +374,6 @@ async function getPageData() {
             buttonText: "Subscribe Now"
           }
         },
-        
       ]
     }
   };

@@ -1277,7 +1277,7 @@ export default function Header() {
         </div>
       )}
 
-      {/* 结果弹窗 - 更新为更精美的设计 */}
+      {/* 结果弹窗 - 更新尺寸 */}
       <Modal
         title={
           <div className="flex items-center text-white">
@@ -1290,16 +1290,16 @@ export default function Header() {
           console.log('弹窗关闭，showResultIdsModal 状态:', false);
         }}
         footer={null}
-        width={900}
+        width={1200}
         className="result-ids-modal"
         zIndex={1500}
         styles={{
           mask: { backgroundColor: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(8px)' }
         }}
       >
-        <div className="flex h-[600px]">
+        <div className="flex h-[700px]">
           {/* 左侧选项卡 */}
-          <div className="w-1/4 border-r border-slate-700/50 pr-4 overflow-y-auto custom-scrollbar">
+          <div className="w-1/5 border-r border-slate-700/50 pr-4 overflow-y-auto custom-scrollbar">
             <h3 className="text-gray-300 text-sm font-medium mb-3">Available Previews</h3>
             <div className="space-y-2">
               {resultIds.map((id, index) => (
@@ -1338,7 +1338,7 @@ export default function Header() {
           </div>
           
           {/* 右侧预览区域 */}
-          <div className="w-3/4 pl-4 relative">
+          <div className="w-4/5 pl-4 relative">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-gray-300 text-sm font-medium">Live Preview</h3>
               <a 
@@ -1356,7 +1356,7 @@ export default function Header() {
             </div>
             
             {/* 预览框架 */}
-            <div className="relative h-[520px] bg-slate-900/50 rounded-lg border border-slate-700/50 overflow-hidden">
+            <div className="relative h-[620px] bg-slate-900/50 rounded-lg border border-slate-700/50 overflow-hidden">
               {isPreviewLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 z-10">
                   <div className="text-center">
