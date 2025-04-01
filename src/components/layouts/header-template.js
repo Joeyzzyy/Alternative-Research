@@ -14,6 +14,10 @@ const animationStyles = `
     to { opacity: 1; transform: translateY(0); }
   }
   
+  html {
+    scroll-behavior: smooth;  /* 添加全局平滑滚动 */
+  }
+  
   .result-ids-modal .ant-modal-content {
     background: rgba(15, 23, 42, 0.95);
     backdrop-filter: blur(12px);
@@ -613,6 +617,48 @@ export default function Header() {
     setIsForgotPassword(false);
   };
 
+  const mainMenuItems = [
+    {
+      label: "Generate Alternative Pages Now!",
+      color: "#000000",
+      fontWeight: "600",
+      link: "#",
+      onClick: (e) => {
+        e.preventDefault();
+        window.scrollTo({
+          top: 0,
+          behavior: 'smooth'
+        });
+      }
+    },
+    {
+      label: "Pricing",
+      color: "#000000", 
+      fontWeight: "600",
+      link: "#pricing-1",
+      onClick: (e) => {
+        e.preventDefault();
+        const element = document.getElementById('pricing-1');
+        if (element) {
+          element.scrollIntoView();
+        }
+      }
+    },
+    {
+      label: "FAQ",
+      color: "#000000", 
+      fontWeight: "600",
+      link: "#faq-1",
+      onClick: (e) => {
+        e.preventDefault();
+        const element = document.getElementById('faq-1');
+        if (element) {
+          element.scrollIntoView();
+        }
+      }
+    }
+  ];
+
   const renderMenuItem = (item) => {
     if (!item?.label) return null;
 
@@ -642,49 +688,17 @@ export default function Header() {
           </a>
         ) : (
           <a
-            href={item.link || `#${item.label.toLowerCase()}`}
+            href={item.link}
+            onClick={item.onClick}
             style={menuItemStyles}
-            className="text-[15px] hover:text-[#1890ff] transition-all duration-300"
-            target="_blank"
-            rel="noopener noreferrer"
+            className="text-[15px] hover:text-[#1890ff] transition-all duration-300 cursor-pointer"
           >
             {item.label}
           </a>
         )}
-
-        {hasChildren && (
-          <div className="invisible group-hover:visible opacity-0 group-hover:opacity-100 absolute top-full left-0 w-40 bg-white shadow-lg rounded-lg py-1 mt-1 transition-all duration-200">
-            {item.children.map((child) => (
-              <a
-                key={child.key || child.label}
-                href={child.href}
-                className="block px-4 py-2 text-sm text-gray-600 hover:text-[#1890ff] hover:bg-gray-50"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {child.label}
-              </a>
-            ))}
-          </div>
-        )}
       </div>
     );
   };
-
-  const mainMenuItems = [
-    {
-      label: "Pricing",
-      color: "#000000",
-      fontWeight: "600",
-      link: "#pricing-1"
-    },
-    {
-      label: "FAQ",
-      color: "#000000", 
-      fontWeight: "600",
-      link: "#faq-1"
-    }
-  ];
 
   return (
     <>

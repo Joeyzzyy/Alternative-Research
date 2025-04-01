@@ -13,6 +13,7 @@ const TAG_FILTERS = {
   '\\[URL_GET\\]': '',  // 过滤 [URL_GET]
   '\\[COMPETITOR_SELECTED\\]': '',  // 过滤 [COMPETITOR_SELECTED]
   '\\[END\\]': '',  // 过滤 [END]
+  '\\[ALL_END\\]': '',  // 过滤 [COMPETITOR_SELECTED]
 };
 
 const ALTERNATIVELY_LOGO = '/images/alternatively-logo.png'; // 假设这是Alternatively的logo路径
@@ -159,6 +160,15 @@ const ResearchTool = () => {
     
     return domainRegex.test(domain);
   };
+
+  // 监听日志变化，在有新日志时自动切回 execution log
+  useEffect(() => {
+    if (rightPanelTab === 'browser' && logs.length > lastLogCountRef.current) {
+      console.log('检测到新的日志，切回 execution log');
+      setRightPanelTab('details');
+    }
+    lastLogCountRef.current = logs.length;
+  }, [logs, rightPanelTab]);
 
   // Add a useEffect to reset inputDisabledDueToUrlGet when messages are updated
   useEffect(() => {
@@ -1102,12 +1112,14 @@ const ResearchTool = () => {
       // 向chat接口发送任务完成消息，带有[PAGES_GENERATED]标记
       (async () => {
         try {
-          const completionMessage = "Task completed successfully! You can now input colors and style preferences to change the page. [PAGES_GENERATED]";
+          const completionMessage = "Task completed successfully! You can check the generated pages in the simulated browser and let me know if you need to change the colors and styles of those pags. [PAGES_GENERATED]";
           const response = await apiClient.chatWithAI(completionMessage, currentWebsiteId);
           
           if (response?.code === 200 && response.data?.answer) {
             const answer = filterMessageTags(response.data.answer);
-            messageHandler.addAgentMessage(answer);
+
+            const thinkingMessageId = messageHandler.addAgentThinkingMessage();
+            messageHandler.updateAgentMessage(answer, thinkingMessageId);
           } else {
             // 如果API调用失败，仍然添加系统消息
             messageHandler.addSystemMessage(
@@ -1134,6 +1146,8 @@ const ResearchTool = () => {
       competitorListProcessedRef.current = false;
     };
   }, []);
+
+  
 
   // 修改标签页处理逻辑
   useEffect(() => {
