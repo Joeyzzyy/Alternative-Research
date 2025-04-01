@@ -89,6 +89,9 @@ export default function Header() {
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [showResultIdsModal, setShowResultIdsModal] = useState(false);
   const [resultIds, setResultIds] = useState([]);
+  const [selectedPreviewUrl, setSelectedPreviewUrl] = useState('');
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [activePreviewTab, setActivePreviewTab] = useState(0);
 
   // 添加点击任务时的加载状态
   const [loadingResultIds, setLoadingResultIds] = useState(false);
@@ -190,6 +193,11 @@ export default function Header() {
           
           if (codesResultIds.length > 0) {
             setResultIds(codesResultIds);
+            // 默认选择第一个预览
+            if (codesResultIds[0]) {
+              setSelectedPreviewUrl(`https://preview.websitelm.site/en/${codesResultIds[0]}`);
+              setActivePreviewTab(0);
+            }
             setTimeout(() => {
               setShowResultIdsModal(true);
               console.log('showResultIdsModal 状态:', true);
@@ -205,6 +213,13 @@ export default function Header() {
         setLoadingResultIds(false);
       }
     }
+  };
+
+  // 处理预览选择
+  const handlePreviewSelect = (resultId, index) => {
+    setIsPreviewLoading(true);
+    setSelectedPreviewUrl(`https://preview.websitelm.site/en/${resultId}`);
+    setActivePreviewTab(index);
   };
 
   const handleGoogleLogin = async () => {
@@ -1236,36 +1251,111 @@ export default function Header() {
         </div>
       )}
 
-      {/* 结果弹窗 */}
+      {/* 结果弹窗 - 更新为更精美的设计 */}
       <Modal
-        title="Generated Results"
+        title={
+          <div className="flex items-center text-white">
+            <span className="text-lg font-medium">Preview Results</span>
+          </div>
+        }
         open={showResultIdsModal}
         onCancel={() => {
           setShowResultIdsModal(false);
           console.log('弹窗关闭，showResultIdsModal 状态:', false);
         }}
         footer={null}
-        width={400}
+        width={900}
         className="result-ids-modal"
         zIndex={1500}
         styles={{
           mask: { backgroundColor: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(8px)' }
         }}
       >
-        {console.log('弹窗状态:', showResultIdsModal)}
-        <div className="space-y-3">
-          {resultIds.map((id, index) => (
-            <div key={index} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
-              <span className="text-gray-300">Result #{index + 1}</span>
-              <Button 
-                type="primary"
-                onClick={() => window.open(`https://preview.websitelm.site/en/${id}`, '_blank')}
-                className="bg-blue-500 hover:bg-blue-600"
-              >
-                View Preview
-              </Button>
+        <div className="flex h-[600px]">
+          {/* 左侧选项卡 */}
+          <div className="w-1/4 border-r border-slate-700/50 pr-4 overflow-y-auto custom-scrollbar">
+            <h3 className="text-gray-300 text-sm font-medium mb-3">Available Previews</h3>
+            <div className="space-y-2">
+              {resultIds.map((id, index) => (
+                <div 
+                  key={index} 
+                  className={`p-3 rounded-lg cursor-pointer transition-all duration-200 ${
+                    activePreviewTab === index 
+                      ? 'bg-blue-500/20 border border-blue-500/50' 
+                      : 'bg-slate-800/50 border border-slate-700/50 hover:bg-slate-700/50'
+                  }`}
+                  onClick={() => handlePreviewSelect(id, index)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${activePreviewTab === index ? 'bg-blue-400' : 'bg-gray-500'}`}></div>
+                      <span className="text-gray-200 font-medium">Preview Version #{index + 1}</span>
+                    </div>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(`https://preview.websitelm.site/en/${id}`, '_blank');
+                      }}
+                      className="text-xs text-blue-400 hover:text-blue-300"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div className="mt-1.5 text-xs text-gray-400">
+                    Result ID: {id.substring(0, 8)}...{id.substring(id.length - 4)}
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
+          
+          {/* 右侧预览区域 */}
+          <div className="w-3/4 pl-4 relative">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-gray-300 text-sm font-medium">Live Preview</h3>
+              <a 
+                href={selectedPreviewUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-xs bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                Open in New Window
+              </a>
+            </div>
+            
+            {/* 预览框架 */}
+            <div className="relative h-[520px] bg-slate-900/50 rounded-lg border border-slate-700/50 overflow-hidden">
+              {isPreviewLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-slate-900/80 z-10">
+                  <div className="text-center">
+                    <Spin size="large" />
+                    <p className="mt-3 text-gray-300">Loading preview...</p>
+                  </div>
+                </div>
+              )}
+              
+              {selectedPreviewUrl && (
+                <iframe 
+                  src={selectedPreviewUrl}
+                  className="w-full h-full border-0"
+                  onLoad={() => setIsPreviewLoading(false)}
+                  title="Website Preview"
+                />
+              )}
+              
+              {!selectedPreviewUrl && (
+                <div className="flex items-center justify-center h-full">
+                  <p className="text-gray-400">Please select a preview version</p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </Modal>
 
@@ -1310,6 +1400,16 @@ export default function Header() {
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
           background-color: rgba(100, 116, 139, 0.7);
+        }
+        
+        @keyframes pulse-border {
+          0% { border-color: rgba(59, 130, 246, 0.3); }
+          50% { border-color: rgba(59, 130, 246, 0.6); }
+          100% { border-color: rgba(59, 130, 246, 0.3); }
+        }
+        
+        .active-preview {
+          animation: pulse-border 2s infinite;
         }
       `}</style>
     </>

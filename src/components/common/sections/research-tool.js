@@ -1016,7 +1016,29 @@ const ResearchTool = () => {
 
       handleCompetitorListRequest(competitors);
     }
-  }, [logs, canProcessCompetitors]);
+    
+    // 添加检测任务完成的逻辑
+    const finishedLog = logs.find(log => 
+      log.type === 'Info' && 
+      log.step === 'GENERATION_FINISHED'
+    );
+    
+    if (finishedLog && !finishedLog.processed) {
+      // 标记该日志已处理，避免重复添加消息
+      setLogs(prevLogs => prevLogs.map(log => 
+        log.id === finishedLog.id ? {...log, processed: true} : log
+      ));
+      
+      // 添加任务完成的系统消息
+      messageHandler.addSystemMessage(
+        "Task completed successfully! You can now input colors to change the style, or start a new task by entering a different URL."
+      );
+      
+      // 确保重新启用输入
+      setInputDisabledDueToUrlGet(false);
+    }
+  }, [logs, canProcessCompetitors]); // 当日志更新时检查
+
   // 组件卸载时重置标记
   useEffect(() => {
     return () => {
