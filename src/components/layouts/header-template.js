@@ -796,13 +796,20 @@ export default function Header() {
                       items: historyList.map((item, index) => ({
                         key: item.websiteId || index,
                         label: (
-                          <div className="py-2 px-3">
+                          <div className={`py-2 px-3 ${
+                            loadingResultIds && currentWebsiteId === item.websiteId ? 'bg-slate-700/30' : ''
+                          }`}>
                             <div className="flex items-center justify-between">
                               <span className="truncate max-w-[200px] text-sm font-medium text-gray-200">{item.domain}</span>
                               <span className="text-xs text-gray-400">{new Date(item.createdAt).toLocaleDateString()}</span>
                             </div>
                             <div className="flex items-center mt-1">
-                              {item.status === 'finished' ? (
+                              {loadingResultIds && currentWebsiteId === item.websiteId ? (
+                                <div className="flex items-center gap-1.5">
+                                  <Spin size="small" />
+                                  <span className="text-xs text-blue-300">Loading results...</span>
+                                </div>
+                              ) : item.status === 'finished' ? (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
                                   Completed
                                 </span>
@@ -822,7 +829,11 @@ export default function Header() {
                             </div>
                           </div>
                         ),
-                        onClick: () => handleHistoryItemClick(item)
+                        onClick: (e) => {
+                          e.domEvent.stopPropagation(); // 阻止事件冒泡
+                          handleHistoryItemClick(item);
+                        },
+                        disabled: loadingResultIds && currentWebsiteId === item.websiteId
                       })),
                       style: { 
                         backgroundColor: 'rgba(15, 23, 42, 0.95)',
@@ -831,13 +842,21 @@ export default function Header() {
                         border: '1px solid rgba(100, 116, 139, 0.2)',
                         padding: '0.5rem 0',
                         width: '350px',
-                        maxHeight: '400px', // 限制最大高度
-                        overflowY: 'auto' // 添加滚动条
+                        maxHeight: '400px',
+                        overflowY: 'auto'
                       }
                     }}
                     trigger={['click']} 
                     placement="bottomRight"
                     overlayClassName="history-dropdown"
+                    onOpenChange={(open) => {
+                      if (!open && loadingResultIds) {
+                        // 如果正在加载，阻止关闭
+                        return false;
+                      }
+                      return true;
+                    }}
+                    open={loadingResultIds ? true : undefined} // 强制保持打开状态
                   >
                     <button className="px-4 py-2.5 text-sm bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border-blue-500/30 rounded-full backdrop-blur-sm transition-all flex items-center gap-2 border shadow-lg hover:shadow-xl hover:-translate-y-0.5 duration-300">
                       <HistoryOutlined style={{ fontSize: '16px' }} />
