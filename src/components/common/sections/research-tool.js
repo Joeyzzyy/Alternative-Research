@@ -574,7 +574,7 @@ const ResearchTool = () => {
                 {log.type === 'Html' && (
                   <div className="text-[10px] text-gray-400 break-words leading-relaxed">
                     <div className="mb-1">
-                      <span className="font-semibold">HTML Code:</span>
+                      <span className="font-semibold">HTML Code Generation:</span>
                       <pre 
                         ref={log.id === currentStreamIdRef.current ? codeContainerRef : null}
                         className="mt-1 p-2 bg-gray-700/50 rounded text-xs whitespace-pre-wrap break-words"
@@ -1615,7 +1615,7 @@ const ResearchTool = () => {
                   <div className={`w-2 h-2 rounded-full mr-2 ${
                     sseConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
                   }`}></div>
-                  <span>SSE {sseConnected ? 'Connected' : 'Disconnected'}</span>
+                  <span>Log Server {sseConnected ? 'Connected' : 'Disconnected'}</span>
                 </div>
               </div>
             </div>

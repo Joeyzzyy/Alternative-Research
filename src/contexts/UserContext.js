@@ -27,11 +27,11 @@ export const UserProvider = ({ children }) => {
           pageGeneratorUsage
         });
       } else {
-        setError('无法获取用户套餐信息');
+        setError('Unable to get user package information  ');
       }
     } catch (err) {
-      console.error('获取用户套餐失败:', err);
-      setError('获取用户套餐失败');
+      console.error('Failed to get user package:', err);
+      setError('Failed to get user package');
     } finally {
       setLoading(false);
     }

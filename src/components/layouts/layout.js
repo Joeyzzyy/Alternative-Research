@@ -12,11 +12,14 @@ import FeatureIntro from '../common/sections/feature-intro';
 import FeatureIntroLeftRight from '../common/sections/feature-intro-left-right';
 import FeatureIntroRightLeft from '../common/sections/feature-intro-right-left';
 import Recommendations from '../common/sections/recommendations';
+import TaskRestoreTool from '../common/sections/task-restore-tool';
+import { useToolContext } from '../../contexts/ToolContext';
 
 const COMPONENT_MAP = {
   Faqs: FAQ,
   CallToAction: CallToAction,
   ResearchTool: ResearchTool,
+  TaskRestoreTool: TaskRestoreTool,
   SubscriptionCard: SubscriptionCard,
   AIModelShowcase: AIModelShowcase,
   FeatureIntro: FeatureIntro,
@@ -46,6 +49,7 @@ const generateSchemaMarkup = (article) => {
 };
 
 const CommonLayout = ({ article, keywords }) => {
+  const { currentTool } = useToolContext();
   const headerData = useMemo(() => {
     return article?.pageLayout?.pageHeaders;
   }, [article?.pageLayout?.pageHeaders]);
@@ -74,19 +78,28 @@ const CommonLayout = ({ article, keywords }) => {
       
       <div className="flex-1 w-full max-w-[100vw] overflow-x-hidden">
         {sections.map((section, index) => {
+          if (section.componentName === "ResearchTool") {
+            return (
+              <div 
+                key={`tool-section-${index}`}
+                className="w-full bg-white"
+              >
+                {currentTool === 'restore' ? (
+                  <TaskRestoreTool />
+                ) : (
+                  <ResearchTool />
+                )}
+              </div>
+            );
+          }
+
           const Component = COMPONENT_MAP[section.componentName];
           if (!Component) return null;
 
-          // 为 ResearchTool 组件添加特殊样式
-        const sectionClassName = section.componentName === "ResearchTool" 
-          ? "w-full bg-white" // 移除顶部内边距
-          : "w-full bg-white";
-      
-          
           return (
             <div 
               key={`${section.componentName}-${section.sectionId}`}
-              className={sectionClassName}
+              className="w-full bg-white"
               id={section.sectionId}
             >
               <Component 

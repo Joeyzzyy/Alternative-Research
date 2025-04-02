@@ -7,6 +7,8 @@ import apiClient from '../../lib/api/index.js';
 import { Dropdown, Modal, Button, Spin, Menu } from 'antd';
 import { HistoryOutlined } from '@ant-design/icons';
 import { useUser } from '../../contexts/UserContext';
+import { useToolContext } from '../../contexts/ToolContext';
+import DeviceManager from '../../utils/DeviceManager';
 
 const animationStyles = `
   @keyframes fadeIn {
@@ -102,6 +104,10 @@ export default function Header() {
   const [loadingResultIds, setLoadingResultIds] = useState(false);
   const [currentWebsiteId, setCurrentWebsiteId] = useState(null);
 
+  const { currentTool, setCurrentTool } = useToolContext();
+
+  const [deviceInfo, setDeviceInfo] = useState(null);
+
   useEffect(() => {
     // Check if user is logged in with alternatively prefix
     const loggedIn = localStorage.getItem('alternativelyIsLoggedIn') === 'true';
@@ -178,10 +184,18 @@ export default function Header() {
 
   // 处理历史记录点击
   const handleHistoryItemClick = async (item) => {
+    // 如果任务状态是进行中，直接切换到restore模式
+    if (item.status === 'processing') {
+      setCurrentTool('restore');
+      // 将websiteId传递给TaskRestoreTool组件
+      localStorage.setItem('restoreWebsiteId', item.websiteId);
+      return; // 直接返回,不执行后续的历史查询
+    }
+
+    // 只有完成的任务才查询历史记录和显示预览
     if (item.websiteId) {
       console.log('处理历史记录点击，websiteId:', item.websiteId);
       
-      // 设置当前选中的websiteId和加载状态
       setCurrentWebsiteId(item.websiteId);
       setLoadingResultIds(true);
       
@@ -227,15 +241,55 @@ export default function Header() {
     setActivePreviewTab(index);
   };
 
+  useEffect(() => {
+    // 检查URL参数
+    const urlParams = new URLSearchParams(window.location.search);
+    const accessToken = urlParams.get('accessToken');
+    const customerId = urlParams.get('customerId');
+    const email = urlParams.get('email');
+    const onboarding = urlParams.get('onboarding') === 'true';
+    const firstLogin = urlParams.get('firstLogin') === 'true';
+
+    // 验证JWT token的格式
+    const isValidJWT = accessToken?.split('.').length === 3;
+
+    if (accessToken && isValidJWT && customerId && email) {
+      try {
+        // 清除现有存储
+        localStorage.clear();
+        
+        // 存储新的登录信息
+        const decodedEmail = decodeURIComponent(email);
+        localStorage.setItem('alternativelyIsLoggedIn', 'true');
+        localStorage.setItem('alternativelyAccessToken', accessToken);
+        localStorage.setItem('alternativelyCustomerId', customerId);
+        localStorage.setItem('alternativelyCustomerEmail', decodedEmail);
+        
+        setIsLoggedIn(true);
+        setUserEmail(decodedEmail);
+        showNotification('Login successful!', 'success');
+        
+        // 清除 URL 参数
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        // 刷新页面以应用新的登录状态
+        window.location.reload();
+      } catch (error) {
+        console.error('Login process failed:', error);
+        showNotification('Authentication Failed', 'error');
+        localStorage.clear();
+      }
+    }
+  }, []);
+
   const handleGoogleLogin = async () => {
     try {
-      setLoading(true); // Add loading state
+      setLoading(true);
       showNotification('Connecting to Google...', 'info');
       
       const response = await apiClient.googleLogin();
       
       if (response && response.data) {
-        // Redirect to the Google authentication URL
         window.location.href = response.data;
       } else {
         showNotification('Failed to get Google login URL', 'error');
@@ -243,54 +297,6 @@ export default function Header() {
     } catch (error) {
       console.error("Google login failed:", error);
       showNotification('Google login request failed, please try again later', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Add Google login callback handler
-  useEffect(() => {
-    // Check if URL contains Google login callback parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    const googleAuthCode = urlParams.get('code');
-    const googleAuthState = urlParams.get('state');
-    
-    if (googleAuthCode && googleAuthState === 'login_alternatively') {
-      // Handle Google login callback
-      handleGoogleLoginCallback(googleAuthCode, googleAuthState);
-    }
-  }, []);
-
-  // Handle Google login callback
-  const handleGoogleLoginCallback = async (code, state) => {
-    try {
-      setLoading(true);
-      showNotification('Completing Google login...', 'info');
-      
-      const response = await apiClient.googleCallback(code, state);
-      
-      if (response && response.accessToken) {
-        // 确保先保存数据再刷新页面
-        localStorage.setItem('alternativelyAccessToken', response.accessToken);
-        localStorage.setItem('alternativelyIsLoggedIn', 'true');
-        localStorage.setItem('alternativelyCustomerEmail', response.data.email);
-        localStorage.setItem('alternativelyCustomerId', response.data.customerId);
-        
-        setIsLoggedIn(true);
-        setUserEmail(response.data.email);
-        showNotification('Google login successful!', 'success');
-        
-        // 使用 setTimeout 确保数据已保存后再刷新
-        setTimeout(() => {
-          window.history.replaceState({}, document.title, window.location.pathname);
-          window.location.href = window.location.pathname; 
-        }, 500);
-      } else {
-        showNotification('Google login verification failed', 'error');
-      }
-    } catch (error) {
-      console.error("Google login callback handling failed:", error);
-      showNotification('Google login verification failed', 'error');
     } finally {
       setLoading(false);
     }
@@ -700,6 +706,29 @@ export default function Header() {
     );
   };
 
+  // 检查免费额度
+  const checkFreeCredits = async (deviceId) => {
+    try {
+      const response = await apiClient.checkFreeCredits(deviceId);
+      if (response?.code === 200 && response.data?.freeCredits) {
+        showNotification(`您有 ${response.data.freeCredits} 次免费使用机会`, 'info');
+      }
+    } catch (error) {
+      console.error('Error checking free credits:', error);
+    }
+  };
+
+  // 初始化设备信息
+  useEffect(() => {
+    if (!isLoggedIn) {
+      const info = DeviceManager.getDeviceInfo();
+      if (info) {
+        setDeviceInfo(info);
+        checkFreeCredits(info.deviceId);
+      }
+    }
+  }, [isLoggedIn]);
+
   return (
     <>
       <nav className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-slate-950 to-black border-b border-slate-800/50">
@@ -833,71 +862,17 @@ export default function Header() {
 
                   {/* 历史记录按钮 */}
                   <Dropdown 
-                    menu={{ 
-                      items: historyList.map((item, index) => ({
-                        key: item.websiteId || index,
-                        label: (
-                          <div className={`py-2 px-3 ${
-                            loadingResultIds && currentWebsiteId === item.websiteId ? 'bg-slate-700/30' : ''
-                          }`}>
-                            <div className="flex items-center justify-between">
-                              <span className="truncate max-w-[200px] text-sm font-medium text-gray-200">{item.domain}</span>
-                              <span className="text-xs text-gray-400">{new Date(item.createdAt).toLocaleDateString()}</span>
-                            </div>
-                            <div className="flex items-center mt-1">
-                              {loadingResultIds && currentWebsiteId === item.websiteId ? (
-                                <div className="flex items-center gap-1.5">
-                                  <Spin size="small" />
-                                  <span className="text-xs text-blue-300">Loading results...</span>
-                                </div>
-                              ) : item.status === 'finished' ? (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                                  Completed
-                                </span>
-                              ) : item.status === 'failed' ? (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
-                                  Failed
-                                </span>
-                              ) : item.status === 'processing' ? (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
-                                  In Progress
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
-                                  {item.status || 'Unknown'}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        ),
-                        onClick: (e) => {
-                          e.domEvent.stopPropagation(); // 阻止事件冒泡
-                          handleHistoryItemClick(item);
-                        },
-                        disabled: loadingResultIds && currentWebsiteId === item.websiteId
-                      })),
-                      style: { 
-                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                        backdropFilter: 'blur(12px)',
-                        borderRadius: '0.75rem',
-                        border: '1px solid rgba(100, 116, 139, 0.2)',
-                        padding: '0.5rem 0',
-                        width: '350px',
-                        maxHeight: '400px',
-                        overflowY: 'auto'
-                      }
-                    }}
+                    menu={historyMenu}
                     trigger={['click']} 
                     placement="bottomRight"
                     overlayClassName="history-dropdown"
                     onOpenChange={(open) => {
                       if (!open && loadingResultIds) {
-                        // 如果正在加载，阻止关闭
                         return false;
                       }
                       return true;
                     }}
-                    open={loadingResultIds ? true : undefined} // 强制保持打开状态
+                    open={loadingResultIds ? true : undefined}
                   >
                     <button className="px-4 py-2.5 text-sm bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border-blue-500/30 rounded-full backdrop-blur-sm transition-all flex items-center gap-2 border shadow-lg hover:shadow-xl hover:-translate-y-0.5 duration-300">
                       <HistoryOutlined style={{ fontSize: '16px' }} />
@@ -905,7 +880,30 @@ export default function Header() {
                     </button>
                   </Dropdown>
 
-                  {/* 原有登出按钮 */}
+                  {/* Switch 工具按钮 */}
+                  <button
+                    onClick={() => setCurrentTool(currentTool === 'research' ? 'restore' : 'research')}
+                    className="px-4 py-2.5 text-sm bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border-cyan-500/30 rounded-full backdrop-blur-sm transition-all flex items-center gap-2 border shadow-lg hover:shadow-xl hover:-translate-y-0.5 duration-300"
+                  >
+                    <span className="font-medium">
+                      {currentTool === 'research' ? 'Switch to Restore' : 'Switch to Research'}
+                    </span>
+                    <svg 
+                      className="w-4 h-4" 
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      stroke="currentColor"
+                    >
+                      <path 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        strokeWidth={2} 
+                        d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" 
+                      />
+                    </svg>
+                  </button>
+
+                  {/* 登出按钮 */}
                   <button
                     onClick={handleLogout}
                     className="px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-600/80 to-blue-600/80 text-white hover:from-cyan-500 hover:to-blue-500 transition-all duration-300 shadow-lg hover:shadow-cyan-500/20"
@@ -1341,18 +1339,31 @@ export default function Header() {
           <div className="w-4/5 pl-4 relative">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-gray-300 text-sm font-medium">Live Preview</h3>
-              <a 
-                href={selectedPreviewUrl} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-xs bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-                Open in New Window
-              </a>
+              <div className="flex items-center gap-2">
+                <a 
+                  href={selectedPreviewUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-xs bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  Open in New Window
+                </a>
+                <a 
+                  href={`http://app.websitelm.com/alternatively-edit/${resultIds[activePreviewTab]}`}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-xs bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Edit
+                </a>
+              </div>
             </div>
             
             {/* 预览框架 */}

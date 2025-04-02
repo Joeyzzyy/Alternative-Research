@@ -277,6 +277,19 @@ const getCustomerPackage = async () => {
   }
 };
 
+// 获取聊天历史记录
+const getAlternativeChatHistory = async (websiteId) => {
+  try {
+    const response = await apiClient.get('/alternatively/chat/history', {
+      params: { websiteId }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Failed to get chat history:', error);
+    throw error;
+  }
+};
+
 apiClient.getCompetitorResearch = getCompetitorResearch;
 apiClient.login = login;
 apiClient.register = register;
@@ -295,5 +308,6 @@ apiClient.changeStyle = changeStyle;
 apiClient.getAlternativeWebsiteList = getAlternativeWebsiteList;
 apiClient.getAlternativeWebsiteHistory = getAlternativeWebsiteHistory;
 apiClient.getCustomerPackage = getCustomerPackage;
+apiClient.getAlternativeChatHistory = getAlternativeChatHistory;
 
 export default apiClient;
