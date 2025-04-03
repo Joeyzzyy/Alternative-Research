@@ -419,13 +419,17 @@ export default function Header() {
       loadingResultIds && {
         key: 'loading',
         label: (
-          <div className="flex items-center justify-center py-4">
-            <div className="flex items-center space-x-2">
-              <Spin size="small" />
-              <span className="text-gray-400">Loading preview data...</span>
+          <div className="flex flex-col items-center justify-center py-6 space-y-3">
+            {/* 添加一个动态的加载动画 */}
+            <div className="w-8 h-8 rounded-full border-2 border-blue-500 border-t-transparent animate-spin"></div>
+            {/* 更美观的加载提示 */}
+            <div className="text-center">
+              <p className="text-sm font-medium text-gray-300">Loading Preview Data</p>
+              <p className="text-xs text-gray-400 mt-1">Please wait while we prepare your preview...</p>
             </div>
           </div>
         ),
+        disabled: true, // 禁用点击
       },
       // History items (only show when not loading)
       !loadingResultIds && {
@@ -1370,7 +1374,6 @@ export default function Header() {
         <div className="flex h-[700px]">
           {/* 左侧选项卡 */}
           <div className="w-1/5 border-r border-slate-700/50 pr-4 overflow-y-auto custom-scrollbar">
-            <h3 className="text-gray-300 text-sm font-medium mb-3">Available Previews</h3>
             <div className="space-y-2">
               {resultIds.map((id, index) => (
                 <div 
