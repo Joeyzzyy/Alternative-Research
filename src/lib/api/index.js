@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API_URL = 'https://api.websitelm.com/v1';
-const API_URL_TEST = 'http://192.168.10.89:9091/v1';
+// const API_URL = 'http://192.168.10.89:9091/v1';
 
 // 创建 axios 实例，更新配置
 const apiClient = axios.create({
@@ -242,10 +242,12 @@ const changeStyle = async (styleColor, websiteId) => {
   }
 };
 
-// 新增获取客户生成信息列表接口
-const getAlternativeWebsiteList = async () => {
+// 修改获取客户生成信息列表接口，添加分页支持
+const getAlternativeWebsiteList = async (page = 1, limit = 10) => {
   try {
-    const response = await apiClient.get('/alternatively/website');
+    const response = await apiClient.get('/alternatively/website', {
+      params: { page, limit }
+    });
     return response.data;
   } catch (error) {
     console.error('Failed to get alternative website list:', error);

@@ -134,6 +134,8 @@ const TaskRestoreTool = () => {
   const [taskDetails, setTaskDetails] = useState(null);
   const [chatHistory, setChatHistory] = useState([]); // 新增聊天历史状态
 
+  const [inputDisabledDueToUrlGet, setInputDisabledDueToUrlGet] = useState(false);
+
   const filterMessageTags = (message) => {
     // 添加空值检查
     if (!message || typeof message !== 'string') {
@@ -304,109 +306,206 @@ const TaskRestoreTool = () => {
     return (
       <div className="h-full flex flex-col" ref={detailsRef}>
         <div className="p-3 space-y-2 overflow-y-auto">
-          {reversedLogs.map((log, index) => (
-            <div 
-              key={log.id || index} // 优先使用日志ID作为key
-              className="bg-gray-800/50 p-2.5 rounded border border-gray-700/50 
-                       hover:border-gray-600/50 transition-all duration-300 
-                       animate-fadeIn opacity-0" // 添加初始透明度
-              style={{
-                animation: 'fadeIn 0.3s ease-out forwards',
-                animationDelay: `${index * 0.05}s` // 添加渐进式动画延迟
-              }}
-            >
-              <div className="flex items-center mb-2">
-                {/* 图标部分 */}
-                {log.type === 'Info' && (
-                  <svg className="w-4 h-4 mr-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                )}
-                {log.type === 'FIND_COMPETITORS_SEMRUSH_API' && (
-                  <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                )}
-                
-                {/* 标题部分 */}
-                <div className="text-[11px] text-gray-300 font-medium">
-                  {log.type === 'Info' && 'Info'}
-                  {log.type === 'FIND_COMPETITORS_SEMRUSH_API' && 'API Request'}
-                </div>
-              </div>
+          {reversedLogs.map((log, index) => {
+            // 解析 Dify 日志的 content
+            let difyContent = null;
+            if (log.type === 'Dify' && typeof log.content === 'string') {
+              try {
+                difyContent = JSON.parse(log.content);
+              } catch (e) {
+                console.error('Failed to parse Dify content:', e);
+              }
+            }
 
-              {/* Info类型日志内容 */}
-              {log.type === 'Info' && (
-                <div className="text-[10px] text-gray-400 break-words leading-relaxed">
-                  {log.content?.website && (
-                    <div className="mb-1">
-                      <span className="font-semibold">Website:</span> {log.content.website}
-                    </div>
-                  )}
-                  {log.content?.generatorStatus && (
-                    <div className="mb-1">
-                      <span className="font-semibold">Status:</span> {log.content.generatorStatus}
-                    </div>
-                  )}
-                  {log.content?.generatedStart && (
-                    <div className="mb-1">
-                      <span className="font-semibold">Start Time:</span> {new Date(log.content.generatedStart).toLocaleString()}
-                    </div>
-                  )}
-                  {log.content?.generatedEnd && (
-                    <div className="mb-1">
-                      <span className="font-semibold">End Time:</span> {new Date(log.content.generatedEnd).toLocaleString()}
-                    </div>
-                  )}
-                  {log.content?.changeStyleCount !== undefined && (
-                    <div className="mb-1">
-                      <span className="font-semibold">Style Changes:</span> {log.content.changeStyleCount}
-                    </div>
-                  )}
-                </div>
-              )}
+            // 获取当前日志的累积内容
+            const currentHtmlContent = log.id === currentStreamIdRef.current 
+              ? htmlStreamRef.current 
+              : log.content;
 
-              {/* FIND_COMPETITORS_SEMRUSH_API类型日志内容 */}
-              {log.type === 'FIND_COMPETITORS_SEMRUSH_API' && (
-                <div className="text-[10px] text-gray-400 break-words leading-relaxed">
-                  {log.content?.status && (
-                    <div className="mb-1">
-                      <span className="font-semibold">Status:</span> {log.content.status}
-                    </div>
+            return (
+              <div 
+                key={log.id || index} // 优先使用日志ID作为key
+                className="bg-gray-800/50 p-2.5 rounded border border-gray-700/50 
+                         hover:border-gray-600/50 transition-all duration-300 
+                         animate-fadeIn opacity-0" // 添加初始透明度
+                style={{
+                  animation: 'fadeIn 0.3s ease-out forwards',
+                  animationDelay: `${index * 0.05}s` // 添加渐进式动画延迟
+                }}
+              >
+                <div className="flex items-center mb-2">
+                  {/* 图标部分 */}
+                  {log.type === 'Dify' && (
+                    <img src="/images/alternatively-logo.png" alt="Alternatively" className="w-4 h-4 mr-2" />
                   )}
-                  {log.content?.data && (
+                  {log.type === 'Error' && (
+                    <svg className="w-4 h-4 mr-2 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                  {log.type === 'API' && (
+                    <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                  )}
+                  {log.type === 'Codes' && (
+                    <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 4l-4 4 4 4" />
+                    </svg>
+                  )}
+                  {log.type === 'Info' && (
+                    <svg className="w-4 h-4 mr-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  )}
+                  {log.type === 'Html' && (
+                    <svg className="w-4 h-4 mr-2 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 4l-4 4 4 4" />
+                    </svg>
+                  )}
+                  
+                  {/* 标题部分 */}
+                  <div className="text-[11px] text-gray-300 font-medium">
+                    {log.type === 'Dify' && 'Running Page Content Generation Workflow'}
+                    {log.type === 'Error' && 'Error Message'}
+                    {log.type === 'API' && 'API Request'}
+                    {log.type === 'Codes' && 'Code Execution'}
+                    {log.type === 'Info' && 'Information'}
+                    {log.type === 'Html' && 'HTML Generation'}
+                  </div>
+                </div>
+
+                {/* Dify 日志内容渲染 */}
+                {log.type === 'Dify' && difyContent && (
+                  <div className="text-[10px] text-gray-400 break-words leading-relaxed">
                     <div className="mb-1">
-                      <span className="font-semibold">Competitors:</span>
-                      <div className="mt-1 p-2 bg-gray-700/50 rounded">
-                        {typeof log.content.data === 'string' 
-                          ? JSON.parse(log.content.data).map((competitor, i) => (
-                              <div key={i} className="text-blue-300 hover:text-blue-200">
-                                {competitor}
-                              </div>
-                            ))
-                          : log.content.data.map((competitor, i) => (
-                              <div key={i} className="text-blue-300 hover:text-blue-200">
-                                {competitor}
-                              </div>
-                            ))
-                        }
+                      <span className="font-semibold">Workflow ID:</span> {difyContent.workflow_id}
+                    </div>
+                    <div className="mb-1">
+                      <span className="font-semibold">Task ID:</span> {difyContent.task_id}
+                    </div>
+                    <div className="mb-1">
+                      <span className="font-semibold">Step:</span> {difyContent.step}
+                    </div>
+                    <div className="mb-1">
+                      <span className="font-semibold">Status:</span> {difyContent.event}
+                    </div>
+                    {difyContent.data && (
+                      <div className="mb-1">
+                        <span className="font-semibold">Node Info:</span>
+                        <pre className="mt-1 p-2 bg-gray-700/50 rounded text-xs overflow-auto">
+                          {JSON.stringify({
+                            id: difyContent.data.id,
+                            title: difyContent.data.title,
+                            status: difyContent.data.status,
+                            elapsed_time: difyContent.data.elapsed_time
+                          }, null, 2)}
+                        </pre>
                       </div>
-                    </div>
-                  )}
-                  {log.content?.errorMsg && (
-                    <div className="mb-1">
-                      <span className="font-semibold">Message:</span> {log.content.errorMsg}
-                    </div>
-                  )}
-                </div>
-              )}
+                    )}
+                  </div>
+                )}
 
-              {/* 时间戳 */}
-              <div className="text-[9px] text-gray-500 mt-1.5">
-                {new Date(log.timestamp).toLocaleString()}
+                {/* HTML 日志内容渲染 */}
+                {log.type === 'Html' && (
+                  <div className="text-[10px] text-gray-400 break-words leading-relaxed">
+                    <div className="mb-1">
+                      <span className="font-semibold">HTML Code Generation:</span>
+                      <pre 
+                        ref={log.id === currentStreamIdRef.current ? codeContainerRef : null}
+                        className="mt-1 p-2 bg-gray-700/50 rounded text-xs whitespace-pre-wrap break-words"
+                        style={{ 
+                          maxHeight: '400px', 
+                          overflowY: 'auto',
+                          color: '#a5d6ff' // 使用浅蓝色显示代码
+                        }}
+                      >
+                        {currentHtmlContent}
+                      </pre>
+                    </div>
+                  </div>
+                )}
+
+                {/* 其他日志类型的渲染逻辑 */}
+                {log.type === 'Error' ? (
+                  <div className="text-[10px] text-red-400 break-words leading-relaxed">
+                    {log.content?.error && (
+                      <div className="mb-1">
+                        <span className="font-semibold">Error Message:</span> {log.content.error}
+                      </div>
+                    )}
+                  </div>
+                ) : log.type === 'API' ? (
+                  <div className="text-[10px] text-gray-400 break-words leading-relaxed">
+                    {log.content?.status && (
+                      <div className="mb-1">
+                        <span className="font-semibold">Status:</span> {log.content.status}
+                      </div>
+                    )}
+                    {log.content?.data && (
+                      <div className="mb-1">
+                        <span className="font-semibold">Data:</span>
+                        <pre className="mt-1 p-2 bg-gray-700/50 rounded text-xs overflow-auto">
+                          {JSON.stringify(log.content.data, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+                  </div>
+                ) : log.type === 'Codes' ? (
+                  <div className="text-[10px] text-gray-400 break-words leading-relaxed">
+                    {log.content?.resultId && (
+                      <div className="mb-1">
+                        <span className="font-semibold">Result ID:</span> {log.content.resultId}
+                      </div>
+                    )}
+                  </div>
+                ) : log.type === 'Info' ? (
+                  <div className="text-[10px] text-gray-400 break-words leading-relaxed">
+                    {log.content?.website && (
+                      <div className="mb-1">
+                        <span className="font-semibold">Website:</span> {log.content.website}
+                      </div>
+                    )}
+                    {log.content?.generatorStatus && (
+                      <div className="mb-1">
+                        <span className="font-semibold">Status:</span> {log.content.generatorStatus}
+                      </div>
+                    )}
+                    {log.content?.generatedStart && (
+                      <div className="mb-1">
+                        <span className="font-semibold">Start Time:</span> {new Date(log.content.generatedStart).toLocaleString()}
+                      </div>
+                    )}
+                    {log.content?.generatedEnd && (
+                      <div className="mb-1">
+                        <span className="font-semibold">End Time:</span> {new Date(log.content.generatedEnd).toLocaleString()}
+                      </div>
+                    )}
+                    {log.content?.changeStyleCount !== undefined && (
+                      <div className="mb-1">
+                        <span className="font-semibold">Style Changes:</span> {log.content.changeStyleCount}
+                      </div>
+                    )}
+                    {log.content?.planningId && (
+                      <div className="mb-1">
+                        <span className="font-semibold">Planning ID:</span> {log.content.planningId}
+                      </div>
+                    )}
+                    {log.content?.status && (
+                      <div className="mb-1">
+                        <span className="font-semibold">Status:</span> {log.content.status}
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+
+                {/* 时间戳 */}
+                <div className="text-[9px] text-gray-500 mt-1.5">
+                  {new Date(log.timestamp).toLocaleString()}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     );
@@ -633,6 +732,8 @@ const TaskRestoreTool = () => {
       eventSource.onmessage = (event) => {
         try {
           const logData = JSON.parse(event.data);
+
+          console.log('logData', logData);
           
           // 使用函数式更新来避免竞态条件
           setLogs(prevLogs => {
@@ -867,11 +968,18 @@ const TaskRestoreTool = () => {
       const response = await apiClient.getAlternativeChatHistory(websiteId);
       if (response?.code === 200) {
         // 将历史消息添加到消息列表中
-        const historyMessages = response.data.map(msg => ({
-          content: msg.content,
-          source: msg.role === 'user' ? 'user' : 'agent',
-          timestamp: msg.timestamp
-        }));
+        const historyMessages = response.data.flatMap(chat => [
+          {
+            content: chat.message,
+            source: 'user',
+            timestamp: chat.createdAt
+          },
+          {
+            content: chat.answer,
+            source: 'agent',
+            timestamp: chat.updatedAt || chat.createdAt
+          }
+        ]);
         setMessages(historyMessages);
       } else {
         messageApi.error('Failed to fetch chat history');
@@ -946,6 +1054,165 @@ const TaskRestoreTool = () => {
     };
   }, []);
 
+  // 添加处理用户输入的函数
+  const handleUserInput = async (e) => {
+    if (e && e.preventDefault) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    if (!userInput.trim() || isMessageSending) return;
+
+    const formattedInput = userInput.trim();
+
+    // Add user message
+    messageHandler.addUserMessage(formattedInput);
+    // Add agent thinking message
+    const thinkingMessageId = messageHandler.addAgentThinkingMessage();
+    setUserInput('');
+    setIsMessageSending(true);
+
+    try {
+      const response = await apiClient.chatWithAI(formattedInput, websiteId);
+
+      if (response?.code === 200 && response.data?.answer) {
+        const rawAnswer = response.data.answer;
+
+        if (rawAnswer.includes('[URL_GET]')) {
+          setInputDisabledDueToUrlGet(true);
+          // Update agent message
+          const answer = filterMessageTags(rawAnswer);
+          messageHandler.updateAgentMessage(answer, thinkingMessageId);
+          // Add system message
+          messageHandler.addSystemMessage('Searching for competitors. Please wait a moment...');
+        } else if (rawAnswer.includes('[COMPETITOR_SELECTED]')) {
+          const messageBody = rawAnswer.replace(/\[COMPETITOR_SELECTED\].*$/s, '').trim();
+          
+          messageHandler.updateAgentMessage(messageBody, thinkingMessageId);
+          
+          // 提取竞品数组部分
+          const competitorArrayMatch = rawAnswer.match(/\[COMPETITOR_SELECTED\]\s*\[(.*?)\]$/s);
+          
+          if (competitorArrayMatch && competitorArrayMatch[1]) {
+            try {
+              // 清理字符串，处理引号和转义字符
+              const cleanedString = competitorArrayMatch[1]
+                .replace(/\\'/g, "'")  // 处理转义的单引号
+                .replace(/\\"/g, '"')  // 处理转义的双引号
+                .replace(/'/g, '"')    // 将单引号替换为双引号
+                .trim();
+              
+              let competitors;
+              try {
+                // 尝试解析 JSON
+                competitors = JSON.parse(`[${cleanedString}]`);
+              } catch (e) {
+                // 如果 JSON 解析失败，使用更智能的字符串分割
+                competitors = cleanedString
+                  .replace(/[\[\]'"`]/g, '') // 移除所有引号和方括号
+                  .split(',')
+                  .map(s => s.trim())
+                  .filter(s => s.length > 0); // 过滤空字符串
+              }
+              
+              // 处理竞争对手列表
+              if (Array.isArray(competitors) && competitors.length > 0) {
+                const formattedCompetitors = competitors.map(comp => {
+                  if (typeof comp === 'string') {
+                    return {
+                      name: comp,
+                      url: comp.startsWith('http') ? comp : `https://${comp}`
+                    };
+                  }
+                  return comp;
+                });
+                
+                handleCompetitorListRequest(formattedCompetitors);
+              } else {
+                messageHandler.updateAgentMessage(
+                  messageBody + "\n\n⚠️ Failed to parse competitor list. Please try again.",
+                  thinkingMessageId
+                );
+                setIsMessageSending(false);
+              }
+            } catch (error) {
+              console.error("Error processing competitor list:", error);
+              messageHandler.updateAgentMessage(
+                messageBody + "\n\n⚠️ Error processing competitor list. Please try again.",
+                thinkingMessageId
+              );
+              setIsMessageSending(false);
+            }
+          } else {
+            messageHandler.updateAgentMessage(messageBody, thinkingMessageId);
+            setIsMessageSending(false);
+          }
+        } else if (rawAnswer.includes('[END]')) {
+          // 处理结束标记
+          const messageBody = rawAnswer.replace(/\[END\].*$/s, '').trim();
+          messageHandler.updateAgentMessage(messageBody, thinkingMessageId);
+          setIsMessageSending(false);
+        } else {
+          // 普通消息
+          const answer = filterMessageTags(rawAnswer);
+          messageHandler.updateAgentMessage(answer, thinkingMessageId);
+          setIsMessageSending(false);
+        }
+      } else {
+        messageHandler.updateAgentMessage('⚠️ Failed to get response: Invalid response from server, can you please say it again?', thinkingMessageId);
+        setIsMessageSending(false);
+      }
+    } catch (error) {
+      messageHandler.handleErrorMessage(error, thinkingMessageId);
+      setIsMessageSending(false);
+    }
+  };
+
+  // 添加处理竞争对手列表的函数
+  const handleCompetitorListRequest = async (competitors) => {
+    setIsMessageSending(true);
+    const thinkingMessageId = messageHandler.addAgentThinkingMessage();
+
+    try {
+      // 清理域名格式
+      const domainArray = competitors.map(comp => 
+        typeof comp === 'string' 
+          ? comp.trim().replace(/^https?:\/\//, '').replace(/\/$/, '').replace(/\s+/g, '')
+          : comp.name.trim().replace(/^https?:\/\//, '').replace(/\/$/, '').replace(/\s+/g, '')
+      ).filter(domain => domain.length > 0);  // 过滤掉空域名
+
+      if (domainArray.length > 0) {
+        // 调用generateAlternative API
+        const generateResponse = await apiClient.generateAlternative(websiteId, domainArray);
+        
+        if (generateResponse?.code === 200) {
+          messageHandler.addSystemMessage(
+            `We are generating alternative solutions for ${domainArray.join(', ')}. This may take some time, please wait...`
+          );
+          setInputDisabledDueToUrlGet(true);
+          
+          // 更新agent消息
+          const response = await apiClient.chatWithAI(JSON.stringify(competitors), websiteId);
+          if (response?.code === 200 && response.data?.answer) {
+            const answer = filterMessageTags(response.data.answer);
+            messageHandler.updateAgentMessage(answer, thinkingMessageId);
+          } else {
+            messageHandler.updateAgentMessage('⚠️ Failed to generate alternatives: Invalid response from server', thinkingMessageId);
+          }
+        } else {
+          messageHandler.updateAgentMessage('⚠️ Failed to generate alternatives: Invalid server response', thinkingMessageId);
+        }
+      } else {
+        messageHandler.updateAgentMessage('⚠️ No valid competitors found after processing', thinkingMessageId);
+      }
+    } catch (error) {
+      messageHandler.handleErrorMessage(error, thinkingMessageId);
+    } finally {
+      setIsMessageSending(false);
+      // 注意：不要在这里重新启用输入框，应该等待生成任务完成后再启用
+    }
+  };
+
   return (
     <ConfigProvider 
       theme={{
@@ -1010,7 +1277,7 @@ const TaskRestoreTool = () => {
                     value={userInput}
                     onChange={(e) => setUserInput(e.target.value)}
                     disabled={loading || isMessageSending}
-                    className="bg-white/10 border border-gray-300/30 rounded-xl text-sm"
+                    className={`bg-white/10 border ${getInputStyle()} rounded-xl text-sm`}
                     style={{ 
                       backgroundColor: 'rgba(255, 255, 255, 0.05)',
                       borderColor: 'rgba(255, 255, 255, 0.1)',
@@ -1019,12 +1286,16 @@ const TaskRestoreTool = () => {
                       transition: 'all 0.3s ease',
                       boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
                     }}
-                    onPressEnter={(e) => {
-                      e.preventDefault();
-                      if (userInput.trim()) {
-                        // TODO: 处理消息发送
-                      }
-                    }}
+                    onPressEnter={handleUserInput}
+                    suffix={
+                      <Button
+                        type="text"
+                        icon={<SendOutlined />}
+                        loading={isMessageSending}
+                        onClick={handleUserInput}
+                        className="text-gray-400 hover:text-blue-400"
+                      />
+                    }
                   />
                 </div>
 

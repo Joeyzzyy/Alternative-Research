@@ -204,6 +204,12 @@ const ResearchTool = () => {
     try {
       const response = await apiClient.chatWithAI(formattedInput, currentWebsiteId);
 
+      // 检查网络错误
+      if (response?.code === 1058) {
+        messageHandler.updateAgentMessage("⚠️ Network error occurred. Please try again.", thinkingMessageId);
+        return;
+      }
+
       if (response?.code === 200 && response.data?.answer) {
         const rawAnswer = response.data.answer;
 
@@ -331,6 +337,12 @@ const ResearchTool = () => {
 
     try {
       const response = await apiClient.chatWithAI(JSON.stringify(competitors), currentWebsiteId);
+
+      // 检查网络错误
+      if (response?.code === 1058) {
+        messageHandler.updateAgentMessage("⚠️ Network error occurred. Please try again.", thinkingMessageId);
+        return;
+      }
 
       if (response?.code === 200 && response.data?.answer) {
         const answer = filterMessageTags(response.data.answer);
@@ -879,6 +891,12 @@ const ResearchTool = () => {
         deepResearchMode
       );
 
+      // 检查网络错误
+      if (searchResponse?.code === 1058) {
+        messageHandler.updateAgentMessage("⚠️ Network error occurred. Please try again.", thinkingMessageId);
+        return;
+      }
+
       if (searchResponse?.code === 200 && searchResponse?.data?.websiteId) {
         const websiteId = searchResponse.data.websiteId;
         setCurrentWebsiteId(websiteId);
@@ -887,6 +905,12 @@ const ResearchTool = () => {
           formattedInput,
           websiteId,
         );
+        
+        // 检查网络错误
+        if (greetingResponse?.code === 1058) {
+          messageHandler.updateAgentMessage("⚠️ Network error occurred. Please try again.", thinkingMessageId);
+          return;
+        }
         
         if (greetingResponse?.code === 200 && greetingResponse.data?.answer) {
           const answer = filterMessageTags(greetingResponse.data.answer);
@@ -911,7 +935,7 @@ const ResearchTool = () => {
         }
       }
     } catch (error) {
-      messageHandler.updateAgentMessage(`⚠️ Failed to initialize chat: ${error.message}`, thinkingMessageId);
+      messageHandler.handleErrorMessage(error, thinkingMessageId);
     } finally {
       setLoading(false);
     }
@@ -1151,20 +1175,14 @@ const ResearchTool = () => {
 
   // 修改标签页处理逻辑
   useEffect(() => {
-    console.log('useEffect 触发 - 当前日志数量:', logs.length);
-    console.log('当前标签页:', browserTabs);
-    
     const allCodesLogs = logs.filter(log => log.type === 'Codes' && log.content?.resultId);
-    console.log('所有 Codes 日志:', allCodesLogs);
     
     // 重置已处理日志ID列表
     processedLogIdsRef.current = [];
     
     const newCodesLogs = allCodesLogs;
-    console.log('将处理的 Codes 日志:', newCodesLogs);
     
     if (newCodesLogs.length === 0) {
-      console.log('没有 Codes 日志需要处理');
       return;
     }
     
@@ -1172,12 +1190,10 @@ const ResearchTool = () => {
     
     newCodesLogs.forEach(log => {
       const tabId = `result-${log.content.resultId}`;
-      console.log(`处理 resultId: ${log.content.resultId}`);
       
       const existingTab = browserTabs.find(tab => tab.id === tabId);
       
       if (!existingTab) {
-        console.log(`为 resultId ${log.content.resultId} 创建新标签页`);
         newTabsToAdd.push({
           id: tabId,
           title: `Result ${log.content.resultId}`,
@@ -1189,11 +1205,8 @@ const ResearchTool = () => {
     });
     
     if (newTabsToAdd.length > 0) {
-      console.log(`添加 ${newTabsToAdd.length} 个新标签页:`, newTabsToAdd);
-      
       setBrowserTabs(prevTabs => {
         const updatedTabs = [...prevTabs, ...newTabsToAdd];
-        console.log('更新后的标签页:', updatedTabs);
         return updatedTabs;
       });
       

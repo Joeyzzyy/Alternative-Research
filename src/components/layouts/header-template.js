@@ -1,10 +1,10 @@
 "use client";
-import React from 'react';
-import { useState, useEffect } from "react";
+import React, { useRef, useEffect, useCallback } from 'react';
+import { useState } from "react";
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import apiClient from '../../lib/api/index.js';
-import { Dropdown, Modal, Button, Spin, Menu } from 'antd';
+import { Dropdown, Modal, Button, Spin, Menu, Pagination } from 'antd';
 import { HistoryOutlined } from '@ant-design/icons';
 import { useUser } from '../../contexts/UserContext';
 import { useToolContext } from '../../contexts/ToolContext';
@@ -108,6 +108,16 @@ export default function Header() {
 
   const [deviceInfo, setDeviceInfo] = useState(null);
 
+  // Add pagination state
+  const [historyPagination, setHistoryPagination] = useState({
+    current: 1,
+    pageSize: 10,
+    total: 0
+  });
+
+  // 添加一个 ref 来跟踪初始加载
+  const initialLoadRef = useRef(false);
+
   useEffect(() => {
     // Check if user is logged in with alternatively prefix
     const loggedIn = localStorage.getItem('alternativelyIsLoggedIn') === 'true';
@@ -143,21 +153,16 @@ export default function Header() {
     };
   }, []);
 
-  // 在组件加载时获取历史记录
-  useEffect(() => {
-    if (isLoggedIn) {
-      fetchHistoryList();
-    }
-  }, [isLoggedIn]);
-
-  // 获取历史记录
-  const fetchHistoryList = async () => {
+  // 使用 useCallback 包裹 fetchHistoryList
+  const fetchHistoryList = useCallback(async (page = 1, pageSize = 10) => {
     if (!isLoggedIn) return;
     
+    console.log(`Fetching history: page=${page}, pageSize=${pageSize}`);
     setLoadingHistory(true);
+    
     try {
-      const response = await apiClient.getAlternativeWebsiteList();
-      console.log('获取历史记录响应:', response);
+      const response = await apiClient.getAlternativeWebsiteList(page, pageSize);
+      console.log('History response:', response);
       
       if (response?.code === 200 && response.data) {
         const formattedHistory = response.data.map(item => ({
@@ -167,10 +172,18 @@ export default function Header() {
           status: item.generatorStatus || 'unknown',
         }));
         
-        // 按创建时间倒序排列
+        // Sort by creation time in descending order
         formattedHistory.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setHistoryList(formattedHistory);
-        console.log('格式化后的历史记录:', formattedHistory);
+        
+        // Update pagination information
+        setHistoryPagination({
+          current: page,
+          pageSize: pageSize,
+          total: response.totalCount || 0
+        });
+        
+        console.log('Formatted history:', formattedHistory);
       } else {
         showNotification('Failed to load history', 'error');
       }
@@ -180,56 +193,109 @@ export default function Header() {
     } finally {
       setLoadingHistory(false);
     }
+  }, [isLoggedIn]);
+
+  // 修改 useEffect
+  useEffect(() => {
+    console.log('isLoggedIn changed:', isLoggedIn);
+    if (isLoggedIn && !initialLoadRef.current) {
+      console.log('Initial history load triggered');
+      initialLoadRef.current = true;
+      fetchHistoryList();
+    }
+  }, [isLoggedIn, fetchHistoryList]);
+
+  // Handle pagination change
+  const handleHistoryPageChange = (page, pageSize) => {
+    fetchHistoryList(page, pageSize);
   };
 
   // 处理历史记录点击
   const handleHistoryItemClick = async (item) => {
-    // 如果任务状态是进行中，直接切换到restore模式
-    if (item.status === 'processing') {
-      setCurrentTool('restore');
-      // 将websiteId传递给TaskRestoreTool组件
-      localStorage.setItem('restoreWebsiteId', item.websiteId);
-      return; // 直接返回,不执行后续的历史查询
+    if (item.status === 'failed') {
+      setNotification({
+        show: true,
+        message: 'Task failed, unable to view details.',
+        type: 'error'
+      });
+      return false;
     }
 
-    // 只有完成的任务才查询历史记录和显示预览
-    if (item.websiteId) {
-      console.log('处理历史记录点击，websiteId:', item.websiteId);
-      
-      setCurrentWebsiteId(item.websiteId);
+    if (item.status === 'finished') {
+      // Show loading state in dropdown
       setLoadingResultIds(true);
-      
-      try {
-        const historyResponse = await apiClient.getAlternativeWebsiteHistory(item.websiteId);
-        console.log('历史记录请求返回:', historyResponse);
+
+      if (item.websiteId) {
+        setCurrentWebsiteId(item.websiteId);
         
-        if (historyResponse?.code === 200 && historyResponse.data) {
-          const codesResultIds = historyResponse.data
-            .filter(record => record.type === 'Codes' && record.content?.resultId)
-            .map(record => record.content.resultId);
+        try {
+          const historyResponse = await apiClient.getAlternativeWebsiteHistory(item.websiteId);
           
-          console.log('提取到的 resultIds:', codesResultIds);
-          
-          if (codesResultIds.length > 0) {
-            setResultIds(codesResultIds);
-            // 默认选择第一个预览
-            if (codesResultIds[0]) {
-              setSelectedPreviewUrl(`https://preview.websitelm.site/en/${codesResultIds[0]}`);
-              setActivePreviewTab(0);
+          if (historyResponse?.code === 200 && historyResponse.data) {
+            const codesResultIds = historyResponse.data
+              .filter(record => record.type === 'Codes' && record.content?.resultId)
+              .map(record => record.content.resultId);
+            
+            if (codesResultIds.length > 0) {
+              setResultIds(codesResultIds);
+              if (codesResultIds[0]) {
+                setSelectedPreviewUrl(`https://preview.websitelm.site/en/${codesResultIds[0]}`);
+                setActivePreviewTab(0);
+              }
+              setTimeout(() => {
+                setShowResultIdsModal(true);
+              }, 0);
+            } else {
+              setNotification({
+                show: true,
+                message: 'No preview data available for this task.',
+                type: 'info'
+              });
             }
-            setTimeout(() => {
-              setShowResultIdsModal(true);
-              console.log('showResultIdsModal 状态:', true);
-            }, 0);
-          } else {
-            showNotification('No generated results found for this item', 'info');
+          }
+        } catch (error) {
+          setNotification({
+            show: true,
+            message: 'Failed to load preview data. Please try again.',
+            type: 'error'
+          });
+        } finally {
+          setLoadingResultIds(false);
+        }
+      }
+      return;
+    }
+
+    if (item.status === 'processing') {
+      try {
+        const statusResponse = await apiClient.getAlternativeStatus(item.websiteId);
+
+        if (statusResponse?.code === 200 && statusResponse.data) {
+          const planningStatuses = statusResponse.data;
+          const productComparisonStatus = planningStatuses.find(planning => planning.planningName === 'PRODUCT_COMPARISON');
+
+          if (productComparisonStatus && productComparisonStatus.status !== 'init') {
+            setNotification({
+              show: true,
+              message: 'Task is still in progress. Please wait.',
+              type: 'info'
+            });
+            return;
+          }
+
+          if (productComparisonStatus && productComparisonStatus.status === 'init') {
+            setCurrentTool('restore');
+            localStorage.setItem('restoreWebsiteId', item.websiteId);
+            return;
           }
         }
       } catch (error) {
-        console.error('加载历史记录详情时出错:', error);
-        showNotification('Failed to load history details', 'error');
-      } finally {
-        setLoadingResultIds(false);
+        console.error('Failed to fetch task status:', error);
+        setNotification({
+          show: true,
+          message: 'Failed to check task status. Please try again.',
+          type: 'error'
+        });
       }
     }
   };
@@ -333,39 +399,44 @@ export default function Header() {
     });
     
     // Auto close notification after 3 seconds
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       setNotification(prev => ({...prev, show: false}));
     }, 3000);
+
+    // 返回 timer 以便在需要时清除
+    return timer;
   };
 
-  // 历史记录菜单
+  // 处理关闭通知
+  const handleCloseNotification = () => {
+    setNotification(prev => ({...prev, show: false}));
+  };
+
+  // History menu
   const historyMenu = {
     items: [
-      {
-        key: 'history-title',
+      // Loading state
+      loadingResultIds && {
+        key: 'loading',
         label: (
-          <div className="flex items-center justify-between py-2 px-3 border-b border-slate-700/50">
-            <span className="font-medium text-white text-sm">Your Generation History</span>
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                fetchHistoryList();
-              }}
-              className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1.5 bg-slate-700/30 px-2 py-1 rounded"
-            >
-              {loadingHistory ? <Spin size="small" /> : (
-                <>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  Refresh
-                </>
-              )}
-            </button>
+          <div className="flex items-center justify-center py-4">
+            <div className="flex items-center space-x-2">
+              <Spin size="small" />
+              <span className="text-gray-400">Loading preview data...</span>
+            </div>
           </div>
         ),
       },
-      // 所有历史记录项
+      // History items (only show when not loading)
+      !loadingResultIds && {
+        key: 'history-header',
+        label: (
+          <div className="flex items-center justify-between py-2 px-3">
+            <span className="text-sm font-medium text-gray-300">Recent Tasks</span>
+          </div>
+        ),
+      },
+      // All history items
       ...historyList.map(item => ({
         key: item.websiteId,
         label: (
@@ -397,7 +468,31 @@ export default function Header() {
         ),
         onClick: () => handleHistoryItemClick(item),
       })),
-    ],
+      // Add pagination component
+      {
+        key: 'history-pagination',
+        label: (
+          <div className="py-2 px-3 border-t border-slate-700/50 mt-2">
+            {historyPagination.total > 0 && (
+              <div className="flex justify-center" onClick={(e) => e.stopPropagation()}>
+                <Pagination 
+                  size="small"
+                  current={historyPagination.current}
+                  pageSize={historyPagination.pageSize}
+                  total={historyPagination.total}
+                  onChange={(page, pageSize) => {
+                    // Stop event propagation to prevent dropdown from closing
+                    fetchHistoryList(page, pageSize);
+                  }}
+                  showSizeChanger={false}
+                  className="history-pagination"
+                />
+              </div>
+            )}
+          </div>
+        ),
+      }
+    ].filter(Boolean), // Remove null/undefined items
   };
 
   // 发送验证码
@@ -868,40 +963,17 @@ export default function Header() {
                     overlayClassName="history-dropdown"
                     onOpenChange={(open) => {
                       if (!open && loadingResultIds) {
-                        return false;
+                        return false; // 如果正在加载，阻止 Dropdown 关闭
                       }
-                      return true;
+                      return true; // 否则允许 Dropdown 关闭
                     }}
-                    open={loadingResultIds ? true : undefined}
+                    open={loadingResultIds ? true : undefined} // 如果正在加载，保持 Dropdown 打开
                   >
                     <button className="px-4 py-2.5 text-sm bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border-blue-500/30 rounded-full backdrop-blur-sm transition-all flex items-center gap-2 border shadow-lg hover:shadow-xl hover:-translate-y-0.5 duration-300">
                       <HistoryOutlined style={{ fontSize: '16px' }} />
                       <span className="font-medium">History</span>
                     </button>
                   </Dropdown>
-
-                  {/* Switch 工具按钮 */}
-                  <button
-                    onClick={() => setCurrentTool(currentTool === 'research' ? 'restore' : 'research')}
-                    className="px-4 py-2.5 text-sm bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border-cyan-500/30 rounded-full backdrop-blur-sm transition-all flex items-center gap-2 border shadow-lg hover:shadow-xl hover:-translate-y-0.5 duration-300"
-                  >
-                    <span className="font-medium">
-                      {currentTool === 'research' ? 'Switch to Restore' : 'Switch to Research'}
-                    </span>
-                    <svg 
-                      className="w-4 h-4" 
-                      fill="none" 
-                      viewBox="0 0 24 24" 
-                      stroke="currentColor"
-                    >
-                      <path 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
-                        strokeWidth={2} 
-                        d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" 
-                      />
-                    </svg>
-                  </button>
 
                   {/* 登出按钮 */}
                   <button
@@ -1279,7 +1351,7 @@ export default function Header() {
       <Modal
         title={
           <div className="flex items-center text-white">
-            <span className="text-lg font-medium">Preview Results</span>
+            <span className="text-lg font-medium">Preview Your Alternative Pages</span>
           </div>
         }
         open={showResultIdsModal}
@@ -1403,6 +1475,7 @@ export default function Header() {
           notification.type === 'error' ? 'bg-red-500' : 'bg-blue-500'
         }`}>
           <div className="flex items-center">
+            {/* 通知类型图标（左边） */}
             {notification.type === 'success' && (
               <svg className="w-6 h-6 mr-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -1410,7 +1483,7 @@ export default function Header() {
             )}
             {notification.type === 'error' && (
               <svg className="w-6 h-6 mr-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             )}
             {notification.type === 'info' && (
@@ -1418,7 +1491,19 @@ export default function Header() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             )}
+
+            {/* 通知消息 */}
             <p className="text-white font-medium">{notification.message}</p>
+
+            {/* 关闭按钮（右边的叉） */}
+            <button 
+              onClick={handleCloseNotification}
+              className="ml-4 text-white hover:text-gray-200 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
         </div>
       )}
