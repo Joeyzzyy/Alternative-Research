@@ -1448,6 +1448,33 @@ export default function Header() {
         .active-preview {
           animation: pulse-border 2s infinite;
         }
+        
+        /* 添加历史记录下拉菜单的样式 */
+        .ant-dropdown .ant-dropdown-menu {
+          max-height: 400px;
+          overflow-y: auto;
+          background-color: rgb(15, 23, 42);
+          border: 1px solid rgba(100, 116, 139, 0.2);
+          backdrop-filter: blur(12px);
+          padding: 8px;
+        }
+        
+        .ant-dropdown .ant-dropdown-menu::-webkit-scrollbar {
+          width: 6px;
+        }
+        
+        .ant-dropdown .ant-dropdown-menu::-webkit-scrollbar-track {
+          background: rgba(15, 23, 42, 0.3);
+        }
+        
+        .ant-dropdown .ant-dropdown-menu::-webkit-scrollbar-thumb {
+          background-color: rgba(100, 116, 139, 0.5);
+          border-radius: 20px;
+        }
+        
+        .ant-dropdown .ant-dropdown-menu::-webkit-scrollbar-thumb:hover {
+          background-color: rgba(100, 116, 139, 0.7);
+        }
       `}</style>
     </>
   );
