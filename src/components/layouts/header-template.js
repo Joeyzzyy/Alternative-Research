@@ -286,7 +286,6 @@ export default function Header() {
           if (productComparisonStatus && productComparisonStatus.status === 'init') {
             setCurrentTool('restore');
             localStorage.setItem('restoreWebsiteId', item.websiteId);
-            return;
           }
         }
       } catch (error) {
@@ -420,16 +419,14 @@ export default function Header() {
         key: 'loading',
         label: (
           <div className="flex flex-col items-center justify-center py-6 space-y-3">
-            {/* 添加一个动态的加载动画 */}
             <div className="w-8 h-8 rounded-full border-2 border-blue-500 border-t-transparent animate-spin"></div>
-            {/* 更美观的加载提示 */}
             <div className="text-center">
               <p className="text-sm font-medium text-gray-300">Loading Preview Data</p>
               <p className="text-xs text-gray-400 mt-1">Please wait while we prepare your preview...</p>
             </div>
           </div>
         ),
-        disabled: true, // 禁用点击
+        disabled: true,
       },
       // History items (only show when not loading)
       !loadingResultIds && {
@@ -467,7 +464,44 @@ export default function Header() {
               </div>
               <span className="truncate text-sm text-gray-200">{item.domain}</span>
             </div>
-            <span className="text-xs text-gray-400 ml-2 flex-shrink-0">{new Date(item.createdAt).toLocaleDateString()}</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-400 ml-2 flex-shrink-0">{new Date(item.createdAt).toLocaleDateString()}</span>
+              {/* 如果是 processing 状态，并且第三个 planning 是 init，显示 Restore Chat Window 按钮 */}
+              {item.status === 'processing' && (
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation(); // 阻止事件冒泡，避免触发父级点击事件
+                    try {
+                      const statusResponse = await apiClient.getAlternativeStatus(item.websiteId);
+                      if (statusResponse?.code === 200 && statusResponse.data) {
+                        const planningStatuses = statusResponse.data;
+                        if (planningStatuses[2] && planningStatuses[2].status === 'init') {
+                          setCurrentTool('restore');
+                          localStorage.setItem('restoreWebsiteId', item.websiteId);
+                        } else {
+                          // 如果不是 init 状态，显示提示
+                          setNotification({
+                            show: true,
+                            message: 'Page Generation is in progress. Please wait.',
+                            type: 'info'
+                          });
+                        }
+                      }
+                    } catch (error) {
+                      console.error('Failed to fetch task status:', error);
+                      setNotification({
+                        show: true,
+                        message: 'Failed to restore chat window. Please try again.',
+                        type: 'error'
+                      });
+                    }
+                  }}
+                  className="px-2 py-1 text-xs font-medium text-white bg-blue-500 rounded hover:bg-blue-600 transition-colors"
+                >
+                  Restore Chat Window
+                </button>
+              )}
+            </div>
           </div>
         ),
         onClick: () => handleHistoryItemClick(item),
