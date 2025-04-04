@@ -87,6 +87,20 @@ const CodeTypingEffect = ({ code, speed = 3 }) => {
   );
 };
 
+// Update the style configuration
+const dropdownStyles = {
+  DEFAULT: {
+    menu: '!bg-white/95 !border !border-gray-200 !shadow-lg', // 使用 !important
+    item: '!text-gray-600 hover:!bg-gray-50', // 使用 !important
+    activeItem: '!bg-blue-50 !text-blue-600', // 使用 !important
+  },
+  GHIBLI: {
+    menu: '!bg-amber-50/95 !border !border-amber-100 !shadow-lg', // 使用 !important
+    item: '!text-amber-700 hover:!bg-amber-50', // 使用 !important
+    activeItem: '!bg-amber-100 !text-amber-800', // 使用 !important
+  }
+};
+
 const ResearchTool = () => {
   const [messageApi, contextHolder] = message.useMessage();
   const [domain, setDomain] = useState('');
@@ -1266,6 +1280,34 @@ const ResearchTool = () => {
     }
   };
 
+  const [exampleDropdownVisible, setExampleDropdownVisible] = useState({
+    hix: false,
+    pipiads: false,
+    jtracking: false
+  });
+
+  const exampleUrls = {
+    hix: [
+      'https://preview.websitelm.site/en/12345',
+      'https://preview.websitelm.site/en/67890'
+    ],
+    pipiads: [
+      'https://preview.websitelm.site/en/54321',
+      'https://preview.websitelm.site/en/09876'
+    ],
+    jtracking: [
+      'https://preview.websitelm.site/en/11223',
+      'https://preview.websitelm.site/en/34455'
+    ]
+  };
+
+  const handleExampleClick = (example) => {
+    setExampleDropdownVisible(prev => ({
+      ...prev,
+      [example]: !prev[example]
+    }));
+  };
+
   if (initialLoading) {
     return (
       <div className="w-full min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 
@@ -1408,87 +1450,120 @@ const ResearchTool = () => {
           <div className="mt-12 max-w-4xl mx-auto">
             <h3 className={`text-xl font-semibold ${currentBackground === 'GHIBLI' ? 'text-amber-100' : 'text-white'} mb-6 text-center ${currentBackground === 'GHIBLI' ? 'drop-shadow-lg' : ''}`}>Popular Product Analysis Examples</h3>
             <div className="grid grid-cols-3 gap-6">
-              <div 
-                onClick={() => {
-                  if (!exampleDisabled) {
-                    setExampleDisabled(true);
-                    setUserInput("hix.ai");
-                    initializeChat("https://hix.ai");
-                  }
+              <Dropdown
+                menu={{
+                  items: exampleUrls.hix.map((url, index) => ({
+                    key: index,
+                    label: (
+                      <a href={url} target="_blank" rel="noopener noreferrer" className="!text-inherit block w-full">
+                        Generated Page {index + 1}
+                      </a>
+                    ),
+                    className: `${dropdownStyles[currentBackground].item} !px-4 !py-2 !text-sm` // 使用 !important
+                  })),
+                  className: `${dropdownStyles[currentBackground].menu} !rounded-lg` // 使用 !important
                 }}
-                className={`${currentBackground === 'GHIBLI' 
-                  ? 'bg-gradient-to-br from-amber-400/40 to-amber-300/20 border-amber-400/30 hover:border-amber-300/50 hover:shadow-[0_0_15px_rgba(217,119,6,0.3)]' 
-                  : 'bg-gradient-to-br from-green-400/40 to-green-300/20 border-green-400/30 hover:border-green-300/50 hover:shadow-[0_0_15px_rgba(74,222,128,0.3)]'
-                } backdrop-blur-sm p-5 rounded-xl 
-                         border ${exampleDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:-translate-y-1'} 
-                         transition-all duration-300 
-                         relative overflow-hidden`}
+                open={exampleDropdownVisible.hix}
+                onOpenChange={(visible) => setExampleDropdownVisible(prev => ({...prev, hix: visible}))}
               >
-                <div className="absolute -right-6 -top-6 w-16 h-16 bg-amber-400/20 rounded-full blur-xl hover:bg-amber-400/30 transition-all"></div>
-                <div className="w-10 h-10 mb-3 flex items-center justify-center bg-white/90 rounded-lg">
-                  <img src="/images/hix.png" alt="HIX" className="w-7 h-7" />
+                <div 
+                  onClick={() => handleExampleClick('hix')}
+                  className={`${currentBackground === 'GHIBLI' 
+                    ? 'bg-gradient-to-br from-amber-400/40 to-amber-300/20 border-amber-400/30 hover:border-amber-300/50 hover:shadow-[0_0_15px_rgba(217,119,6,0.3)]' 
+                    : 'bg-gradient-to-br from-green-400/40 to-green-300/20 border-green-400/30 hover:border-green-300/50 hover:shadow-[0_0_15px_rgba(74,222,128,0.3)]'
+                  } backdrop-blur-sm p-5 rounded-xl 
+                           border cursor-pointer hover:-translate-y-1 
+                           transition-all duration-300 
+                           relative overflow-hidden`}
+                >
+                  <div className="absolute -right-6 -top-6 w-16 h-16 bg-amber-400/20 rounded-full blur-xl hover:bg-amber-400/30 transition-all"></div>
+                  <div className="w-10 h-10 mb-3 flex items-center justify-center bg-white/90 rounded-lg">
+                    <img src="/images/hix.png" alt="HIX" className="w-7 h-7" />
+                  </div>
+                  <div className="text-amber-300 font-medium mb-2 hover:text-amber-200 text-base">HIX</div>
+                  <div className="text-xs text-gray-400 hover:text-gray-300">Analyze HIX alternatives</div>
+                  <div className="absolute bottom-3 right-3">
+                    <ArrowRightOutlined className="text-amber-400/50 hover:text-amber-300 transition-all" />
+                  </div>
                 </div>
-                <div className="text-amber-300 font-medium mb-2 hover:text-amber-200 text-base">HIX</div>
-                <div className="text-xs text-gray-400 hover:text-gray-300">Analyze HIX alternatives</div>
-                <div className="absolute bottom-3 right-3">
-                  <ArrowRightOutlined className="text-amber-400/50 hover:text-amber-300 transition-all" />
-                </div>
-              </div>
+              </Dropdown>
               
-              <div 
-                onClick={() => {
-                  if (!exampleDisabled) {
-                    setExampleDisabled(true);
-                    setUserInput("pipiads.com");
-                    initializeChat("https://pipiads.com");
-                  }
+              <Dropdown
+                menu={{
+                  items: exampleUrls.pipiads.map((url, index) => ({
+                    key: index,
+                    label: (
+                      <a href={url} target="_blank" rel="noopener noreferrer" className="!text-inherit block w-full">
+                        Generated Page {index + 1}
+                      </a>
+                    ),
+                    className: `${dropdownStyles[currentBackground].item} !px-4 !py-2 !text-sm` // 使用 !important
+                  })),
+                  className: `${dropdownStyles[currentBackground].menu} !rounded-lg` // 使用 !important
                 }}
-                className={`${currentBackground === 'GHIBLI' 
-                  ? 'bg-gradient-to-br from-amber-800/40 to-amber-700/20 border-amber-600/30 hover:border-amber-500/50 hover:shadow-[0_0_15px_rgba(217,119,6,0.3)]' 
-                  : 'bg-gradient-to-br from-emerald-800/40 to-emerald-700/20 border-emerald-600/30 hover:border-emerald-500/50 hover:shadow-[0_0_15px_rgba(5,150,105,0.3)]'
-                } backdrop-blur-sm p-5 rounded-xl 
-                         border ${exampleDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:-translate-y-1'} 
-                         transition-all duration-300 
-                         group relative overflow-hidden`}
+                open={exampleDropdownVisible.pipiads}
+                onOpenChange={(visible) => setExampleDropdownVisible(prev => ({...prev, pipiads: visible}))}
               >
-                <div className="absolute -right-6 -top-6 w-16 h-16 bg-amber-800/20 rounded-full blur-xl group-hover:bg-amber-800/30 transition-all"></div>
-                <img src="/images/pipiads.png" alt="PiPiAds" className="w-10 h-10 mb-3 rounded-lg" />
-                <div className="text-amber-400 font-medium mb-2 group-hover:text-amber-300 text-base">PiPiAds</div>
-                <div className="text-xs text-gray-400 group-hover:text-gray-300">Explore PiPiAds alternatives</div>
-                <div className="absolute bottom-3 right-3">
-                  <ArrowRightOutlined className="text-amber-500/50 group-hover:text-amber-400 transition-all" />
+                <div 
+                  onClick={() => handleExampleClick('pipiads')}
+                  className={`${currentBackground === 'GHIBLI' 
+                    ? 'bg-gradient-to-br from-amber-800/40 to-amber-700/20 border-amber-600/30 hover:border-amber-500/50 hover:shadow-[0_0_15px_rgba(217,119,6,0.3)]' 
+                    : 'bg-gradient-to-br from-emerald-800/40 to-emerald-700/20 border-emerald-600/30 hover:border-emerald-500/50 hover:shadow-[0_0_15px_rgba(5,150,105,0.3)]'
+                  } backdrop-blur-sm p-5 rounded-xl 
+                           border cursor-pointer hover:-translate-y-1 
+                           transition-all duration-300 
+                           group relative overflow-hidden`}
+                >
+                  <div className="absolute -right-6 -top-6 w-16 h-16 bg-amber-800/20 rounded-full blur-xl group-hover:bg-amber-800/30 transition-all"></div>
+                  <img src="/images/pipiads.png" alt="PiPiAds" className="w-10 h-10 mb-3 rounded-lg" />
+                  <div className="text-amber-400 font-medium mb-2 group-hover:text-amber-300 text-base">PiPiAds</div>
+                  <div className="text-xs text-gray-400 group-hover:text-gray-300">Explore PiPiAds alternatives</div>
+                  <div className="absolute bottom-3 right-3">
+                    <ArrowRightOutlined className="text-amber-500/50 group-hover:text-amber-400 transition-all" />
+                  </div>
                 </div>
-              </div>
+              </Dropdown>
               
-              <div 
-                onClick={() => {
-                  if (!exampleDisabled) {
-                    setExampleDisabled(true);
-                    setUserInput("jtracking.io");
-                    initializeChat("https://jtracking.io");
-                  }
+              <Dropdown
+                menu={{
+                  items: exampleUrls.jtracking.map((url, index) => ({
+                    key: index,
+                    label: (
+                      <a href={url} target="_blank" rel="noopener noreferrer" className="!text-inherit block w-full">
+                        Generated Page {index + 1}
+                      </a>
+                    ),
+                    className: `${dropdownStyles[currentBackground].item} !px-4 !py-2 !text-sm` // 使用 !important
+                  })),
+                  className: `${dropdownStyles[currentBackground].menu} !rounded-lg` // 使用 !important
                 }}
-                className={`${currentBackground === 'GHIBLI' 
-                  ? 'bg-gradient-to-br from-amber-900/40 to-amber-800/20 border-amber-500/30 hover:border-amber-400/50 hover:shadow-[0_0_15px_rgba(217,119,6,0.3)]' 
-                  : 'bg-gradient-to-br from-blue-900/40 to-blue-800/20 border-blue-500/30 hover:border-blue-400/50 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)]'
-                } backdrop-blur-sm p-5 rounded-xl 
-                         border ${exampleDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:-translate-y-1'} 
-                         transition-all duration-300 
-                         group relative overflow-hidden`}
+                open={exampleDropdownVisible.jtracking}
+                onOpenChange={(visible) => setExampleDropdownVisible(prev => ({...prev, jtracking: visible}))}
               >
-                <div className="absolute -right-6 -top-6 w-16 h-16 bg-amber-900/20 rounded-full blur-xl group-hover:bg-amber-900/30 transition-all"></div>
-                <div className="w-10 h-10 mb-3 flex items-center justify-center bg-white/90 rounded-lg">
-                  {/* Inline SVG for J icon */}
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#3B82F6" className="w-7 h-7">
-                    <path d="M16 4h-2v12c0 1.1-.9 2-2 2H8v2h4c2.21 0 4-1.79 4-4V4z"/>
-                  </svg>
+                <div 
+                  onClick={() => handleExampleClick('jtracking')}
+                  className={`${currentBackground === 'GHIBLI' 
+                    ? 'bg-gradient-to-br from-amber-900/40 to-amber-800/20 border-amber-500/30 hover:border-amber-400/50 hover:shadow-[0_0_15px_rgba(217,119,6,0.3)]' 
+                    : 'bg-gradient-to-br from-blue-900/40 to-blue-800/20 border-blue-500/30 hover:border-blue-400/50 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)]'
+                  } backdrop-blur-sm p-5 rounded-xl 
+                           border cursor-pointer hover:-translate-y-1 
+                           transition-all duration-300 
+                           group relative overflow-hidden`}
+                >
+                  <div className="absolute -right-6 -top-6 w-16 h-16 bg-amber-900/20 rounded-full blur-xl group-hover:bg-amber-900/30 transition-all"></div>
+                  <div className="w-10 h-10 mb-3 flex items-center justify-center bg-white/90 rounded-lg">
+                    {/* Inline SVG for J icon */}
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#3B82F6" className="w-7 h-7">
+                      <path d="M16 4h-2v12c0 1.1-.9 2-2 2H8v2h4c2.21 0 4-1.79 4-4V4z"/>
+                    </svg>
+                  </div>
+                  <div className="text-amber-300 font-medium mb-2 group-hover:text-amber-200 text-base">JTracking</div>
+                  <div className="text-xs text-gray-400 group-hover:text-gray-300">View JTracking alternatives</div>
+                  <div className="absolute bottom-3 right-3">
+                    <ArrowRightOutlined className="text-amber-400/50 group-hover:text-amber-300 transition-all" />
+                  </div>
                 </div>
-                <div className="text-amber-300 font-medium mb-2 group-hover:text-amber-200 text-base">JTracking</div>
-                <div className="text-xs text-gray-400 group-hover:text-gray-300">View JTracking alternatives</div>
-                <div className="absolute bottom-3 right-3">
-                  <ArrowRightOutlined className="text-amber-400/50 group-hover:text-amber-300 transition-all" />
-                </div>
-              </div>
+              </Dropdown>
             </div>
             
             <div className="mt-8 text-center">
