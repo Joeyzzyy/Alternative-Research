@@ -482,7 +482,7 @@ export default function Header() {
                           // 如果不是 init 状态，显示提示
                           setNotification({
                             show: true,
-                            message: 'Page Generation is in progress. Please wait.',
+                            message: 'Page Generation is in progress, window can not be restored. Please wait.',
                             type: 'info'
                           });
                         }
