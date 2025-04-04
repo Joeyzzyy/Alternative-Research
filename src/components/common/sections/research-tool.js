@@ -1552,10 +1552,7 @@ const ResearchTool = () => {
                 >
                   <div className="absolute -right-6 -top-6 w-16 h-16 bg-amber-900/20 rounded-full blur-xl group-hover:bg-amber-900/30 transition-all"></div>
                   <div className="w-10 h-10 mb-3 flex items-center justify-center bg-white/90 rounded-lg">
-                    {/* Inline SVG for J icon */}
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#3B82F6" className="w-7 h-7">
-                      <path d="M16 4h-2v12c0 1.1-.9 2-2 2H8v2h4c2.21 0 4-1.79 4-4V4z"/>
-                    </svg>
+                    <img src="/images/jtracking.svg" alt="JTracking" className="w-7 h-7" />
                   </div>
                   <div className="text-amber-300 font-medium mb-2 group-hover:text-amber-200 text-base">JTracking</div>
                   <div className="text-xs text-gray-400 group-hover:text-gray-300">View JTracking alternatives</div>

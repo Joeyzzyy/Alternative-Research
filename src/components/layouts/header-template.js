@@ -962,7 +962,7 @@ export default function Header() {
                       <div className="absolute right-0 top-10 w-56 bg-gray-800 border border-gray-700 rounded-lg shadow-xl p-4 z-50 text-xs"
                            style={{animation: 'fadeIn 0.2s ease-out forwards'}}>
                         <div className="flex items-center justify-between mb-3">
-                          <span className="font-medium text-purple-300">Generation Credits</span>
+                          <span className="font-medium text-purple-300">Page Generation Credits</span>
                           <button 
                             onClick={() => setShowCreditsTooltip(false)}
                             className="text-gray-400 hover:text-white transition-colors"
@@ -989,6 +989,7 @@ export default function Header() {
                         </div>
                         <p className="mb-3 text-gray-300">Total Limit: {userCredits.pageGeneratorLimit}</p>
                         <p className="mb-3 text-gray-300">Used: {userCredits.pageGeneratorUsage}</p>
+                        <p className="text-gray-400 text-xs">Note: Changing the overall color scheme or style of the page will also consume credits.</p>
                       </div>
                     )}
                   </div>
