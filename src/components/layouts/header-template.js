@@ -284,8 +284,21 @@ export default function Header() {
           }
 
           if (productComparisonStatus && productComparisonStatus.status === 'init') {
-            setCurrentTool('restore');
+            // 存储新的 websiteId
             localStorage.setItem('restoreWebsiteId', item.websiteId);
+            
+            // 如果当前工具已经是 restore，则触发一个自定义事件通知恢复窗口切换
+            if (currentTool === 'restore') {
+              const switchEvent = new CustomEvent('switchRestoreWindow', { 
+                detail: { websiteId: item.websiteId } 
+              });
+              window.dispatchEvent(switchEvent);
+              
+              showNotification('Switching to selected chat window...', 'info');
+            } else {
+              // 如果当前不在恢复窗口，则切换到恢复工具
+              setCurrentTool('restore');
+            }
           }
         }
       } catch (error) {
@@ -397,10 +410,10 @@ export default function Header() {
       type
     });
     
-    // Auto close notification after 3 seconds
+    // Auto close notification after 2 seconds (changed from 3 seconds)
     const timer = setTimeout(() => {
       setNotification(prev => ({...prev, show: false}));
-    }, 3000);
+    }, 2000);
 
     // 返回 timer 以便在需要时清除
     return timer;
@@ -798,47 +811,6 @@ export default function Header() {
     }
   ];
 
-  const renderMenuItem = (item) => {
-    if (!item?.label) return null;
-
-    const hasChildren = Array.isArray(item.children) && item.children.length > 0;
-    const menuItemStyles = {
-      color: item.color || 'text-gray-600',
-      fontWeight: item.fontWeight || 'normal'
-    };
-    
-    return (
-      <div 
-        key={item.key || item.label}
-        className="relative group"
-      >
-        {hasChildren ? (
-          <a
-            href={item.link || '#'}
-            style={menuItemStyles}
-            className="text-[15px] hover:text-[#1890ff] transition-all duration-300 flex items-center gap-1"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {item.label}
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </a>
-        ) : (
-          <a
-            href={item.link}
-            onClick={item.onClick}
-            style={menuItemStyles}
-            className="text-[15px] hover:text-[#1890ff] transition-all duration-300 cursor-pointer"
-          >
-            {item.label}
-          </a>
-        )}
-      </div>
-    );
-  };
-
   // 检查免费额度
   const checkFreeCredits = async (deviceId) => {
     try {
@@ -861,6 +833,28 @@ export default function Header() {
       }
     }
   }, [isLoggedIn]);
+
+  // 在恢复窗口组件中
+  useEffect(() => {
+    const handleSwitchWindow = (event) => {
+      const { websiteId } = event.detail;
+      // 不直接调用 loadRestoreData，而是更新 localStorage
+      localStorage.setItem('restoreWebsiteId', websiteId);
+      
+      // 可能需要触发一个页面刷新或其他机制来重新加载恢复窗口
+      // 例如，可以触发一个新的自定义事件，让恢复窗口组件知道需要重新加载数据
+      const reloadEvent = new CustomEvent('reloadRestoreWindow');
+      window.dispatchEvent(reloadEvent);
+      
+      showNotification('Switching to selected chat window...', 'info');
+    };
+
+    window.addEventListener('switchRestoreWindow', handleSwitchWindow);
+    
+    return () => {
+      window.removeEventListener('switchRestoreWindow', handleSwitchWindow);
+    };
+  }, []);
 
   return (
     <>
@@ -1463,7 +1457,11 @@ export default function Header() {
                   Open in New Window
                 </a>
                 <a 
-                  href={`http://app.websitelm.com/alternatively-edit/${resultIds[activePreviewTab]}`}
+                  href={`http://app.websitelm.com/alternatively-edit/${resultIds[activePreviewTab]}${
+                    localStorage.getItem('alternativelyAccessToken') ? 
+                    `?authKey=${localStorage.getItem('alternativelyAccessToken')}` : 
+                    ''
+                  }`}
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="text-xs bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded flex items-center gap-1.5 transition-colors"

@@ -1794,7 +1794,6 @@ const ResearchTool = () => {
         zIndex={1500}
         maskStyle={{ backgroundColor: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(8px)' }}
       >
-        {console.log('弹窗状态:', showResultIdsModal)}
         <div className="space-y-3">
           {resultIds.map((id, index) => (
             <div key={index} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">

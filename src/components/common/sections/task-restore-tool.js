@@ -990,14 +990,44 @@ const TaskRestoreTool = () => {
     }
   };
 
-  // 修改初始化时获取websiteId的useEffect
+  // 添加对 reloadRestoreWindow 事件的监听
+  useEffect(() => {
+    const handleReloadWindow = () => {
+      const storedWebsiteId = localStorage.getItem('restoreWebsiteId');
+      if (storedWebsiteId) {
+        console.log('Reloading restore window with websiteId:', storedWebsiteId);
+        setWebsiteId(storedWebsiteId);
+        setCurrentWebsiteId(storedWebsiteId); // 确保也更新 currentWebsiteId
+        fetchTaskHistory(storedWebsiteId);
+        fetchChatHistory(storedWebsiteId);
+        
+        // 清空现有消息和日志，以便加载新任务的数据
+        setMessages([]);
+        setLogs([]);
+        
+        // 不要立即删除 localStorage 中的值，这样可以支持页面刷新
+        // localStorage.removeItem('restoreWebsiteId');
+      }
+    };
+
+    window.addEventListener('reloadRestoreWindow', handleReloadWindow);
+    
+    return () => {
+      window.removeEventListener('reloadRestoreWindow', handleReloadWindow);
+    };
+  }, []);
+
+  // 修改初始化时获取websiteId的useEffect，不要立即删除localStorage中的值
   useEffect(() => {
     const storedWebsiteId = localStorage.getItem('restoreWebsiteId');
     if (storedWebsiteId) {
       setWebsiteId(storedWebsiteId);
+      setCurrentWebsiteId(storedWebsiteId); // 确保也更新 currentWebsiteId
       fetchTaskHistory(storedWebsiteId);
-      fetchChatHistory(storedWebsiteId); // 新增获取聊天历史
-      localStorage.removeItem('restoreWebsiteId');
+      fetchChatHistory(storedWebsiteId);
+      
+      // 不要立即删除 localStorage 中的值
+      // localStorage.removeItem('restoreWebsiteId');
     }
   }, []);
 
@@ -1440,7 +1470,6 @@ const TaskRestoreTool = () => {
           }
         }}
       >
-        {console.log('弹窗状态:', showResultIdsModal)}
         <div className="space-y-3">
           {resultIds.map((id, index) => (
             <div key={index} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
