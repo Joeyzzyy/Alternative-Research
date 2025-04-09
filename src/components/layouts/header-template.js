@@ -325,9 +325,7 @@ export default function Header() {
     const accessToken = urlParams.get('accessToken');
     const customerId = urlParams.get('customerId');
     const email = urlParams.get('email');
-    const onboarding = urlParams.get('onboarding') === 'true';
-    const firstLogin = urlParams.get('firstLogin') === 'true';
-
+    
     // 验证JWT token的格式
     const isValidJWT = accessToken?.split('.').length === 3;
 
@@ -345,7 +343,7 @@ export default function Header() {
         
         setIsLoggedIn(true);
         setUserEmail(decodedEmail);
-        showNotification('Login successful!', 'success');
+        showNotification('登录成功！', 'success');
         
         // 清除 URL 参数
         window.history.replaceState({}, document.title, window.location.pathname);
@@ -353,8 +351,8 @@ export default function Header() {
         // 刷新页面以应用新的登录状态
         window.location.reload();
       } catch (error) {
-        console.error('Login process failed:', error);
-        showNotification('Authentication Failed', 'error');
+        console.error('登录过程失败:', error);
+        showNotification('认证失败', 'error');
         localStorage.clear();
       }
     }
