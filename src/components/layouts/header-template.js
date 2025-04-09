@@ -164,8 +164,11 @@ export default function Header() {
       const response = await apiClient.getAlternativeWebsiteList(page, pageSize);
       console.log('History response:', response);
       
-      if (response?.code === 200 && response.data) {
-        const formattedHistory = response.data.map(item => ({
+      if (response?.code === 200) {
+        // 即使 data 为 null 或空数组，也视为正常情况
+        const historyData = response.data || [];
+        
+        const formattedHistory = historyData.map(item => ({
           websiteId: item.websiteId,
           domain: item.website || 'Unknown website',
           createdAt: item.generatedStart || new Date().toISOString(),
@@ -185,6 +188,7 @@ export default function Header() {
         
         console.log('Formatted history:', formattedHistory);
       } else {
+        // 只有当 code 不是 200 时才显示错误
         showNotification('Failed to load history', 'error');
       }
     } catch (error) {
