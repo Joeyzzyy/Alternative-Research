@@ -933,6 +933,10 @@ export default function Header() {
                 <div className="flex items-center gap-4">
                   {/* 积分显示 */}
                   <div className="relative flex items-center gap-2">
+                    {/* 添加用户名显示 */}
+                    <div className="mr-3 text-gray-300">
+                      <span className="text-sm">Hi, {userEmail ? userEmail.split('@')[0] : 'User'}</span>
+                    </div>
                     <div 
                       className="flex items-center cursor-pointer text-gray-300 hover:text-white transition-colors"
                       onClick={() => setShowCreditsTooltip(!showCreditsTooltip)}
