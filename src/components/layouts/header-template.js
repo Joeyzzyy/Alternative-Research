@@ -496,7 +496,7 @@ export default function Header() {
       !loadingResultIds && historyList.length === 0 && {
         key: 'no-data',
         label: (
-          <div className="flex items-center justify-center py-6 space-y-3" style={{ minWidth: '280px', minHeight: '150px' }}>
+          <div className="flex items-center justify-center py-6 space-y-3" style={{ minWidth: '280px', minHeight: '150px', padding: '0 20px' }}>
             <div className="text-center">
               <div className="flex justify-center mb-4">
                 <svg className="w-12 h-12 text-blue-400/50" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
