@@ -809,25 +809,12 @@ export default function Header() {
     }
   ];
 
-  // 检查免费额度
-  const checkFreeCredits = async (deviceId) => {
-    try {
-      const response = await apiClient.checkFreeCredits(deviceId);
-      if (response?.code === 200 && response.data?.freeCredits) {
-        showNotification(`You have ${response.data.freeCredits} free usage opportunities`, 'info');
-      }
-    } catch (error) {
-      console.error('Error checking free credits:', error);
-    }
-  };
-
   // 初始化设备信息
   useEffect(() => {
     if (!isLoggedIn) {
       const info = DeviceManager.getDeviceInfo();
       if (info) {
         setDeviceInfo(info);
-        checkFreeCredits(info.deviceId);
       }
     }
   }, [isLoggedIn]);
