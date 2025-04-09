@@ -452,6 +452,19 @@ export default function Header() {
           </div>
         ),
       },
+      // 如果历史记录为空，显示"No data available"
+      !loadingResultIds && historyList.length === 0 && {
+        key: 'no-data',
+        label: (
+          <div className="flex items-center justify-center py-6">
+            <div className="text-center">
+              <p className="text-sm font-medium text-gray-400">No data available</p>
+              <p className="text-xs text-gray-500 mt-1">Your task history will appear here</p>
+            </div>
+          </div>
+        ),
+        disabled: true,
+      },
       // All history items
       ...historyList.map(item => ({
         key: item.websiteId,
