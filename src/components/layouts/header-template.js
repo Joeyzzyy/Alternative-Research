@@ -320,21 +320,21 @@ export default function Header() {
   };
 
   useEffect(() => {
-    // 检查URL参数
+    // Check URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     const accessToken = urlParams.get('accessToken');
     const customerId = urlParams.get('customerId');
     const email = urlParams.get('email');
     
-    // 验证JWT token的格式
+    // Validate JWT token format
     const isValidJWT = accessToken?.split('.').length === 3;
 
     if (accessToken && isValidJWT && customerId && email) {
       try {
-        // 清除现有存储
+        // Clear existing storage
         localStorage.clear();
         
-        // 存储新的登录信息
+        // Store new login information
         const decodedEmail = decodeURIComponent(email);
         localStorage.setItem('alternativelyIsLoggedIn', 'true');
         localStorage.setItem('alternativelyAccessToken', accessToken);
@@ -343,16 +343,16 @@ export default function Header() {
         
         setIsLoggedIn(true);
         setUserEmail(decodedEmail);
-        showNotification('登录成功！', 'success');
+        showNotification('Login successful!', 'success');
         
-        // 清除 URL 参数
+        // Clear URL parameters
         window.history.replaceState({}, document.title, window.location.pathname);
         
-        // 刷新页面以应用新的登录状态
+        // Refresh page to apply new login status
         window.location.reload();
       } catch (error) {
-        console.error('登录过程失败:', error);
-        showNotification('认证失败', 'error');
+        console.error('Login process failed:', error);
+        showNotification('Authentication failed', 'error');
         localStorage.clear();
       }
     }
@@ -814,7 +814,7 @@ export default function Header() {
     try {
       const response = await apiClient.checkFreeCredits(deviceId);
       if (response?.code === 200 && response.data?.freeCredits) {
-        showNotification(`您有 ${response.data.freeCredits} 次免费使用机会`, 'info');
+        showNotification(`You have ${response.data.freeCredits} free usage opportunities`, 'info');
       }
     } catch (error) {
       console.error('Error checking free credits:', error);
