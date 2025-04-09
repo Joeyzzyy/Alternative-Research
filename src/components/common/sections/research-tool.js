@@ -1457,7 +1457,7 @@ const ResearchTool = () => {
               <svg className="w-5 h-5 mr-3 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span className="font-medium text-base">Start now with 5 free alternative pages - no login or credit card required!</span>
+              <span className="font-medium text-base">Start now with 5 free alternative pages - no credit card required!</span>
             </div>
           </div>
           
