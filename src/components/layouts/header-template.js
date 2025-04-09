@@ -44,6 +44,46 @@ const animationStyles = `
   .result-ids-modal .ant-modal-wrap {
     z-index: 1500;
   }
+  
+  /* 改进历史记录下拉菜单样式 */
+  .history-dropdown .ant-dropdown-menu {
+    background: rgba(15, 23, 42, 0.95) !important;
+    backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(99, 102, 241, 0.3) !important;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
+  }
+  
+  .history-dropdown .ant-dropdown-menu-item {
+    color: rgba(255, 255, 255, 0.9) !important;
+  }
+  
+  .history-dropdown .ant-dropdown-menu-item:hover {
+    background: rgba(99, 102, 241, 0.2) !important;
+  }
+  
+  /* 改进分页器样式 */
+  .history-pagination .ant-pagination-item {
+    background: rgba(30, 41, 59, 0.8) !important;
+    border-color: rgba(99, 102, 241, 0.3) !important;
+  }
+  
+  .history-pagination .ant-pagination-item a {
+    color: rgba(255, 255, 255, 0.8) !important;
+  }
+  
+  .history-pagination .ant-pagination-item-active {
+    background: rgba(99, 102, 241, 0.5) !important;
+    border-color: rgba(99, 102, 241, 0.8) !important;
+  }
+  
+  .history-pagination .ant-pagination-item-active a {
+    color: white !important;
+  }
+  
+  .history-pagination .ant-pagination-prev button,
+  .history-pagination .ant-pagination-next button {
+    color: rgba(255, 255, 255, 0.8) !important;
+  }
 `;
 
 export default function Header() {
@@ -458,8 +498,8 @@ export default function Header() {
         label: (
           <div className="flex items-center justify-center py-6">
             <div className="text-center">
-              <p className="text-sm font-medium text-gray-400">No data available</p>
-              <p className="text-xs text-gray-500 mt-1">Your task history will appear here</p>
+              <p className="text-sm font-medium text-white">No data available</p>
+              <p className="text-xs text-blue-300 mt-1">Your task history will appear here</p>
             </div>
           </div>
         ),
@@ -1403,7 +1443,11 @@ export default function Header() {
         className="result-ids-modal"
         zIndex={1500}
         styles={{
-          mask: { backgroundColor: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(8px)' }
+          mask: { backgroundColor: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(8px)' },
+          content: { 
+            background: 'rgba(15, 23, 42, 0.95)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)'
+          }
         }}
       >
         <div className="flex h-[700px]">
