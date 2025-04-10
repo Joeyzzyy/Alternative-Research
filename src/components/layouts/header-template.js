@@ -8,7 +8,6 @@ import { Dropdown, Modal, Button, Spin, Menu, Pagination } from 'antd';
 import { HistoryOutlined } from '@ant-design/icons';
 import { useUser } from '../../contexts/UserContext';
 import { useToolContext } from '../../contexts/ToolContext';
-import DeviceManager from '../../utils/DeviceManager';
 
 const animationStyles = `
   @keyframes fadeIn {
@@ -146,8 +145,6 @@ export default function Header() {
 
   const { currentTool, setCurrentTool } = useToolContext();
 
-  const [deviceInfo, setDeviceInfo] = useState(null);
-
   // Add pagination state
   const [historyPagination, setHistoryPagination] = useState({
     current: 1,
@@ -160,6 +157,93 @@ export default function Header() {
 
   // 添加登出确认状态 - 在其他状态变量附近添加
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+
+  const [googleOneTapInitialized, setGoogleOneTapInitialized] = useState(false);
+
+  // 添加 Google One Tap 初始化函数
+  const initializeGoogleOneTap = useCallback(() => {
+    if (googleOneTapInitialized || isLoggedIn) return;
+    
+    // 确保 Google 脚本已加载
+    if (typeof window !== 'undefined' && window.google && window.google.accounts) {
+      try {
+        window.google.accounts.id.initialize({
+          client_id: '491914743416-1o5v2lv5582cvc7lrrmslg5g5b4kr6c1.apps.googleusercontent.com', 
+          callback: handleGoogleOneTapResponse,
+          auto_select: true,
+          cancel_on_tap_outside: true,
+        });
+        
+        // 显示 One Tap UI
+        window.google.accounts.id.prompt((notification) => {
+          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+            console.log('One Tap not displayed or skipped:', notification.getNotDisplayedReason() || notification.getSkippedReason());
+          }
+        });
+        
+        setGoogleOneTapInitialized(true);
+      } catch (error) {
+        console.error('Google One Tap 初始化失败:', error);
+      }
+    }
+  }, [googleOneTapInitialized, isLoggedIn]);
+
+  // 处理 Google One Tap 响应
+  const handleGoogleOneTapResponse = async (response) => {
+    try {
+      setLoading(true);
+      showNotification('Verifying Google login...', 'info');
+      
+      // 发送 ID 令牌到后端进行验证
+      const apiResponse = await apiClient.googleOneTapLogin(response.credential);
+      
+      if (apiResponse && apiResponse.data) {
+        // 存储用户数据
+        localStorage.setItem('alternativelyAccessToken', apiResponse.data.accessToken);
+        localStorage.setItem('alternativelyIsLoggedIn', 'true');
+        localStorage.setItem('alternativelyCustomerEmail', apiResponse.data.email);
+        localStorage.setItem('alternativelyCustomerId', apiResponse.data.customerId);
+        
+        // 更新状态
+        setIsLoggedIn(true);
+        setUserEmail(apiResponse.data.email);
+        
+        showNotification('Login successful!', 'success');
+        
+        // 刷新页面应用新的登录状态
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error("Google One Tap login failed:", error);
+      showNotification('Google login failed, please try again later', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 加载 Google One Tap 脚本
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !isLoggedIn && !googleOneTapInitialized) {
+      // 检查脚本是否已加载
+      if (!document.querySelector('script[src="https://accounts.google.com/gsi/client"]')) {
+        const script = document.createElement('script');
+        script.src = "https://accounts.google.com/gsi/client";
+        script.async = true;
+        script.defer = true;
+        script.onload = initializeGoogleOneTap;
+        document.body.appendChild(script);
+      } else {
+        initializeGoogleOneTap();
+      }
+    }
+  }, [isLoggedIn, initializeGoogleOneTap, googleOneTapInitialized]);
+
+  // 当用户登出时重置 One Tap 状态
+  useEffect(() => {
+    if (!isLoggedIn && googleOneTapInitialized) {
+      setGoogleOneTapInitialized(false);
+    }
+  }, [isLoggedIn]);
 
   useEffect(() => {
     // Check if user is logged in with alternatively prefix
@@ -869,16 +953,6 @@ export default function Header() {
       }
     }
   ];
-
-  // 初始化设备信息
-  useEffect(() => {
-    if (!isLoggedIn) {
-      const info = DeviceManager.getDeviceInfo();
-      if (info) {
-        setDeviceInfo(info);
-      }
-    }
-  }, [isLoggedIn]);
 
   // 在恢复窗口组件中
   useEffect(() => {

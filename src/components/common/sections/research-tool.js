@@ -155,6 +155,13 @@ const ResearchTool = () => {
     Object.entries(TAG_FILTERS).forEach(([tag, replacement]) => {
       filteredMessage = filteredMessage.replace(new RegExp(tag, 'g'), replacement);
     });
+    
+    // 添加过滤思考过程的逻辑
+    filteredMessage = filteredMessage.replace(/<details style="color:gray;background-color: #f8f8f8;padding: 8px;border-radius: 4px;" open>\s*<summary>\s*Thinking\.\.\.\s*<\/summary>.*?<\/details>/gs, '');
+    
+    // 过滤掉Action:和Thought:标签
+    filteredMessage = filteredMessage.replace(/^(Action|Thought):\s*/gm, '');
+    
     return filteredMessage;
   };
 
@@ -502,13 +509,155 @@ const ResearchTool = () => {
   // 添加一个 ref 来引用代码容器
   const codeContainerRef = useRef(null);
 
+  const messageStreamRef = useRef({}); // 用于存储流式输出的消息
+
+  // 添加一个过滤日志内容的函数
+  const filterLogContent = (content) => {
+    if (!content) return '';
+    
+    let filteredContent = String(content);
+    
+    // 处理标签内容 - 将它们转换为格式化的显示内容
+    // 1. 处理 details/summary 标签 - 转换为格式化的思考过程区块
+    filteredContent = filteredContent.replace(
+      /<details.*?>\s*<summary>\s*Thinking\.\.\.\s*<\/summary>(.*?)<\/details>/gs, 
+      (match, thinkingContent) => {
+        // 添加空格到思考内容中
+        const formattedThinking = thinkingContent
+          .replace(/([a-z])([A-Z])/g, '$1 $2')  // 在小写字母后跟大写字母之间添加空格
+          .replace(/([.,!?:;])([a-zA-Z])/g, '$1 $2')  // 在标点符号后添加空格
+          .replace(/([a-zA-Z])([.,!?:;])/g, '$1$2 ')  // 在标点符号前保持不变，后面添加空格
+          .trim();
+        
+        // 返回格式化的思考区块
+        return `<div class="thinking-block p-2 my-2 bg-gray-100 rounded text-xs text-gray-600">
+                  <div class="font-medium mb-1">Thinking Process:</div>
+                  <div>${formattedThinking}</div>
+                </div>`;
+      }
+    );
+    
+    // 2. 处理 Action: 标签 - 转换为格式化的动作区块
+    filteredContent = filteredContent.replace(
+      /Action:\s*(.*?)(?=Thought:|<details|$)/gs,
+      (match, actionContent) => {
+        const formattedAction = actionContent.trim();
+        if (!formattedAction) return '';
+        
+        return `<div class="action-block p-2 my-2 bg-blue-50 rounded text-xs text-blue-600">
+                  <div class="font-medium mb-1">Action:</div>
+                  <div>${formattedAction}</div>
+                </div>`;
+      }
+    );
+    
+    // 3. 处理 Thought: 标签 - 转换为格式化的思考区块
+    filteredContent = filteredContent.replace(
+      /Thought:\s*(.*?)(?=Action:|<details|$)/gs,
+      (match, thoughtContent) => {
+        const formattedThought = thoughtContent.trim();
+        if (!formattedThought) return '';
+        
+        return `<div class="thought-block p-2 my-2 bg-purple-50 rounded text-xs text-purple-600">
+                  <div class="font-medium mb-1">Thought:</div>
+                  <div>${formattedThought}</div>
+                </div>`;
+      }
+    );
+    
+    // 4. 处理 JSON 格式的 action 指令
+    filteredContent = filteredContent.replace(
+      /\{\s*"action":\s*"(.*?)"\s*,\s*"action_input":\s*"(.*?)"\s*\}/gs,
+      (match, action, actionInput) => {
+        return `<div class="json-action-block p-2 my-2 bg-green-50 rounded text-xs text-green-600">
+                  <div class="font-medium mb-1">Action: ${action}</div>
+                  <div>${actionInput}</div>
+                </div>`;
+      }
+    );
+    
+    // 5. 修复单词之间缺少空格的问题
+    filteredContent = filteredContent.replace(/([a-z])([A-Z])/g, '$1 $2');
+    
+    return filteredContent;
+  };
+
+  // 渲染日志内容
   const renderDetails = (details) => {
-    const reversedLogs = [...logs].reverse();
+    // 首先，合并相同 message_id 的 Agent 消息
+    const mergedLogs = [];
+    const agentMessageMap = new Map();
+    
+    // 第一步：收集所有 Agent 消息，按 message_id 分组
+    logs.forEach(log => {
+      if (log.type === 'Agent' && log.content) {
+        try {
+          const content = JSON.parse(log.content);
+          const organicData = JSON.parse(content.organic_data);
+          
+          if (organicData.event === 'agent_message') {
+            const { message_id, answer } = organicData;
+            
+            // 过滤日志内容
+            const filteredAnswer = filterLogContent(answer);
+            
+            if (!agentMessageMap.has(message_id)) {
+              agentMessageMap.set(message_id, {
+                id: message_id,
+                type: 'Agent',
+                content: filteredAnswer,
+                timestamp: log.timestamp
+              });
+            } else {
+              // 追加内容
+              const existingLog = agentMessageMap.get(message_id);
+              existingLog.content += filteredAnswer;
+            }
+          }
+        } catch (error) {
+          console.error('Error parsing Agent log content:', error);
+        }
+      } else {
+        // 非 Agent 消息直接添加
+        mergedLogs.push(log);
+      }
+    });
+    
+    // 第二步：将合并后的 Agent 消息添加到结果中
+    agentMessageMap.forEach(mergedLog => {
+      mergedLogs.push(mergedLog);
+    });
+    
+    // 按时间戳排序
+    mergedLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
     
     return (
       <div className="h-full flex flex-col" ref={detailsRef}>
         <div className="p-3 space-y-2 overflow-y-auto">
-          {reversedLogs.map((log, index) => {
+          {mergedLogs.map((log, index) => {
+            // 渲染 Agent 类型的日志
+            if (log.type === 'Agent') {
+              return (
+                <div 
+                  key={index} 
+                  className="bg-gray-800/50 p-2.5 rounded border border-gray-700/50 hover:border-gray-600/50 transition-all duration-300 animate-fadeIn"
+                  style={{ animationDelay: '0.5s' }}
+                >
+                  <div className="flex items-center mb-2">
+                    <img src="/images/alternatively-logo.png" alt="Alternatively" className="w-4 h-4 mr-2" />
+                    <div className="text-[11px] text-gray-300 font-medium">Agent Message</div>
+                  </div>
+                  <div 
+                    className="text-[10px] text-gray-400 break-words leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: filterLogContent(log.content) }}
+                  />
+                  <div className="text-[9px] text-gray-500 mt-1.5">
+                    {new Date(log.timestamp).toLocaleString()}
+                  </div>
+                </div>
+              );
+            }
+            
             // 解析 Dify 日志的 content
             let difyContent = null;
             if (log.type === 'Dify' && typeof log.content === 'string') {
