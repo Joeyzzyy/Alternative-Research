@@ -56,7 +56,7 @@ const ResearchTool = () => {
   const [inputDisabledDueToUrlGet, setInputDisabledDueToUrlGet] = useState(false);
   const [validationError, setValidationError] = useState('');
   const lastProcessedLogIdRef = useRef(null);
-  const [currentBackground, setCurrentBackground] = useState('GHIBLI');
+  const [currentBackground, setCurrentBackground] = useState('DEFAULT');
   const [exampleDisabled, setExampleDisabled] = useState(false); // 添加 exampleDisabled 状态
   const messageHandler = new MessageHandler(setMessages);
   const [sseConnected, setSseConnected] = useState(false);
@@ -1406,13 +1406,42 @@ const ResearchTool = () => {
 
   if (showInitialScreen) {
     return (
-      <div className={`w-full h-screen flex items-center justify-center ${
+      <div className={`w-full h-screen flex items-center justify-center relative ${
         currentBackground === 'GHIBLI' ? 'bg-cover bg-center bg-no-repeat' : getBackgroundClass()
       }`}
            style={getBackgroundStyle()}>
-        {/* Inject contextHolder so messageApi works */}
+        {/* Inject contextHolder */}
         {contextHolder}
-        <div className={`w-full max-w-4xl px-8 py-12 initial-screen-content rounded-xl ${
+
+        {/* Effects for DEFAULT mode */}
+        {currentBackground === 'DEFAULT' && (
+          <>
+            {/* 1. Halo effect */}
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{ background: 'radial-gradient(ellipse at top, rgba(59, 130, 246, 0.2) 0%, transparent 70%)' }}
+            ></div>
+            {/* 2. Subtle Tech Grid effect */}
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                backgroundImage: `
+                  linear-gradient(rgba(59, 130, 246, 0.05) 1px, transparent 1px),
+                  linear-gradient(to right, rgba(59, 130, 246, 0.05) 1px, transparent 1px)
+                `,
+                backgroundSize: '30px 30px',
+              }}
+            ></div>
+            {/* 3. Corner Brackets */}
+            <div className="absolute top-4 left-4 w-5 h-5 border-t border-l border-blue-500/30 pointer-events-none"></div>
+            <div className="absolute top-4 right-4 w-5 h-5 border-t border-r border-blue-500/30 pointer-events-none"></div>
+            <div className="absolute bottom-4 left-4 w-5 h-5 border-b border-l border-blue-500/30 pointer-events-none"></div>
+            <div className="absolute bottom-4 right-4 w-5 h-5 border-b border-r border-blue-500/30 pointer-events-none"></div>
+          </>
+        )}
+
+        {/* Ensure content is above the effects */}
+        <div className={`relative z-10 w-full max-w-4xl px-8 py-12 initial-screen-content rounded-xl ${
           currentBackground === 'GHIBLI' ? 'bg-transparent' : 'bg-slate-900/80 backdrop-blur-md'
         }`}>
           <div className={`text-center mb-8 ${currentBackground === 'GHIBLI' ? 'text-shadow' : ''}`}>
@@ -1428,7 +1457,7 @@ const ResearchTool = () => {
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
                 </svg>
-                {currentBackground === 'GHIBLI' ? 'Switch to Default' : 'Switch to Ghibli'}
+                {currentBackground === 'GHIBLI' ? 'Switch to Default' : 'Switch to Ghibli Style'}
               </button>
             </h1>
             <p className={`text-lg ${currentBackground === 'GHIBLI' ? 'text-amber-200/90' : 'text-gray-300'} mb-8 ${currentBackground === 'GHIBLI' ? 'drop-shadow-md' : ''}`}>
@@ -1602,15 +1631,6 @@ const ResearchTool = () => {
                 <div className="absolute bottom-3 right-3">
                   <ArrowRightOutlined className="text-amber-400/50 group-hover:text-amber-300 transition-all" />
                 </div>
-              </div>
-            </div>
-            
-            <div className="mt-8 text-center">
-              <div className={`inline-flex items-center px-4 py-2 bg-white/10 rounded-full text-xs text-gray-300 ${currentBackground === 'GHIBLI' ? 'shadow-md' : ''}`}>
-                <InfoCircleOutlined className="mr-2 text-blue-400" />
-                {exampleDisabled ? 
-                  "Processing your request..." : 
-                  "Click any card to view alternative page performance of that product"}
               </div>
             </div>
           </div>
