@@ -2,7 +2,6 @@ import { notFound } from 'next/navigation';
 import { ClientWrapper } from '../../components/layouts/client-wrapper';
 import CommonLayout from '../../components/layouts/layout';
 import Script from 'next/script'
-import FeatureIntro from '../../components/common/sections/feature-intro';
 
 // 1. 确保动态渲染
 export const dynamic = 'force-dynamic'
@@ -294,6 +293,10 @@ async function getPageData() {
         {
           componentName: "ResearchTool",
           sectionId: "research-tool",
+        },
+        {
+          componentName: "ShowCase",
+          sectionId: "show-case",
         },
         {
           componentName: "SubscriptionCard", 

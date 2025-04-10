@@ -183,7 +183,7 @@ export default function Header() {
         
         setGoogleOneTapInitialized(true);
       } catch (error) {
-        console.error('Google One Tap 初始化失败:', error);
+        console.error('Google One Tap initialization failed:', error);
       }
     }
   }, [googleOneTapInitialized, isLoggedIn]);
@@ -193,7 +193,7 @@ export default function Header() {
     try {
       setLoading(true);
       showNotification('Verifying Google login...', 'info');
-      
+      console.log('Google One Tap response:', response);
       // 发送 ID 令牌到后端进行验证
       const apiResponse = await apiClient.googleOneTapLogin(response.credential);
       
@@ -328,7 +328,6 @@ export default function Header() {
 
   // 修改 useEffect
   useEffect(() => {
-    console.log('isLoggedIn changed:', isLoggedIn);
     if (isLoggedIn && !initialLoadRef.current) {
       console.log('Initial history load triggered');
       initialLoadRef.current = true;

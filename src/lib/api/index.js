@@ -292,6 +292,19 @@ const getAlternativeChatHistory = async (websiteId) => {
   }
 };
 
+// 新增：Google One Tap 登录方法
+const googleOneTapLogin = async (credential) => {
+  try {
+    const response = await apiClient.post('/auth/google', {
+      credential
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Failed to login with Google One Tap:', error);
+    throw error;
+  }
+};
+
 apiClient.getCompetitorResearch = getCompetitorResearch;
 apiClient.login = login;
 apiClient.register = register;
@@ -311,5 +324,6 @@ apiClient.getAlternativeWebsiteList = getAlternativeWebsiteList;
 apiClient.getAlternativeWebsiteHistory = getAlternativeWebsiteHistory;
 apiClient.getCustomerPackage = getCustomerPackage;
 apiClient.getAlternativeChatHistory = getAlternativeChatHistory;
+apiClient.googleOneTapLogin = googleOneTapLogin;
 
 export default apiClient;
