@@ -72,21 +72,6 @@ export default function Footer({ data }) {
             <p className="text-gray-400 text-sm leading-relaxed max-w-md">
               {data.description}
             </p>
-
-            {/* Add a subscribe box */}
-            <div className="pt-4">
-              <p className="text-gray-300 text-sm font-medium mb-3">Stay updated with our latest AI innovations</p>
-              <div className="flex max-w-md">
-                <input 
-                  type="email" 
-                  placeholder="Enter your email" 
-                  className="bg-slate-800/80 text-white border border-slate-700/50 rounded-l-lg px-4 py-2 focus:outline-none focus:ring-1 focus:ring-cyan-500 w-full text-sm"
-                />
-                <button className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-r-lg px-4 py-2 text-sm font-medium hover:from-cyan-600 hover:to-blue-700 transition-all duration-300 whitespace-nowrap">
-                  Subscribe
-                </button>
-              </div>
-            </div>
           </div>
           
           {/* Footer Sections */}
