@@ -53,6 +53,11 @@ const LoginModal = ({
     };
   }, [cooldownTimer]);
 
+  // 在组件顶部添加一个调试日志，查看组件是否被多次渲染
+  useEffect(() => {
+    console.log('LoginModal rendered, showLoginModal:', showLoginModal);
+  }, [showLoginModal]);
+
   // Handle login form input change
   const handleLoginInputChange = (e) => {
     const { name, value } = e.target;
@@ -245,10 +250,12 @@ const LoginModal = ({
     setIsLoginForm(true);
   };
 
+  // 确保模态框只渲染一次的防御性代码
   if (!showLoginModal) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm modal-overlay">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm modal-overlay" 
+         key="login-modal-overlay">
       <div className="w-full max-w-md p-8 mx-auto bg-gray-900 rounded-xl shadow-2xl modal-content border border-indigo-500/30 text-white">
         <div className="flex justify-between mb-6">
           <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-600">

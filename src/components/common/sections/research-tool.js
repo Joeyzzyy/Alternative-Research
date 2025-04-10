@@ -3,23 +3,17 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Input, Button, Card, Spin, message, Tag, Tooltip, Avatar, ConfigProvider, Pagination, Dropdown, Menu, Modal } from 'antd';
 import { SearchOutlined, ClearOutlined, ArrowRightOutlined, InfoCircleOutlined, SendOutlined, UserOutlined, RobotOutlined, LoadingOutlined } from '@ant-design/icons';
 import apiClient from '../../../lib/api/index.js';
-import BrowserSimulator from '../BrowserSimulator';
-import Typewriter from 'typewriter-effect';
 import { EventSourcePolyfill } from 'event-source-polyfill';
 import MessageHandler from '../../../utils/MessageHandler';
-import LoginModal from '../sections/LoginModal';
+import LoginModal from './LoginModal';
 
-// 修改 TAG_FILTERS 字典
 const TAG_FILTERS = {
   '\\[URL_GET\\]': '',  // 过滤 [URL_GET]
   '\\[COMPETITOR_SELECTED\\]': '',  // 过滤 [COMPETITOR_SELECTED]
   '\\[END\\]': '',  // 过滤 [END]
   '\\[ALL_END\\]': '',  // 过滤 [COMPETITOR_SELECTED]
 };
-
 const ALTERNATIVELY_LOGO = '/images/alternatively-logo.png'; // 假设这是Alternatively的logo路径
-
-// 修改背景配置，增强吉卜力风格
 const BACKGROUNDS = {
   DEFAULT: {
     type: 'gradient',
@@ -33,72 +27,6 @@ const BACKGROUNDS = {
     buttonStyle: 'bg-amber-500/30 hover:bg-amber-500/40 text-amber-200 border-amber-500/40 hover:border-amber-400/60',
     inputStyle: 'border-amber-400/30 focus:border-amber-300/50 shadow-amber-700/20',
     cardStyle: 'border-amber-500/30 hover:border-amber-400/50 shadow-amber-700/20'
-  }
-};
-
-const CodeTypingEffect = ({ code, speed = 3 }) => {
-  const [displayedCode, setDisplayedCode] = useState('');
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const codeContainerRef = useRef(null);
-  const previousCodeRef = useRef('');
-
-  useEffect(() => {
-    // 如果是新的代码内容，只追加新增部分
-    if (code !== previousCodeRef.current) {
-      const newContent = code.slice(previousCodeRef.current.length);
-      previousCodeRef.current = code;
-      setDisplayedCode(prev => prev + newContent);
-      return;
-    }
-
-    // 正常打字效果
-    if (currentIndex < code.length) {
-      const timer = setTimeout(() => {
-        if (code[currentIndex] === '<') {
-          const tagEndIndex = code.indexOf('>', currentIndex);
-          if (tagEndIndex !== -1) {
-            // 一次性打印整个 HTML 标签
-            setDisplayedCode(prev => prev + code.slice(currentIndex, tagEndIndex + 1));
-            setCurrentIndex(tagEndIndex + 1);
-          } else {
-            setDisplayedCode(prev => prev + code[currentIndex]);
-            setCurrentIndex(prev => prev + 1);
-          }
-        } else {
-          setDisplayedCode(prev => prev + code[currentIndex]);
-          setCurrentIndex(prev => prev + 1);
-        }
-      }, speed);
-      
-      return () => clearTimeout(timer);
-    }
-  }, [code, currentIndex, speed]);
-
-  return (
-    <pre 
-      ref={codeContainerRef}
-      className="text-[10px] text-blue-300 font-mono whitespace-pre-wrap leading-relaxed overflow-auto" 
-      style={{ maxHeight: '600px' }}
-    >
-      <div>{displayedCode}</div>
-      {currentIndex < code.length && (
-        <span className="animate-blink">▋</span>
-      )}
-    </pre>
-  );
-};
-
-// Update the style configuration
-const dropdownStyles = {
-  DEFAULT: {
-    menu: '!bg-white/95 !border !border-gray-200 !shadow-lg', // 使用 !important
-    item: '!text-gray-600 hover:!bg-gray-50', // 使用 !important
-    activeItem: '!bg-blue-50 !text-blue-600', // 使用 !important
-  },
-  GHIBLI: {
-    menu: '!bg-amber-50/95 !border !border-amber-100 !shadow-lg', // 使用 !important
-    item: '!text-amber-700 hover:!bg-amber-50', // 使用 !important
-    activeItem: '!bg-amber-100 !text-amber-800', // 使用 !important
   }
 };
 
@@ -131,69 +59,22 @@ const ResearchTool = () => {
   const [currentBackground, setCurrentBackground] = useState('GHIBLI');
   const [exampleDisabled, setExampleDisabled] = useState(false); // 添加 exampleDisabled 状态
   const messageHandler = new MessageHandler(setMessages);
-
-  // 添加 SSE 连接状态和重试相关变量
   const [sseConnected, setSseConnected] = useState(false);
   const retryCountRef = useRef(0);
   const retryTimeoutRef = useRef(null);
   const MAX_RETRY_COUNT = 5;
-
   const [htmlStream, setHtmlStream] = useState('');
   const htmlStreamRef = useRef('');  // 用于累积 HTML 流
   const isStreamingRef = useRef(false);
   const currentStreamIdRef = useRef(null);  // 添加一个 ref 来跟踪当前正在流式输出的日志 ID
-
-  // 添加一个新的 state 来存储 resultIds
   const [resultIds, setResultIds] = useState([]);
-  // 添加一个新的 state 来控制弹窗的显示
   const [showResultIdsModal, setShowResultIdsModal] = useState(false);
-
-  // 添加一个 ref 来跟踪最后一次看到的日志数量
   const lastLogCountRef = useRef(0);
-
-  // 添加登录模态框相关的状态
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [isLoginForm, setIsLoginForm] = useState(true);
-  const [isForgotPassword, setIsForgotPassword] = useState(false);
-  
-  // 添加通知状态（如果还没有的话）
   const [notification, setNotification] = useState({
     show: false,
     message: '',
     type: 'success' // 'success', 'error', 'info'
   });
-  
-  // 显示通知的函数
-  const showNotification = (message, type = 'info') => {
-    setNotification({
-      show: true,
-      message,
-      type
-    });
-    
-    // 自动关闭通知
-    setTimeout(() => {
-      setNotification(prev => ({ ...prev, show: false }));
-    }, 3000);
-  };
-  
-  // 处理登录成功
-  const handleLoginSuccess = (userData) => {
-    // 存储用户数据
-    localStorage.setItem('alternativelyAccessToken', userData.accessToken);
-    localStorage.setItem('alternativelyIsLoggedIn', 'true');
-    localStorage.setItem('alternativelyCustomerEmail', userData.email);
-    localStorage.setItem('alternativelyCustomerId', userData.customerId);
-    
-    // 关闭登录模态框
-    setShowLoginModal(false);
-    
-    // 显示成功通知
-    showNotification('Login successful!', 'success');
-    
-    // 刷新页面或继续之前的操作
-    window.location.reload();
-  };
 
   const filterMessageTags = (message) => {
     let filteredMessage = message;
@@ -201,29 +82,15 @@ const ResearchTool = () => {
       filteredMessage = filteredMessage.replace(new RegExp(tag, 'g'), replacement);
     });
     
-    // 添加过滤思考过程的逻辑
-    filteredMessage = filteredMessage.replace(/<details style="color:gray;background-color: #f8f8f8;padding: 8px;border-radius: 4px;" open>\s*<summary>\s*Thinking\.\.\.\s*<\/summary>.*?<\/details>/gs, '');
-    
-    // 过滤掉Action:和Thought:标签
-    filteredMessage = filteredMessage.replace(/^(Action|Thought):\s*/gm, '');
-    
     return filteredMessage;
   };
 
-  // Function to validate domain format
   const validateDomain = (input) => {
-    // Remove https:// or http:// if present
     let domain = input.trim();
     if (domain.startsWith('http://')) domain = domain.substring(7);
     if (domain.startsWith('https://')) domain = domain.substring(8);
-    
-    // Remove www. if present
     if (domain.startsWith('www.')) domain = domain.substring(4);
-    
-    // Basic domain validation regex
-    // This checks for at least one character, followed by a dot, followed by at least two characters
     const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
-    
     return domainRegex.test(domain);
   };
 
@@ -524,14 +391,7 @@ const ResearchTool = () => {
   };
 
   const detailsRef = useRef(null);
-  const htmlCodeRef = useRef(null);
-
-  // 添加一个 ref 来引用代码容器
   const codeContainerRef = useRef(null);
-
-  const messageStreamRef = useRef({}); // 用于存储流式输出的消息
-
-  // 添加一个过滤日志内容的函数
   const filterLogContent = (content) => {
     if (!content) return '';
     
@@ -1001,12 +861,15 @@ const ResearchTool = () => {
 
   const initializeChat = async (userInput) => {
     try {
+      // 检查用户是否已登录
       const isLoggedIn = localStorage.getItem('alternativelyIsLoggedIn') === 'true';
       const token = localStorage.getItem('alternativelyAccessToken');
       
+      // 如果用户未登录，触发 header-template.js 中的登录弹窗并返回
       if (!isLoggedIn || !token) {
-        // 直接设置 showLoginModal 为 true
-        setShowLoginModal(true);
+        // 创建并分发自定义事件，通知 header-template 显示登录弹窗
+        const showLoginEvent = new CustomEvent('showAlternativelyLoginModal');
+        window.dispatchEvent(showLoginEvent);
         return;
       }
       
@@ -1480,8 +1343,6 @@ const ResearchTool = () => {
   };
 
   const handleExampleClick = (example) => {
-    // 移除下拉框显示逻辑
-    // 改为滚动到对应的 showcase 区域
     const showcaseSection = document.getElementById(`showcase-${example}`);
     if (showcaseSection) {
       showcaseSection.scrollIntoView({ behavior: 'smooth' });
@@ -1950,20 +1811,6 @@ const ResearchTool = () => {
         </div>
       </Modal>
 
-      {/* 添加 LoginModal 组件 */}
-      <LoginModal
-        showLoginModal={showLoginModal}
-        setShowLoginModal={setShowLoginModal}
-        isLoginForm={isLoginForm}
-        setIsLoginForm={setIsLoginForm}
-        isForgotPassword={isForgotPassword}
-        setIsForgotPassword={setIsForgotPassword}
-        onLoginSuccess={handleLoginSuccess}
-        showNotification={showNotification}
-        handleGoogleLogin={() => {}} // 如果需要处理 Google 登录
-        googleLoading={false} // 如果需要显示 Google 登录加载状态
-      />
-      
       {/* 通知组件（如果还没有的话） */}
       {notification.show && (
         <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 ${

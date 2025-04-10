@@ -282,7 +282,6 @@ export default function Header() {
     }
 
     if (item.status === 'finished') {
-      // Show loading state in dropdown
       setLoadingResultIds(true);
 
       if (item.websiteId) {
@@ -694,6 +693,23 @@ export default function Header() {
     // Close login modal
     setShowLoginModal(false);
   };
+
+  // 添加事件监听器来响应 research-tool 组件触发的登录弹窗请求
+  useEffect(() => {
+    const handleShowLoginModal = () => {
+      if (!showLoginModal) {
+        setShowLoginModal(true);
+        setIsLoginForm(true); // 确保显示登录表单而不是注册表单
+        showNotification('Please login to continue', 'info');
+      }
+    };
+    
+    window.addEventListener('showAlternativelyLoginModal', handleShowLoginModal);
+    
+    return () => {
+      window.removeEventListener('showAlternativelyLoginModal', handleShowLoginModal);
+    };
+  }, []);
 
   return (
     <>
