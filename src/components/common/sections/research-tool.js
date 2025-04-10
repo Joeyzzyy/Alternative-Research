@@ -75,6 +75,7 @@ const ResearchTool = () => {
     message: '',
     type: 'success' // 'success', 'error', 'info'
   });
+  const [pendingUserInput, setPendingUserInput] = useState('');
 
   const filterMessageTags = (message) => {
     let filteredMessage = message;
@@ -377,6 +378,28 @@ const ResearchTool = () => {
     
     return () => clearTimeout(timer);
   }, []);
+
+
+  // 添加监听登录成功事件的 useEffect
+  useEffect(() => {
+    const handleLoginSuccess = () => {
+      // 检查是否有待处理的用户输入
+      if (pendingUserInput) {
+        // 延迟一点执行，确保登录状态已完全更新
+        setTimeout(() => {
+          initializeChat(pendingUserInput);
+          // 清除待处理的输入
+          setPendingUserInput('');
+        }, 500);
+      }
+    };
+    
+    window.addEventListener('alternativelyLoginSuccess', handleLoginSuccess);
+    
+    return () => {
+      window.removeEventListener('alternativelyLoginSuccess', handleLoginSuccess);
+    };
+  }, [pendingUserInput, setPendingUserInput]); // 添加 setPendingUserInput 到依赖数组
 
   useEffect(() => {
     const storedCustomerId = localStorage.getItem('alternativelyCustomerId');
@@ -865,8 +888,11 @@ const ResearchTool = () => {
       const isLoggedIn = localStorage.getItem('alternativelyIsLoggedIn') === 'true';
       const token = localStorage.getItem('alternativelyAccessToken');
       
-      // 如果用户未登录，触发 header-template.js 中的登录弹窗并返回
+      // 如果用户未登录，保存当前输入并触发登录弹窗
       if (!isLoggedIn || !token) {
+        // 保存用户输入，以便登录后继续
+        setPendingUserInput(userInput);
+        
         // 创建并分发自定义事件，通知 header-template 显示登录弹窗
         const showLoginEvent = new CustomEvent('showAlternativelyLoginModal');
         window.dispatchEvent(showLoginEvent);

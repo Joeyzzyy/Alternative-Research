@@ -177,8 +177,9 @@ export default function Header() {
         
         showNotification('Login successful!', 'success');
         
-        // 刷新页面应用新的登录状态
-        window.location.reload();
+        // 触发登录成功事件，通知其他组件
+        const loginSuccessEvent = new CustomEvent('alternativelyLoginSuccess');
+        window.dispatchEvent(loginSuccessEvent);
       }
     } catch (error) {
       console.error("Google One Tap login failed:", error);
@@ -407,8 +408,9 @@ export default function Header() {
         // Clear URL parameters
         window.history.replaceState({}, document.title, window.location.pathname);
         
-        // Refresh page to apply new login status
-        window.location.reload();
+        // 触发登录成功事件，通知其他组件
+        const loginSuccessEvent = new CustomEvent('alternativelyLoginSuccess');
+        window.dispatchEvent(loginSuccessEvent);
       } catch (error) {
         console.error('Login process failed:', error);
         showNotification('Authentication failed', 'error');
@@ -692,6 +694,10 @@ export default function Header() {
     
     // Close login modal
     setShowLoginModal(false);
+    
+    // 触发登录成功事件，通知其他组件
+    const loginSuccessEvent = new CustomEvent('alternativelyLoginSuccess');
+    window.dispatchEvent(loginSuccessEvent);
   };
 
   // 修改 useEffect 依赖数组，添加 showLoginModal
@@ -710,6 +716,17 @@ export default function Header() {
       window.removeEventListener('showAlternativelyLoginModal', handleShowLoginModal);
     };
   }, [showNotification, setIsLoginForm]); // 添加所有依赖项
+
+  useEffect(() => {
+    // 检查本地存储中的登录信息
+    const storedIsLoggedIn = localStorage.getItem('alternativelyIsLoggedIn');
+    const storedEmail = localStorage.getItem('alternativelyCustomerEmail');
+    
+    if (storedIsLoggedIn === 'true' && storedEmail) {
+      setIsLoggedIn(true);
+      setUserEmail(storedEmail);
+    }
+  }, []);
 
   return (
     <>
