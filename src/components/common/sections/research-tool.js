@@ -15,14 +15,18 @@ const TAG_FILTERS = {
 };
 const ALTERNATIVELY_LOGO = '/images/alternatively-logo.png'; // 假设这是Alternatively的logo路径
 const BACKGROUNDS = {
-  DEFAULT: {
-    type: 'gradient',
-    value: 'bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950',
-    overlay: 'bg-transparent'
+  NIGHT_GHIBLI: { // 重命名 DEFAULT 为 NIGHT_GHIBLI
+    type: 'image', // 类型改为 image
+    value: 'url("/images/GHIBLI-NIGHT.png")', // 使用夜间图片
+    overlay: 'bg-slate-950/60 backdrop-blur-sm', // 统一覆盖层样式
+    // 添加夜间模式的样式
+    buttonStyle: 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border-blue-500/30 hover:border-blue-400/60',
+    inputStyle: 'border-blue-400/30 focus:border-blue-300/50 shadow-blue-700/20',
+    cardStyle: 'border-blue-500/30 hover:border-blue-400/50 shadow-blue-700/20'
   },
-  GHIBLI: {
+  DAY_GHIBLI: { // 重命名 GHIBLI 为 DAY_GHIBLI
     type: 'image',
-    value: 'url("/images/GHIBLI.png")',
+    value: 'url("/images/GHIBLI-BEST.png")',
     overlay: 'bg-slate-950/60 backdrop-blur-sm',
     buttonStyle: 'bg-amber-500/30 hover:bg-amber-500/40 text-amber-200 border-amber-500/40 hover:border-amber-400/60',
     inputStyle: 'border-amber-400/30 focus:border-amber-300/50 shadow-amber-700/20',
@@ -56,7 +60,7 @@ const ResearchTool = () => {
   const [inputDisabledDueToUrlGet, setInputDisabledDueToUrlGet] = useState(false);
   const [validationError, setValidationError] = useState('');
   const lastProcessedLogIdRef = useRef(null);
-  const [currentBackground, setCurrentBackground] = useState('DEFAULT');
+  const [currentBackground, setCurrentBackground] = useState('NIGHT_GHIBLI'); // 默认使用 NIGHT_GHIBLI
   const [exampleDisabled, setExampleDisabled] = useState(false); // 添加 exampleDisabled 状态
   const messageHandler = new MessageHandler(setMessages);
   const [sseConnected, setSseConnected] = useState(false);
@@ -735,22 +739,22 @@ const ResearchTool = () => {
 
   // 切换背景函数
   const toggleBackground = () => {
-    setCurrentBackground(prev => prev === 'GHIBLI' ? 'DEFAULT' : 'GHIBLI');
+    // 使用新的主题名称
+    setCurrentBackground(prev => prev === 'DAY_GHIBLI' ? 'NIGHT_GHIBLI' : 'DAY_GHIBLI');
   };
 
   // 获取当前背景配置
   const getBackgroundStyle = () => {
     const bg = BACKGROUNDS[currentBackground];
-    if (bg.type === 'image') {
-      return { backgroundImage: bg.value };
-    }
-    return {};
+    // 两种模式现在都是 image
+    return { backgroundImage: bg.value };
   };
 
-  // 获取当前背景类名
+  // 获取当前背景类名 - 现在不需要了，因为都是图片背景
   const getBackgroundClass = () => {
-    const bg = BACKGROUNDS[currentBackground];
-    return bg.type === 'gradient' ? bg.value : '';
+    // const bg = BACKGROUNDS[currentBackground];
+    // return bg.type === 'gradient' ? bg.value : '';
+    return ''; // 返回空字符串
   };
 
   // 获取覆盖层类名
@@ -1317,23 +1321,17 @@ const ResearchTool = () => {
 
   // 获取当前主题的按钮样式
   const getButtonStyle = () => {
-    return currentBackground === 'GHIBLI' 
-      ? BACKGROUNDS.GHIBLI.buttonStyle 
-      : 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border-blue-500/30';
+    return BACKGROUNDS[currentBackground].buttonStyle;
   };
   
   // 获取当前主题的输入框样式
   const getInputStyle = () => {
-    return currentBackground === 'GHIBLI'
-      ? BACKGROUNDS.GHIBLI.inputStyle
-      : 'border-gray-300/30';
+    return BACKGROUNDS[currentBackground].inputStyle;
   };
   
   // 获取当前主题的卡片样式
   const getCardStyle = () => {
-    return currentBackground === 'GHIBLI'
-      ? BACKGROUNDS.GHIBLI.cardStyle
-      : '';
+    return BACKGROUNDS[currentBackground].cardStyle;
   };
 
   const handlePreview = (data) => {
@@ -1406,87 +1404,59 @@ const ResearchTool = () => {
 
   if (showInitialScreen) {
     return (
-      <div className={`w-full h-screen flex items-center justify-center relative ${
-        currentBackground === 'GHIBLI' ? 'bg-cover bg-center bg-no-repeat' : getBackgroundClass()
-      }`}
+      <div className={`w-full h-screen flex items-center justify-center relative bg-cover bg-center bg-no-repeat`} // 移除 getBackgroundClass()
            style={getBackgroundStyle()}>
         {/* Inject contextHolder */}
         {contextHolder}
 
-        {/* Effects for DEFAULT mode */}
-        {currentBackground === 'DEFAULT' && (
-          <>
-            {/* 1. Halo effect */}
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{ background: 'radial-gradient(ellipse at top, rgba(59, 130, 246, 0.2) 0%, transparent 70%)' }}
-            ></div>
-            {/* 2. Subtle Tech Grid effect */}
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                backgroundImage: `
-                  linear-gradient(rgba(59, 130, 246, 0.05) 1px, transparent 1px),
-                  linear-gradient(to right, rgba(59, 130, 246, 0.05) 1px, transparent 1px)
-                `,
-                backgroundSize: '30px 30px',
-              }}
-            ></div>
-            {/* 3. Corner Brackets */}
-            <div className="absolute top-4 left-4 w-5 h-5 border-t border-l border-blue-500/30 pointer-events-none"></div>
-            <div className="absolute top-4 right-4 w-5 h-5 border-t border-r border-blue-500/30 pointer-events-none"></div>
-            <div className="absolute bottom-4 left-4 w-5 h-5 border-b border-l border-blue-500/30 pointer-events-none"></div>
-            <div className="absolute bottom-4 right-4 w-5 h-5 border-b border-r border-blue-500/30 pointer-events-none"></div>
-          </>
-        )}
+        {/* 移除原 DEFAULT 模式的特效 */}
+        {/* {currentBackground === 'NIGHT_GHIBLI' && ( ... )} */}
+
+        {/* 覆盖层 */}
+        <div className={`absolute inset-0 ${getOverlayClass()}`}></div>
 
         {/* Ensure content is above the effects */}
-        <div className={`relative z-10 w-full max-w-4xl px-8 py-12 initial-screen-content rounded-xl ${
-          currentBackground === 'GHIBLI' ? 'bg-transparent' : 'bg-slate-900/80 backdrop-blur-md'
-        }`}>
-          <div className={`text-center mb-8 ${currentBackground === 'GHIBLI' ? 'text-shadow' : ''}`}>
-            <h1 className={`text-4xl font-bold ${currentBackground === 'GHIBLI' ? 'text-amber-100' : 'text-white'} mb-6 ${currentBackground === 'GHIBLI' ? 'drop-shadow-lg' : ''}`}>
-              Welcome to <span className={currentBackground === 'GHIBLI' ? 'text-amber-400' : 'text-blue-400'}>Alternatively</span>
-              
-              <button 
+        <div className={`relative z-10 w-full max-w-4xl px-8 py-12 initial-screen-content rounded-xl bg-transparent`}> {/* 移除背景和模糊 */}
+          <div className={`text-center mb-8 text-shadow`}> {/* 应用 text-shadow */}
+            <h1 className={`text-4xl font-bold ${currentBackground === 'DAY_GHIBLI' ? 'text-amber-100' : 'text-white'} mb-6 drop-shadow-lg`}> {/* 应用 drop-shadow */}
+              Welcome to <span className={currentBackground === 'DAY_GHIBLI' ? 'text-amber-400' : 'text-blue-400'}>Alternatively</span>
+
+              <button
                 onClick={toggleBackground}
-                className={`ml-4 inline-flex items-center px-3 py-1.5 text-xs ${getButtonStyle()} rounded-full 
+                className={`ml-4 inline-flex items-center px-3 py-1.5 text-xs ${getButtonStyle()} rounded-full
                          backdrop-blur-sm transition-all gap-1.5 border
-                         shadow-lg hover:bg-blue-500/50 align-middle`}
+                         shadow-lg hover:scale-105 align-middle`} // 使用 hover:scale-105 替代 hover:bg-blue-500/50
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
                 </svg>
-                {currentBackground === 'GHIBLI' ? 'Switch to Default' : 'Switch to Ghibli Style'}
+                {/* 更新按钮文本 */}
+                {currentBackground === 'DAY_GHIBLI' ? 'Switch to Night Ghibli' : 'Switch to Day Ghibli'}
               </button>
             </h1>
-            <p className={`text-lg ${currentBackground === 'GHIBLI' ? 'text-amber-200/90' : 'text-gray-300'} mb-8 ${currentBackground === 'GHIBLI' ? 'drop-shadow-md' : ''}`}>
+            <p className={`text-lg ${currentBackground === 'DAY_GHIBLI' ? 'text-amber-200/90' : 'text-gray-300'} mb-8 drop-shadow-md`}> {/* 应用 drop-shadow */}
               Which product would you like to analyze and create an SEO-friendly Alternatively page for?
             </p>
           </div>
-          
+
           <div className="relative max-w-3xl mx-auto">
             <form onSubmit={(e) => {
+              // ... (form submission logic remains the same) ...
               e.preventDefault();
 
               if (!userInput.trim()) {
-                // Use messageApi to show the error message
                 messageApi.error('Please enter a website URL');
-                setValidationError('Please enter a website URL'); // Keep state to change input style
+                setValidationError('Please enter a website URL');
                 return;
               }
 
               if (!validateDomain(userInput)) {
-                // Use messageApi to show the error message
                 messageApi.error('Please enter a valid domain (e.g., example.com)');
-                setValidationError('Please enter a valid domain (e.g., example.com)'); // Keep state to change input style
+                setValidationError('Please enter a valid domain (e.g., example.com)');
                 return;
               }
 
-              // Clear validation error state (for input style)
               setValidationError('');
-
-              // Ensure input contains https://
               const formattedInput = userInput.trim().startsWith('http') ? userInput.trim() : `https://${userInput.trim()}`;
               initializeChat(formattedInput);
             }}>
@@ -1496,49 +1466,41 @@ const ResearchTool = () => {
                   value={userInput}
                   onChange={(e) => {
                     setUserInput(e.target.value);
-                    // Clear validation error state when user types (for input style)
                     if (validationError) setValidationError('');
                   }}
-                  className={`bg-white/10 border rounded-xl text-lg w-full ${validationError ? 'border-red-500' : getInputStyle()} ${currentBackground === 'GHIBLI' ? 'shadow-xl' : ''}`}
+                  // 强制使用 Day Ghibli 的边框/阴影样式，并保留 research-tool-input 类
+                  className={`research-tool-input bg-white/10 border rounded-xl text-lg w-full ${validationError ? 'border-red-500' : BACKGROUNDS.DAY_GHIBLI.cardStyle} shadow-xl`}
                   style={{
-                    color: currentBackground === 'GHIBLI' ? '#433422' : 'black',
-                    backgroundColor: currentBackground === 'GHIBLI' ? 'rgba(253, 230, 190, 0.85)' : 'rgba(255, 255, 255, 0.8)',
+                    // 强制使用 Day Ghibli 的文字和背景色
+                    color: '#433422',
+                    backgroundColor: 'rgba(253, 230, 190, 0.85)',
                     height: '80px',
                     paddingRight: '120px',
                     transition: 'all 0.3s ease',
-                    boxShadow: currentBackground === 'GHIBLI' ? '0 10px 25px -5px rgba(120, 80, 40, 0.3)' : ''
+                    // 强制使用 Day Ghibli 的阴影
+                    boxShadow: '0 10px 25px -5px rgba(120, 80, 40, 0.3)'
                   }}
                   prefix={
-                    <span className={`font-mono ${currentBackground === 'GHIBLI' ? 'text-amber-800/70' : 'text-gray-500'}`} style={{ marginLeft: '16px' }}>https://</span>
+                    // 强制使用 Day Ghibli 的前缀颜色
+                    <span className={`font-mono text-amber-800/70`} style={{ marginLeft: '16px' }}>https://</span>
                   }
-                  // Keep the status prop to make the input border red
                   status={validationError ? "error" : ""}
                 />
-
-                {/* Remove the previous error text display */}
-                {/* {validationError && (
-                  <div className={`absolute -bottom-6 left-0 text-red-500 text-sm ${currentBackground === 'GHIBLI' ? 'drop-shadow-md' : ''}`}>
-                    {validationError}
-                  </div>
-                )} */}
               </div>
               <button
                 type="submit"
-                className={`absolute right-2 top-1/2 transform -translate-y-1/2 z-10 px-6 py-4 text-base 
-                         ${currentBackground === 'GHIBLI' 
-                           ? 'bg-gradient-to-r from-amber-600 to-amber-700 text-amber-100 border-amber-400/50 hover:border-amber-300 shadow-[0_0_15px_rgba(217,119,6,0.5)] hover:shadow-[0_0_25px_rgba(217,119,6,0.7)]' 
-                           : 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white border-blue-400/50 hover:border-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.5)] hover:shadow-[0_0_25px_rgba(59,130,246,0.7)]'
-                         } rounded-xl 
-                         transition-all duration-300 flex items-center gap-2 
-                         border hover:scale-105 
-                         ${currentBackground === 'GHIBLI' 
-                           ? 'hover:from-amber-500 hover:to-amber-600' 
-                           : 'hover:from-blue-500 hover:to-indigo-600'
-                         }
-                         after:content-[''] after:absolute after:inset-0 after:bg-gradient-to-r 
-                         after:from-transparent after:via-white/20 after:to-transparent 
+                // 根据主题设置按钮样式
+                className={`absolute right-2 top-1/2 transform -translate-y-1/2 z-10 px-6 py-4 text-base
+                         ${currentBackground === 'DAY_GHIBLI'
+                           ? 'bg-gradient-to-r from-amber-600 to-amber-700 text-amber-100 border-amber-400/50 hover:border-amber-300 shadow-[0_0_15px_rgba(217,119,6,0.5)] hover:shadow-[0_0_25px_rgba(217,119,6,0.7)] hover:from-amber-500 hover:to-amber-600'
+                           : 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white border-blue-400/50 hover:border-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.5)] hover:shadow-[0_0_25px_rgba(59,130,246,0.7)] hover:from-blue-500 hover:to-indigo-600'
+                         } rounded-xl
+                         transition-all duration-300 flex items-center gap-2
+                         border hover:scale-105 shadow-lg
+                         after:content-[''] after:absolute after:inset-0 after:bg-gradient-to-r
+                         after:from-transparent after:via-white/20 after:to-transparent
                          after:translate-x-[-200%] hover:after:translate-x-[200%] after:transition-all after:duration-1000
-                         after:rounded-xl overflow-hidden ${currentBackground === 'GHIBLI' ? 'shadow-lg' : ''}`}
+                         after:rounded-xl overflow-hidden`}
                 style={{ height: '64px' }}
               >
                 <ArrowRightOutlined className="w-6 h-6" />
@@ -1546,14 +1508,15 @@ const ResearchTool = () => {
               </button>
             </form>
           </div>
-          
+
           {/* 添加免费credits提示 - 样式更加醒目 */}
-          <div className={`mt-4 text-center mb-8 ${currentBackground === 'GHIBLI' ? 'drop-shadow-md' : ''}`}>
+          <div className={`mt-4 text-center mb-8 drop-shadow-md`}> {/* 应用 drop-shadow */}
             <div className={`inline-flex items-center px-5 py-4 ${
-              currentBackground === 'GHIBLI' 
-                ? 'bg-gradient-to-r from-amber-600/70 to-amber-700/70 text-white border-4 border-yellow-300 animate-pulse-strong' 
-                : 'bg-gradient-to-r from-blue-600/70 to-indigo-700/70 text-white border-4 border-yellow-300 animate-pulse-strong'
-            } rounded-lg shadow-2xl transform hover:scale-105 transition-all duration-300 relative overflow-hidden`}>
+              currentBackground === 'DAY_GHIBLI'
+                ? 'bg-gradient-to-r from-amber-600/70 to-amber-700/70 text-white border-4 border-yellow-300 animate-pulse-strong'
+                : 'bg-gradient-to-r from-blue-600/70 to-indigo-700/70 text-white border-4 border-yellow-300 animate-pulse-strong' // Night: blue gradient
+            } rounded-lg shadow-2xl transform hover:scale-105 transition-all duration-300 relative overflow-hidden`}> {/* 应用 drop-shadow */}
+              {/* ... (rest of the credits banner remains the same) ... */}
               <div className="absolute inset-0 bg-white/20 animate-shimmer-fast"></div>
               <div className="absolute -left-4 -top-4 w-16 h-16 bg-yellow-300/30 rounded-full blur-xl"></div>
               <div className="absolute -right-4 -bottom-4 w-16 h-16 bg-yellow-300/30 rounded-full blur-xl"></div>
@@ -1566,70 +1529,79 @@ const ResearchTool = () => {
               </svg>
             </div>
           </div>
-          
+
           <div className="mt-12 max-w-4xl mx-auto">
-            <h3 className={`text-xl font-semibold ${currentBackground === 'GHIBLI' ? 'text-amber-100' : 'text-white'} mb-6 text-center ${currentBackground === 'GHIBLI' ? 'drop-shadow-lg' : ''}`}>Some Outstanding Alternative Pages Cases Generated By Us</h3>
+            <h3 className={`text-xl font-semibold ${currentBackground === 'DAY_GHIBLI' ? 'text-amber-100' : 'text-white'} mb-6 text-center drop-shadow-lg`}>Some Outstanding Alternative Pages Cases Generated By Us</h3> {/* 应用 drop-shadow */}
             <div className="grid grid-cols-3 gap-6">
-              <div 
+              {/* Example Card 1: HIX */}
+              <div
                 onClick={() => handleExampleClick('hix')}
-                className={`${currentBackground === 'GHIBLI' 
-                  ? 'bg-gradient-to-br from-amber-400/40 to-amber-300/20 border-amber-400/30 hover:border-amber-300/50 hover:shadow-[0_0_15px_rgba(217,119,6,0.3)]' 
-                  : 'bg-gradient-to-br from-green-400/40 to-green-300/20 border-green-400/30 hover:border-green-300/50 hover:shadow-[0_0_15px_rgba(74,222,128,0.3)]'
-                } backdrop-blur-sm p-5 rounded-xl 
-                         border cursor-pointer hover:-translate-y-1 
-                         transition-all duration-300 
-                         relative overflow-hidden`}
+                // 使用 getCardStyle 获取样式
+                className={`${getCardStyle()} backdrop-blur-sm p-5 rounded-xl
+                         border cursor-pointer hover:-translate-y-1
+                         transition-all duration-300
+                         relative overflow-hidden group`} // Add group for hover effects
               >
-                <div className="absolute -right-6 -top-6 w-16 h-16 bg-amber-400/20 rounded-full blur-xl hover:bg-amber-400/30 transition-all"></div>
+                {/* 根据主题设置光晕效果 */}
+                <div className={`absolute -right-6 -top-6 w-16 h-16 ${currentBackground === 'DAY_GHIBLI' ? 'bg-amber-400/20 group-hover:bg-amber-400/30' : 'bg-blue-400/20 group-hover:bg-blue-400/30'} rounded-full blur-xl transition-all`}></div>
                 <div className="w-10 h-10 mb-3 flex items-center justify-center bg-white/90 rounded-lg">
-                  <span className="text-amber-600 font-bold text-xl">H</span>
+                  {/* 根据主题设置文字颜色 */}
+                  <span className={`${currentBackground === 'DAY_GHIBLI' ? 'text-amber-600' : 'text-blue-600'} font-bold text-xl`}>H</span>
                 </div>
-                <div className="text-amber-300 font-medium mb-2 hover:text-amber-200 text-base">HIX</div>
-                <div className="text-xs text-gray-400 hover:text-gray-300">Premium fitness equipment</div>
+                {/* 根据主题设置文字颜色 */}
+                <div className={`${currentBackground === 'DAY_GHIBLI' ? 'text-amber-300 group-hover:text-amber-200' : 'text-blue-300 group-hover:text-blue-200'} font-medium mb-2 text-base`}>HIX</div>
+                <div className="text-xs text-gray-400 group-hover:text-gray-300">Premium fitness equipment</div>
                 <div className="absolute bottom-3 right-3">
-                  <ArrowRightOutlined className="text-amber-400/50 hover:text-amber-300 transition-all" />
+                  {/* 根据主题设置箭头颜色 */}
+                  <ArrowRightOutlined className={`${currentBackground === 'DAY_GHIBLI' ? 'text-amber-400/50 group-hover:text-amber-300' : 'text-blue-400/50 group-hover:text-blue-300'} transition-all`} />
                 </div>
               </div>
-              
-              <div 
+
+              {/* Example Card 2: Joggai */}
+              <div
                 onClick={() => handleExampleClick('joggai')}
-                className={`${currentBackground === 'GHIBLI' 
-                  ? 'bg-gradient-to-br from-amber-800/40 to-amber-700/20 border-amber-600/30 hover:border-amber-500/50 hover:shadow-[0_0_15px_rgba(217,119,6,0.3)]' 
-                  : 'bg-gradient-to-br from-emerald-800/40 to-emerald-700/20 border-emerald-600/30 hover:border-emerald-500/50 hover:shadow-[0_0_15px_rgba(5,150,105,0.3)]'
-                } backdrop-blur-sm p-5 rounded-xl 
-                         border cursor-pointer hover:-translate-y-1 
-                         transition-all duration-300 
+                // 使用 getCardStyle 获取样式
+                 className={`${getCardStyle()} backdrop-blur-sm p-5 rounded-xl
+                         border cursor-pointer hover:-translate-y-1
+                         transition-all duration-300
                          group relative overflow-hidden`}
               >
-                <div className="absolute -right-6 -top-6 w-16 h-16 bg-amber-800/20 rounded-full blur-xl group-hover:bg-amber-800/30 transition-all"></div>
+                 {/* 根据主题设置光晕效果 */}
+                <div className={`absolute -right-6 -top-6 w-16 h-16 ${currentBackground === 'DAY_GHIBLI' ? 'bg-amber-800/20 group-hover:bg-amber-800/30' : 'bg-indigo-400/20 group-hover:bg-indigo-400/30'} rounded-full blur-xl transition-all`}></div>
                 <div className="w-10 h-10 mb-3 flex items-center justify-center bg-white/90 rounded-lg">
-                  <span className="text-purple-600 font-bold text-xl">J</span>
+                   {/* 根据主题设置文字颜色 */}
+                  <span className={`${currentBackground === 'DAY_GHIBLI' ? 'text-purple-600' : 'text-indigo-600'} font-bold text-xl`}>J</span>
                 </div>
-                <div className="text-amber-400 font-medium mb-2 group-hover:text-amber-300 text-base">Joggai</div>
+                 {/* 根据主题设置文字颜色 */}
+                <div className={`${currentBackground === 'DAY_GHIBLI' ? 'text-amber-400 group-hover:text-amber-300' : 'text-indigo-300 group-hover:text-indigo-200'} font-medium mb-2 text-base`}>Joggai</div>
                 <div className="text-xs text-gray-400 group-hover:text-gray-300">Innovative running app</div>
                 <div className="absolute bottom-3 right-3">
-                  <ArrowRightOutlined className="text-amber-500/50 group-hover:text-amber-400 transition-all" />
+                   {/* 根据主题设置箭头颜色 */}
+                  <ArrowRightOutlined className={`${currentBackground === 'DAY_GHIBLI' ? 'text-amber-500/50 group-hover:text-amber-400' : 'text-indigo-400/50 group-hover:text-indigo-300'} transition-all`} />
                 </div>
               </div>
-              
-              <div 
+
+              {/* Example Card 3: JTracking */}
+              <div
                 onClick={() => handleExampleClick('jtracking')}
-                className={`${currentBackground === 'GHIBLI' 
-                  ? 'bg-gradient-to-br from-amber-600/40 to-amber-500/20 border-amber-500/30 hover:border-amber-400/50 hover:shadow-[0_0_15px_rgba(217,119,6,0.3)]' 
-                  : 'bg-gradient-to-br from-blue-600/40 to-blue-500/20 border-blue-500/30 hover:border-blue-400/50 hover:shadow-[0_0_15px_rgba(59,130,246,0.3)]'
-                } backdrop-blur-sm p-5 rounded-xl 
-                         border cursor-pointer hover:-translate-y-1 
-                         transition-all duration-300 
+                // 使用 getCardStyle 获取样式
+                 className={`${getCardStyle()} backdrop-blur-sm p-5 rounded-xl
+                         border cursor-pointer hover:-translate-y-1
+                         transition-all duration-300
                          group relative overflow-hidden`}
               >
-                <div className="absolute -right-6 -top-6 w-16 h-16 bg-amber-600/20 rounded-full blur-xl group-hover:bg-amber-600/30 transition-all"></div>
+                 {/* 根据主题设置光晕效果 */}
+                <div className={`absolute -right-6 -top-6 w-16 h-16 ${currentBackground === 'DAY_GHIBLI' ? 'bg-amber-600/20 group-hover:bg-amber-600/30' : 'bg-cyan-400/20 group-hover:bg-cyan-400/30'} rounded-full blur-xl transition-all`}></div>
                 <div className="w-10 h-10 mb-3 flex items-center justify-center bg-white/90 rounded-lg">
-                  <span className="text-amber-600 font-bold text-xl">J</span>
+                   {/* 根据主题设置文字颜色 */}
+                  <span className={`${currentBackground === 'DAY_GHIBLI' ? 'text-amber-600' : 'text-cyan-600'} font-bold text-xl`}>J</span>
                 </div>
-                <div className="text-amber-300 font-medium mb-2 group-hover:text-amber-200 text-base">JTracking</div>
+                 {/* 根据主题设置文字颜色 */}
+                <div className={`${currentBackground === 'DAY_GHIBLI' ? 'text-amber-300 group-hover:text-amber-200' : 'text-cyan-300 group-hover:text-cyan-200'} font-medium mb-2 text-base`}>JTracking</div>
                 <div className="text-xs text-gray-400 group-hover:text-gray-300">Fleet management solution</div>
                 <div className="absolute bottom-3 right-3">
-                  <ArrowRightOutlined className="text-amber-400/50 group-hover:text-amber-300 transition-all" />
+                   {/* 根据主题设置箭头颜色 */}
+                  <ArrowRightOutlined className={`${currentBackground === 'DAY_GHIBLI' ? 'text-amber-400/50 group-hover:text-amber-300' : 'text-cyan-400/50 group-hover:text-cyan-300'} transition-all`} />
                 </div>
               </div>
             </div>
@@ -1640,48 +1612,46 @@ const ResearchTool = () => {
   }
 
   return (
-    <ConfigProvider 
+    <ConfigProvider
       theme={{
         token: {
-          colorPrimary: currentBackground === 'GHIBLI' ? '#d97706' : '#3b82f6',
+          // 根据主题设置主色调
+          colorPrimary: currentBackground === 'DAY_GHIBLI' ? '#d97706' : '#3b82f6', // Amber for Day, Blue for Night
         },
       }}
       wave={{ disabled: true }}
     >
       {/* Ensure contextHolder is also rendered here */}
       {contextHolder}
-      <div className={`w-full min-h-screen ${
-        currentBackground === 'GHIBLI' ? 'bg-cover bg-center bg-no-repeat' : getBackgroundClass()
-      } text-white flex items-center justify-center p-4 relative overflow-hidden`} 
-           style={{ 
+      <div className={`w-full min-h-screen bg-cover bg-center bg-no-repeat text-white flex items-center justify-center p-4 relative overflow-hidden`} // 移除 getBackgroundClass()
+           style={{
              paddingTop: "80px",
              ...getBackgroundStyle()
            }}>
-      
+
         {/* 背景覆盖层 */}
         <div className={`absolute inset-0 ${getOverlayClass()}`} style={{ paddingTop: "80px" }}></div>
-        
-        {/* 添加吉卜力风格的漂浮元素 */}
-        {currentBackground === 'GHIBLI' && (
+
+        {/* 添加漂浮元素 - 仅在 DAY_GHIBLI 模式下 */}
+        {currentBackground === 'DAY_GHIBLI' && (
           <>
             <div className="absolute top-[15%] left-[10%] w-8 h-8 rounded-full bg-amber-400/20 animate-float" style={{animationDuration: '8s'}}></div>
             <div className="absolute top-[30%] right-[15%] w-6 h-6 rounded-full bg-amber-300/30 animate-float" style={{animationDuration: '12s', animationDelay: '2s'}}></div>
             <div className="absolute bottom-[20%] left-[20%] w-10 h-10 rounded-full bg-amber-500/20 animate-float" style={{animationDuration: '10s', animationDelay: '1s'}}></div>
           </>
         )}
-        
+
         <div className="relative z-10 w-full flex flex-row gap-6 h-[calc(100vh-140px)] px-4 text-sm">
-          {/* 移除 showBrowser 条件判断，直接使用固定宽度 */}
+          {/* 左侧聊天面板 */}
           <div className="w-[35%] relative flex flex-col">
-            {/* 移除 Browser 切换按钮 */}
+            {/* ... (聊天面板内容保持不变) ... */}
             <div className="h-10 px-4 border-b border-gray-300/20 flex-shrink-0">
               <div className="flex items-center">
                 <img src="/images/alternatively-logo.png" alt="Alternatively" className="w-5 h-5 mr-1.5" />
                 <h2 className="text-sm font-semibold text-gray-100">Copilot</h2>
               </div>
             </div>
-            
-            {/* 其他聊天区域内容 */}
+
             <div className="flex-1 overflow-y-auto pt-12 px-4 pb-4 chat-messages-container">
               {initialLoading ? (
                 <div className="flex items-center justify-center h-full">
@@ -1704,10 +1674,12 @@ const ResearchTool = () => {
                     value={userInput}
                     onChange={(e) => setUserInput(e.target.value)}
                     disabled={loading || isMessageSending || inputDisabledDueToUrlGet}
-                    className="bg-white/10 border border-gray-300/30 rounded-xl text-sm"
-                    style={{ 
-                      color: 'black', 
-                      backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                    // 强制使用 Day Ghibli 的边框/阴影样式，并保留 research-tool-input 类
+                    className={`research-tool-input bg-white/10 border rounded-xl text-sm ${BACKGROUNDS.DAY_GHIBLI.inputStyle}`}
+                    style={{
+                      // 强制使用 Day Ghibli 的文字和背景色
+                      color: '#433422',
+                      backgroundColor: 'rgba(253, 230, 190, 0.85)',
                       height: '48px',
                       transition: 'all 0.3s ease'
                     }}
@@ -1729,30 +1701,33 @@ const ResearchTool = () => {
               </div>
             </div>
           </div>
-          
-          {/* 右侧面板保持不变 */}
-          <div className={`w-[65%] ${currentBackground === 'GHIBLI' 
-            ? 'bg-amber-900/10 border-amber-700/30' 
-            : 'bg-white/5 border-gray-300/20'
+
+          {/* 右侧面板 */}
+          <div className={`w-[65%] ${
+            // 根据主题设置背景和边框
+            currentBackground === 'DAY_GHIBLI'
+              ? 'bg-amber-900/10 border-amber-700/30'
+              : 'bg-slate-900/10 border-blue-700/30' // Night: slate bg, blue border
           } backdrop-blur-lg rounded-2xl border shadow-xl flex flex-col h-full relative`}>
-            <div className="border-b border-gray-300/20 p-3">
+            {/* ... (右侧面板内容保持不变) ... */}
+             <div className="border-b border-gray-300/20 p-3">
               <div className="flex justify-between items-center">
                 <div className="flex space-x-4">
-                  <button 
-                    onClick={() => setRightPanelTab('details')} 
+                  <button
+                    onClick={() => setRightPanelTab('details')}
                     className={`text-sm ${
-                      rightPanelTab === 'details' 
-                        ? 'text-blue-400 font-medium' 
+                      rightPanelTab === 'details'
+                        ? (currentBackground === 'DAY_GHIBLI' ? 'text-amber-400' : 'text-blue-400') + ' font-medium' // Theme-based active color
                         : 'text-gray-400 hover:text-gray-200'
                     }`}
                   >
                     Execution Log
                   </button>
-                  <button 
-                    onClick={() => setRightPanelTab('browser')} 
+                  <button
+                    onClick={() => setRightPanelTab('browser')}
                     className={`text-sm ${
-                      rightPanelTab === 'browser' 
-                        ? 'text-blue-400 font-medium' 
+                      rightPanelTab === 'browser'
+                         ? (currentBackground === 'DAY_GHIBLI' ? 'text-amber-400' : 'text-blue-400') + ' font-medium' // Theme-based active color
                         : 'text-gray-400 hover:text-gray-200'
                     }`}
                   >
@@ -1767,7 +1742,7 @@ const ResearchTool = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="flex-1 overflow-y-auto">
               {rightPanelTab === 'details' && renderDetails(detailsData)}
               {rightPanelTab === 'browser' && (
@@ -1786,7 +1761,7 @@ const ResearchTool = () => {
                             onClick={() => setActiveTab(tab.id)}
                             className={`px-3 py-1.5 text-xs rounded-full whitespace-nowrap ${
                               activeTab === tab.id
-                                ? 'bg-blue-500/20 text-blue-300'
+                                ? (currentBackground === 'DAY_GHIBLI' ? 'bg-amber-500/20 text-amber-300' : 'bg-blue-500/20 text-blue-300') // Theme-based active tab
                                 : 'bg-gray-500/20 text-gray-400 hover:text-gray-300'
                             }`}
                           >
@@ -1808,16 +1783,16 @@ const ResearchTool = () => {
                               className="p-1.5 hover:bg-gray-700/50 rounded-md transition-colors duration-200 group"
                               title="Open in new tab"
                             >
-                              <svg 
-                                className="w-4 h-4 text-gray-400 group-hover:text-blue-400 transition-colors duration-200" 
-                                fill="none" 
-                                stroke="currentColor" 
+                              <svg
+                                className={`w-4 h-4 text-gray-400 group-hover:${currentBackground === 'DAY_GHIBLI' ? 'text-amber-400' : 'text-blue-400'} transition-colors duration-200`} // Theme-based hover color
+                                fill="none"
+                                stroke="currentColor"
                                 viewBox="0 0 24 24"
                               >
-                                <path 
-                                  strokeLinecap="round" 
-                                  strokeLinejoin="round" 
-                                  strokeWidth="2" 
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="2"
                                   d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
                                 />
                               </svg>
@@ -1860,10 +1835,11 @@ const ResearchTool = () => {
           {resultIds.map((id, index) => (
             <div key={index} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
               <span className="text-gray-300">Result #{index + 1}</span>
-              <Button 
+              <Button
                 type="primary"
                 onClick={() => window.open(`https://preview.websitelm.site/en/${id}`, '_blank')}
-                className="bg-blue-500 hover:bg-blue-600"
+                // 根据主题设置按钮颜色
+                className={`${currentBackground === 'DAY_GHIBLI' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-blue-500 hover:bg-blue-600'}`}
               >
                 View Preview
               </Button>
@@ -1981,6 +1957,22 @@ style.innerHTML = `
   }
 `;
 document.head.appendChild(style);
+
+// 添加样式来强制设置 placeholder 颜色 (保留，因为 Day Ghibli 背景也是浅色)
+const placeholderStyle = document.createElement('style');
+placeholderStyle.innerHTML = `
+  .research-tool-input::placeholder {
+    color: #d1d5db !important; /* text-gray-300 */
+    opacity: 1 !important; /* 确保不透明度为 1 */
+  }
+
+  /* 针对 Ant Design 可能使用的特定选择器 (以防万一) */
+  .research-tool-input.ant-input::placeholder {
+     color: #d1d5db !important; /* text-gray-300 */
+     opacity: 1 !important;
+  }
+`;
+document.head.appendChild(placeholderStyle);
 
 // 添加样式
 const modalStyle = document.createElement('style');
