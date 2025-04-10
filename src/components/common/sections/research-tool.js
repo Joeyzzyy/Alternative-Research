@@ -1600,15 +1600,21 @@ const ResearchTool = () => {
           
           {/* 添加免费credits提示 - 样式更加醒目 */}
           <div className={`mt-4 text-center mb-8 ${currentBackground === 'GHIBLI' ? 'drop-shadow-md' : ''}`}>
-            <div className={`inline-flex items-center px-5 py-3 ${
+            <div className={`inline-flex items-center px-5 py-4 ${
               currentBackground === 'GHIBLI' 
-                ? 'bg-gradient-to-r from-amber-500/30 to-amber-600/30 text-amber-100 border-2 border-amber-400/50' 
-                : 'bg-gradient-to-r from-blue-500/30 to-blue-600/30 text-blue-100 border-2 border-blue-400/50'
-            } rounded-lg shadow-lg transform hover:scale-105 transition-all duration-300`}>
-              <svg className="w-5 h-5 mr-3 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                ? 'bg-gradient-to-r from-amber-600/70 to-amber-700/70 text-white border-4 border-yellow-300 animate-pulse-strong' 
+                : 'bg-gradient-to-r from-blue-600/70 to-indigo-700/70 text-white border-4 border-yellow-300 animate-pulse-strong'
+            } rounded-lg shadow-2xl transform hover:scale-105 transition-all duration-300 relative overflow-hidden`}>
+              <div className="absolute inset-0 bg-white/20 animate-shimmer-fast"></div>
+              <div className="absolute -left-4 -top-4 w-16 h-16 bg-yellow-300/30 rounded-full blur-xl"></div>
+              <div className="absolute -right-4 -bottom-4 w-16 h-16 bg-yellow-300/30 rounded-full blur-xl"></div>
+              <svg className="w-6 h-6 mr-3 text-yellow-300 animate-bounce-strong" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm-1.06 13.54L7.4 12l1.41-1.41 2.12 2.12 4.24-4.24 1.41 1.41-5.64 5.66z"/>
               </svg>
-              <span className="font-medium text-base">Start now with 5 free alternative pages - no credit card required!</span>
+              <span className="font-extrabold text-lg relative z-10">Start now with <span className="text-yellow-300 underline decoration-2 decoration-wavy decoration-yellow-300/70">5 FREE alternative pages</span> - no credit card required!</span>
+              <svg className="w-6 h-6 ml-3 text-yellow-300 animate-bounce-strong" style={{animationDelay: '0.3s'}} viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                <path d="M13 9V3.5L18.5 9M6 2c-1.11 0-2 .89-2 2v16c0 1.11.89 2 2 2h12c1.11 0 2-.89 2-2V8l-6-6H6z"/>
+              </svg>
             </div>
           </div>
           
@@ -1940,6 +1946,63 @@ style.innerHTML = `
   
   .animate-float {
     animation: float 8s ease-in-out infinite;
+  }
+  
+  @keyframes pulse-slow {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.9; transform: scale(1.03); }
+  }
+  
+  .animate-pulse-slow {
+    animation: pulse-slow 3s ease-in-out infinite;
+  }
+  
+  @keyframes pulse-strong {
+    0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 15px rgba(253, 224, 71, 0.5); }
+    50% { opacity: 1; transform: scale(1.05); box-shadow: 0 0 30px rgba(253, 224, 71, 0.8); }
+  }
+  
+  .animate-pulse-strong {
+    animation: pulse-strong 2s ease-in-out infinite;
+  }
+  
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+  
+  .animate-shimmer {
+    animation: shimmer 2s infinite;
+    background: linear-gradient(
+      to right,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.2) 50%,
+      rgba(255, 255, 255, 0) 100%
+    );
+  }
+  
+  @keyframes shimmer-fast {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+  
+  .animate-shimmer-fast {
+    animation: shimmer-fast 1.5s infinite;
+    background: linear-gradient(
+      to right,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.3) 50%,
+      rgba(255, 255, 255, 0) 100%
+    );
+  }
+  
+  @keyframes bounce-strong {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+  
+  .animate-bounce-strong {
+    animation: bounce-strong 1s ease-in-out infinite;
   }
 `;
 document.head.appendChild(style);
