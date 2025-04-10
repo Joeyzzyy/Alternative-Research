@@ -127,39 +127,29 @@ export default function Header() {
   const [googleOneTapInitialized, setGoogleOneTapInitialized] = useState(false);
   const tokenExpiredHandledRef = useRef(false);
 
-  // 添加 Google One Tap 初始化函数
-  const initializeGoogleOneTap = useCallback(() => {
-    if (googleOneTapInitialized || isLoggedIn) return;
+  // 显示通知的辅助函数 (Moved Up)
+  const showNotification = useCallback((message, type = 'info') => {
+    setNotification({
+      show: true,
+      message,
+      type
+    });
     
-    // 确保 Google 脚本已加载
-    if (typeof window !== 'undefined' && window.google && window.google.accounts) {
-      try {
-        window.google.accounts.id.initialize({
-          client_id: '491914743416-1o5v2lv5582cvc7lrrmslg5g5b4kr6c1.apps.googleusercontent.com', 
-          callback: handleGoogleOneTapResponse,
-          auto_select: true,
-          cancel_on_tap_outside: true,
-        });
-        
-        // 显示 One Tap UI
-        window.google.accounts.id.prompt((notification) => {
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            console.log('One Tap not displayed or skipped:', notification.getNotDisplayedReason() || notification.getSkippedReason());
-          }
-        });
-        
-        setGoogleOneTapInitialized(true);
-      } catch (error) {
-        console.error('Google One Tap initialization failed:', error);
-      }
-    }
-  }, [googleOneTapInitialized, isLoggedIn]);
+    // Auto close notification after 2 seconds (changed from 3 seconds)
+    const timer = setTimeout(() => {
+      setNotification(prev => ({...prev, show: false}));
+    }, 2000);
 
-  // 处理 Google One Tap 响应
-  const handleGoogleOneTapResponse = async (response) => {
+    // 返回 timer 以便在需要时清除
+    return timer;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Dependencies for showNotification (if any, like setNotification)
+
+  // 处理 Google One Tap 响应 (Moved Up)
+  const handleGoogleOneTapResponse = useCallback(async (response) => {
     try {
       setLoading(true);
-      showNotification('Verifying Google login...', 'info');
+      showNotification('Verifying Google login...', 'info'); // showNotification is defined
       console.log('Google One Tap response:', response);
       // 发送 ID 令牌到后端进行验证
       const apiResponse = await apiClient.googleOneTapLogin(response.credential);
@@ -187,24 +177,94 @@ export default function Header() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showNotification]); // Keep showNotification dependency, ensure apiClient is stable or added if needed
+
+  // 添加 Google One Tap 初始化函数
+  const initializeGoogleOneTap = useCallback(() => {
+    // 增加检查，确保只在未登录且未初始化时执行
+    if (googleOneTapInitialized || isLoggedIn || typeof window === 'undefined' || !window.google?.accounts?.id) {
+      console.log('Skipping One Tap initialization (already initialized, logged in, or GSI not ready).');
+      return;
+    }
+    
+    try {
+      console.log('Initializing Google One Tap...'); // 添加日志
+      window.google.accounts.id.initialize({
+        client_id: '491914743416-1o5v2lv5582cvc7lrrmslg5g5b4kr6c1.apps.googleusercontent.com', 
+        callback: handleGoogleOneTapResponse, // Now handleGoogleOneTapResponse is defined
+        // auto_select: true, // Temporarily disable auto_select
+        // cancel_on_tap_outside: true, // Temporarily disable cancel_on_tap_outside
+        use_fedcm_for_prompt: false // Explicitly disable FedCM for testing
+      });
+      
+      console.log('Google One Tap Initialized. Calling prompt...'); // 添加日志
+      
+      // 使用更详细的日志记录 prompt notification
+      window.google.accounts.id.prompt((notification) => {
+        console.log('Google One Tap Prompt Notification:', notification); // Log the raw notification object
+        
+        // Log specific reasons if available
+        if (notification.isNotDisplayed?.()) {
+          console.error('One Tap prompt not displayed. Reason:', notification.getNotDisplayedReason?.());
+        } else if (notification.isSkippedMoment?.()) {
+          console.error('One Tap prompt skipped. Reason:', notification.getSkippedReason?.());
+        } else if (notification.isDismissedMoment?.()) {
+           console.log('One Tap prompt dismissed. Reason:', notification.getDismissedReason?.());
+        } else if (notification.isDisplayed?.()) {
+           console.log('One Tap prompt displayed successfully (non-FedCM check).');
+        } else {
+           console.log('One Tap prompt notification received, but state is unclear or FedCM-specific.');
+        }
+      });
+      
+      setGoogleOneTapInitialized(true);
+      console.log('googleOneTapInitialized set to true'); // 添加日志
+    } catch (error) {
+      console.error('Google One Tap initialization failed:', error);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [googleOneTapInitialized, isLoggedIn, handleGoogleOneTapResponse]); // Keep handleGoogleOneTapResponse dependency
 
   // 加载 Google One Tap 脚本
   useEffect(() => {
+    console.log('Checking One Tap script load. isLoggedIn:', isLoggedIn, 'googleOneTapInitialized:', googleOneTapInitialized); // 添加日志
     if (typeof window !== 'undefined' && !isLoggedIn && !googleOneTapInitialized) {
       // 检查脚本是否已加载
       if (!document.querySelector('script[src="https://accounts.google.com/gsi/client"]')) {
+        console.log('Google GSI script not found. Appending script...'); // 添加日志
         const script = document.createElement('script');
         script.src = "https://accounts.google.com/gsi/client";
         script.async = true;
         script.defer = true;
-        script.onload = initializeGoogleOneTap;
+        script.onload = () => {
+          console.log('Google GSI script loaded via onload.'); // 添加日志
+          // 确保 google.accounts.id 可用后再初始化
+          if (window.google?.accounts?.id) {
+            initializeGoogleOneTap();
+          } else {
+            console.warn('GSI script loaded, but google.accounts.id not immediately available. Retrying initialization shortly.');
+            // 可以选择稍作延迟重试，或依赖 initializeGoogleOneTap 内部的检查
+            setTimeout(initializeGoogleOneTap, 100); 
+          }
+        };
+        script.onerror = () => {
+          console.error('Failed to load Google GSI script.'); // 添加错误处理
+        };
         document.body.appendChild(script);
       } else {
-        initializeGoogleOneTap();
+        console.log('Google GSI script already exists. Attempting to initialize One Tap...'); // 添加日志
+        // 即使脚本存在，也需要确保 google.accounts.id 可用
+        if (window.google?.accounts?.id) {
+          initializeGoogleOneTap();
+        } else {
+           console.warn('GSI script tag exists, but google.accounts.id not available. Waiting for potential late initialization.');
+           // GSI 库可能仍在初始化，稍等片刻
+           setTimeout(initializeGoogleOneTap, 500);
+        }
       }
     }
-  }, [isLoggedIn, initializeGoogleOneTap, googleOneTapInitialized]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn, googleOneTapInitialized]); // 移除 initializeGoogleOneTap，因为它现在是 useCallback 包裹的稳定函数
 
   // 当用户登出时重置 One Tap 状态
   useEffect(() => {
@@ -255,7 +315,7 @@ export default function Header() {
     } finally {
       setLoadingHistory(false);
     }
-  }, [isLoggedIn]);
+  }, [isLoggedIn, showNotification]);
 
   // 修改 useEffect
   useEffect(() => {
@@ -417,7 +477,7 @@ export default function Header() {
         localStorage.clear();
       }
     }
-  }, []);
+  }, [showNotification]);
 
   const handleGoogleLogin = async () => {
     try {
@@ -444,23 +504,6 @@ export default function Header() {
     setShowLogoutConfirm(true);
   };
   
-  // 显示通知的辅助函数
-  const showNotification = (message, type = 'info') => {
-    setNotification({
-      show: true,
-      message,
-      type
-    });
-    
-    // Auto close notification after 2 seconds (changed from 3 seconds)
-    const timer = setTimeout(() => {
-      setNotification(prev => ({...prev, show: false}));
-    }, 2000);
-
-    // 返回 timer 以便在需要时清除
-    return timer;
-  };
-
   // 处理关闭通知
   const handleCloseNotification = () => {
     setNotification(prev => ({...prev, show: false}));
@@ -676,7 +719,7 @@ export default function Header() {
     return () => {
       window.removeEventListener('switchRestoreWindow', handleSwitchWindow);
     };
-  }, []);
+  }, [showNotification]);
 
   // Handle login success callback
   const handleLoginSuccess = (userData) => {
@@ -715,7 +758,7 @@ export default function Header() {
     return () => {
       window.removeEventListener('showAlternativelyLoginModal', handleShowLoginModal);
     };
-  }, [showNotification, setIsLoginForm]); // 添加所有依赖项
+  }, [showNotification, setIsLoginForm, showLoginModal]); // 添加所有依赖项 (added showLoginModal)
 
   useEffect(() => {
     // 检查本地存储中的登录信息
