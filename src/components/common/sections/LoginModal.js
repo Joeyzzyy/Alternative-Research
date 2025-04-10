@@ -589,4 +589,5 @@ const LoginModal = ({
   );
 };
 
-export default LoginModal;
+// 使用 React.memo 包装组件，防止不必要的重新渲染
+export default React.memo(LoginModal);

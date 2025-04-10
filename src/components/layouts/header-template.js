@@ -694,7 +694,7 @@ export default function Header() {
     setShowLoginModal(false);
   };
 
-  // 添加事件监听器来响应 research-tool 组件触发的登录弹窗请求
+  // 修改 useEffect 依赖数组，添加 showLoginModal
   useEffect(() => {
     const handleShowLoginModal = () => {
       if (!showLoginModal) {
@@ -709,7 +709,7 @@ export default function Header() {
     return () => {
       window.removeEventListener('showAlternativelyLoginModal', handleShowLoginModal);
     };
-  }, []);
+  }, [showNotification, setIsLoginForm]); // 添加所有依赖项
 
   return (
     <>
