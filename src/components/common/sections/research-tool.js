@@ -7,6 +7,7 @@ import BrowserSimulator from '../BrowserSimulator';
 import Typewriter from 'typewriter-effect';
 import { EventSourcePolyfill } from 'event-source-polyfill';
 import MessageHandler from '../../../utils/MessageHandler';
+import LoginModal from '../sections/LoginModal';
 
 // 修改 TAG_FILTERS 字典
 const TAG_FILTERS = {
@@ -150,6 +151,50 @@ const ResearchTool = () => {
   // 添加一个 ref 来跟踪最后一次看到的日志数量
   const lastLogCountRef = useRef(0);
 
+  // 添加登录模态框相关的状态
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [isLoginForm, setIsLoginForm] = useState(true);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  
+  // 添加通知状态（如果还没有的话）
+  const [notification, setNotification] = useState({
+    show: false,
+    message: '',
+    type: 'success' // 'success', 'error', 'info'
+  });
+  
+  // 显示通知的函数
+  const showNotification = (message, type = 'info') => {
+    setNotification({
+      show: true,
+      message,
+      type
+    });
+    
+    // 自动关闭通知
+    setTimeout(() => {
+      setNotification(prev => ({ ...prev, show: false }));
+    }, 3000);
+  };
+  
+  // 处理登录成功
+  const handleLoginSuccess = (userData) => {
+    // 存储用户数据
+    localStorage.setItem('alternativelyAccessToken', userData.accessToken);
+    localStorage.setItem('alternativelyIsLoggedIn', 'true');
+    localStorage.setItem('alternativelyCustomerEmail', userData.email);
+    localStorage.setItem('alternativelyCustomerId', userData.customerId);
+    
+    // 关闭登录模态框
+    setShowLoginModal(false);
+    
+    // 显示成功通知
+    showNotification('Login successful!', 'success');
+    
+    // 刷新页面或继续之前的操作
+    window.location.reload();
+  };
+
   const filterMessageTags = (message) => {
     let filteredMessage = message;
     Object.entries(TAG_FILTERS).forEach(([tag, replacement]) => {
@@ -185,7 +230,6 @@ const ResearchTool = () => {
   // 监听日志变化，在有新日志时自动切回 execution log
   useEffect(() => {
     if (rightPanelTab === 'browser' && logs.length > lastLogCountRef.current) {
-      console.log('检测到新的日志，切回 execution log');
       setRightPanelTab('details');
     }
     lastLogCountRef.current = logs.length;
@@ -225,12 +269,6 @@ const ResearchTool = () => {
     try {
       const response = await apiClient.chatWithAI(formattedInput, currentWebsiteId);
 
-      // 检查网络错误
-      if (response?.code === 1058) {
-        messageHandler.updateAgentMessage("⚠️ Network error occurred. Please try again.", thinkingMessageId);
-        return;
-      }
-
       if (response?.code === 200 && response.data?.answer) {
         const rawAnswer = response.data.answer;
 
@@ -243,13 +281,11 @@ const ResearchTool = () => {
           messageHandler.addSystemMessage('Searching for competitors. Please wait a moment...');
         } else if (rawAnswer.includes('[COMPETITOR_SELECTED]')) {
           const messageBody = rawAnswer.replace(/\[COMPETITOR_SELECTED\].*$/s, '').trim();
-          console.log('1. Message body:', messageBody);
           
           messageHandler.updateAgentMessage(messageBody, thinkingMessageId);
           
           // 提取竞品数组部分
           const competitorArrayMatch = rawAnswer.match(/\[COMPETITOR_SELECTED\]\s*\[(.*?)\]$/s);
-          console.log('2. Competitor array match:', competitorArrayMatch);
           
           if (competitorArrayMatch && competitorArrayMatch[1]) {
             try {
@@ -259,23 +295,18 @@ const ResearchTool = () => {
                 .replace(/\\"/g, '"')  // 处理转义的双引号
                 .replace(/'/g, '"')    // 将单引号替换为双引号
                 .trim();
-              console.log('3. Cleaned string:', cleanedString);
               
               let competitors;
               try {
                 // 尝试解析 JSON
-                console.log('4. Attempting to parse JSON:', `[${cleanedString}]`);
                 competitors = JSON.parse(`[${cleanedString}]`);
-                console.log('5. Parsed competitors:', competitors);
               } catch (e) {
-                console.log('6. JSON parse failed:', e.message);
                 // 如果 JSON 解析失败，使用更智能的字符串分割
                 competitors = cleanedString
                   .replace(/[\[\]'"`]/g, '') // 移除所有引号和方括号
                   .split(',')
                   .map(s => s.trim())
                   .filter(s => s.length > 0); // 过滤空字符串
-                console.log('7. Fallback competitors:', competitors);
               }
               
               // 确保结果是数组并且每个元素都是有效的
@@ -289,11 +320,8 @@ const ResearchTool = () => {
                     .replace(/\s+/g, '')          // 移除所有空格
                 ).filter(domain => domain.length > 0);  // 过滤掉空域名
 
-                console.log('8. Final domain array:', domainArray);
-                
                 if (domainArray.length > 0) {
                   const generateResponse = await apiClient.generateAlternative(currentWebsiteId, domainArray);
-                  console.log('9. Generate response:', generateResponse);
                   
                   if (generateResponse?.code === 200) {
                     messageHandler.addSystemMessage(
@@ -310,11 +338,9 @@ const ResearchTool = () => {
                 throw new Error('No valid competitors found in the response');
               }
             } catch (error) {
-              console.error('10. Competitor processing error:', error);
               messageHandler.addSystemMessage(`⚠️ Failed to process competitor selection: ${error.message}`);
             }
           } else {
-            console.error('11. Failed to extract competitor array from response');
             messageHandler.addSystemMessage(`⚠️ Failed to extract competitor information from the response`);
           }
         } else if (rawAnswer.includes('[END]')) {
@@ -358,12 +384,6 @@ const ResearchTool = () => {
 
     try {
       const response = await apiClient.chatWithAI(JSON.stringify(competitors), currentWebsiteId);
-
-      // 检查网络错误
-      if (response?.code === 1058) {
-        messageHandler.updateAgentMessage("⚠️ Network error occurred. Please try again.", thinkingMessageId);
-        return;
-      }
 
       if (response?.code === 200 && response.data?.answer) {
         const answer = filterMessageTags(response.data.answer);
@@ -981,6 +1001,15 @@ const ResearchTool = () => {
 
   const initializeChat = async (userInput) => {
     try {
+      const isLoggedIn = localStorage.getItem('alternativelyIsLoggedIn') === 'true';
+      const token = localStorage.getItem('alternativelyAccessToken');
+      
+      if (!isLoggedIn || !token) {
+        // 直接设置 showLoginModal 为 true
+        setShowLoginModal(true);
+        return;
+      }
+      
       // 1. Fade out form
       const formElement = document.querySelector('.initial-screen-content form');
       if (formElement) {
@@ -1588,16 +1617,6 @@ const ResearchTool = () => {
             </form>
           </div>
           
-          {validationError ? (
-            <div className="mt-10 text-center text-gray-400 text-sm mb-6">
-              {/* Space for error message */}
-            </div>
-          ) : (
-            <div className="mt-6 mb-10">
-              {/* 移除了原来的提示文字 */}
-            </div>
-          )}
-          
           {/* 添加免费credits提示 - 样式更加醒目 */}
           <div className={`mt-4 text-center mb-8 ${currentBackground === 'GHIBLI' ? 'drop-shadow-md' : ''}`}>
             <div className={`inline-flex items-center px-5 py-4 ${
@@ -1611,7 +1630,7 @@ const ResearchTool = () => {
               <svg className="w-6 h-6 mr-3 text-yellow-300 animate-bounce-strong" viewBox="0 0 24 24" fill="currentColor" stroke="none">
                 <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm-1.06 13.54L7.4 12l1.41-1.41 2.12 2.12 4.24-4.24 1.41 1.41-5.64 5.66z"/>
               </svg>
-              <span className="font-extrabold text-lg relative z-10">Start now with <span className="text-yellow-300 underline decoration-2 decoration-wavy decoration-yellow-300/70">5 FREE alternative pages</span> - no credit card required!</span>
+              <span className="font-extrabold text-lg relative z-10">Generate And Deploy <span className="text-yellow-300 underline decoration-2 decoration-wavy decoration-yellow-300/70">5 FREE alternative pages</span> - no credit card required!</span>
               <svg className="w-6 h-6 ml-3 text-yellow-300 animate-bounce-strong" style={{animationDelay: '0.3s'}} viewBox="0 0 24 24" fill="currentColor" stroke="none">
                 <path d="M13 9V3.5L18.5 9M6 2c-1.11 0-2 .89-2 2v16c0 1.11.89 2 2 2h12c1.11 0 2-.89 2-2V8l-6-6H6z"/>
               </svg>
@@ -1619,7 +1638,7 @@ const ResearchTool = () => {
           </div>
           
           <div className="mt-12 max-w-4xl mx-auto">
-            <h3 className={`text-xl font-semibold ${currentBackground === 'GHIBLI' ? 'text-amber-100' : 'text-white'} mb-6 text-center ${currentBackground === 'GHIBLI' ? 'drop-shadow-lg' : ''}`}>Some Outstanding Alternative Pages Generated By Us</h3>
+            <h3 className={`text-xl font-semibold ${currentBackground === 'GHIBLI' ? 'text-amber-100' : 'text-white'} mb-6 text-center ${currentBackground === 'GHIBLI' ? 'drop-shadow-lg' : ''}`}>Some Outstanding Alternative Pages Cases Generated By Us</h3>
             <div className="grid grid-cols-3 gap-6">
               <div 
                 onClick={() => handleExampleClick('hix')}
@@ -1908,7 +1927,6 @@ const ResearchTool = () => {
         open={showResultIdsModal}
         onCancel={() => {
           setShowResultIdsModal(false);
-          console.log('弹窗关闭，showResultIdsModal 状态:', false);
         }}
         footer={null}
         width={400}
@@ -1931,6 +1949,55 @@ const ResearchTool = () => {
           ))}
         </div>
       </Modal>
+
+      {/* 添加 LoginModal 组件 */}
+      <LoginModal
+        showLoginModal={showLoginModal}
+        setShowLoginModal={setShowLoginModal}
+        isLoginForm={isLoginForm}
+        setIsLoginForm={setIsLoginForm}
+        isForgotPassword={isForgotPassword}
+        setIsForgotPassword={setIsForgotPassword}
+        onLoginSuccess={handleLoginSuccess}
+        showNotification={showNotification}
+        handleGoogleLogin={() => {}} // 如果需要处理 Google 登录
+        googleLoading={false} // 如果需要显示 Google 登录加载状态
+      />
+      
+      {/* 通知组件（如果还没有的话） */}
+      {notification.show && (
+        <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 ${
+          notification.type === 'success' ? 'bg-green-500' : 
+          notification.type === 'error' ? 'bg-red-500' : 'bg-blue-500'
+        }`}>
+          <div className="flex items-center">
+            {notification.type === 'success' && (
+              <svg className="w-6 h-6 mr-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            )}
+            {notification.type === 'error' && (
+              <svg className="w-6 h-6 mr-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            )}
+            {notification.type === 'info' && (
+              <svg className="w-6 h-6 mr-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            )}
+            <p className="text-white font-medium">{notification.message}</p>
+            <button 
+              onClick={() => setNotification(prev => ({ ...prev, show: false }))}
+              className="ml-4 text-white hover:text-gray-200 transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
     </ConfigProvider>
   );
 };
