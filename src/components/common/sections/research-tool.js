@@ -1401,9 +1401,10 @@ const ResearchTool = () => {
     return (
       <div className={`w-full h-screen flex items-center justify-center ${
         currentBackground === 'GHIBLI' ? 'bg-cover bg-center bg-no-repeat' : getBackgroundClass()
-      }`} 
+      }`}
            style={getBackgroundStyle()}>
-      
+        {/* Inject contextHolder so messageApi works */}
+        {contextHolder}
         <div className={`w-full max-w-4xl px-8 py-12 initial-screen-content rounded-xl ${
           currentBackground === 'GHIBLI' ? 'bg-transparent' : 'bg-slate-900/80 backdrop-blur-md'
         }`}>
@@ -1431,20 +1432,24 @@ const ResearchTool = () => {
           <div className="relative max-w-3xl mx-auto">
             <form onSubmit={(e) => {
               e.preventDefault();
-              
+
               if (!userInput.trim()) {
-                setValidationError('Please enter a website URL');
+                // Use messageApi to show the error message
+                messageApi.error('Please enter a website URL');
+                setValidationError('Please enter a website URL'); // Keep state to change input style
                 return;
               }
-              
+
               if (!validateDomain(userInput)) {
-                setValidationError('Please enter a valid domain (e.g., example.com)');
+                // Use messageApi to show the error message
+                messageApi.error('Please enter a valid domain (e.g., example.com)');
+                setValidationError('Please enter a valid domain (e.g., example.com)'); // Keep state to change input style
                 return;
               }
-              
-              // Clear any previous validation errors
+
+              // Clear validation error state (for input style)
               setValidationError('');
-              
+
               // Ensure input contains https://
               const formattedInput = userInput.trim().startsWith('http') ? userInput.trim() : `https://${userInput.trim()}`;
               initializeChat(formattedInput);
@@ -1455,12 +1460,12 @@ const ResearchTool = () => {
                   value={userInput}
                   onChange={(e) => {
                     setUserInput(e.target.value);
-                    // Clear validation error when user types
+                    // Clear validation error state when user types (for input style)
                     if (validationError) setValidationError('');
                   }}
                   className={`bg-white/10 border rounded-xl text-lg w-full ${validationError ? 'border-red-500' : getInputStyle()} ${currentBackground === 'GHIBLI' ? 'shadow-xl' : ''}`}
-                  style={{ 
-                    color: currentBackground === 'GHIBLI' ? '#433422' : 'black', 
+                  style={{
+                    color: currentBackground === 'GHIBLI' ? '#433422' : 'black',
                     backgroundColor: currentBackground === 'GHIBLI' ? 'rgba(253, 230, 190, 0.85)' : 'rgba(255, 255, 255, 0.8)',
                     height: '80px',
                     paddingRight: '120px',
@@ -1470,14 +1475,16 @@ const ResearchTool = () => {
                   prefix={
                     <span className={`font-mono ${currentBackground === 'GHIBLI' ? 'text-amber-800/70' : 'text-gray-500'}`} style={{ marginLeft: '16px' }}>https://</span>
                   }
+                  // Keep the status prop to make the input border red
                   status={validationError ? "error" : ""}
                 />
-                
-                {validationError && (
+
+                {/* Remove the previous error text display */}
+                {/* {validationError && (
                   <div className={`absolute -bottom-6 left-0 text-red-500 text-sm ${currentBackground === 'GHIBLI' ? 'drop-shadow-md' : ''}`}>
                     {validationError}
                   </div>
-                )}
+                )} */}
               </div>
               <button
                 type="submit"
@@ -1614,6 +1621,7 @@ const ResearchTool = () => {
       }}
       wave={{ disabled: true }}
     >
+      {/* Ensure contextHolder is also rendered here */}
       {contextHolder}
       <div className={`w-full min-h-screen ${
         currentBackground === 'GHIBLI' ? 'bg-cover bg-center bg-no-repeat' : getBackgroundClass()
