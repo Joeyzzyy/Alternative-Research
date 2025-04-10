@@ -496,29 +496,36 @@ const ResearchTool = () => {
       if (log.type === 'Agent' && log.content) {
         try {
           const content = JSON.parse(log.content);
-          const organicData = JSON.parse(content.organic_data);
-          
-          if (organicData.event === 'agent_message') {
-            const { message_id, answer } = organicData;
-            
-            // 过滤日志内容
-            const filteredAnswer = filterLogContent(answer);
-            
-            if (!agentMessageMap.has(message_id)) {
-              agentMessageMap.set(message_id, {
-                id: message_id,
-                type: 'Agent',
-                content: filteredAnswer,
-                timestamp: log.timestamp
-              });
-            } else {
-              // 追加内容
-              const existingLog = agentMessageMap.get(message_id);
-              existingLog.content += filteredAnswer;
+          // 检查 organic_data 是否存在且为字符串
+          if (content.organic_data && typeof content.organic_data === 'string') {
+            const organicData = JSON.parse(content.organic_data); // Line 521
+
+            if (organicData.event === 'agent_message') {
+              const { message_id, answer } = organicData;
+              
+              // 过滤日志内容
+              const filteredAnswer = filterLogContent(answer);
+              
+              if (!agentMessageMap.has(message_id)) {
+                agentMessageMap.set(message_id, {
+                  id: message_id,
+                  type: 'Agent',
+                  content: filteredAnswer,
+                  timestamp: log.timestamp
+                });
+              } else {
+                // 追加内容
+                const existingLog = agentMessageMap.get(message_id);
+                existingLog.content += filteredAnswer;
+              }
             }
+          } else {
+             // 如果 organic_data 不存在或不是字符串，可以选择记录一个警告或跳过
+             console.warn('Skipping Agent log due to missing or invalid organic_data:', log);
           }
         } catch (error) {
-          console.error('Error parsing Agent log content:', error);
+          // 捕获 JSON.parse 可能出现的错误
+          console.error('Error parsing Agent log content:', error, 'Original log:', log);
         }
       } else {
         // 非 Agent 消息直接添加
