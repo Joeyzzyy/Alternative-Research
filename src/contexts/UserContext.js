@@ -48,28 +48,24 @@ export const UserProvider = ({ children }) => {
     if (isLoggedIn) {
       fetchUserPackage();
     } else {
-      setLoading(false);
-    }
-    
-    // 监听登录事件
-    const handleLogin = () => {
-      fetchUserPackage();
-    };
-    
-    // 监听登出事件
-    const handleLogout = () => {
+      // 如果未登录，重置用户积分信息
       setUserCredits({
         pageGeneratorLimit: 0,
         pageGeneratorUsage: 0
       });
+      setLoading(false);
+    }
+    
+    // 只监听登录事件
+    const handleLogin = () => {
+      fetchUserPackage();
     };
     
-    window.addEventListener('userLoggedIn', handleLogin);
-    window.addEventListener('userLoggedOut', handleLogout);
+    // 确保使用正确的事件名称
+    window.addEventListener('alternativelyLoginSuccess', handleLogin);
     
     return () => {
-      window.removeEventListener('userLoggedIn', handleLogin);
-      window.removeEventListener('userLoggedOut', handleLogout);
+      window.removeEventListener('alternativelyLoginSuccess', handleLogin);
     };
   }, []);
 

@@ -1053,136 +1053,298 @@ const ResearchTool = () => {
 
   // Add function to show subscription modal
   const showSubscriptionModal = () => {
-    // Create modal container
+    // 创建模态容器
     const modalContainer = document.createElement('div');
     modalContainer.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 backdrop-blur-sm';
     
-    // Create modal content
+    // 创建模态内容 - 缩小整体尺寸
     const modalContent = document.createElement('div');
-    modalContent.className = 'bg-gradient-to-b from-slate-900 to-slate-950 rounded-xl shadow-2xl p-6 max-w-2xl w-full border border-purple-500/30 relative overflow-hidden';
+    modalContent.className = 'bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 rounded-xl shadow-2xl p-4 max-w-3xl w-full border border-purple-500/30 relative overflow-hidden';
     
-    // Add background decorations
+    // 添加背景装饰
     const bgDecoration1 = document.createElement('div');
     bgDecoration1.className = 'absolute inset-0 bg-[radial-gradient(circle_at_top_right,_#22d3ee15_0%,_transparent_60%)]';
     
     const bgDecoration2 = document.createElement('div');
     bgDecoration2.className = 'absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_#a78bfa15_0%,_transparent_60%)]';
     
-    // Add title
+    // 添加标题 - 更有吸引力的文案
     const title = document.createElement('h2');
-    title.className = 'text-2xl font-bold text-white mb-4 text-center';
-    title.textContent = 'Insufficient Credits';
+    title.className = 'text-3xl sm:text-4xl font-bold mb-4 text-white leading-tight text-center';
+    title.innerHTML = 'Oops! <span class="text-rose-400">You\'ve Run Out of Credits</span> 🚀';
     
-    // Add description
+    // 添加描述 - 缩小字体和间距
     const description = document.createElement('p');
-    description.className = 'text-gray-300 mb-6 text-center';
-    description.textContent = 'Please choose a subscription plan to continue using our services';
+    description.className = 'text-lg text-gray-300 mb-8 max-w-3xl mx-auto leading-relaxed text-center';
+    description.textContent = 'Upgrade now to continue creating amazing alternative pages and stay ahead of your competition!';
     
-    // Add plan cards container
+    // 创建计费周期切换 - 减少上边距
+    const billingToggleContainer = document.createElement('div');
+    billingToggleContainer.className = 'mt-8 flex justify-center';
+    
+    const billingToggle = document.createElement('div');
+    billingToggle.className = 'relative bg-slate-800/50 backdrop-blur-sm p-1 rounded-full flex border border-slate-700/50';
+    
+    // 年付选项
+    const yearlyButton = document.createElement('button');
+    yearlyButton.className = 'relative py-1.5 px-5 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-300 bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-rose-500/20 text-white shadow-inner shadow-cyan-500/10';
+    yearlyButton.innerHTML = '<span class="absolute inset-0 rounded-full bg-slate-700/50 backdrop-blur-sm"></span><span class="relative">Annual · Save 20%</span>';
+    
+    // 月付选项
+    const monthlyButton = document.createElement('button');
+    monthlyButton.className = 'relative py-1.5 px-5 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-300 text-gray-400 hover:text-gray-200';
+    monthlyButton.innerHTML = '<span class="relative">Monthly</span>';
+    
+    billingToggle.appendChild(yearlyButton);
+    billingToggle.appendChild(monthlyButton);
+    billingToggleContainer.appendChild(billingToggle);
+    
+    // 创建计划卡片容器 - 减少上边距
     const plansContainer = document.createElement('div');
-    plansContainer.className = 'grid gap-4 md:grid-cols-2 mb-6';
+    plansContainer.className = 'mt-8 grid gap-6 lg:grid-cols-2 max-w-3xl mx-auto';
     
-    // Standard plan
+    // 标准计划 - 减小内边距
     const standardPlan = document.createElement('div');
-    standardPlan.className = 'bg-slate-800/70 border border-slate-700/50 rounded-lg p-4 hover:shadow-lg hover:shadow-cyan-500/10 transition-all duration-300';
-    standardPlan.innerHTML = `
-      <h3 class="text-xl font-bold text-white mb-2">Standard</h3>
-      <div class="flex items-baseline mb-2">
-        <span class="text-3xl font-bold text-white">$36</span>
-        <span class="text-gray-400 ml-1">/mo</span>
-        <span class="ml-2 text-xs bg-emerald-900/30 text-emerald-400 px-2 py-0.5 rounded-full">Save 20% annually</span>
-      </div>
-      <p class="text-gray-300 text-sm mb-3">Perfect for getting started</p>
-      <ul class="space-y-2 mb-4">
-        <li class="flex items-start text-sm">
-          <svg class="w-4 h-4 text-cyan-400 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-          </svg>
-          <span class="text-gray-300">30 pages/month generation & style changes</span>
-        </li>
-        <li class="flex items-start text-sm">
-          <svg class="w-4 h-4 text-cyan-400 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-          </svg>
-          <span class="text-gray-300">Auto AI image generation</span>
-        </li>
-        <li class="flex items-start text-sm">
-          <svg class="w-4 h-4 text-cyan-400 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-          </svg>
-          <span class="text-gray-300">Standard support</span>
-        </li>
-      </ul>
-      <button class="w-full py-2 px-4 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-lg font-medium hover:-translate-y-1 transition-transform duration-300">
-        Choose This Plan
-      </button>
-    `;
+    standardPlan.className = 'relative flex flex-col rounded-2xl p-6 transition-all duration-500 text-center backdrop-blur-sm bg-slate-900/70 border border-slate-700/50 shadow-lg shadow-cyan-500/5 hover:shadow-xl hover:shadow-cyan-500/10 hover:translate-y-[-4px]';
     
-    // Professional plan
+    // 专业计划 - 减小内边距
     const proPlan = document.createElement('div');
-    proPlan.className = 'bg-gradient-to-b from-slate-800/95 to-slate-900/95 border-2 border-purple-500/50 ring-4 ring-purple-500/10 rounded-lg p-4 shadow-xl shadow-purple-500/20 relative';
+    proPlan.className = 'relative flex flex-col rounded-2xl p-6 transition-all duration-500 text-center backdrop-blur-sm bg-gradient-to-b from-slate-800/95 to-slate-900/95 border-2 border-purple-500/50 ring-4 ring-purple-500/10 scale-[1.02] shadow-xl shadow-purple-500/20 hover:translate-y-[-4px]';
     
-    // Add popular tag
+    // 添加热门标签 - 调整位置和大小
     const popularTag = document.createElement('div');
-    popularTag.className = 'absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-purple-500 to-rose-500 text-white px-3 py-1 rounded-full text-xs font-bold';
-    popularTag.textContent = 'MOST POPULAR ✨';
+    popularTag.className = 'absolute -top-4 left-1/2 -translate-x-1/2';
+    popularTag.innerHTML = '<div class="bg-gradient-to-r from-purple-500 to-rose-500 text-white px-4 py-1 rounded-full text-xs font-bold shadow-lg shadow-purple-500/20">MOST POPULAR ✨</div>';
     proPlan.appendChild(popularTag);
     
-    proPlan.innerHTML += `
-      <h3 class="text-xl font-bold text-white mb-2 mt-2">Professional</h3>
-      <div class="flex items-baseline mb-2">
-        <span class="text-3xl font-bold bg-gradient-to-r from-purple-400 to-rose-400 bg-clip-text text-transparent">$99</span>
-        <span class="text-gray-400 ml-1">/mo</span>
-        <span class="ml-2 text-xs bg-emerald-900/30 text-emerald-400 px-2 py-0.5 rounded-full">Save 23% annually</span>
+    // 设置初始价格为年付
+    let currentBilling = 'yearly';
+    
+    // 标准计划内容 - 减小字体和间距，高亮页面生成数量
+    standardPlan.innerHTML += `
+      <h3 class="text-xl font-bold text-white mt-3">Standard</h3>
+      <div class="mt-3 flex items-baseline justify-center">
+        <div class="flex items-baseline">
+          <span class="text-4xl font-bold tracking-tight text-white">$36</span>
+          <span class="text-lg text-gray-400 ml-1">/mo</span>
+        </div>
       </div>
-      <p class="text-gray-300 text-sm mb-3">For teams scaling page production</p>
-      <ul class="space-y-2 mb-4">
-        <li class="flex items-start text-sm">
-          <svg class="w-4 h-4 text-purple-400 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+      <div class="mt-2">
+        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-900/30 text-emerald-400 border border-emerald-700/30">
+          <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 14a6 6 0 110-12 6 6 0 010 12zm-1-5h2v2H9v-2zm0-6h2v4H9V5z"/>
           </svg>
-          <span class="text-gray-300">100 pages/month generation & style changes</span>
-        </li>
-        <li class="flex items-start text-sm">
-          <svg class="w-4 h-4 text-purple-400 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-          </svg>
-          <span class="text-gray-300">Unlimited page section regeneration</span>
-        </li>
-        <li class="flex items-start text-sm">
-          <svg class="w-4 h-4 text-purple-400 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-          </svg>
-          <span class="text-gray-300">Priority support</span>
-        </li>
-      </ul>
-      <button class="w-full py-2 px-4 bg-gradient-to-r from-purple-500 via-fuchsia-500 to-rose-500 text-white rounded-lg font-medium hover:-translate-y-1 transition-transform duration-300">
-        Choose This Plan
-      </button>
+          Save 20%
+        </span>
+      </div>
+      <p class="mt-3 text-sm text-gray-300">Everything you need to start creating alternative pages</p>
+      <div class="mt-6 relative group">
+        <div class="absolute -inset-0.5 rounded-xl blur-sm bg-gradient-to-r from-cyan-500 to-blue-500 opacity-50 group-hover:opacity-70 transition duration-300"></div>
+        <button class="relative w-full py-3 px-4 rounded-xl text-white text-sm font-medium bg-slate-900 transition-all duration-300 transform hover:-translate-y-1 active:translate-y-0">
+          Choose This Plan
+        </button>
+      </div>
+      <div class="mt-6 space-y-4">
+        <div>
+          <h4 class="text-xs font-semibold uppercase tracking-wide mb-3 text-cyan-400">
+            Features include:
+          </h4>
+          <ul class="space-y-3 text-xs">
+            <li class="flex items-start">
+              <div class="w-4 h-4 mr-2 rounded-full flex-shrink-0 flex items-center justify-center bg-cyan-500/20">
+                <svg class="w-2.5 h-2.5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <span class="text-gray-300 text-left">
+                <span class="bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent font-bold">30 alternative pages</span> generation & style change/month
+              </span>
+            </li>
+            <li class="flex items-start">
+              <div class="w-4 h-4 mr-2 rounded-full flex-shrink-0 flex items-center justify-center bg-cyan-500/20">
+                <svg class="w-2.5 h-2.5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <span class="text-gray-300 text-left">Auto AI images generation</span>
+            </li>
+            <li class="flex items-start">
+              <div class="w-4 h-4 mr-2 rounded-full flex-shrink-0 flex items-center justify-center bg-cyan-500/20">
+                <svg class="w-2.5 h-2.5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <span class="text-gray-300 text-left">Auto internal links insertion</span>
+            </li>
+            <li class="flex items-start">
+              <div class="w-4 h-4 mr-2 rounded-full flex-shrink-0 flex items-center justify-center bg-cyan-500/20">
+                <svg class="w-2.5 h-2.5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <span class="text-gray-300 text-left">AI page design and generation</span>
+            </li>
+            <li class="flex items-start">
+              <div class="w-4 h-4 mr-2 rounded-full flex-shrink-0 flex items-center justify-center bg-cyan-500/20">
+                <svg class="w-2.5 h-2.5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <span class="text-gray-300 text-left">Standard support</span>
+            </li>
+            <li class="flex items-start">
+              <div class="w-4 h-4 mr-2 rounded-full flex-shrink-0 flex items-center justify-center bg-cyan-500/20">
+                <svg class="w-2.5 h-2.5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <span class="text-gray-300 text-left">1 Free onboarding call</span>
+            </li>
+          </ul>
+        </div>
+      </div>
     `;
     
-    // Add close button
+    // 专业计划内容 - 减小字体和间距，高亮页面生成数量
+    proPlan.innerHTML += `
+      <h3 class="text-xl font-bold text-white mt-3">Professional</h3>
+      <div class="mt-3 flex items-baseline justify-center">
+        <div class="flex items-baseline">
+          <span class="text-4xl font-bold tracking-tight bg-gradient-to-r from-purple-400 to-rose-400 bg-clip-text text-transparent">$99</span>
+          <span class="text-lg text-gray-400 ml-1">/mo</span>
+        </div>
+      </div>
+      <div class="mt-2">
+        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-900/30 text-emerald-400 border border-emerald-700/30">
+          <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 14a6 6 0 110-12 6 6 0 010 12zm-1-5h2v2H9v-2zm0-6h2v4H9V5z"/>
+          </svg>
+          Save 23%
+        </span>
+      </div>
+      <p class="mt-3 text-sm text-gray-300">Perfect for teams scaling alternative page production</p>
+      <div class="mt-6 relative group">
+        <div class="absolute -inset-0.5 rounded-xl blur-sm bg-gradient-to-r from-purple-500 via-fuchsia-500 to-rose-500 opacity-70 group-hover:opacity-100 transition duration-300"></div>
+        <button class="relative w-full py-3 px-4 rounded-xl text-white text-sm font-medium bg-slate-900 transition-all duration-300 transform hover:-translate-y-1 active:translate-y-0">
+          Choose This Plan
+        </button>
+      </div>
+      <div class="mt-6 space-y-4">
+        <div>
+          <h4 class="text-xs font-semibold uppercase tracking-wide mb-3 text-purple-400">
+            Everything in Standard, plus:
+          </h4>
+          <ul class="space-y-3 text-xs">
+            <li class="flex items-start">
+              <div class="w-4 h-4 mr-2 rounded-full flex-shrink-0 flex items-center justify-center bg-purple-500/20">
+                <svg class="w-2.5 h-2.5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <span class="text-gray-300 text-left">
+                <span class="bg-gradient-to-r from-purple-400 to-rose-400 bg-clip-text text-transparent font-bold text-base animate-pulse">100 alternative pages</span> generation/month
+              </span>
+            </li>
+            <li class="flex items-start">
+              <div class="w-4 h-4 mr-2 rounded-full flex-shrink-0 flex items-center justify-center bg-purple-500/20">
+                <svg class="w-2.5 h-2.5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <span class="text-gray-300 text-left">Auto AI images generation</span>
+            </li>
+            <li class="flex items-start">
+              <div class="w-4 h-4 mr-2 rounded-full flex-shrink-0 flex items-center justify-center bg-purple-500/20">
+                <svg class="w-2.5 h-2.5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <span class="text-gray-300 text-left">Auto internal links insertion</span>
+            </li>
+            <li class="flex items-start">
+              <div class="w-4 h-4 mr-2 rounded-full flex-shrink-0 flex items-center justify-center bg-purple-500/20">
+                <svg class="w-2.5 h-2.5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <span class="text-gray-300 text-left">AI page design and generation</span>
+            </li>
+            <li class="flex items-start">
+              <div class="w-4 h-4 mr-2 rounded-full flex-shrink-0 flex items-center justify-center bg-purple-500/20">
+                <svg class="w-2.5 h-2.5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <span class="text-gray-300 text-left">Priority page generation</span>
+            </li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="text-xs font-semibold uppercase tracking-wide mb-3 text-purple-400">
+            Pro features:
+          </h4>
+          <ul class="space-y-3 text-xs">
+            <li class="flex items-start">
+              <div class="w-4 h-4 mr-2 rounded-full flex-shrink-0 flex items-center justify-center bg-purple-500/20">
+                <svg class="w-2.5 h-2.5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <span class="text-gray-300 text-left">More alternative pages generation</span>
+            </li>
+            <li class="flex items-start">
+              <div class="w-4 h-4 mr-2 rounded-full flex-shrink-0 flex items-center justify-center bg-purple-500/20">
+                <svg class="w-2.5 h-2.5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <span class="text-gray-300 text-left">Unlimited Page Section Re-generation</span>
+            </li>
+            <li class="flex items-start">
+              <div class="w-4 h-4 mr-2 rounded-full flex-shrink-0 flex items-center justify-center bg-purple-500/20">
+                <svg class="w-2.5 h-2.5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <span class="text-gray-300 text-left">Unlimited onboarding calls</span>
+            </li>
+            <li class="flex items-start">
+              <div class="w-4 h-4 mr-2 rounded-full flex-shrink-0 flex items-center justify-center bg-purple-500/20">
+                <svg class="w-2.5 h-2.5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <span class="text-gray-300 text-left">Priority support</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    `;
+    
+    // 添加关闭按钮
     const closeButton = document.createElement('button');
-    closeButton.className = 'absolute top-4 right-4 text-gray-400 hover:text-white transition-colors';
+    closeButton.className = 'absolute top-3 right-3 text-gray-400 hover:text-white transition-colors';
     closeButton.innerHTML = `
       <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
       </svg>
     `;
+    
     closeButton.onclick = () => {
       document.body.removeChild(modalContainer);
     };
     
-    // Add bottom text
+    // 添加底部文本 - 减小字体和上边距
     const bottomText = document.createElement('p');
-    bottomText.className = 'text-center text-gray-400 text-sm mt-4';
+    bottomText.className = 'text-center text-gray-400 text-xs mt-6';
     bottomText.textContent = 'You will receive credits immediately after purchasing a subscription';
     
-    // Assemble modal
+    // 组装模态框
     modalContent.appendChild(bgDecoration1);
     modalContent.appendChild(bgDecoration2);
     modalContent.appendChild(title);
     modalContent.appendChild(description);
+    modalContent.appendChild(billingToggleContainer);
     plansContainer.appendChild(standardPlan);
     plansContainer.appendChild(proPlan);
     modalContent.appendChild(plansContainer);
@@ -1190,7 +1352,7 @@ const ResearchTool = () => {
     modalContent.appendChild(closeButton);
     modalContainer.appendChild(modalContent);
     
-    // Add click event handlers
+    // 添加点击事件处理程序
     standardPlan.querySelector('button').onclick = () => {
       window.open('/pricing?plan=standard', '_blank');
       document.body.removeChild(modalContainer);
@@ -1201,7 +1363,54 @@ const ResearchTool = () => {
       document.body.removeChild(modalContainer);
     };
     
-    // Show modal
+    // 添加月付/年付切换功能
+    yearlyButton.onclick = () => {
+      if (currentBilling !== 'yearly') {
+        currentBilling = 'yearly';
+        
+        // 更新按钮样式
+        yearlyButton.className = 'relative py-1.5 px-5 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-300 bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-rose-500/20 text-white shadow-inner shadow-cyan-500/10';
+        yearlyButton.innerHTML = '<span class="absolute inset-0 rounded-full bg-slate-700/50 backdrop-blur-sm"></span><span class="relative">Annual · Save 20%</span>';
+        
+        monthlyButton.className = 'relative py-1.5 px-5 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-300 text-gray-400 hover:text-gray-200';
+        monthlyButton.innerHTML = '<span class="relative">Monthly</span>';
+        
+        // 更新价格
+        standardPlan.querySelector('.text-4xl').textContent = '$36';
+        proPlan.querySelector('.text-4xl').textContent = '$99';
+        
+        // 显示折扣标签
+        const standardDiscount = standardPlan.querySelector('.inline-flex');
+        const proDiscount = proPlan.querySelector('.inline-flex');
+        if (standardDiscount) standardDiscount.style.display = 'inline-flex';
+        if (proDiscount) proDiscount.style.display = 'inline-flex';
+      }
+    };
+    
+    monthlyButton.onclick = () => {
+      if (currentBilling !== 'monthly') {
+        currentBilling = 'monthly';
+        
+        // 更新按钮样式
+        monthlyButton.className = 'relative py-1.5 px-5 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-300 bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-rose-500/20 text-white shadow-inner shadow-cyan-500/10';
+        monthlyButton.innerHTML = '<span class="absolute inset-0 rounded-full bg-slate-700/50 backdrop-blur-sm"></span><span class="relative">Monthly</span>';
+        
+        yearlyButton.className = 'relative py-1.5 px-5 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-300 text-gray-400 hover:text-gray-200';
+        yearlyButton.innerHTML = '<span class="relative">Annual · Save 20%</span>';
+        
+        // 更新价格
+        standardPlan.querySelector('.text-4xl').textContent = '$45';
+        proPlan.querySelector('.text-4xl').textContent = '$129';
+        
+        // 隐藏折扣标签
+        const standardDiscount = standardPlan.querySelector('.inline-flex');
+        const proDiscount = proPlan.querySelector('.inline-flex');
+        if (standardDiscount) standardDiscount.style.display = 'none';
+        if (proDiscount) proDiscount.style.display = 'none';
+      }
+    };
+    
+    // 显示模态框
     document.body.appendChild(modalContainer);
   };
 
