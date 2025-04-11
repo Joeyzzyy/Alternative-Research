@@ -743,6 +743,28 @@ export default function Header() {
     window.dispatchEvent(loginSuccessEvent);
   };
 
+  // 添加注册成功的回调函数
+  const handleRegisterSuccess = (userData) => {
+    // 存储用户数据
+    localStorage.setItem('alternativelyAccessToken', userData.accessToken);
+    localStorage.setItem('alternativelyIsLoggedIn', 'true');
+    localStorage.setItem('alternativelyCustomerEmail', userData.email);
+    localStorage.setItem('alternativelyCustomerId', userData.customerId);
+    
+    // 更新状态
+    setIsLoggedIn(true);
+    setUserEmail(userData.email);
+    
+    showNotification('Registration successful!', 'success');
+    
+    // 关闭登录模态框
+    setShowLoginModal(false);
+    
+    // 触发登录成功事件，通知其他组件
+    const loginSuccessEvent = new CustomEvent('alternativelyLoginSuccess');
+    window.dispatchEvent(loginSuccessEvent);
+  };
+
   // 修改 useEffect 依赖数组，添加 showLoginModal
   useEffect(() => {
     const handleShowLoginModal = () => {
@@ -902,7 +924,21 @@ export default function Header() {
                         </div>
                         <p className="mb-3 text-gray-300">Total Limit: {userCredits.pageGeneratorLimit}</p>
                         <p className="mb-3 text-gray-300">Used: {userCredits.pageGeneratorUsage}</p>
-                        <p className="text-gray-400 text-xs">Note: Changing the overall color scheme or style of the page will also consume credits.</p>
+                        <p className="text-gray-400 text-xs mb-4">Note: Changing the overall color scheme or style of the page will also consume credits.</p>
+                        
+                        {/* 添加购买更多积分按钮 */}
+                        <button 
+                          onClick={() => {
+                            window.location.href = "/#pricing-1";
+                            setShowCreditsTooltip(false);
+                          }}
+                          className="w-full py-2 px-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-sm font-medium rounded-md transition-all duration-300 flex items-center justify-center"
+                        >
+                          <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                          </svg>
+                          Buy More Credits
+                        </button>
                       </div>
                     )}
                   </div>
@@ -1004,6 +1040,7 @@ export default function Header() {
         isForgotPassword={isForgotPassword}
         setIsForgotPassword={setIsForgotPassword}
         onLoginSuccess={handleLoginSuccess}
+        onRegisterSuccess={handleRegisterSuccess}
         showNotification={showNotification}
         handleGoogleLogin={handleGoogleLogin}
         loading={loading}
