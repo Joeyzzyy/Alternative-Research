@@ -11,7 +11,8 @@ const LoginModal = ({
   onLoginSuccess,
   showNotification,
   handleGoogleLogin,
-  googleLoading
+  googleLoading,
+  onRegisterSuccess
 }) => {
   // Login form state
   const [loginForm, setLoginForm] = useState({
@@ -172,16 +173,49 @@ const LoginModal = ({
         code: registerForm.code
       });
       
-      // Check if response contains error code despite 200 status
-      if (response && response.code) {
+      // Modified logic: Only treat as error if code is not 200
+      if (response && response.code && response.code !== 200) {
         showNotification(response.message || 'Registration failed. Please try again.', 'error');
         return;
       }
       
-      if (response && response.token) {
-        localStorage.setItem('token', response.token);
-        setShowLoginModal(false);
-        window.location.reload();
+      // Registration successful
+      showNotification('Registration successful!', 'success');
+      
+      // Automatically login after successful registration
+      try {
+        const loginResponse = await apiClient.login(registerForm.email, registerForm.password);
+        
+        if (loginResponse && loginResponse.accessToken) {
+          // If onRegisterSuccess callback provided, use it
+          if (onRegisterSuccess) {
+            onRegisterSuccess({
+              accessToken: loginResponse.accessToken,
+              email: loginResponse.data.email,
+              customerId: loginResponse.data.customerId
+            });
+          } 
+          // Otherwise use onLoginSuccess if available
+          else if (onLoginSuccess) {
+            onLoginSuccess({
+              accessToken: loginResponse.accessToken,
+              email: loginResponse.data.email,
+              customerId: loginResponse.data.customerId
+            });
+          }
+          
+          // Close login modal
+          setShowLoginModal(false);
+        } else {
+          // If auto-login fails but registration succeeded, redirect to login form
+          setIsLoginForm(true);
+          showNotification('Registration successful. Please log in with your credentials.', 'success');
+        }
+      } catch (loginError) {
+        console.error("Auto-login after registration failed:", loginError);
+        // If auto-login fails but registration succeeded, redirect to login form
+        setIsLoginForm(true);
+        showNotification('Registration successful. Please log in with your credentials.', 'success');
       }
     } catch (error) {
       console.error("Registration failed:", error);
