@@ -6,6 +6,7 @@ import apiClient from '../../../lib/api/index.js';
 import { EventSourcePolyfill } from 'event-source-polyfill';
 import MessageHandler from '../../../utils/MessageHandler';
 import LoginModal from './LoginModal';
+import { useUser } from '../../../contexts/UserContext';
 
 const TAG_FILTERS = {
   '\\[URL_GET\\]': '',  // 过滤 [URL_GET]
@@ -80,6 +81,8 @@ const ResearchTool = () => {
     type: 'success' // 'success', 'error', 'info'
   });
   const [pendingUserInput, setPendingUserInput] = useState('');
+  // 从 UserContext 获取用户信用额度
+  const { userCredits, loading: userCreditsLoading } = useUser();
 
   const filterMessageTags = (message) => {
     let filteredMessage = message;
@@ -910,6 +913,21 @@ const ResearchTool = () => {
         return;
       }
       
+      // 检查用户信用额度
+      try {
+        // 直接从 UserContext 获取用户信用额度
+        console.log('User credits from context:', userCredits);
+        const availableCredits = userCredits ? (userCredits.pageGeneratorLimit - userCredits.pageGeneratorUsage) : 0;
+        
+        // 如果信用额度为0，显示购买套餐弹窗
+        if (availableCredits <= 0) {
+          showSubscriptionModal();
+          return;
+        }
+      } catch (creditError) {
+        console.error('Error checking user credit:', creditError);
+      }
+      
       // 1. Fade out form
       const formElement = document.querySelector('.initial-screen-content form');
       if (formElement) {
@@ -1031,6 +1049,160 @@ const ResearchTool = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Add function to show subscription modal
+  const showSubscriptionModal = () => {
+    // Create modal container
+    const modalContainer = document.createElement('div');
+    modalContainer.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 backdrop-blur-sm';
+    
+    // Create modal content
+    const modalContent = document.createElement('div');
+    modalContent.className = 'bg-gradient-to-b from-slate-900 to-slate-950 rounded-xl shadow-2xl p-6 max-w-2xl w-full border border-purple-500/30 relative overflow-hidden';
+    
+    // Add background decorations
+    const bgDecoration1 = document.createElement('div');
+    bgDecoration1.className = 'absolute inset-0 bg-[radial-gradient(circle_at_top_right,_#22d3ee15_0%,_transparent_60%)]';
+    
+    const bgDecoration2 = document.createElement('div');
+    bgDecoration2.className = 'absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_#a78bfa15_0%,_transparent_60%)]';
+    
+    // Add title
+    const title = document.createElement('h2');
+    title.className = 'text-2xl font-bold text-white mb-4 text-center';
+    title.textContent = 'Insufficient Credits';
+    
+    // Add description
+    const description = document.createElement('p');
+    description.className = 'text-gray-300 mb-6 text-center';
+    description.textContent = 'Please choose a subscription plan to continue using our services';
+    
+    // Add plan cards container
+    const plansContainer = document.createElement('div');
+    plansContainer.className = 'grid gap-4 md:grid-cols-2 mb-6';
+    
+    // Standard plan
+    const standardPlan = document.createElement('div');
+    standardPlan.className = 'bg-slate-800/70 border border-slate-700/50 rounded-lg p-4 hover:shadow-lg hover:shadow-cyan-500/10 transition-all duration-300';
+    standardPlan.innerHTML = `
+      <h3 class="text-xl font-bold text-white mb-2">Standard</h3>
+      <div class="flex items-baseline mb-2">
+        <span class="text-3xl font-bold text-white">$36</span>
+        <span class="text-gray-400 ml-1">/mo</span>
+        <span class="ml-2 text-xs bg-emerald-900/30 text-emerald-400 px-2 py-0.5 rounded-full">Save 20% annually</span>
+      </div>
+      <p class="text-gray-300 text-sm mb-3">Perfect for getting started</p>
+      <ul class="space-y-2 mb-4">
+        <li class="flex items-start text-sm">
+          <svg class="w-4 h-4 text-cyan-400 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          <span class="text-gray-300">30 pages/month generation & style changes</span>
+        </li>
+        <li class="flex items-start text-sm">
+          <svg class="w-4 h-4 text-cyan-400 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          <span class="text-gray-300">Auto AI image generation</span>
+        </li>
+        <li class="flex items-start text-sm">
+          <svg class="w-4 h-4 text-cyan-400 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          <span class="text-gray-300">Standard support</span>
+        </li>
+      </ul>
+      <button class="w-full py-2 px-4 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-lg font-medium hover:-translate-y-1 transition-transform duration-300">
+        Choose This Plan
+      </button>
+    `;
+    
+    // Professional plan
+    const proPlan = document.createElement('div');
+    proPlan.className = 'bg-gradient-to-b from-slate-800/95 to-slate-900/95 border-2 border-purple-500/50 ring-4 ring-purple-500/10 rounded-lg p-4 shadow-xl shadow-purple-500/20 relative';
+    
+    // Add popular tag
+    const popularTag = document.createElement('div');
+    popularTag.className = 'absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-purple-500 to-rose-500 text-white px-3 py-1 rounded-full text-xs font-bold';
+    popularTag.textContent = 'MOST POPULAR ✨';
+    proPlan.appendChild(popularTag);
+    
+    proPlan.innerHTML += `
+      <h3 class="text-xl font-bold text-white mb-2 mt-2">Professional</h3>
+      <div class="flex items-baseline mb-2">
+        <span class="text-3xl font-bold bg-gradient-to-r from-purple-400 to-rose-400 bg-clip-text text-transparent">$99</span>
+        <span class="text-gray-400 ml-1">/mo</span>
+        <span class="ml-2 text-xs bg-emerald-900/30 text-emerald-400 px-2 py-0.5 rounded-full">Save 23% annually</span>
+      </div>
+      <p class="text-gray-300 text-sm mb-3">For teams scaling page production</p>
+      <ul class="space-y-2 mb-4">
+        <li class="flex items-start text-sm">
+          <svg class="w-4 h-4 text-purple-400 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          <span class="text-gray-300">100 pages/month generation & style changes</span>
+        </li>
+        <li class="flex items-start text-sm">
+          <svg class="w-4 h-4 text-purple-400 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          <span class="text-gray-300">Unlimited page section regeneration</span>
+        </li>
+        <li class="flex items-start text-sm">
+          <svg class="w-4 h-4 text-purple-400 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          <span class="text-gray-300">Priority support</span>
+        </li>
+      </ul>
+      <button class="w-full py-2 px-4 bg-gradient-to-r from-purple-500 via-fuchsia-500 to-rose-500 text-white rounded-lg font-medium hover:-translate-y-1 transition-transform duration-300">
+        Choose This Plan
+      </button>
+    `;
+    
+    // Add close button
+    const closeButton = document.createElement('button');
+    closeButton.className = 'absolute top-4 right-4 text-gray-400 hover:text-white transition-colors';
+    closeButton.innerHTML = `
+      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    `;
+    closeButton.onclick = () => {
+      document.body.removeChild(modalContainer);
+    };
+    
+    // Add bottom text
+    const bottomText = document.createElement('p');
+    bottomText.className = 'text-center text-gray-400 text-sm mt-4';
+    bottomText.textContent = 'You will receive credits immediately after purchasing a subscription';
+    
+    // Assemble modal
+    modalContent.appendChild(bgDecoration1);
+    modalContent.appendChild(bgDecoration2);
+    modalContent.appendChild(title);
+    modalContent.appendChild(description);
+    plansContainer.appendChild(standardPlan);
+    plansContainer.appendChild(proPlan);
+    modalContent.appendChild(plansContainer);
+    modalContent.appendChild(bottomText);
+    modalContent.appendChild(closeButton);
+    modalContainer.appendChild(modalContent);
+    
+    // Add click event handlers
+    standardPlan.querySelector('button').onclick = () => {
+      window.open('/pricing?plan=standard', '_blank');
+      document.body.removeChild(modalContainer);
+    };
+    
+    proPlan.querySelector('button').onclick = () => {
+      window.open('/pricing?plan=professional', '_blank');
+      document.body.removeChild(modalContainer);
+    };
+    
+    // Show modal
+    document.body.appendChild(modalContainer);
   };
 
   // 修改 SSE 连接的 useEffect

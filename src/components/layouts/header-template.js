@@ -1200,6 +1200,11 @@ export default function Header() {
                   setUserEmail('');
                   showNotification('Logged out successfully', 'info');
                   setShowLogoutConfirm(false);
+                  
+                  // 添加页面刷新
+                  setTimeout(() => {
+                    window.location.reload();
+                  }, 500); // 短暂延迟确保通知能够显示
                 }}
                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 transition-colors"
               >
