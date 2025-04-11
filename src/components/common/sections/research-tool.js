@@ -18,7 +18,7 @@ const BACKGROUNDS = {
   NIGHT_GHIBLI: { // 重命名 DEFAULT 为 NIGHT_GHIBLI
     type: 'image', // 类型改为 image
     value: 'url("/images/GHIBLI-NIGHT.png")', // 使用夜间图片
-    overlay: 'bg-slate-950/60 backdrop-blur-sm', // 统一覆盖层样式
+    overlay: 'bg-slate-950/60', // 统一覆盖层样式
     // 添加夜间模式的样式
     buttonStyle: 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border-blue-500/30 hover:border-blue-400/60',
     inputStyle: 'border-blue-400/30 focus:border-blue-300/50 shadow-blue-700/20',
@@ -27,7 +27,7 @@ const BACKGROUNDS = {
   DAY_GHIBLI: { // 重命名 GHIBLI 为 DAY_GHIBLI
     type: 'image',
     value: 'url("/images/GHIBLI-BEST.png")',
-    overlay: 'bg-slate-950/60 backdrop-blur-sm',
+    overlay: 'bg-slate-950/60',
     buttonStyle: 'bg-amber-500/30 hover:bg-amber-500/40 text-amber-200 border-amber-500/40 hover:border-amber-400/60',
     inputStyle: 'border-amber-400/30 focus:border-amber-300/50 shadow-amber-700/20',
     cardStyle: 'border-amber-500/30 hover:border-amber-400/50 shadow-amber-700/20'
@@ -60,7 +60,7 @@ const ResearchTool = () => {
   const [inputDisabledDueToUrlGet, setInputDisabledDueToUrlGet] = useState(false);
   const [validationError, setValidationError] = useState('');
   const lastProcessedLogIdRef = useRef(null);
-  const [currentBackground, setCurrentBackground] = useState('NIGHT_GHIBLI'); // 默认使用 NIGHT_GHIBLI
+  const [currentBackground, setCurrentBackground] = useState('DAY_GHIBLI'); // 默认使用 NIGHT_GHIBLI
   const [exampleDisabled, setExampleDisabled] = useState(false); // 添加 exampleDisabled 状态
   const messageHandler = new MessageHandler(setMessages);
   const [sseConnected, setSseConnected] = useState(false);

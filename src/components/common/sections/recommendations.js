@@ -7,7 +7,6 @@ const HelpfulResources = () => {
       {/* Background decorations */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_#22d3ee15_0%,_transparent_60%)]"></div>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_#a78bfa15_0%,_transparent_60%)]"></div>
-      <div className="absolute top-0 left-0 w-full h-full bg-[url('/circuit-grid.svg')] opacity-[0.05]"></div>
       
       <div className="max-w-5xl mx-auto px-4 text-center relative z-10">
         <h2 className="text-4xl font-bold mb-4 text-white">

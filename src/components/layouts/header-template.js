@@ -776,7 +776,6 @@ export default function Header() {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-slate-950 to-black border-b border-slate-800/50">
         {/* 科技感背景装饰 */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_#22d3ee10_0%,_transparent_60%)]"></div>
-        <div className="absolute inset-0 bg-[url('/circuit-grid.svg')] opacity-[0.03]"></div>
         
         {/* 动态粒子效果 */}
         <div className="absolute inset-0 overflow-hidden">
@@ -811,6 +810,7 @@ export default function Header() {
                     width={160}
                     height={40}
                     className="object-contain transition-transform duration-300 group-hover:scale-105 mix-blend-lighten"
+                    style={{ width: 'auto', height: 'auto' }}
                     quality={100}
                     priority
                   />

@@ -37,7 +37,6 @@ export default function Footer({ data }) {
       {/* AI-style background decorations */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_#22d3ee10_0%,_transparent_60%)]"></div>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_#a78bfa10_0%,_transparent_60%)]"></div>
-      <div className="absolute top-0 left-0 w-full h-full bg-[url('/circuit-grid.svg')] opacity-[0.05]"></div>
 
       {/* Animated particles for enhanced tech feel */}
       <div className="absolute inset-0 overflow-hidden">
