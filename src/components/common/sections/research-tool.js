@@ -101,6 +101,7 @@ const ResearchTool = () => {
     const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
     return domainRegex.test(domain);
   };
+  const [shouldConnectSSE, setShouldConnectSSE] = useState(false);
 
   // 监听日志变化，在有新日志时自动切回 execution log
   useEffect(() => {
@@ -1025,6 +1026,8 @@ const ResearchTool = () => {
       if (searchResponse?.code === 200 && searchResponse?.data?.websiteId) {
         const websiteId = searchResponse.data.websiteId;
         setCurrentWebsiteId(websiteId);
+
+        setShouldConnectSSE(true);
         
         const greetingResponse = await apiClient.chatWithAI(
           formattedInput,
@@ -1431,6 +1434,9 @@ const ResearchTool = () => {
 
   // 修改 SSE 连接的 useEffect
   useEffect(() => {
+    if (!shouldConnectSSE) {
+      return;
+    }
     const customerId = localStorage.getItem('alternativelyCustomerId');
     const token = localStorage.getItem('alternativelyAccessToken');
     const isLoggedIn = localStorage.getItem('alternativelyIsLoggedIn') === 'true';
@@ -1570,7 +1576,20 @@ const ResearchTool = () => {
       }
       retryCountRef.current = 0;
     };
-  }, []);
+  }, [shouldConnectSSE]);
+
+  useEffect(() => {
+    // 检查是否有任务完成的日志
+    const finishedLog = logs.find(log => 
+      (log.type === 'Info' && log.step === 'GENERATION_FINISHED') ||
+      (log.type === 'Info' && log.step === 'GENERATION_CHANGE_FINISHED')
+    );
+    
+    if (finishedLog && shouldConnectSSE) {
+      // 任务完成后，关闭 SSE 连接
+      setShouldConnectSSE(false);
+    }
+  }, [logs, shouldConnectSSE]);
 
   useEffect(() => {
     // 检查是否有符合条件的 API 请求

@@ -205,9 +205,9 @@ export default function Header() {
         
         // Log specific reasons if available
         if (notification.isNotDisplayed?.()) {
-          console.error('One Tap prompt not displayed. Reason:', notification.getNotDisplayedReason?.());
+          console.log('One Tap prompt not displayed. Reason:', notification.getNotDisplayedReason?.());
         } else if (notification.isSkippedMoment?.()) {
-          console.error('One Tap prompt skipped. Reason:', notification.getSkippedReason?.());
+          console.log('One Tap prompt skipped. Reason:', notification.getSkippedReason?.());
         } else if (notification.isDismissedMoment?.()) {
            console.log('One Tap prompt dismissed. Reason:', notification.getDismissedReason?.());
         } else if (notification.isDisplayed?.()) {
