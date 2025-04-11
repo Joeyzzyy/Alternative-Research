@@ -898,34 +898,49 @@ const ResearchTool = () => {
 
   const initializeChat = async (userInput) => {
     try {
-      // 检查用户是否已登录
+      // Check if user is logged in
       const isLoggedIn = localStorage.getItem('alternativelyIsLoggedIn') === 'true';
       const token = localStorage.getItem('alternativelyAccessToken');
+
+      console.log('[DEBUG] Login status check:', { isLoggedIn, hasToken: !!token });
       
-      // 如果用户未登录，保存当前输入并触发登录弹窗
+      // If user is not logged in, save current input and trigger login modal
       if (!isLoggedIn || !token) {
-        // 保存用户输入，以便登录后继续
+        // Save user input to continue after login
         setPendingUserInput(userInput);
         
-        // 创建并分发自定义事件，通知 header-template 显示登录弹窗
+        // Create and dispatch custom event to notify header-template to show login modal
         const showLoginEvent = new CustomEvent('showAlternativelyLoginModal');
         window.dispatchEvent(showLoginEvent);
         return;
       }
       
-      // 检查用户信用额度
+      // Check user credits - directly fetch from API
       try {
-        // 直接从 UserContext 获取用户信用额度
-        console.log('User credits from context:', userCredits);
-        const availableCredits = userCredits ? (userCredits.pageGeneratorLimit - userCredits.pageGeneratorUsage) : 0;
+        // Directly fetch user package information from API
+        const packageResponse = await apiClient.getCustomerPackage();
         
-        // 如果信用额度为0，显示购买套餐弹窗
-        if (availableCredits <= 0) {
-          showSubscriptionModal();
-          return;
+        if (packageResponse?.code === 200 && packageResponse.data) {
+          const { pageGeneratorLimit, pageGeneratorUsage } = packageResponse.data;
+          const availableCredits = pageGeneratorLimit - pageGeneratorUsage;
+          
+          console.log('[DEBUG] Available credits from API:', {
+            limit: pageGeneratorLimit,
+            usage: pageGeneratorUsage,
+            available: availableCredits
+          });
+          
+          // If credit is 0, show subscription modal
+          if (availableCredits <= 0) {
+            showSubscriptionModal();
+            return;
+          }
+        } else {
+          console.warn('[DEBUG] Failed to get user package information, continuing without credit check');
         }
       } catch (creditError) {
         console.error('Error checking user credit:', creditError);
+        // Continue execution on error, don't block user operation
       }
       
       // 1. Fade out form
