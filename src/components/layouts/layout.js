@@ -12,7 +12,6 @@ import FeatureIntro from '../common/sections/feature-intro';
 import FeatureIntroLeftRight from '../common/sections/feature-intro-left-right';
 import FeatureIntroRightLeft from '../common/sections/feature-intro-right-left';
 import Recommendations from '../common/sections/recommendations';
-import TaskRestoreTool from '../common/sections/task-restore-tool';
 import ShowCase from '../common/sections/show-case';
 import { useToolContext } from '../../contexts/ToolContext';
 
