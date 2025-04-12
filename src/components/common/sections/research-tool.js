@@ -503,10 +503,15 @@ const ResearchTool = () => {
     logs.forEach(log => {
       if (log.type === 'Agent' && log.content) {
         try {
-          const content = JSON.parse(log.content);
-          // 检查 organic_data 是否存在且为字符串
-          if (content.organic_data && typeof content.organic_data === 'string') {
-            const organicData = JSON.parse(content.organic_data); // Line 521
+          // 不再需要解析 log.content，因为它已经是对象
+          const content = log.content;
+          
+          // 检查 organic_data 是否存在
+          if (content.organic_data) {
+            // 如果 organic_data 是字符串，则需要解析；如果已经是对象，则直接使用
+            const organicData = typeof content.organic_data === 'string' 
+              ? JSON.parse(content.organic_data) 
+              : content.organic_data;
 
             if (organicData.event === 'agent_message') {
               const { message_id, answer } = organicData;
@@ -527,13 +532,10 @@ const ResearchTool = () => {
                 existingLog.content += filteredAnswer;
               }
             }
-          } else {
-             // 如果 organic_data 不存在或不是字符串，可以选择记录一个警告或跳过
-             console.warn('Skipping Agent log due to missing or invalid organic_data:', log);
           }
         } catch (error) {
-          // 捕获 JSON.parse 可能出现的错误
-          console.error('Error parsing Agent log content:', error, 'Original log:', log);
+          // 保留 try-catch 以处理可能的错误，例如 organic_data 仍然是字符串但格式不正确
+          console.error('Error processing Agent log content:', error, 'Original log:', log);
         }
       } else {
         // 非 Agent 消息直接添加
@@ -897,6 +899,7 @@ const ResearchTool = () => {
     };
   }, []);
 
+  const [showConstructionModal, setShowConstructionModal] = useState(false);
   const initializeChat = async (userInput) => {
     try {
       // Check if user is logged in
@@ -942,6 +945,81 @@ const ResearchTool = () => {
       } catch (creditError) {
         console.error('Error checking user credit:', creditError);
         // Continue execution on error, don't block user operation
+      }
+
+      try {
+        // Get the most recent 3 tasks
+        const historyResponse = await apiClient.getAlternativeWebsiteList(1, 3);
+        
+        console.log('[DEBUG] 历史任务检查:', historyResponse?.data);
+        
+        if (historyResponse?.code === 200 && historyResponse.data) {
+          // Find processing tasks
+          const processingTasks = historyResponse.data.filter(item => 
+            item.generatorStatus === 'processing'
+          );
+          
+          console.log('[DEBUG] 正在处理的任务:', processingTasks);
+          
+          // Check if any processing task has a non-init third planning
+          for (const task of processingTasks) {
+            const statusResponse = await apiClient.getAlternativeStatus(task.websiteId);
+            
+            console.log('[DEBUG] 任务状态检查 (websiteId=' + task.websiteId + '):', statusResponse?.data);
+            
+            if (statusResponse?.code === 200 && statusResponse.data) {
+              const planningStatuses = statusResponse.data;
+              const productComparisonStatus = planningStatuses.find(planning => 
+                planning.planningName === 'PRODUCT_COMPARISON'
+              );
+              
+              console.log('[DEBUG] 产品比较状态:', productComparisonStatus);
+              
+              if (productComparisonStatus && productComparisonStatus.status !== 'init') {
+                // 创建自定义弹窗，参考 header-template.js 中的样式
+                const modalContainer = document.createElement('div');
+                modalContainer.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm';
+                
+                const modalContent = document.createElement('div');
+                modalContent.className = 'bg-slate-800 rounded-lg shadow-xl p-6 max-w-sm w-full border border-slate-700 animate-fadeIn';
+                
+                const title = document.createElement('h3');
+                title.className = 'text-xl font-semibold text-white mb-4';
+                title.textContent = 'Task In Progress';
+                
+                const description = document.createElement('p');
+                description.className = 'text-gray-300 mb-3';
+                description.textContent = 'You already have a product comparison task in progress. Please wait for it to complete before starting a new one.';
+                
+                const emailNote = document.createElement('p');
+                emailNote.className = 'text-gray-400 text-sm mb-6';
+                emailNote.textContent = 'You will receive an email notification when your current task is complete.';
+                
+                const buttonContainer = document.createElement('div');
+                buttonContainer.className = 'flex justify-end';
+                
+                const closeButton = document.createElement('button');
+                closeButton.className = 'px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 transition-colors';
+                closeButton.textContent = 'Got it';
+                closeButton.onclick = () => {
+                  document.body.removeChild(modalContainer);
+                };
+                
+                buttonContainer.appendChild(closeButton);
+                modalContent.appendChild(title);
+                modalContent.appendChild(description);
+                modalContent.appendChild(emailNote);
+                modalContent.appendChild(buttonContainer);
+                modalContainer.appendChild(modalContent);
+                
+                document.body.appendChild(modalContainer);
+                return;
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('[DEBUG] 检查任务状态时出错:', error);
       }
       
       // 1. Fade out form
@@ -2030,15 +2108,13 @@ const ResearchTool = () => {
     <ConfigProvider
       theme={{
         token: {
-          // 根据主题设置主色调
-          colorPrimary: currentBackground === 'DAY_GHIBLI' ? '#d97706' : '#3b82f6', // Amber for Day, Blue for Night
+          colorPrimary: currentBackground === 'DAY_GHIBLI' ? '#d97706' : '#3b82f6',
         },
       }}
       wave={{ disabled: true }}
     >
-      {/* Ensure contextHolder is also rendered here */}
       {contextHolder}
-      <div className={`w-full min-h-screen bg-cover bg-center bg-no-repeat text-white flex items-center justify-center p-4 relative overflow-hidden`} // 移除 getBackgroundClass()
+      <div className={`w-full min-h-screen bg-cover bg-center bg-no-repeat text-white flex items-center justify-center p-4 relative overflow-hidden`}
            style={{
              paddingTop: "80px",
              ...getBackgroundStyle()
@@ -2262,7 +2338,7 @@ const ResearchTool = () => {
           ))}
         </div>
       </Modal>
-
+      
       {/* 通知组件（如果还没有的话） */}
       {notification.show && (
         <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 ${

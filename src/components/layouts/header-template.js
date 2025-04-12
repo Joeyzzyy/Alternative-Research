@@ -86,6 +86,43 @@ const animationStyles = `
   .history-pagination .ant-pagination-next button {
     color: rgba(255, 255, 255, 0.8) !important;
   }
+
+  /* 添加构建中弹窗样式 */
+  .construction-modal .ant-modal-content {
+    background: rgba(15, 23, 42, 0.95);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  }
+  
+  .construction-modal .ant-modal-body {
+    padding: 24px;
+  }
+  
+  .construction-modal .ant-modal-confirm-title {
+    color: white;
+    text-align: center;
+    font-size: 20px;
+    margin-bottom: 16px;
+  }
+  
+  .construction-modal .ant-modal-confirm-content {
+    color: rgba(255, 255, 255, 0.9);
+    margin-left: 0;
+  }
+  
+  .construction-modal-button {
+    background: linear-gradient(to right, #4f46e5, #7c3aed) !important;
+    border: none !important;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3) !important;
+    transition: all 0.3s ease !important;
+  }
+  
+  .construction-modal-button:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 16px rgba(79, 70, 229, 0.4) !important;
+    background: linear-gradient(to right, #4338ca, #6d28d9) !important;
+  }
 `;
 
 export default function Header() {
@@ -126,6 +163,7 @@ export default function Header() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [googleOneTapInitialized, setGoogleOneTapInitialized] = useState(false);
   const tokenExpiredHandledRef = useRef(false);
+  const [showConstructionModal, setShowConstructionModal] = useState(false);
 
   // 显示通知的辅助函数 (Moved Up)
   const showNotification = useCallback((message, type = 'info') => {
@@ -274,7 +312,7 @@ export default function Header() {
   }, [isLoggedIn]);
 
   // 使用 useCallback 包裹 fetchHistoryList
-  const fetchHistoryList = useCallback(async (page = 1, pageSize = 10) => {
+  const fetchHistoryList = useCallback(async (page = 1, pageSize = 200) => {
     if (!isLoggedIn) return;
     
     console.log(`Fetching history: page=${page}, pageSize=${pageSize}`);
@@ -286,25 +324,67 @@ export default function Header() {
       
       if (response?.code === 200) {
         const historyData = response.data || [];
-        const formattedHistory = historyData.map(item => ({
-          websiteId: item.websiteId,
-          domain: item.website || 'Unknown website',
-          createdAt: item.generatedStart || new Date().toISOString(),
-          status: item.generatorStatus || 'unknown',
-        }));
         
-        // Sort by creation time in descending order
-        formattedHistory.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        setHistoryList(formattedHistory);
+        // 创建一个数组来存储过滤后的历史记录
+        let filteredHistory = [];
         
-        // Update pagination information
+        // 处理每个历史记录项
+        for (const item of historyData) {
+          // 如果状态不是processing，直接添加到过滤后的列表
+          if (item.generatorStatus !== 'processing') {
+            filteredHistory.push({
+              websiteId: item.websiteId,
+              domain: item.website || 'Unknown website',
+              createdAt: item.generatedStart || new Date().toISOString(),
+              status: item.generatorStatus || 'unknown',
+            });
+            continue;
+          }
+          
+          // 如果状态是processing，检查第三个planning的状态
+          try {
+            const statusResponse = await apiClient.getAlternativeStatus(item.websiteId);
+            if (statusResponse?.code === 200 && statusResponse.data) {
+              const planningStatuses = statusResponse.data;
+              const productComparisonStatus = planningStatuses.find(planning => 
+                planning.planningName === 'PRODUCT_COMPARISON'
+              );
+              
+              // 如果第三个planning不是init状态，添加到过滤后的列表
+              if (!productComparisonStatus || productComparisonStatus.status !== 'init') {
+                filteredHistory.push({
+                  websiteId: item.websiteId,
+                  domain: item.website || 'Unknown website',
+                  createdAt: item.generatedStart || new Date().toISOString(),
+                  status: item.generatorStatus || 'unknown',
+                });
+              }
+              // 如果是init状态，则不添加（过滤掉）
+            }
+          } catch (error) {
+            console.error('Error checking planning status:', error);
+            // 如果获取状态失败，仍然添加到列表中
+            filteredHistory.push({
+              websiteId: item.websiteId,
+              domain: item.website || 'Unknown website',
+              createdAt: item.generatedStart || new Date().toISOString(),
+              status: item.generatorStatus || 'unknown',
+            });
+          }
+        }
+        
+        // 按创建时间降序排序
+        filteredHistory.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        setHistoryList(filteredHistory);
+        
+        // 更新分页信息（虽然不再使用分页，但保留这个状态以避免其他地方出错）
         setHistoryPagination({
-          current: page,
-          pageSize: pageSize,
-          total: response.totalCount || 0
+          current: 1,
+          pageSize: 200,
+          total: filteredHistory.length
         });
         
-        console.log('Formatted history:', formattedHistory);
+        console.log('Filtered history:', filteredHistory);
       } else {
         // 只有当 code 不是 200 时才显示错误
         showNotification('Failed to load history', 'error');
@@ -326,12 +406,7 @@ export default function Header() {
     }
   }, [isLoggedIn, fetchHistoryList]);
 
-  // Handle pagination change
-  const handleHistoryPageChange = (page, pageSize) => {
-    fetchHistoryList(page, pageSize);
-  };
-
-  // 处理历史记录点击
+  // Handle history record click
   const handleHistoryItemClick = async (item) => {
     if (item.status === 'failed') {
       setNotification({
@@ -395,19 +470,17 @@ export default function Header() {
           const productComparisonStatus = planningStatuses.find(planning => planning.planningName === 'PRODUCT_COMPARISON');
 
           if (productComparisonStatus && productComparisonStatus.status !== 'init') {
-            setNotification({
-              show: true,
-              message: 'Task is still in progress. Please wait.',
-              type: 'info'
-            });
+            // Show custom construction modal instead of using Modal.info
+            console.log('Showing construction modal');
+            setShowConstructionModal(true);
             return;
           }
 
           if (productComparisonStatus && productComparisonStatus.status === 'init') {
-            // 存储新的 websiteId
+            // Store new websiteId
             localStorage.setItem('restoreWebsiteId', item.websiteId);
             
-            // 如果当前工具已经是 restore，则触发一个自定义事件通知恢复窗口切换
+            // If current tool is already restore, trigger a custom event to notify restore window to switch
             if (currentTool === 'restore') {
               const switchEvent = new CustomEvent('switchRestoreWindow', { 
                 detail: { websiteId: item.websiteId } 
@@ -416,7 +489,7 @@ export default function Header() {
               
               showNotification('Switching to selected chat window...', 'info');
             } else {
-              // 如果当前不在恢复窗口，则切换到恢复工具
+              // If not in restore window, switch to restore tool
               setCurrentTool('restore');
             }
           }
@@ -583,70 +656,11 @@ export default function Header() {
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs text-gray-400 ml-2 flex-shrink-0">{new Date(item.createdAt).toLocaleDateString()}</span>
-              {/* 如果是 processing 状态，并且第三个 planning 是 init，显示 Restore Chat Window 按钮 */}
-              {item.status === 'processing' && (
-                <button
-                  onClick={async (e) => {
-                    e.stopPropagation(); // 阻止事件冒泡，避免触发父级点击事件
-                    try {
-                      const statusResponse = await apiClient.getAlternativeStatus(item.websiteId);
-                      if (statusResponse?.code === 200 && statusResponse.data) {
-                        const planningStatuses = statusResponse.data;
-                        if (planningStatuses[2] && planningStatuses[2].status === 'init') {
-                          setCurrentTool('restore');
-                          localStorage.setItem('restoreWebsiteId', item.websiteId);
-                        } else {
-                          // 如果不是 init 状态，显示提示
-                          setNotification({
-                            show: true,
-                            message: 'Page Generation is in progress, window can not be restored. Please wait.',
-                            type: 'info'
-                          });
-                        }
-                      }
-                    } catch (error) {
-                      console.error('Failed to fetch task status:', error);
-                      setNotification({
-                        show: true,
-                        message: 'Failed to restore chat window. Please try again.',
-                        type: 'error'
-                      });
-                    }
-                  }}
-                  className="px-2 py-1 text-xs font-medium text-white bg-blue-500 rounded hover:bg-blue-600 transition-colors"
-                >
-                  Restore Chat Window
-                </button>
-              )}
             </div>
           </div>
         ),
         onClick: () => handleHistoryItemClick(item),
       })),
-      // Add pagination component
-      {
-        key: 'history-pagination',
-        label: (
-          <div className="py-2 px-3 border-t border-slate-700/50 mt-2">
-            {historyPagination.total > 0 && (
-              <div className="flex justify-center" onClick={(e) => e.stopPropagation()}>
-                <Pagination 
-                  size="small"
-                  current={historyPagination.current}
-                  pageSize={historyPagination.pageSize}
-                  total={historyPagination.total}
-                  onChange={(page, pageSize) => {
-                    // Stop event propagation to prevent dropdown from closing
-                    fetchHistoryList(page, pageSize);
-                  }}
-                  showSizeChanger={false}
-                  className="history-pagination"
-                />
-              </div>
-            )}
-          </div>
-        ),
-      }
     ].filter(Boolean), // Remove null/undefined items
   };
 
@@ -1246,6 +1260,35 @@ export default function Header() {
                 className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 transition-colors"
               >
                 Yes, Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Construction Modal */}
+      {showConstructionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">
+          <div className="bg-slate-800 rounded-lg shadow-xl p-6 max-w-md w-full border border-slate-700">
+            <div className="text-center">
+              <div className="flex justify-center mb-6">
+                <div className="w-16 h-16 relative">
+                  <div className="absolute inset-0 rounded-full border-4 border-blue-500/30 border-t-blue-500 animate-spin"></div>
+                  <div className="absolute inset-2 rounded-full border-4 border-purple-500/30 border-t-purple-500 animate-spin" style={{ animationDuration: '1.5s' }}></div>
+                </div>
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-4">Your Last Alternative Page Generation is Under Construction</h3>
+              <p className="text-gray-400 text-sm mb-4">
+                This usually takes less than 5 minutes to complete.
+              </p>
+              <p className="text-gray-300 text-sm mb-6">
+                We'll notify you by email once it's ready!
+              </p>
+              <button
+                onClick={() => setShowConstructionModal(false)}
+                className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded hover:from-blue-500 hover:to-purple-500 transition-colors"
+              >
+                Got it
               </button>
             </div>
           </div>
