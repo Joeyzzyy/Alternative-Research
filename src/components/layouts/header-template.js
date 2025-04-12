@@ -582,7 +582,7 @@ export default function Header() {
     setNotification(prev => ({...prev, show: false}));
   };
 
-  // History menu
+  // 修改 historyMenu
   const historyMenu = {
     items: [
       // Loading state
@@ -599,12 +599,25 @@ export default function Header() {
         ),
         disabled: true,
       },
-      // History items (only show when not loading)
+      // History header with refresh button
       !loadingResultIds && {
         key: 'history-header',
         label: (
-          <div className="flex items-center justify-between py-2 px-3">
+          <div className="flex items-center justify-between py-2 px-3 border-b border-slate-700/50 mb-2">
             <span className="text-sm font-medium text-gray-300">Recent Tasks</span>
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                fetchHistoryList();
+                showNotification('Refreshing history...', 'info');
+              }}
+              className="p-1.5 rounded-full bg-slate-700/50 hover:bg-slate-600/50 text-gray-400 hover:text-gray-200 transition-all duration-200"
+              title="Refresh history"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
           </div>
         ),
       },
@@ -612,10 +625,10 @@ export default function Header() {
       !loadingResultIds && historyList.length === 0 && {
         key: 'no-data',
         label: (
-          <div className="flex items-center justify-center py-6 space-y-3" style={{ minWidth: '280px', minHeight: '150px', padding: '0 20px' }}>
+          <div className="flex items-center justify-center py-6 space-y-3" style={{ minWidth: '320px', minHeight: '200px', padding: '0 20px' }}>
             <div className="text-center">
               <div className="flex justify-center mb-4">
-                <svg className="w-12 h-12 text-blue-400/50" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-16 h-16 text-blue-400/30" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
@@ -631,31 +644,60 @@ export default function Header() {
       ...historyList.map(item => ({
         key: item.websiteId,
         label: (
-          <div className="flex items-center justify-between py-2 px-3 hover:bg-slate-700/50 rounded-md transition-colors">
-            <div className="flex items-center max-w-[180px]">
-              <div className="flex-shrink-0 mr-2.5">
+          <div className="flex items-center justify-between py-3 px-3 hover:bg-slate-700/50 rounded-md transition-colors mb-1.5 border border-transparent hover:border-slate-600/50">
+            <div className="flex items-center max-w-[220px]">
+              <div className="flex-shrink-0 mr-3">
                 {item.status === 'finished' ? (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
+                    <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
                     Completed
                   </span>
                 ) : item.status === 'failed' ? (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800">
+                    <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
                     Failed
                   </span>
                 ) : item.status === 'processing' ? (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                    <svg className="w-3 h-3 mr-1 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
                     In Progress
                   </span>
                 ) : (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                    <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
                     {item.status || 'Unknown'}
                   </span>
                 )}
               </div>
-              <span className="truncate text-sm text-gray-200">{item.domain}</span>
+              <div className="flex flex-col">
+                <span className="truncate text-sm text-gray-200 font-medium">{item.domain}</span>
+                <span className="text-xs text-gray-400 mt-0.5">{new Date(item.createdAt).toLocaleDateString()} {new Date(item.createdAt).toLocaleTimeString()}</span>
+              </div>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-400 ml-2 flex-shrink-0">{new Date(item.createdAt).toLocaleDateString()}</span>
+              {item.status === 'finished' && (
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleHistoryItemClick(item);
+                  }}
+                  className="p-1.5 rounded bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 hover:text-blue-300 transition-all"
+                  title="View Preview"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </button>
+              )}
             </div>
           </div>
         ),
@@ -957,13 +999,17 @@ export default function Header() {
                     )}
                   </div>
 
-                  {/* 历史记录按钮 */}
+                  {/* 历史记录按钮 - 更新样式 */}
                   <Dropdown 
                     menu={historyMenu}
                     trigger={['click']} 
                     placement="bottomRight"
                     overlayClassName="history-dropdown"
                     onOpenChange={(open) => {
+                      if (open) {
+                        // 当打开下拉菜单时刷新历史记录
+                        fetchHistoryList();
+                      }
                       if (!open && loadingResultIds) {
                         return false; // 如果正在加载，阻止 Dropdown 关闭
                       }
@@ -971,7 +1017,7 @@ export default function Header() {
                     }}
                     open={loadingResultIds ? true : undefined} // 如果正在加载，保持 Dropdown 打开
                   >
-                    <button className="px-4 py-2.5 text-sm bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border-blue-500/30 rounded-full backdrop-blur-sm transition-all flex items-center gap-2 border shadow-lg hover:shadow-xl hover:-translate-y-0.5 duration-300">
+                    <button className="px-4 py-2.5 text-sm bg-gradient-to-r from-blue-500/20 to-purple-500/20 hover:from-blue-500/30 hover:to-purple-500/30 text-blue-300 border border-blue-500/30 rounded-full backdrop-blur-sm transition-all flex items-center gap-2 shadow-lg hover:shadow-blue-500/10 hover:-translate-y-0.5 duration-300">
                       <HistoryOutlined style={{ fontSize: '16px' }} />
                       <span className="font-medium">History</span>
                     </button>
@@ -1323,12 +1369,15 @@ export default function Header() {
         
         /* 添加历史记录下拉菜单的样式 */
         .ant-dropdown .ant-dropdown-menu {
-          max-height: 400px;
+          max-height: 500px;
           overflow-y: auto;
-          background-color: rgb(15, 23, 42);
-          border: 1px solid rgba(100, 116, 139, 0.2);
-          backdrop-filter: blur(12px);
-          padding: 8px;
+          background-color: rgba(15, 23, 42, 0.95) !important;
+          border: 1px solid rgba(99, 102, 241, 0.3) !important;
+          backdrop-filter: blur(12px) !important;
+          padding: 12px;
+          min-width: 360px;
+          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
+          border-radius: 12px;
         }
         
         .ant-dropdown .ant-dropdown-menu::-webkit-scrollbar {
@@ -1337,15 +1386,30 @@ export default function Header() {
         
         .ant-dropdown .ant-dropdown-menu::-webkit-scrollbar-track {
           background: rgba(15, 23, 42, 0.3);
+          border-radius: 10px;
         }
         
         .ant-dropdown .ant-dropdown-menu::-webkit-scrollbar-thumb {
-          background-color: rgba(100, 116, 139, 0.5);
-          border-radius: 20px;
+          background-color: rgba(99, 102, 241, 0.4);
+          border-radius: 10px;
         }
         
         .ant-dropdown .ant-dropdown-menu::-webkit-scrollbar-thumb:hover {
-          background-color: rgba(100, 116, 139, 0.7);
+          background-color: rgba(99, 102, 241, 0.6);
+        }
+        
+        .ant-dropdown-menu-item {
+          padding: 0 !important;
+          margin: 0 !important;
+          background: transparent !important;
+        }
+        
+        .ant-dropdown-menu-item:hover {
+          background: transparent !important;
+        }
+        
+        .ant-dropdown-menu-item-active {
+          background: transparent !important;
         }
       `}</style>
     </>
