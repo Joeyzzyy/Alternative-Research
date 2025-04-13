@@ -305,6 +305,17 @@ const googleOneTapLogin = async (credential) => {
   }
 };
 
+// 新增：删除页面接口
+const deletePage = async (pageId) => {
+  try {
+    const response = await apiClient.delete(`/pages/${pageId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to delete page:', error);
+    return null;
+  }
+};
+
 apiClient.getCompetitorResearch = getCompetitorResearch;
 apiClient.login = login;
 apiClient.register = register;
@@ -325,5 +336,6 @@ apiClient.getAlternativeWebsiteHistory = getAlternativeWebsiteHistory;
 apiClient.getCustomerPackage = getCustomerPackage;
 apiClient.getAlternativeChatHistory = getAlternativeChatHistory;
 apiClient.googleOneTapLogin = googleOneTapLogin;
+apiClient.deletePage = deletePage;
 
 export default apiClient;

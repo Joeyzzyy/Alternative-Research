@@ -1882,7 +1882,7 @@ const ResearchTool = () => {
 
   // 添加历史记录状态
   const [historyList, setHistoryList] = useState([]);
-  const [historyCollapsed, setHistoryCollapsed] = useState(true);
+  const [historyCollapsed, setHistoryCollapsed] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
 
   // 添加获取历史记录的函数
@@ -1962,8 +1962,115 @@ const ResearchTool = () => {
   }, []);
 
   // 处理历史记录项点击
-  const handleHistoryItemClick = async(item) => {
-    console.log('handleHistoryItemClick', item);
+  const handleHistoryItemClick = async(item, event) => {  // 添加 event 参数
+    // 添加删除按钮点击处理
+    if (event.target.closest('.delete-btn')) {  // 使用 closest 来确保点击的是删除按钮
+      event.stopPropagation();  // 阻止事件冒泡
+      try {
+        // 创建自定义删除确认弹窗
+        const modalOverlay = document.createElement('div');
+        modalOverlay.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[2000]';
+        
+        const modalContent = document.createElement('div');
+        modalContent.className = 'bg-slate-900 border border-slate-700/50 rounded-xl shadow-2xl p-6 max-w-md w-full relative animate-fadeIn';
+        modalContent.innerHTML = `
+          <div class="relative">
+            <h3 class="text-xl font-bold text-white mb-2">Delete Record</h3>
+            <p class="text-gray-300 mb-6">Are you sure you want to delete this record? This action cannot be undone.</p>
+            
+            <div class="flex space-x-3">
+              <button class="cancel-btn flex-1 py-2 px-4 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors">
+                Cancel
+              </button>
+              <button class="confirm-btn flex-1 py-2 px-4 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white rounded-lg transition-colors">
+                Delete
+              </button>
+            </div>
+          </div>
+        `;
+        
+        document.body.appendChild(modalOverlay);
+        
+        // 添加样式
+        const style = document.createElement('style');
+        style.textContent = `
+          @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+          }
+          .animate-fadeIn {
+            animation: fadeIn 0.2s ease-out forwards;
+          }
+        `;
+        document.head.appendChild(style);
+        
+        // 绑定事件
+        const closeModal = () => {
+          document.body.removeChild(modalOverlay);
+          document.head.removeChild(style);
+        };
+        
+        // 取消按钮
+        const cancelBtn = modalContent.querySelector('.cancel-btn');
+        cancelBtn.addEventListener('click', closeModal);
+        
+        // 确认删除按钮
+        const confirmBtn = modalContent.querySelector('.confirm-btn');
+        confirmBtn.addEventListener('click', async () => {
+          try {
+            console.log('Deleting website with ID:', item.websiteId); // 添加日志
+            const deleteResponse = await apiClient.deletePage(item.websiteId);
+            console.log('Delete response:', deleteResponse); // 添加日志
+            
+            // 检查响应是否成功
+            if (deleteResponse?.code === 200) {
+              // 更新历史记录列表
+              setHistoryList(prev => prev.filter(record => record.websiteId !== item.websiteId));
+              setNotification({
+                show: true,
+                message: 'Record deleted successfully',
+                type: 'success'
+              });
+            } else {
+              console.error('Delete API returned non-200 code:', deleteResponse);
+              setNotification({
+                show: true,
+                message: `Failed to delete record: ${deleteResponse?.message || 'Unknown error'}`,
+                type: 'error'
+              });
+            }
+            closeModal();
+          } catch (error) {
+            console.error('Failed to delete record:', error);
+            setNotification({
+              show: true,
+              message: `Failed to delete record: ${error.message || 'Unknown error'}`,
+              type: 'error'
+            });
+            closeModal();
+          }
+        });
+        
+        // 点击背景关闭
+        modalOverlay.addEventListener('click', (e) => {
+          if (e.target === modalOverlay) {
+            closeModal();
+          }
+        });
+        
+        modalOverlay.appendChild(modalContent);
+        return;
+      } catch (error) {
+        console.error('Failed to delete record:', error);
+        setNotification({
+          show: true,
+          message: 'Failed to delete record',
+          type: 'error'
+        });
+      }
+      return;
+    }
+  
     if (item.generatorStatus === 'failed') {
       // 创建自定义弹窗
       const modalOverlay = document.createElement('div');
@@ -2421,29 +2528,41 @@ const ResearchTool = () => {
             ) : historyList.length > 0 ? (
               <div className="space-y-1.5 pr-1">
                 {historyList.map((item) => (
-                  <div 
-                    key={item.websiteId}
-                    onClick={() => handleHistoryItemClick(item)}
-                    className="p-1.5 rounded-lg bg-slate-800/40 hover:bg-slate-800/70 border border-slate-700/30 cursor-pointer transition-all duration-300"
-                  >
-                    <div className="text-xs text-gray-400 font-medium truncate max-w-full">{getDomainFromUrl(item.website)}</div>
-                    <div className="text-[9px] text-gray-500 mt-0.5 truncate">
-                      {formatDateTime(item.generatedStart)}
+                <div 
+                  key={item.websiteId}
+                  className="p-1.5 rounded-lg bg-slate-800/40 hover:bg-slate-800/70 border border-slate-700/30 cursor-pointer transition-all duration-300"
+                  onClick={(e) => handleHistoryItemClick(item, e)}  // 传递 event 参数
+                >
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <div className="text-xs text-gray-400 font-medium truncate max-w-full">{getDomainFromUrl(item.website)}</div>
+                      <div className="text-[9px] text-gray-500 mt-0.5 truncate">
+                        {formatDateTime(item.generatedStart)}
+                      </div>
+                      <div className="flex items-center mt-0.5">
+                        <span className={`text-[8px] px-1 py-0.5 rounded ${
+                          item.generatorStatus === 'processing' 
+                            ? 'bg-blue-900/30 text-blue-400/80' 
+                            : item.generatorStatus === 'finished'
+                            ? 'bg-green-900/30 text-green-400/80'
+                            : 'bg-red-900/30 text-red-400/80'
+                        }`}>
+                          {item.generatorStatus === 'processing' ? 'Processing' : 
+                          item.generatorStatus === 'finished' ? 'Completed' : 'Failed'}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center mt-0.5">
-                      <span className={`text-[8px] px-1 py-0.5 rounded ${
-                        item.generatorStatus === 'processing' 
-                          ? 'bg-blue-900/30 text-blue-400/80' 
-                          : item.generatorStatus === 'finished'
-                          ? 'bg-green-900/30 text-green-400/80'
-                          : 'bg-red-900/30 text-red-400/80'
-                      }`}>
-                        {item.generatorStatus === 'processing' ? 'Processing' : 
-                         item.generatorStatus === 'finished' ? 'Completed' : 'Failed'}
-                      </span>
-                    </div>
+                    <button 
+                      className="delete-btn p-1 text-gray-500 hover:text-red-500 transition-colors"
+                      title="Delete this record"
+                    >
+                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
                   </div>
-                ))}
+                </div>
+              ))}
               </div>
             ) : (
               <div className="text-center py-2 text-gray-500 text-[10px]">
@@ -2937,9 +3056,6 @@ const ResearchTool = () => {
             </div>
             </div>
       )}
-      
-      {/* Add preview modal */}
-      <PreviewModal />
     </ConfigProvider>
   );
 };
