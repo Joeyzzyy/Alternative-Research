@@ -84,6 +84,13 @@ const ResearchTool = () => {
   // 从 UserContext 获取用户信用额度
   const { userCredits, loading: userCreditsLoading } = useUser();
 
+  // Add necessary state variables
+  const [loadingResultIds, setLoadingResultIds] = useState(false);
+  const [activePreviewTab, setActivePreviewTab] = useState(0);
+  const [selectedPreviewUrl, setSelectedPreviewUrl] = useState('');
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+
   const filterMessageTags = (message) => {
     let filteredMessage = message;
     Object.entries(TAG_FILTERS).forEach(([tag, replacement]) => {
@@ -1419,7 +1426,7 @@ const ResearchTool = () => {
     
     // 添加关闭按钮
     const closeButton = document.createElement('button');
-    closeButton.className = 'absolute top-3 right-3 text-gray-400 hover:text-white transition-colors';
+    closeButton.className = 'absolute top-3 right-3 text-gray-400 hover:text-white transition-colors cursor-pointer';
     closeButton.innerHTML = `
       <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -1873,6 +1880,477 @@ const ResearchTool = () => {
     }
   };
 
+  // 添加历史记录状态
+  const [historyList, setHistoryList] = useState([]);
+  const [historyCollapsed, setHistoryCollapsed] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  // 添加获取历史记录的函数
+  const fetchHistoryData = async () => {
+    try {
+      setHistoryLoading(true);
+      // 获取历史记录数据
+      const historyResponse = await apiClient.getAlternativeWebsiteList(1, 200);
+      
+      if (historyResponse?.code === 200 && historyResponse.data) {
+        // 创建一个数组来存储过滤后的历史记录
+        let filteredHistory = [];
+        
+        // 处理每个历史记录项
+        for (const item of historyResponse.data) {
+          // 如果状态不是processing，直接添加到过滤后的列表
+          if (item.generatorStatus !== 'processing') {
+            filteredHistory.push(item);
+            continue;
+          }
+          
+          // 如果状态是processing，检查第三个planning的状态
+          try {
+            const statusResponse = await apiClient.getAlternativeStatus(item.websiteId);
+            if (statusResponse?.code === 200 && statusResponse.data) {
+              const planningStatuses = statusResponse.data;
+              const productComparisonStatus = planningStatuses.find(planning => 
+                planning.planningName === 'PRODUCT_COMPARISON'
+              );
+              
+              // 如果第三个planning不是init状态，添加到过滤后的列表
+              if (!productComparisonStatus || productComparisonStatus.status !== 'init') {
+                filteredHistory.push(item);
+              }
+              // 如果是init状态，则不添加（过滤掉）
+            }
+          } catch (error) {
+            console.error('Error checking planning status:', error);
+            // 如果获取状态失败，仍然添加到列表中
+            filteredHistory.push(item);
+          }
+        }
+        
+        // 按创建时间降序排序
+        filteredHistory.sort((a, b) => new Date(b.generatedStart) - new Date(a.generatedStart));
+        setHistoryList(filteredHistory);
+      } else {
+        console.warn('[DEBUG] Failed to get history data');
+      }
+    } catch (error) {
+      console.error('Error fetching history:', error);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  // 添加加载历史记录的 useEffect
+  useEffect(() => {
+    // 检查用户是否登录
+    const isLoggedIn = localStorage.getItem('alternativelyIsLoggedIn') === 'true';
+    const token = localStorage.getItem('alternativelyAccessToken');
+    
+    if (isLoggedIn && token) {
+      fetchHistoryData();
+    }
+    
+    // 监听登录成功事件
+    const handleLoginSuccess = () => {
+      fetchHistoryData();
+    };
+    
+    window.addEventListener('alternativelyLoginSuccess', handleLoginSuccess);
+    
+    return () => {
+      window.removeEventListener('alternativelyLoginSuccess', handleLoginSuccess);
+    };
+  }, []);
+
+  // 处理历史记录项点击
+  const handleHistoryItemClick = async(item) => {
+    console.log('handleHistoryItemClick', item);
+    if (item.generatorStatus === 'failed') {
+      // 创建自定义弹窗
+      const modalOverlay = document.createElement('div');
+      modalOverlay.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[2000]';
+      
+      const modalContent = document.createElement('div');
+      modalContent.className = 'bg-slate-900 border border-red-500/30 rounded-xl shadow-2xl p-6 max-w-md w-full relative animate-fadeIn';
+      modalContent.innerHTML = `
+        <div class="absolute -inset-0.5 bg-gradient-to-r from-red-500/20 to-rose-500/20 rounded-xl blur opacity-30"></div>
+        <div class="relative">
+          <button class="absolute top-0 right-0 text-gray-400 hover:text-white p-1 rounded-full hover:bg-gray-800/50 transition-colors">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+          
+          <h3 class="text-xl font-bold text-white mb-2">Task Failed</h3>
+          <p class="text-gray-300 mb-6">This task could not be completed successfully. Would you like to restart with the same URL?</p>
+          
+          <div class="flex space-x-3">
+            <button class="cancel-btn flex-1 py-2 px-4 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors">
+              Cancel
+            </button>
+            <button class="restart-btn flex-1 py-2 px-4 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white rounded-lg transition-colors">
+              Restart Task
+            </button>
+          </div>
+        </div>
+      `;
+      
+      document.body.appendChild(modalOverlay);
+      
+      // 添加样式
+      const style = document.createElement('style');
+      style.textContent = `
+        @keyframes fadeIn {
+          from { opacity: 0; transform: scale(0.95); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.2s ease-out forwards;
+        }
+      `;
+      document.head.appendChild(style);
+      
+      // 绑定事件
+      const closeModal = () => {
+        document.body.removeChild(modalOverlay);
+        document.head.removeChild(style);
+      };
+      
+      // 关闭按钮
+      const closeBtn = modalContent.querySelector('button');
+      closeBtn.addEventListener('click', closeModal);
+      
+      // 取消按钮
+      const cancelBtn = modalContent.querySelector('.cancel-btn');
+      cancelBtn.addEventListener('click', closeModal);
+      
+      // 重启按钮
+      const restartBtn = modalContent.querySelector('.restart-btn');
+      restartBtn.addEventListener('click', () => {
+        closeModal();
+        initializeChat(item.website);
+      });
+      
+      // 点击背景关闭
+      modalOverlay.addEventListener('click', (e) => {
+        if (e.target === modalOverlay) {
+          closeModal();
+        }
+      });
+      
+      modalOverlay.appendChild(modalContent);
+      
+      return false;
+    }
+  
+    if (item.generatorStatus === 'finished') {
+      // 创建加载中弹窗
+      const loadingModalOverlay = document.createElement('div');
+      loadingModalOverlay.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[2000]';
+      loadingModalOverlay.id = 'loading-preview-overlay';
+      
+      const loadingModalContent = document.createElement('div');
+      loadingModalContent.className = 'bg-slate-900 border border-blue-500/30 rounded-xl shadow-2xl p-8 max-w-md w-full relative animate-fadeIn text-center';
+      
+      loadingModalContent.innerHTML = `
+        <div class="flex flex-col items-center">
+          <div class="w-12 h-12 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+          <h3 class="text-xl font-bold text-white mb-2">Loading Preview Data</h3>
+          <p class="text-gray-300">Please wait while we fetch your generated results...</p>
+        </div>
+      `;
+      
+      document.body.appendChild(loadingModalOverlay);
+      loadingModalOverlay.appendChild(loadingModalContent);
+      
+      setLoadingResultIds(true);
+
+      if (item.websiteId) {
+        setCurrentWebsiteId(item.websiteId);
+        
+        try {
+          const historyResponse = await apiClient.getAlternativeWebsiteHistory(item.websiteId);
+          
+          // Remove loading modal
+          const loadingOverlay = document.getElementById('loading-preview-overlay');
+          if (loadingOverlay) {
+            document.body.removeChild(loadingOverlay);
+          }
+          
+          if (historyResponse?.code === 200 && historyResponse.data) {
+            const codesResultIds = historyResponse.data
+              .filter(record => record.type === 'Codes' && record.content?.resultId)
+              .map(record => record.content.resultId);
+            
+            if (codesResultIds.length > 0) {
+              setResultIds(codesResultIds);
+              
+              // 创建自定义预览弹窗
+              const modalOverlay = document.createElement('div');
+              modalOverlay.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[2000]';
+              
+              const modalContent = document.createElement('div');
+              modalContent.className = 'bg-slate-900 border border-blue-500/30 rounded-xl shadow-2xl p-6 w-[90%] h-[80vh] relative animate-fadeIn';
+              
+              // 添加标题和关闭按钮
+              modalContent.innerHTML = `
+                <div class="flex justify-between items-center mb-4">
+                  <h3 class="text-xl font-bold text-white">Generated Results</h3>
+                  <button class="text-gray-400 hover:text-white p-1 rounded-full hover:bg-gray-800/50 transition-colors">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                
+                <div class="flex h-[calc(100%-3rem)] gap-4">
+                  <div class="w-1/5 border-r border-slate-700/50 pr-4 overflow-y-auto" id="preview-list">
+                    <!-- Preview list will be added here dynamically -->
+                  </div>
+                  
+                  <div class="w-4/5 pl-4 relative">
+                    <div class="mb-3 flex items-center justify-between">
+                      <h3 class="text-gray-300 text-sm font-medium">Live Preview</h3>
+                      <div class="flex items-center gap-2">
+                        <button id="open-new-window" class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded transition-colors">
+                          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                          </svg>
+                          Open in New Window
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div class="h-[calc(100%-3rem)] bg-white rounded-lg overflow-hidden relative">
+                      <div id="loading-indicator" class="absolute inset-0 bg-slate-900/80 flex items-center justify-center z-10">
+                        <div class="flex flex-col items-center">
+                          <div class="w-10 h-10 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-3"></div>
+                          <p class="text-gray-300">Loading preview...</p>
+                        </div>
+                      </div>
+                      <iframe id="preview-iframe" src="" class="w-full h-full border-0"></iframe>
+                    </div>
+                  </div>
+                </div>
+              `;
+              
+              document.body.appendChild(modalOverlay);
+              modalOverlay.appendChild(modalContent);
+              
+              // 获取DOM元素
+              const closeBtn = modalContent.querySelector('button');
+              const previewList = modalContent.querySelector('#preview-list');
+              const previewIframe = modalContent.querySelector('#preview-iframe');
+              const loadingIndicator = modalContent.querySelector('#loading-indicator');
+              const openNewWindowBtn = modalContent.querySelector('#open-new-window');
+              
+              // 设置初始预览URL
+              const initialPreviewUrl = `https://preview.websitelm.site/en/${codesResultIds[0]}`;
+              previewIframe.src = initialPreviewUrl;
+              
+              // 添加预览列表项
+              codesResultIds.forEach((id, index) => {
+                const listItem = document.createElement('div');
+                listItem.className = `p-3 rounded-lg cursor-pointer transition-all duration-200 ${index === 0 ? 'bg-blue-500/20 border border-blue-500/50' : 'bg-slate-800/50 border border-slate-700/50 hover:bg-slate-700/50'}`;
+                listItem.innerHTML = `
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <div class="w-2 h-2 rounded-full ${index === 0 ? 'bg-blue-400' : 'bg-gray-500'}"></div>
+                      <span class="text-gray-200 font-medium">Preview Version #${index + 1}</span>
+                    </div>
+                    <button class="text-xs text-blue-400 hover:text-blue-300 open-external" data-url="https://preview.websitelm.site/en/${id}">
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div class="mt-1.5 text-xs text-gray-400">
+                    Result ID: ${id.substring(0, 8)}...${id.substring(id.length - 4)}
+                  </div>
+                `;
+                
+                // 点击预览项切换预览
+                listItem.addEventListener('click', (e) => {
+                  if (!e.target.closest('.open-external')) {
+                    // 更新选中状态
+                    previewList.querySelectorAll('div[class^="p-3"]').forEach(item => {
+                      item.className = 'p-3 rounded-lg cursor-pointer transition-all duration-200 bg-slate-800/50 border border-slate-700/50 hover:bg-slate-700/50';
+                      item.querySelector('.w-2').className = 'w-2 h-2 rounded-full bg-gray-500';
+                    });
+                    listItem.className = 'p-3 rounded-lg cursor-pointer transition-all duration-200 bg-blue-500/20 border border-blue-500/50';
+                    listItem.querySelector('.w-2').className = 'w-2 h-2 rounded-full bg-blue-400';
+                    
+                    // 显示加载指示器
+                    loadingIndicator.style.display = 'flex';
+                    
+                    // 更新iframe源
+                    previewIframe.src = `https://preview.websitelm.site/en/${id}`;
+                    
+                    // 更新"在新窗口打开"按钮的URL
+                    openNewWindowBtn.setAttribute('data-url', `https://preview.websitelm.site/en/${id}`);
+                  }
+                });
+                
+                previewList.appendChild(listItem);
+              });
+              
+              // 绑定事件
+              closeBtn.addEventListener('click', () => {
+                document.body.removeChild(modalOverlay);
+              });
+              
+              // 点击背景关闭
+              modalOverlay.addEventListener('click', (e) => {
+                if (e.target === modalOverlay) {
+                  document.body.removeChild(modalOverlay);
+                }
+              });
+              
+              // iframe加载完成后隐藏加载指示器
+              previewIframe.addEventListener('load', () => {
+                loadingIndicator.style.display = 'none';
+              });
+              
+              // 在新窗口打开按钮
+              openNewWindowBtn.addEventListener('click', () => {
+                window.open(previewIframe.src, '_blank');
+              });
+              
+              // 外部链接按钮
+              modalContent.querySelectorAll('.open-external').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                  e.stopPropagation();
+                  window.open(btn.getAttribute('data-url'), '_blank');
+                });
+              });
+              
+              // 更新浏览器标签页
+              const newTabs = codesResultIds.map((id, index) => ({
+                id: `result-${id}`,
+                title: `Result ${index + 1}`,
+                url: `https://preview.websitelm.site/en/${id}`
+              }));
+              
+              setBrowserTabs(newTabs);
+              setActiveTab(`result-${codesResultIds[0]}`);
+              setRightPanelTab('browser');
+            } else {
+              setNotification({
+                show: true,
+                message: 'No preview data available for this task.',
+                type: 'info'
+              });
+            }
+          }
+        } catch (error) {
+          // Remove loading modal in case of error
+          const loadingOverlay = document.getElementById('loading-preview-overlay');
+          if (loadingOverlay) {
+            document.body.removeChild(loadingOverlay);
+          }
+          
+          setNotification({
+            show: true,
+            message: 'Failed to load preview data. Please try again.',
+            type: 'error'
+          });
+        } finally {
+          setLoadingResultIds(false);
+        }
+      }
+      return;
+    }
+  
+    if (item.generatorStatus === 'processing') {
+      try {
+        const statusResponse = await apiClient.getAlternativeStatus(item.websiteId);
+  
+        if (statusResponse?.code === 200 && statusResponse.data) {
+          const planningStatuses = statusResponse.data;
+          const productComparisonStatus = planningStatuses.find(planning => 
+            planning.planningName === 'PRODUCT_COMPARISON'
+          );
+  
+          if (productComparisonStatus && productComparisonStatus.status !== 'init') {
+            // 创建自定义弹窗，参考 header-template.js 中的样式
+            const modalContainer = document.createElement('div');
+            modalContainer.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm';
+            
+            const modalContent = document.createElement('div');
+            modalContent.className = 'bg-slate-800 rounded-lg shadow-xl p-6 max-w-sm w-full border border-slate-700 animate-fadeIn';
+            
+            const title = document.createElement('h3');
+            title.className = 'text-xl font-semibold text-white mb-4';
+            title.textContent = 'Task In Progress';
+            
+            const description = document.createElement('p');
+            description.className = 'text-gray-300 mb-3';
+            description.textContent = 'You already have a product comparison task in progress. Please wait for it to complete before starting a new one.';
+            
+            const emailNote = document.createElement('p');
+            emailNote.className = 'text-gray-400 text-sm mb-6';
+            emailNote.textContent = 'You will receive an email notification when your current task is complete.';
+            
+            const buttonContainer = document.createElement('div');
+            buttonContainer.className = 'flex justify-end';
+            
+            const closeButton = document.createElement('button');
+            closeButton.className = 'px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 transition-colors';
+            closeButton.textContent = 'Got it';
+            closeButton.onclick = () => {
+              document.body.removeChild(modalContainer);
+            };
+            
+            buttonContainer.appendChild(closeButton);
+            modalContent.appendChild(title);
+            modalContent.appendChild(description);
+            modalContent.appendChild(emailNote);
+            modalContent.appendChild(buttonContainer);
+            modalContainer.appendChild(modalContent);
+            
+            document.body.appendChild(modalContainer);
+            return;
+          }
+
+        }
+      } catch (error) {
+        console.error('Failed to fetch task status:', error);
+        setNotification({
+          show: true,
+          message: 'Failed to check task status. Please try again.',
+          type: 'error'
+        });
+      }
+    }
+  };
+
+  // 格式化日期时间
+  const formatDateTime = (dateString) => {
+    if (!dateString) return 'N/A';
+    
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleString();
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid date';
+    }
+  };
+
+  // 获取网站域名
+  const getDomainFromUrl = (url) => {
+    if (!url) return 'Unnamed Site';
+    
+    try {
+      // 移除协议前缀
+      let domain = url.replace(/^https?:\/\//, '');
+      // 移除路径和查询参数
+      domain = domain.split('/')[0];
+      return domain;
+    } catch (error) {
+      return url;
+    }
+  };
+
   if (initialLoading) {
     return (
       <div className="w-full min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 
@@ -1897,24 +2375,110 @@ const ResearchTool = () => {
 
   if (showInitialScreen) {
     return (
-      <div className={`w-full h-screen flex items-center justify-center relative bg-cover bg-center bg-no-repeat`} // 移除 getBackgroundClass()
+      <div className={`w-full h-screen flex items-center justify-center relative bg-cover bg-center bg-no-repeat`} // 保留原有布局
            style={getBackgroundStyle()}>
         {/* Inject contextHolder */}
         {contextHolder}
 
-        {/* 移除原 DEFAULT 模式的特效 */}
-        {/* {currentBackground === 'NIGHT_GHIBLI' && ( ... )} */}
-
         {/* 覆盖层 */}
         <div className={`absolute inset-0 ${getOverlayClass()}`}></div>
 
-        {/* Ensure content is above the effects */}
+        {/* 添加历史记录侧边栏 - 绝对定位，不影响现有布局 */}
+        <div className={`fixed left-0 top-0 bottom-0 w-72 bg-slate-900/80 backdrop-blur-sm border-r border-slate-700/50 z-10 overflow-y-auto pt-20 transition-all duration-300 ${historyCollapsed ? '-translate-x-64' : 'translate-x-0'}`}>
+          <div className="p-4 relative">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-white text-lg font-medium">History</h3>
+              <button 
+                onClick={() => setHistoryCollapsed(!historyCollapsed)}
+                className="absolute -right-4 top-4 bg-slate-800 border border-slate-700 rounded-full p-1.5 text-gray-400 hover:text-white transition-colors"
+              >
+                {historyCollapsed ? (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                  </svg>
+                )}
+              </button>
+            </div>
+            
+            <button 
+              onClick={fetchHistoryData}
+              className="w-full py-2 mb-4 text-xs text-gray-300 hover:text-white bg-slate-800/50 hover:bg-slate-800 rounded-lg transition-colors flex items-center justify-center"
+            >
+              <svg className="w-3.5 h-3.5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Refresh History
+            </button>
+            
+            {historyLoading ? (
+              <div className="flex justify-center py-4">
+                <Spin size="small" />
+              </div>
+            ) : historyList.length > 0 ? (
+              <div className="space-y-3">
+                {historyList.map((item) => (
+                  <div 
+                    key={item.websiteId}
+                    onClick={() => handleHistoryItemClick(item)}
+                    className="p-3 rounded-lg bg-slate-800/70 hover:bg-slate-800/90 border border-slate-700/50 cursor-pointer transition-all duration-300"
+                  >
+                    <div className="text-sm text-white font-medium truncate">{getDomainFromUrl(item.website)}</div>
+                    <div className="text-xs text-gray-400 mt-1">
+                      {formatDateTime(item.generatedStart)}
+                    </div>
+                    <div className="flex items-center mt-1.5">
+                      <span className={`text-xs px-1.5 py-0.5 rounded ${
+                        item.generatorStatus === 'processing' 
+                          ? 'bg-blue-900/50 text-blue-300' 
+                          : item.generatorStatus === 'finished'
+                          ? 'bg-green-900/50 text-green-300'
+                          : 'bg-red-900/50 text-red-300'
+                      }`}>
+                        {item.generatorStatus === 'processing' ? 'Processing' : 
+                         item.generatorStatus === 'finished' ? 'Completed' : 'Failed'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4 text-gray-400 text-sm">
+                No history records found
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 添加折叠状态下的小标签 */}
+        {historyCollapsed && (
+          <div 
+            onClick={() => setHistoryCollapsed(false)}
+            className="fixed left-0 top-1/2 transform -translate-y-1/2 bg-slate-800 text-white py-3 px-2 rounded-r-lg cursor-pointer z-20 border-t border-r border-b border-slate-700/50"
+          >
+            <div className="vertical-text text-xs font-medium">History</div>
+          </div>
+        )}
+
+        {/* 添加垂直文本样式 */}
+        <style jsx>{`
+          .vertical-text {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            transform: rotate(180deg);
+          }
+        `}</style>
+
+        {/* Ensure content is above the effects - 保持原有布局不变 */}
         <div className={`relative z-10 w-full max-w-4xl px-8 py-12 initial-screen-content rounded-xl bg-transparent`}> {/* 移除背景和模糊 */}
           <div className={`text-center mb-8 text-shadow`}> {/* 应用 text-shadow */}
             <h1 className={`text-4xl font-bold ${currentBackground === 'DAY_GHIBLI' ? 'text-amber-100' : 'text-white'} mb-6 drop-shadow-lg`}> {/* 应用 drop-shadow */}
               Welcome to <span className={currentBackground === 'DAY_GHIBLI' ? 'text-amber-400' : 'text-blue-400'}>Alternatively</span>
 
-              <button
+              <button 
                 onClick={toggleBackground}
                 className={`ml-4 inline-flex items-center px-3 py-1.5 text-xs ${getButtonStyle()} rounded-full
                          backdrop-blur-sm transition-all gap-1.5 border
@@ -1931,7 +2495,7 @@ const ResearchTool = () => {
               Which product would you like to analyze and create an SEO-friendly Alternatively page for?
             </p>
           </div>
-
+          
           <div className="relative max-w-3xl mx-auto">
             <form onSubmit={(e) => {
               // ... (form submission logic remains the same) ...
@@ -1948,16 +2512,16 @@ const ResearchTool = () => {
                 setValidationError('Please enter a valid domain (e.g., example.com)');
                 return;
               }
-
+              
               setValidationError('');
               const formattedInput = userInput.trim().startsWith('http') ? userInput.trim() : `https://${userInput.trim()}`;
               initializeChat(formattedInput);
             }}>
-              <div className="relative">
+                <div className="relative">
                 <Input
                   placeholder="Enter product website URL (e.g., example.com)"
                   value={userInput}
-                  onChange={(e) => {
+                    onChange={(e) => {
                     setUserInput(e.target.value);
                     if (validationError) setValidationError('');
                   }}
@@ -1979,9 +2543,9 @@ const ResearchTool = () => {
                   }
                   status={validationError ? "error" : ""}
                 />
-              </div>
-              <button
-                type="submit"
+                </div>
+                <button
+                  type="submit"
                 // 根据主题设置按钮样式
                 className={`absolute right-2 top-1/2 transform -translate-y-1/2 z-10 px-6 py-4 text-base
                          ${currentBackground === 'DAY_GHIBLI'
@@ -2148,12 +2712,12 @@ const ResearchTool = () => {
                 <div className="flex items-center justify-center h-full">
                   <Spin size="large" />
                 </div>
-              ) : (
-                <>
+                  ) : (
+                    <>
                   {messages.map((message, index) => renderChatMessage(message, index))}
                   <div ref={chatEndRef} />
-                </>
-              )}
+                    </>
+                  )}
             </div>
 
             <div className="p-4 border-t border-gray-300/20 flex-shrink-0">
@@ -2223,16 +2787,16 @@ const ResearchTool = () => {
                     }`}
                   >
                     Browser
-                  </button>
-                </div>
+                </button>
+              </div>
                 <div className="flex items-center text-xs">
                   <div className={`w-2 h-2 rounded-full mr-2 ${
                     sseConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
                   }`}></div>
                   <span>Log Server {sseConnected ? 'Connected' : 'Disconnected'}</span>
-                </div>
-              </div>
-            </div>
+          </div>
+        </div>
+      </div>
 
             <div className="flex-1 overflow-y-auto">
               {rightPanelTab === 'details' && renderDetails(detailsData)}
@@ -2288,8 +2852,8 @@ const ResearchTool = () => {
                                 />
                               </svg>
                             </button>
-                          </div>
-
+      </div>
+      
                           {/* iframe 预览区域 */}
                           <div className="bg-white rounded-lg overflow-hidden">
                             <iframe
@@ -2348,19 +2912,19 @@ const ResearchTool = () => {
           <div className="flex items-center">
             {notification.type === 'success' && (
               <svg className="w-6 h-6 mr-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
             )}
             {notification.type === 'error' && (
               <svg className="w-6 h-6 mr-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+                </svg>
             )}
             {notification.type === 'info' && (
               <svg className="w-6 h-6 mr-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            )}
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              )}
             <p className="text-white font-medium">{notification.message}</p>
             <button 
               onClick={() => setNotification(prev => ({ ...prev, show: false }))}
@@ -2370,9 +2934,12 @@ const ResearchTool = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-          </div>
-        </div>
+            </div>
+            </div>
       )}
+      
+      {/* Add preview modal */}
+      <PreviewModal />
     </ConfigProvider>
   );
 };

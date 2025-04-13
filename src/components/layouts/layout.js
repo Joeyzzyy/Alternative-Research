@@ -19,7 +19,6 @@ const COMPONENT_MAP = {
   Faqs: FAQ,
   CallToAction: CallToAction,
   ResearchTool: ResearchTool,
-  TaskRestoreTool: TaskRestoreTool,
   SubscriptionCard: SubscriptionCard,
   AIModelShowcase: AIModelShowcase,
   FeatureIntro: FeatureIntro,

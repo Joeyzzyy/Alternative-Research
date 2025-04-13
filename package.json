@@ -22,8 +22,8 @@
     "next-intl": "^3.25.3",
     "next-sitemap": "^4.2.3",
     "prop-types": "^15.8.1",
-    "react": "^18",
-    "react-dom": "^18",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "react-icons": "^5.5.0",
     "react-syntax-highlighter": "^15.6.1",
     "typewriter-effect": "^2.21.0"
