@@ -5,7 +5,6 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import apiClient from '../../lib/api/index.js';
 import { Dropdown, Modal, Button, Spin, Menu, Pagination } from 'antd';
-import { HistoryOutlined } from '@ant-design/icons';
 import { useUser } from '../../contexts/UserContext';
 import { useToolContext } from '../../contexts/ToolContext';
 
@@ -45,46 +44,6 @@ const animationStyles = `
   }
   .result-ids-modal .ant-modal-wrap {
     z-index: 1500;
-  }
-  
-  /* 改进历史记录下拉菜单样式 */
-  .history-dropdown .ant-dropdown-menu {
-    background: rgba(15, 23, 42, 0.95) !important;
-    backdrop-filter: blur(12px) !important;
-    border: 1px solid rgba(99, 102, 241, 0.3) !important;
-    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
-  }
-  
-  .history-dropdown .ant-dropdown-menu-item {
-    color: rgba(255, 255, 255, 0.9) !important;
-  }
-  
-  .history-dropdown .ant-dropdown-menu-item:hover {
-    background: rgba(99, 102, 241, 0.2) !important;
-  }
-  
-  /* 改进分页器样式 */
-  .history-pagination .ant-pagination-item {
-    background: rgba(30, 41, 59, 0.8) !important;
-    border-color: rgba(99, 102, 241, 0.3) !important;
-  }
-  
-  .history-pagination .ant-pagination-item a {
-    color: rgba(255, 255, 255, 0.8) !important;
-  }
-  
-  .history-pagination .ant-pagination-item-active {
-    background: rgba(99, 102, 241, 0.5) !important;
-    border-color: rgba(99, 102, 241, 0.8) !important;
-  }
-  
-  .history-pagination .ant-pagination-item-active a {
-    color: white !important;
-  }
-  
-  .history-pagination .ant-pagination-prev button,
-  .history-pagination .ant-pagination-next button {
-    color: rgba(255, 255, 255, 0.8) !important;
   }
 
   /* 添加构建中弹窗样式 */
@@ -143,8 +102,6 @@ export default function Header() {
     type: 'success' // 'success', 'error', 'info'
   });
   const [showCreditsTooltip, setShowCreditsTooltip] = useState(false);
-  const [historyList, setHistoryList] = useState([]);
-  const [loadingHistory, setLoadingHistory] = useState(false);
   const [showResultIdsModal, setShowResultIdsModal] = useState(false);
   const [resultIds, setResultIds] = useState([]);
   const [selectedPreviewUrl, setSelectedPreviewUrl] = useState('');
@@ -153,11 +110,6 @@ export default function Header() {
   const [loadingResultIds, setLoadingResultIds] = useState(false);
   const [currentWebsiteId, setCurrentWebsiteId] = useState(null);
   const { currentTool, setCurrentTool } = useToolContext();
-  const [historyPagination, setHistoryPagination] = useState({
-    current: 1,
-    pageSize: 10,
-    total: 0
-  });
   const [loading, setLoading] = useState(false);
   const initialLoadRef = useRef(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -311,200 +263,6 @@ export default function Header() {
     }
   }, [isLoggedIn]);
 
-  // 使用 useCallback 包裹 fetchHistoryList
-  const fetchHistoryList = useCallback(async (page = 1, pageSize = 200) => {
-    if (!isLoggedIn) return;
-    
-    console.log(`Fetching history: page=${page}, pageSize=${pageSize}`);
-    setLoadingHistory(true);
-    
-    try {
-      const response = await apiClient.getAlternativeWebsiteList(page, pageSize);
-      console.log('History response:', response);
-      
-      if (response?.code === 200) {
-        const historyData = response.data || [];
-        
-        // 创建一个数组来存储过滤后的历史记录
-        let filteredHistory = [];
-        
-        // 处理每个历史记录项
-        for (const item of historyData) {
-          // 如果状态不是processing，直接添加到过滤后的列表
-          if (item.generatorStatus !== 'processing') {
-            filteredHistory.push({
-              websiteId: item.websiteId,
-              domain: item.website || 'Unknown website',
-              createdAt: item.generatedStart || new Date().toISOString(),
-              status: item.generatorStatus || 'unknown',
-            });
-            continue;
-          }
-          
-          // 如果状态是processing，检查第三个planning的状态
-          try {
-            const statusResponse = await apiClient.getAlternativeStatus(item.websiteId);
-            if (statusResponse?.code === 200 && statusResponse.data) {
-              const planningStatuses = statusResponse.data;
-              const productComparisonStatus = planningStatuses.find(planning => 
-                planning.planningName === 'PRODUCT_COMPARISON'
-              );
-              
-              // 如果第三个planning不是init状态，添加到过滤后的列表
-              if (!productComparisonStatus || productComparisonStatus.status !== 'init') {
-                filteredHistory.push({
-                  websiteId: item.websiteId,
-                  domain: item.website || 'Unknown website',
-                  createdAt: item.generatedStart || new Date().toISOString(),
-                  status: item.generatorStatus || 'unknown',
-                });
-              }
-              // 如果是init状态，则不添加（过滤掉）
-            }
-          } catch (error) {
-            console.error('Error checking planning status:', error);
-            // 如果获取状态失败，仍然添加到列表中
-            filteredHistory.push({
-              websiteId: item.websiteId,
-              domain: item.website || 'Unknown website',
-              createdAt: item.generatedStart || new Date().toISOString(),
-              status: item.generatorStatus || 'unknown',
-            });
-          }
-        }
-        
-        // 按创建时间降序排序
-        filteredHistory.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        setHistoryList(filteredHistory);
-        
-        // 更新分页信息（虽然不再使用分页，但保留这个状态以避免其他地方出错）
-        setHistoryPagination({
-          current: 1,
-          pageSize: 200,
-          total: filteredHistory.length
-        });
-        
-        console.log('Filtered history:', filteredHistory);
-      } else {
-        // 只有当 code 不是 200 时才显示错误
-        showNotification('Failed to load history', 'error');
-      }
-    } catch (error) {
-      console.error('Error fetching history:', error);
-      showNotification('Error loading history', 'error');
-    } finally {
-      setLoadingHistory(false);
-    }
-  }, [isLoggedIn, showNotification]);
-
-  // 修改 useEffect
-  useEffect(() => {
-    if (isLoggedIn && !initialLoadRef.current) {
-      console.log('Initial history load triggered');
-      initialLoadRef.current = true;
-      fetchHistoryList();
-    }
-  }, [isLoggedIn, fetchHistoryList]);
-
-  // Handle history record click
-  const handleHistoryItemClick = async (item) => {
-    if (item.status === 'failed') {
-      setNotification({
-        show: true,
-        message: 'Task failed, unable to view details.',
-        type: 'error'
-      });
-      return false;
-    }
-
-    if (item.status === 'finished') {
-      setLoadingResultIds(true);
-
-      if (item.websiteId) {
-        setCurrentWebsiteId(item.websiteId);
-        
-        try {
-          const historyResponse = await apiClient.getAlternativeWebsiteHistory(item.websiteId);
-          
-          if (historyResponse?.code === 200 && historyResponse.data) {
-            const codesResultIds = historyResponse.data
-              .filter(record => record.type === 'Codes' && record.content?.resultId)
-              .map(record => record.content.resultId);
-            
-            if (codesResultIds.length > 0) {
-              setResultIds(codesResultIds);
-              if (codesResultIds[0]) {
-                setSelectedPreviewUrl(`https://preview.websitelm.site/en/${codesResultIds[0]}`);
-                setActivePreviewTab(0);
-              }
-              setTimeout(() => {
-                setShowResultIdsModal(true);
-              }, 0);
-            } else {
-              setNotification({
-                show: true,
-                message: 'No preview data available for this task.',
-                type: 'info'
-              });
-            }
-          }
-        } catch (error) {
-          setNotification({
-            show: true,
-            message: 'Failed to load preview data. Please try again.',
-            type: 'error'
-          });
-        } finally {
-          setLoadingResultIds(false);
-        }
-      }
-      return;
-    }
-
-    if (item.status === 'processing') {
-      try {
-        const statusResponse = await apiClient.getAlternativeStatus(item.websiteId);
-
-        if (statusResponse?.code === 200 && statusResponse.data) {
-          const planningStatuses = statusResponse.data;
-          const productComparisonStatus = planningStatuses.find(planning => planning.planningName === 'PRODUCT_COMPARISON');
-
-          if (productComparisonStatus && productComparisonStatus.status !== 'init') {
-            // Show custom construction modal instead of using Modal.info
-            console.log('Showing construction modal');
-            setShowConstructionModal(true);
-            return;
-          }
-
-          if (productComparisonStatus && productComparisonStatus.status === 'init') {
-            // Store new websiteId
-            localStorage.setItem('restoreWebsiteId', item.websiteId);
-            
-            // If current tool is already restore, trigger a custom event to notify restore window to switch
-            if (currentTool === 'restore') {
-              const switchEvent = new CustomEvent('switchRestoreWindow', { 
-                detail: { websiteId: item.websiteId } 
-              });
-              window.dispatchEvent(switchEvent);
-              
-              showNotification('Switching to selected chat window...', 'info');
-            } else {
-              // If not in restore window, switch to restore tool
-              setCurrentTool('restore');
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Failed to fetch task status:', error);
-        setNotification({
-          show: true,
-          message: 'Failed to check task status. Please try again.',
-          type: 'error'
-        });
-      }
-    }
-  };
-
   // 处理预览选择
   const handlePreviewSelect = (resultId, index) => {
     setIsPreviewLoading(true);
@@ -582,130 +340,6 @@ export default function Header() {
     setNotification(prev => ({...prev, show: false}));
   };
 
-  // 修改 historyMenu
-  const historyMenu = {
-    items: [
-      // Loading state
-      loadingResultIds && {
-        key: 'loading',
-        label: (
-          <div className="flex flex-col items-center justify-center py-6 space-y-3">
-            <div className="w-8 h-8 rounded-full border-2 border-blue-500 border-t-transparent animate-spin"></div>
-            <div className="text-center">
-              <p className="text-sm font-medium text-gray-300">Loading Preview Data</p>
-              <p className="text-xs text-gray-400 mt-1">Please wait while we prepare your preview...</p>
-            </div>
-          </div>
-        ),
-        disabled: true,
-      },
-      // History header with refresh button
-      !loadingResultIds && {
-        key: 'history-header',
-        label: (
-          <div className="flex items-center justify-between py-2 px-3 border-b border-slate-700/50 mb-2">
-            <span className="text-sm font-medium text-gray-300">Recent Tasks</span>
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                fetchHistoryList();
-                showNotification('Refreshing history...', 'info');
-              }}
-              className="p-1.5 rounded-full bg-slate-700/50 hover:bg-slate-600/50 text-gray-400 hover:text-gray-200 transition-all duration-200"
-              title="Refresh history"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-            </button>
-          </div>
-        ),
-      },
-      // 如果历史记录为空，显示"No data available"
-      !loadingResultIds && historyList.length === 0 && {
-        key: 'no-data',
-        label: (
-          <div className="flex items-center justify-center py-6 space-y-3" style={{ minWidth: '320px', minHeight: '200px', padding: '0 20px' }}>
-            <div className="text-center">
-              <div className="flex justify-center mb-4">
-                <svg className="w-16 h-16 text-blue-400/30" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <p className="text-base font-medium text-white mb-2">No task history yet</p>
-              <p className="text-sm text-blue-300">Your completed tasks will appear here</p>
-              <p className="text-xs text-gray-400 mt-3 max-w-xs">Generate your first alternative page to see results</p>
-            </div>
-          </div>
-        ),
-        disabled: true,
-      },
-      // All history items
-      ...historyList.map(item => ({
-        key: item.websiteId,
-        label: (
-          <div className="flex items-center justify-between py-3 px-3 hover:bg-slate-700/50 rounded-md transition-colors mb-1.5 border border-transparent hover:border-slate-600/50">
-            <div className="flex items-center max-w-[220px]">
-              <div className="flex-shrink-0 mr-3">
-                {item.status === 'finished' ? (
-                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
-                    <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    Completed
-                  </span>
-                ) : item.status === 'failed' ? (
-                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800">
-                    <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                    Failed
-                  </span>
-                ) : item.status === 'processing' ? (
-                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
-                    <svg className="w-3 h-3 mr-1 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    In Progress
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
-                    <svg className="w-3 h-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    {item.status || 'Unknown'}
-                  </span>
-                )}
-              </div>
-              <div className="flex flex-col">
-                <span className="truncate text-sm text-gray-200 font-medium">{item.domain}</span>
-                <span className="text-xs text-gray-400 mt-0.5">{new Date(item.createdAt).toLocaleDateString()} {new Date(item.createdAt).toLocaleTimeString()}</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {item.status === 'finished' && (
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleHistoryItemClick(item);
-                  }}
-                  className="p-1.5 rounded bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 hover:text-blue-300 transition-all"
-                  title="View Preview"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                </button>
-              )}
-            </div>
-          </div>
-        ),
-        onClick: () => handleHistoryItemClick(item),
-      })),
-    ].filter(Boolean), // Remove null/undefined items
-  };
-
   // Handle regular login button click
   const handleRegularLoginClick = () => {
     setShowLoginModal(true);
@@ -754,28 +388,6 @@ export default function Header() {
       }
     }
   ];
-
-  // 在恢复窗口组件中
-  useEffect(() => {
-    const handleSwitchWindow = (event) => {
-      const { websiteId } = event.detail;
-      // 不直接调用 loadRestoreData，而是更新 localStorage
-      localStorage.setItem('restoreWebsiteId', websiteId);
-      
-      // 可能需要触发一个页面刷新或其他机制来重新加载恢复窗口
-      // 例如，可以触发一个新的自定义事件，让恢复窗口组件知道需要重新加载数据
-      const reloadEvent = new CustomEvent('reloadRestoreWindow');
-      window.dispatchEvent(reloadEvent);
-      
-      showNotification('Switching to selected chat window...', 'info');
-    };
-
-    window.addEventListener('switchRestoreWindow', handleSwitchWindow);
-    
-    return () => {
-      window.removeEventListener('switchRestoreWindow', handleSwitchWindow);
-    };
-  }, [showNotification]);
 
   // Handle login success callback
   const handleLoginSuccess = (userData) => {
@@ -998,30 +610,6 @@ export default function Header() {
                       </div>
                     )}
                   </div>
-
-                  {/* 历史记录按钮 - 更新样式 */}
-                  <Dropdown 
-                    menu={historyMenu}
-                    trigger={['click']} 
-                    placement="bottomRight"
-                    overlayClassName="history-dropdown"
-                    onOpenChange={(open) => {
-                      if (open) {
-                        // 当打开下拉菜单时刷新历史记录
-                        fetchHistoryList();
-                      }
-                      if (!open && loadingResultIds) {
-                        return false; // 如果正在加载，阻止 Dropdown 关闭
-                      }
-                      return true; // 否则允许 Dropdown 关闭
-                    }}
-                    open={loadingResultIds ? true : undefined} // 如果正在加载，保持 Dropdown 打开
-                  >
-                    <button className="px-4 py-2.5 text-sm bg-gradient-to-r from-blue-500/20 to-purple-500/20 hover:from-blue-500/30 hover:to-purple-500/30 text-blue-300 border border-blue-500/30 rounded-full backdrop-blur-sm transition-all flex items-center gap-2 shadow-lg hover:shadow-blue-500/10 hover:-translate-y-0.5 duration-300">
-                      <HistoryOutlined style={{ fontSize: '16px' }} />
-                      <span className="font-medium">History</span>
-                    </button>
-                  </Dropdown>
 
                   {/* 登出按钮 */}
                   <button
@@ -1365,51 +953,6 @@ export default function Header() {
         
         .active-preview {
           animation: pulse-border 2s infinite;
-        }
-        
-        /* 添加历史记录下拉菜单的样式 */
-        .ant-dropdown .ant-dropdown-menu {
-          max-height: 500px;
-          overflow-y: auto;
-          background-color: rgba(15, 23, 42, 0.95) !important;
-          border: 1px solid rgba(99, 102, 241, 0.3) !important;
-          backdrop-filter: blur(12px) !important;
-          padding: 12px;
-          min-width: 360px;
-          box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
-          border-radius: 12px;
-        }
-        
-        .ant-dropdown .ant-dropdown-menu::-webkit-scrollbar {
-          width: 6px;
-        }
-        
-        .ant-dropdown .ant-dropdown-menu::-webkit-scrollbar-track {
-          background: rgba(15, 23, 42, 0.3);
-          border-radius: 10px;
-        }
-        
-        .ant-dropdown .ant-dropdown-menu::-webkit-scrollbar-thumb {
-          background-color: rgba(99, 102, 241, 0.4);
-          border-radius: 10px;
-        }
-        
-        .ant-dropdown .ant-dropdown-menu::-webkit-scrollbar-thumb:hover {
-          background-color: rgba(99, 102, 241, 0.6);
-        }
-        
-        .ant-dropdown-menu-item {
-          padding: 0 !important;
-          margin: 0 !important;
-          background: transparent !important;
-        }
-        
-        .ant-dropdown-menu-item:hover {
-          background: transparent !important;
-        }
-        
-        .ant-dropdown-menu-item-active {
-          background: transparent !important;
         }
       `}</style>
     </>
