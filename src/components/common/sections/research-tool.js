@@ -90,6 +90,7 @@ const ResearchTool = () => {
   const [selectedPreviewUrl, setSelectedPreviewUrl] = useState('');
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [isProcessingTask, setIsProcessingTask] = useState(false);
 
   const filterMessageTags = (message) => {
     let filteredMessage = message;
@@ -909,6 +910,9 @@ const ResearchTool = () => {
   const [showConstructionModal, setShowConstructionModal] = useState(false);
   const initializeChat = async (userInput) => {
     try {
+      // 设置处理状态为 true，禁用按钮
+      setIsProcessingTask(true);
+      
       // Check if user is logged in
       const isLoggedIn = localStorage.getItem('alternativelyIsLoggedIn') === 'true';
       const token = localStorage.getItem('alternativelyAccessToken');
@@ -923,6 +927,7 @@ const ResearchTool = () => {
         // Create and dispatch custom event to notify header-template to show login modal
         const showLoginEvent = new CustomEvent('showAlternativelyLoginModal');
         window.dispatchEvent(showLoginEvent);
+        setIsProcessingTask(false); // 重置处理状态
         return;
       }
       
@@ -944,6 +949,7 @@ const ResearchTool = () => {
           // If credit is 0, show subscription modal
           if (availableCredits <= 0) {
             showSubscriptionModal();
+            setIsProcessingTask(false); // 重置处理状态
             return;
           }
         } else {
@@ -1151,6 +1157,7 @@ const ResearchTool = () => {
       messageHandler.handleErrorMessage(error, thinkingMessageId);
     } finally {
       setLoading(false);
+      setIsProcessingTask(false); // 重置处理状态
     }
   };
 
@@ -1962,7 +1969,7 @@ const ResearchTool = () => {
   }, []);
 
   // 处理历史记录项点击
-  const handleHistoryItemClick = async(item, event) => {  // 添加 event 参数
+  const handleHistoryItemClick = async(item, event) =>  {  // 添加 event 参数
     // 添加删除按钮点击处理
     if (event.target.closest('.delete-btn')) {  // 使用 closest 来确保点击的是删除按钮
       event.stopPropagation();  // 阻止事件冒泡
@@ -2676,11 +2683,22 @@ const ResearchTool = () => {
                          after:content-[''] after:absolute after:inset-0 after:bg-gradient-to-r
                          after:from-transparent after:via-white/20 after:to-transparent
                          after:translate-x-[-200%] hover:after:translate-x-[200%] after:transition-all after:duration-1000
-                         after:rounded-xl overflow-hidden`}
+                         after:rounded-xl overflow-hidden
+                         ${isProcessingTask ? 'opacity-70 cursor-not-allowed hover:scale-100' : ''}`}
                 style={{ height: '64px' }}
+                disabled={!userInput.trim() || isProcessingTask}
               >
-                <ArrowRightOutlined className="w-6 h-6" />
-                <span className="relative z-10">Analyze Now</span>
+                {isProcessingTask ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span className="relative z-10">Processing...</span>
+                  </>
+                ) : (
+                  <>
+                    <ArrowRightOutlined className="w-6 h-6" />
+                    <span className="relative z-10">Analyze Now</span>
+                  </>
+                )}
               </button>
             </form>
           </div>
@@ -2844,7 +2862,6 @@ const ResearchTool = () => {
                 <div className="relative">
                   <Input
                     ref={inputRef}
-                    placeholder="Enter your product URL (e.g., example.com)"
                     value={userInput}
                     onChange={(e) => setUserInput(e.target.value)}
                     disabled={loading || isMessageSending || inputDisabledDueToUrlGet}
