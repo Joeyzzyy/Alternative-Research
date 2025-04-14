@@ -84,7 +84,7 @@ const SubscriptionCard = () => {
       <div className="max-w-7xl mx-auto px-4 relative z-10">
         <div className="text-center">
           {displayData.title && (
-            <h2 className="text-4xl sm:text-5xl font-bold mb-6 text-white leading-tight">
+            <h2 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-6 bg-gradient-to-r from-cyan-400 to-purple-500 text-transparent bg-clip-text">
               {displayData.title}
             </h2>
           )}

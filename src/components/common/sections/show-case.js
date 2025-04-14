@@ -10,7 +10,7 @@ const CustomizableResearchUI = () => {
       
       <div className="max-w-7xl mx-auto px-4 relative z-10">
         <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold text-white mb-6">
+          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-6 bg-gradient-to-r from-cyan-400 to-purple-500 text-transparent bg-clip-text">
             Our Customers See Real Results
           </h2>
           <p className="text-gray-300 max-w-3xl mx-auto">
@@ -58,22 +58,38 @@ const CustomizableResearchUI = () => {
           </div>
           
           <div className="flex justify-center">
-            <img 
-              src="https://websitelm-us-east-2.s3.amazonaws.com/67a9fabf538eb88a2247b5be/2025-03-12/tiydfa70c1_Untitled (9) (1).png"
-              alt="HIX success case study" 
-              className="w-full rounded-lg shadow-2xl shadow-slate-900/70 border border-slate-800/50 transform scale-110 origin-center"
-            />  
+            <div className="aspect-w-16 aspect-h-9 w-full rounded-lg shadow-2xl shadow-slate-900/70 border border-slate-800/50 bg-slate-800 flex flex-col p-4 overflow-hidden">
+              <div className="flex items-center space-x-1.5 mb-3">
+                <div className="w-3 h-3 rounded-full bg-red-500/70"></div>
+                <div className="w-3 h-3 rounded-full bg-yellow-500/70"></div>
+                <div className="w-3 h-3 rounded-full bg-green-500/70"></div>
+              </div>
+              <div className="flex-grow bg-slate-700 rounded p-3 space-y-2">
+                <div className="h-4 bg-slate-600 rounded w-3/4"></div>
+                <div className="h-3 bg-slate-600/80 rounded w-full"></div>
+                <div className="h-3 bg-slate-600/80 rounded w-5/6"></div>
+                <div className="h-3 bg-slate-600/80 rounded w-1/2"></div>
+              </div>
+            </div>
           </div>
         </div>
         
         {/* Case Study 2: Joggai - Right Text, Left Image */}
         <div className="grid md:grid-cols-2 gap-16 items-center mb-24" id="showcase-joggai">
           <div className="flex justify-center order-2 md:order-1">
-            <img 
-              src="https://websitelm-us-east-2.s3.amazonaws.com/67a9fabf538eb88a2247b5be/2025-03-10/33kf353c26_ai detector, caricature, detectorist, detector, beach scene, coloured, sunny, sunglasses.jpeg"
-              alt="Joggai success case study" 
-              className="w-full rounded-lg shadow-2xl shadow-slate-900/70 border border-slate-800/50 transform scale-110 origin-center"
-            />  
+            <div className="aspect-w-16 aspect-h-9 w-full rounded-lg shadow-2xl shadow-slate-900/70 border border-slate-800/50 bg-slate-800 flex flex-col p-4 overflow-hidden">
+              <div className="flex items-center space-x-1.5 mb-3">
+                <div className="w-3 h-3 rounded-full bg-red-500/70"></div>
+                <div className="w-3 h-3 rounded-full bg-yellow-500/70"></div>
+                <div className="w-3 h-3 rounded-full bg-green-500/70"></div>
+              </div>
+              <div className="flex-grow bg-slate-700 rounded p-3 space-y-2">
+                <div className="h-4 bg-purple-500/30 rounded w-1/2"></div>
+                <div className="h-3 bg-slate-600/80 rounded w-full"></div>
+                <div className="h-3 bg-slate-600/80 rounded w-full"></div>
+                <div className="h-3 bg-slate-600/80 rounded w-3/4"></div>
+              </div>
+            </div>
           </div>
           
           <div className="py-12 space-y-8 order-1 md:order-2">
@@ -154,11 +170,19 @@ const CustomizableResearchUI = () => {
           </div>
           
           <div className="flex justify-center">
-            <img 
-              src="https://websitelm-us-east-2.s3.amazonaws.com/67a9fabf538eb88a2247b5be/2025-03-12/tiydfa70c1_Untitled (9) (1).png"
-              alt="JTracking success case study" 
-              className="w-full rounded-lg shadow-2xl shadow-slate-900/70 border border-slate-800/50 transform scale-110 origin-center"
-            />  
+            <div className="aspect-w-16 aspect-h-9 w-full rounded-lg shadow-2xl shadow-slate-900/70 border border-slate-800/50 bg-slate-800 flex flex-col p-4 overflow-hidden">
+              <div className="flex items-center space-x-1.5 mb-3">
+                <div className="w-3 h-3 rounded-full bg-red-500/70"></div>
+                <div className="w-3 h-3 rounded-full bg-yellow-500/70"></div>
+                <div className="w-3 h-3 rounded-full bg-green-500/70"></div>
+              </div>
+              <div className="flex-grow bg-slate-700 rounded p-3 space-y-2">
+                <div className="h-4 bg-amber-500/30 rounded w-1/3"></div>
+                <div className="h-3 bg-slate-600/80 rounded w-full"></div>
+                <div className="h-3 bg-slate-600/80 rounded w-4/5"></div>
+                <div className="h-3 bg-slate-600/80 rounded w-5/6"></div>
+              </div>
+            </div>
           </div>
         </div>
         

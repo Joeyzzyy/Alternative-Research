@@ -38,7 +38,7 @@ const AltPageFeatures = () => {
 
       <div className="max-w-7xl mx-auto px-4 relative z-10 text-center">
         {/* Main Title and Intro */}
-        <h2 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 mb-4">
+        <h2 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-6 bg-gradient-to-r from-cyan-400 to-purple-500 text-transparent bg-clip-text">
           How AltPage.ai Creates Winning Alternative Pages
         </h2>
         <p className="text-lg text-gray-300 leading-relaxed mb-16 max-w-3xl mx-auto">

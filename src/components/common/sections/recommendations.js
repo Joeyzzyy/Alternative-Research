@@ -9,7 +9,7 @@ const HelpfulResources = () => {
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_#a78bfa15_0%,_transparent_60%)]"></div>
       
       <div className="max-w-5xl mx-auto px-4 text-center relative z-10">
-        <h2 className="text-4xl font-bold mb-4 text-white">
+        <h2 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-6 bg-gradient-to-r from-cyan-400 to-purple-500 text-transparent bg-clip-text">
           The Best SEO Blogs We Recommend For You
         </h2>
         
