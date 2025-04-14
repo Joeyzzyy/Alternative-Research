@@ -166,7 +166,7 @@ export async function generateMetadata({ params }) {
 async function getPageData() {
   const mockData = {
     data: {
-      title: "Alternatively",
+      title: "AltPage.ai",
       description: "AI-Powered Competitive Research & SEO Content Generation Platform",
       author: "AI Research Team",
       updatedAt: "2024-03-20T08:00:00.000Z",
