@@ -2341,7 +2341,7 @@ const ResearchTool = ({
                           <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                           </svg>
-                          Deploy this page now
+                          Go deploy this page with WebsiteLM
                         </button>
                         <button id="open-new-window" class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded transition-colors">
                           <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -2478,10 +2478,31 @@ const ResearchTool = ({
               
               // 部署页面按钮 (添加占位符功能)
               deployPageBtn.addEventListener('click', () => {
-                const url = deployPageBtn.getAttribute('data-url');
-                console.log('Deploy page clicked for:', url);
-                // 在这里添加实际的部署逻辑
-                alert('Deploy functionality not yet implemented.');
+                // 获取必要的参数
+                const accessToken = localStorage.getItem('alternativelyAccessToken');
+                const customerId = localStorage.getItem('alternativelyCustomerId');
+                const customerEmail = localStorage.getItem('alternativelyCustomerEmail');
+                const websiteId = item.websiteId; // 从 item 对象获取 websiteId
+
+                console.log('Deploy page clicked. Data:', { accessToken, customerId, websiteId }); // 添加日志
+
+                // 检查参数是否存在
+                if (!accessToken || !customerId || !websiteId) {
+                  console.error('Missing required data for deployment:', { hasToken: !!accessToken, hasCustomerId: !!customerId, hasWebsiteId: !!websiteId });
+                  messageApi.error('Missing required information (token, customer ID, or website ID) to proceed with deployment. Please ensure you are logged in.');
+                  return; // 阻止进一步执行
+                }
+
+                // 构建目标 URL
+                const deployUrl = `https://app.websitelm.com/alternatively?authKey=${encodeURIComponent(accessToken)}&customerId=${encodeURIComponent(customerId)}&websiteId=${encodeURIComponent(websiteId)}&email=${encodeURIComponent(customerEmail)}`;
+
+                console.log('Opening deploy URL:', deployUrl); // 添加日志
+
+                // 在新窗口中打开部署页面
+                window.open(deployUrl, '_blank');
+
+                // 可选：关闭预览弹窗
+                // document.body.removeChild(modalOverlay);
               });
               
               // 外部链接按钮
@@ -3145,7 +3166,7 @@ const ResearchTool = ({
 
                 <div className="flex justify-end mt-3 px-1">
                   <div className="text-xs text-gray-400">
-                    Press Enter ↵ to search
+                    Press Enter ↵ to submit
                   </div>
                 </div>
               </div>
