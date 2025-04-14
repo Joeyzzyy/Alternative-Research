@@ -7,7 +7,6 @@ import FAQ from '../common/sections/faq-standard';
 import CallToAction from '../common/sections/call-to-action';
 import ResearchTool from '../common/sections/research-tool';
 import SubscriptionCard from '../common/sections/subscription-card';
-import AIModelShowcase from '../common/sections/ai-model-showcase';
 import FeatureIntro from '../common/sections/feature-intro';
 import FeatureIntroLeftRight from '../common/sections/feature-intro-left-right';
 import FeatureIntroRightLeft from '../common/sections/feature-intro-right-left';
@@ -20,7 +19,6 @@ const COMPONENT_MAP = {
   CallToAction: CallToAction,
   ResearchTool: ResearchTool,
   SubscriptionCard: SubscriptionCard,
-  AIModelShowcase: AIModelShowcase,
   FeatureIntro: FeatureIntro,
   FeatureIntroLeftRight: FeatureIntroLeftRight,
   FeatureIntroRightLeft: FeatureIntroRightLeft,

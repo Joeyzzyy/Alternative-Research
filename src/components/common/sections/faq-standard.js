@@ -1,8 +1,35 @@
 'use client';
 import React from 'react';
-import themeConfig from '../../../styles/themeConfig';
+// themeConfig is no longer used, can be removed
+// import themeConfig from '../../../styles/themeConfig';
 
-const FAQTwoColumnsWithSmallTitle = ({ data, theme = 'normal' }) => {
+// Define the new FAQ data in English
+const faqData = [
+  {
+    question: "What exactly is an alternative page?",
+    answer: "An alternative page is a specialized landing page that compares your product or service to a popular competitor. These pages target users who are actively searching for alternatives to that competitor, capturing high-intent traffic."
+  },
+  {
+    question: "Are alternative pages ethical?",
+    answer: "Yes, when done properly. AltPage.ai creates objective, fact-based comparison content that highlights your unique advantages without resorting to negative marketing or false claims about competitors."
+  },
+  {
+    question: "How long does it take to see results?",
+    answer: "Most customers start seeing traffic and conversions within 30-60 days, depending on the competitiveness of the keywords targeted. Our SEO optimization helps your pages rank faster for relevant search terms."
+  },
+  {
+    question: "Can I integrate AltPage.ai with my existing website?",
+    answer: "Yes! AltPage.ai works with all major website platforms including WordPress, Shopify, Webflow, and custom websites. We provide easy integration options or can host your alternative pages on our high-performance servers."
+  },
+  {
+    question: "What if I need help creating my alternative pages?",
+    answer: "We offer comprehensive support including detailed tutorials, templates, and responsive customer service. Enterprise plans include a dedicated account manager to help you create and optimize your alternative pages."
+  }
+];
+
+// The theme prop is no longer used, can be removed
+// const FAQTwoColumnsWithSmallTitle = ({ data, theme = 'normal' }) => {
+const FAQTwoColumnsWithSmallTitle = ({ data }) => { // Remove the theme prop
   const scrollToTop = (e) => {
     e.preventDefault();
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -23,7 +50,7 @@ const FAQTwoColumnsWithSmallTitle = ({ data, theme = 'normal' }) => {
         </div>
 
         <div className="grid grid-cols-1 gap-y-6">
-          {data.topContent.map((faq, index) => (
+          {faqData.map((faq, index) => (
             <div 
               key={index} 
               className="backdrop-blur-sm bg-slate-900/80 rounded-2xl p-8 

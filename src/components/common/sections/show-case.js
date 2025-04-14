@@ -11,10 +11,10 @@ const CustomizableResearchUI = () => {
       <div className="max-w-7xl mx-auto px-4 relative z-10">
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold text-white mb-6">
-            Why Alternative Pages Matter
+            Our Customers See Real Results
           </h2>
           <p className="text-gray-300 max-w-3xl mx-auto">
-            In today's competitive digital landscape, traditional SEO isn't enough. See how our AI-powered alternative pages have helped businesses outrank competitors, capture untapped traffic, and dramatically increase conversions.
+            Here's what our customers are saying about their alternative page strategy.
           </p>
         </div>
 

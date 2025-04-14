@@ -293,36 +293,6 @@ async function getPageData() {
           sectionId: "research-tool",
         },
         {
-          componentName: "ShowCase",
-          sectionId: "show-case",
-        },
-        {
-          componentName: "SubscriptionCard", 
-          sectionId: "pricing-1",
-        },
-        {
-          componentName: "AIModelShowcase",
-          sectionId: "ai-model-showcase-1",
-          title: "All-in-One AI Competitive Research Platform",
-          description: "Alternatively is your ultimate AI-powered competitive research assistant. Simply input a URL, and our advanced AI agents will automatically analyze competitors, generate comprehensive reports, and create SEO-optimized alternative pages - all in one place.",
-          data: {
-            aiModels: [
-              { name: 'Market Analysis', icon: 'circle', color: 'from-cyan-400 to-blue-500' },
-              { name: 'SEO Optimization', icon: 'square', color: 'from-emerald-400 to-green-500' },
-              { name: 'Content Generation', icon: 'circle', color: 'from-pink-500 to-rose-600' },
-              { name: 'Competitor Tracking', icon: 'square', color: 'from-blue-400 to-cyan-300' },
-              { name: 'Keyword Research', icon: 'triangle', color: 'from-teal-400 to-cyan-500' },
-              { name: 'Performance Analytics', icon: 'square', color: 'from-fuchsia-500 to-purple-600' },
-              { name: 'Trend Analysis', icon: 'cloud', color: 'from-slate-200 to-slate-400' },
-              { name: 'Feature Comparison', icon: 'hexagon', color: 'from-violet-500 to-purple-600' },
-              { name: 'Price Monitoring', icon: 'circle', color: 'from-blue-400 to-blue-600' },
-              { name: 'User Sentiment', icon: 'circle', color: 'from-blue-500 to-indigo-600' },
-              { name: 'Market Insights', icon: 'diamond', color: 'from-emerald-400 to-teal-500' }
-            ],
-            moreButtonText: "Explore Features"
-          }
-        },
-        {
           componentName: "FeatureIntro",
           sectionId: "feature-intro-1"
         },
@@ -333,6 +303,14 @@ async function getPageData() {
         {
           componentName: "FeatureIntroRightLeft",
           sectionId: "feature-intro-right-left-1"
+        },
+        {
+          componentName: "ShowCase",
+          sectionId: "show-case",
+        },
+        {
+          componentName: "SubscriptionCard", 
+          sectionId: "pricing-1",
         },
         {
           componentName: "Recommendations",
