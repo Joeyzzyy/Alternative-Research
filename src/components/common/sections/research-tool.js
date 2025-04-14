@@ -573,9 +573,52 @@ const ResearchTool = ({
       return 'text-gray-400'; // Fallback
     };
 
+    // 检查任务是否完成
+    const isTaskFinished = logs.some(log => 
+      (log.type === 'Info' && log.step === 'GENERATION_FINISHED') ||
+      (log.type === 'Info' && log.step === 'GENERATION_CHANGE_FINISHED')
+    );
+
     return (
       <div className="h-full flex flex-col" ref={detailsRef}>
         <div className="p-3 space-y-2 overflow-y-auto">
+          {/* 添加加载动画 - 仅在SSE连接成功且任务未完成时显示 */}
+          {sseConnected && !isTaskFinished && (
+            <div className="bg-blue-900/30 p-3 rounded-lg border border-blue-500/30 flex items-center space-x-3 overflow-hidden relative">
+              {/* Background pulse effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/10 to-blue-500/0 animate-pulse-slow"></div>
+              
+              {/* Animated loader with glow effect */}
+              <div className="relative w-7 h-7 flex-shrink-0">
+                <div className="absolute inset-0 rounded-full border-2 border-blue-400 border-t-transparent animate-spin"></div>
+                <div className="absolute inset-0 rounded-full border-2 border-blue-300/30 border-t-transparent animate-spin" style={{animationDuration: '3s'}}></div>
+                <div className="absolute inset-0 rounded-full bg-blue-400/10 animate-ping" style={{animationDuration: '2s'}}></div>
+              </div>
+              
+              <div className="text-blue-300 text-sm font-medium flex flex-col z-10">
+                <div className="flex items-center">
+                  <span className="mr-1 bg-gradient-to-r from-blue-300 to-cyan-300 bg-clip-text text-transparent font-semibold">Working on your page</span>
+                  <span className="inline-flex">
+                    <span className="animate-bounce delay-0">.</span>
+                    <span className="animate-bounce delay-100">.</span>
+                    <span className="animate-bounce delay-200">.</span>
+                  </span>
+                </div>
+                <div className="text-xs text-blue-300/70 mt-0.5 flex items-center">
+                  <span className="mr-2">We're analyzing content and generating alternatives</span>
+                  <span className="inline-block w-16 h-1 bg-gradient-to-r from-blue-500/50 to-cyan-400/50 rounded-full overflow-hidden relative">
+                    <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-blue-400 to-cyan-300 rounded-full animate-progress"></span>
+                  </span>
+                </div>
+              </div>
+              
+              {/* Floating particles */}
+              <div className="absolute w-1 h-1 bg-blue-400 rounded-full top-1/4 left-1/4 animate-float-slow"></div>
+              <div className="absolute w-1 h-1 bg-cyan-400 rounded-full bottom-1/4 right-1/3 animate-float-slow" style={{animationDelay: '1s'}}></div>
+              <div className="absolute w-0.5 h-0.5 bg-blue-300 rounded-full top-1/2 right-1/4 animate-float-slow" style={{animationDelay: '1.5s'}}></div>
+            </div>
+          )}
+          
           {mergedLogs.map((log, index) => {
             // 渲染 Agent 类型的日志
             if (log.type === 'Agent') {
@@ -986,6 +1029,47 @@ const ResearchTool = ({
       .h-full, .overflow-y-auto, .chat-messages-container {
         scrollbar-width: thin;
         scrollbar-color: rgba(59, 130, 246, 0.5) rgba(15, 23, 42, 0.1);
+      }
+      
+      @keyframes pulse-slow {
+        0%, 100% { opacity: 0.1; }
+        50% { opacity: 0.3; }
+      }
+      
+      @keyframes float-slow {
+        0% { transform: translateY(0) translateX(0); opacity: 0; }
+        50% { opacity: 0.8; }
+        100% { transform: translateY(-10px) translateX(5px); opacity: 0; }
+      }
+      
+      @keyframes progress {
+        0% { transform: translateX(-100%); }
+        50% { transform: translateX(0); }
+        100% { transform: translateX(100%); }
+      }
+      
+      .animate-pulse-slow {
+        animation: pulse-slow 3s ease-in-out infinite;
+      }
+      
+      .animate-float-slow {
+        animation: float-slow 4s ease-in-out infinite;
+      }
+      
+      .animate-progress {
+        animation: progress 2s ease-in-out infinite;
+      }
+      
+      .delay-0 {
+        animation-delay: 0s;
+      }
+      
+      .delay-100 {
+        animation-delay: 0.2s;
+      }
+      
+      .delay-200 {
+        animation-delay: 0.4s;
       }
     `;
     document.head.appendChild(style);
