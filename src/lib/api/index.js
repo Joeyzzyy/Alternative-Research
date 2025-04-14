@@ -306,9 +306,9 @@ const googleOneTapLogin = async (credential) => {
 };
 
 // 新增：删除页面接口
-const deletePage = async (pageId) => {
+const deletePage = async (websiteId) => {
   try {
-    const response = await apiClient.delete(`/pages/${pageId}`);
+    const response = await apiClient.delete(`/alternatively/${websiteId}`);
     return response.data;
   } catch (error) {
     console.error('Failed to delete page:', error);

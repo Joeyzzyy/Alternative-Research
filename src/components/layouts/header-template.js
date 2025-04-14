@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import apiClient from '../../lib/api/index.js';
-import { Dropdown, Modal, Button, Spin, Menu, Pagination } from 'antd';
+import { Dropdown, Modal, Button, Spin, Menu, Pagination, message } from 'antd';
 import { useUser } from '../../contexts/UserContext';
 import { useToolContext } from '../../contexts/ToolContext';
 
@@ -85,6 +85,8 @@ const animationStyles = `
 `;
 
 export default function Header() {
+  // 初始化 messageApi 和 contextHolder
+  const [messageApi, contextHolder] = message.useMessage();
   const { userCredits, loading: userCreditsLoading } = useUser();
   const router = useRouter();
   const [state, setState] = useState({
@@ -96,11 +98,6 @@ export default function Header() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isLoginForm, setIsLoginForm] = useState(true); // true for login form, false for register form
   const [isForgotPassword, setIsForgotPassword] = useState(false);
-  const [notification, setNotification] = useState({
-    show: false,
-    message: '',
-    type: 'success' // 'success', 'error', 'info'
-  });
   const [showCreditsTooltip, setShowCreditsTooltip] = useState(false);
   const [showResultIdsModal, setShowResultIdsModal] = useState(false);
   const [resultIds, setResultIds] = useState([]);
@@ -117,29 +114,13 @@ export default function Header() {
   const tokenExpiredHandledRef = useRef(false);
   const [showConstructionModal, setShowConstructionModal] = useState(false);
 
-  // 显示通知的辅助函数 (Moved Up)
-  const showNotification = useCallback((message, type = 'info') => {
-    setNotification({
-      show: true,
-      message,
-      type
-    });
-    
-    // Auto close notification after 2 seconds (changed from 3 seconds)
-    const timer = setTimeout(() => {
-      setNotification(prev => ({...prev, show: false}));
-    }, 2000);
-
-    // 返回 timer 以便在需要时清除
-    return timer;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Dependencies for showNotification (if any, like setNotification)
-
   // 处理 Google One Tap 响应 (Moved Up)
   const handleGoogleOneTapResponse = useCallback(async (response) => {
+    const key = 'googleOneTapLogin'; // 定义一个唯一的 key
     try {
       setLoading(true);
-      showNotification('Verifying Google login...', 'info'); // showNotification is defined
+      // 使用 messageApi 显示加载中消息
+      messageApi.loading({ content: 'Verifying Google login...', key, duration: 0 });
       console.log('Google One Tap response:', response);
       // 发送 ID 令牌到后端进行验证
       const apiResponse = await apiClient.googleOneTapLogin(response.credential);
@@ -155,19 +136,25 @@ export default function Header() {
         setIsLoggedIn(true);
         setUserEmail(apiResponse.data.email);
         
-        showNotification('Login successful!', 'success');
+        // 使用 messageApi 显示成功消息
+        messageApi.success({ content: 'Login successful!', key, duration: 2 });
         
         // 触发登录成功事件，通知其他组件
         const loginSuccessEvent = new CustomEvent('alternativelyLoginSuccess');
         window.dispatchEvent(loginSuccessEvent);
+      } else {
+        // 处理 API 返回但没有 data 的情况
+        messageApi.error({ content: 'Google login verification failed.', key, duration: 2 });
       }
     } catch (error) {
       console.error("Google One Tap login failed:", error);
-      showNotification('Google login failed, please try again later', 'error');
+      // 使用 messageApi 显示错误消息
+      messageApi.error({ content: 'Google login failed, please try again later', key, duration: 2 });
     } finally {
       setLoading(false);
     }
-  }, [showNotification]); // Keep showNotification dependency, ensure apiClient is stable or added if needed
+  // 移除 showNotification 依赖，添加 messageApi
+  }, [messageApi]); // Keep messageApi dependency, ensure apiClient is stable or added if needed
 
   // 添加 Google One Tap 初始化函数
   const initializeGoogleOneTap = useCallback(() => {
@@ -294,7 +281,8 @@ export default function Header() {
         
         setIsLoggedIn(true);
         setUserEmail(decodedEmail);
-        showNotification('Login successful!', 'success');
+        // 使用 messageApi 显示成功消息
+        messageApi.success({ content: 'Login successful!', duration: 2 });
         
         // Clear URL parameters
         window.history.replaceState({}, document.title, window.location.pathname);
@@ -304,27 +292,35 @@ export default function Header() {
         window.dispatchEvent(loginSuccessEvent);
       } catch (error) {
         console.error('Login process failed:', error);
-        showNotification('Authentication failed', 'error');
+        // 使用 messageApi 显示错误消息
+        messageApi.error({ content: 'Authentication failed', duration: 2 });
         localStorage.clear();
       }
     }
-  }, [showNotification]);
+  // 移除 showNotification 依赖，添加 messageApi
+  }, [messageApi]);
 
   const handleGoogleLogin = async () => {
+    const key = 'googleLogin';
     try {
       setLoading(true);
-      showNotification('Connecting to Google...', 'info');
+      // 使用 messageApi 显示加载中消息
+      messageApi.loading({ content: 'Connecting to Google...', key, duration: 0 });
       
       const response = await apiClient.googleLogin();
       
       if (response && response.data) {
+        // 移除加载消息，因为页面即将跳转
+        messageApi.destroy(key);
         window.location.href = response.data;
       } else {
-        showNotification('Failed to get Google login URL', 'error');
+        // 使用 messageApi 显示错误消息
+        messageApi.error({ content: 'Failed to get Google login URL', key, duration: 2 });
       }
     } catch (error) {
       console.error("Google login failed:", error);
-      showNotification('Google login request failed, please try again later', 'error');
+      // 使用 messageApi 显示错误消息
+      messageApi.error({ content: 'Google login request failed, please try again later', key, duration: 2 });
     } finally {
       setLoading(false);
     }
@@ -335,11 +331,6 @@ export default function Header() {
     setShowLogoutConfirm(true);
   };
   
-  // 处理关闭通知
-  const handleCloseNotification = () => {
-    setNotification(prev => ({...prev, show: false}));
-  };
-
   // Handle regular login button click
   const handleRegularLoginClick = () => {
     setShowLoginModal(true);
@@ -401,7 +392,8 @@ export default function Header() {
     setIsLoggedIn(true);
     setUserEmail(userData.email);
     
-    showNotification('Login successful!', 'success');
+    // 使用 messageApi 显示成功消息
+    messageApi.success({ content: 'Login successful!', duration: 2 });
     
     // Close login modal
     setShowLoginModal(false);
@@ -423,7 +415,8 @@ export default function Header() {
     setIsLoggedIn(true);
     setUserEmail(userData.email);
     
-    showNotification('Registration successful!', 'success');
+    // 使用 messageApi 显示成功消息
+    messageApi.success({ content: 'Registration successful!', duration: 2 });
     
     // 关闭登录模态框
     setShowLoginModal(false);
@@ -439,7 +432,8 @@ export default function Header() {
       if (!showLoginModal) {
         setShowLoginModal(true);
         setIsLoginForm(true); // 确保显示登录表单而不是注册表单
-        showNotification('Please login to continue', 'info');
+        // 使用 messageApi 显示提示信息
+        messageApi.info({ content: 'Please login to continue', duration: 2 });
       }
     };
     
@@ -448,7 +442,8 @@ export default function Header() {
     return () => {
       window.removeEventListener('showAlternativelyLoginModal', handleShowLoginModal);
     };
-  }, [showNotification, setIsLoginForm, showLoginModal]); // 添加所有依赖项 (added showLoginModal)
+  // 移除 showNotification 依赖，添加 messageApi
+  }, [setIsLoginForm, showLoginModal, messageApi]); // 添加所有依赖项 (added showLoginModal, messageApi)
 
   useEffect(() => {
     // 检查本地存储中的登录信息
@@ -463,6 +458,8 @@ export default function Header() {
 
   return (
     <>
+      {/* 在根元素渲染 contextHolder */}
+      {contextHolder}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-slate-950 to-black border-b border-slate-800/50">
         {/* 科技感背景装饰 */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_#22d3ee10_0%,_transparent_60%)]"></div>
@@ -689,50 +686,10 @@ export default function Header() {
         setIsForgotPassword={setIsForgotPassword}
         onLoginSuccess={handleLoginSuccess}
         onRegisterSuccess={handleRegisterSuccess}
-        showNotification={showNotification}
+        messageApi={messageApi}
         handleGoogleLogin={handleGoogleLogin}
         loading={loading}
       />
-
-      {/* 通知组件 */}
-      {notification.show && (
-        <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 ${
-          notification.type === 'success' ? 'bg-green-500' : 
-          notification.type === 'error' ? 'bg-red-500' : 'bg-blue-500'
-        }`}>
-          <div className="flex items-center">
-            {/* 通知类型图标（左边） */}
-            {notification.type === 'success' && (
-              <svg className="w-6 h-6 mr-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-            )}
-            {notification.type === 'error' && (
-              <svg className="w-6 h-6 mr-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            )}
-            {notification.type === 'info' && (
-              <svg className="w-6 h-6 mr-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            )}
-
-            {/* 通知消息 */}
-            <p className="text-white font-medium">{notification.message}</p>
-
-            {/* 关闭按钮（右边的叉） */}
-            <button 
-              onClick={handleCloseNotification}
-              className="ml-4 text-white hover:text-gray-200 transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* 自定义登出确认对话框 */}
       {showLogoutConfirm && (
@@ -755,7 +712,8 @@ export default function Header() {
                   localStorage.removeItem('alternativelyCustomerId');
                   setIsLoggedIn(false);
                   setUserEmail('');
-                  showNotification('Logged out successfully', 'info');
+                  // 使用 messageApi 显示提示信息
+                  messageApi.info({ content: 'Logged out successfully', duration: 2 });
                   setShowLogoutConfirm(false);
                   
                   // 添加页面刷新

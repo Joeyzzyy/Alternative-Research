@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Input, Button, Card, Spin, message, Tag, Tooltip, Avatar, ConfigProvider, Pagination, Dropdown, Menu, Modal } from 'antd';
 import { SearchOutlined, ClearOutlined, ArrowRightOutlined, InfoCircleOutlined, SendOutlined, UserOutlined, RobotOutlined, LoadingOutlined } from '@ant-design/icons';
 import apiClient from '../../../lib/api/index.js';
@@ -75,11 +75,6 @@ const ResearchTool = () => {
   const [resultIds, setResultIds] = useState([]);
   const [showResultIdsModal, setShowResultIdsModal] = useState(false);
   const lastLogCountRef = useRef(0);
-  const [notification, setNotification] = useState({
-    show: false,
-    message: '',
-    type: 'success' // 'success', 'error', 'info'
-  });
   const [pendingUserInput, setPendingUserInput] = useState('');
   // 从 UserContext 获取用户信用额度
   const { userCredits, loading: userCreditsLoading } = useUser();
@@ -2064,31 +2059,28 @@ const ResearchTool = () => {
             const deleteResponse = await apiClient.deletePage(item.websiteId);
             console.log('Delete response:', deleteResponse); // 添加日志
             
-            // 检查响应是否成功
-            if (deleteResponse?.code === 200) {
+            // 检查响应是否成功 (适配新的 API 返回)
+            if (deleteResponse && deleteResponse.code === 200) {
               // 更新历史记录列表
               setHistoryList(prev => prev.filter(record => record.websiteId !== item.websiteId));
-              setNotification({
-                show: true,
-                message: 'Record deleted successfully',
-                type: 'success'
-              });
+              // *** 成功反馈 ***
+              messageApi.success('Record deleted successfully'); // <--- 只修改这里
+              console.log('Attempting to show SUCCESS notification via messageApi');
             } else {
-              console.error('Delete API returned non-200 code:', deleteResponse);
-              setNotification({
-                show: true,
-                message: `Failed to delete record: ${deleteResponse?.message || 'Unknown error'}`,
-                type: 'error'
-              });
+              // 处理 API 调用失败或返回非 200 code 的情况
+              const errorMessage = deleteResponse?.message || 'Failed to delete record due to an unknown error.';
+              console.error('Delete API failed:', deleteResponse);
+              // *** API 失败反馈 ***
+              messageApi.error(`Failed to delete record: ${errorMessage}`); // 替换 setNotification
+              console.log('Attempting to show ERROR notification (API fail) via messageApi');
             }
             closeModal();
           } catch (error) {
-            console.error('Failed to delete record:', error);
-            setNotification({
-              show: true,
-              message: `Failed to delete record: ${error.message || 'Unknown error'}`,
-              type: 'error'
-            });
+            // 处理网络错误或其他异常
+            console.error('Failed to delete record (exception):', error);
+            // *** 异常失败反馈 ***
+            messageApi.error(`Failed to delete record: ${error.message || 'An unexpected error occurred.'}`); // 替换 setNotification
+            console.log('Attempting to show ERROR notification (exception) via messageApi');
             closeModal();
           }
         });
@@ -2103,14 +2095,11 @@ const ResearchTool = () => {
         modalOverlay.appendChild(modalContent);
         return;
       } catch (error) {
-        console.error('Failed to delete record:', error);
-        setNotification({
-          show: true,
-          message: 'Failed to delete record',
-          type: 'error'
-        });
+        // 处理创建弹窗时的错误
+        console.error('Error creating delete confirmation modal:', error);
+        messageApi.error('Failed to initiate delete action'); // 替换 setNotification
       }
-      return;
+      return; // 确保在处理完删除逻辑后返回
     }
   
     if (item.generatorStatus === 'failed') {
@@ -2260,6 +2249,18 @@ const ResearchTool = () => {
                     <div class="mb-3 flex items-center justify-between">
                       <h3 class="text-gray-300 text-sm font-medium">Live Preview</h3>
                       <div class="flex items-center gap-2">
+                        <button id="edit-page" class="flex items-center gap-1.5 px-3 py-1.5 bg-yellow-600 hover:bg-yellow-500 text-white text-xs rounded transition-colors">
+                          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                          Edit this page
+                        </button>
+                        <button id="deploy-page" class="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white text-xs rounded transition-colors">
+                          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                          </svg>
+                          Deploy this page now
+                        </button>
                         <button id="open-new-window" class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded transition-colors">
                           <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -2291,6 +2292,8 @@ const ResearchTool = () => {
               const previewIframe = modalContent.querySelector('#preview-iframe');
               const loadingIndicator = modalContent.querySelector('#loading-indicator');
               const openNewWindowBtn = modalContent.querySelector('#open-new-window');
+              const editPageBtn = modalContent.querySelector('#edit-page'); // 获取 Edit 按钮
+              const deployPageBtn = modalContent.querySelector('#deploy-page'); // 获取 Deploy 按钮
               
               // 设置初始预览URL
               const initialPreviewUrl = `https://preview.websitelm.site/en/${codesResultIds[0]}`;
@@ -2336,6 +2339,8 @@ const ResearchTool = () => {
                     
                     // 更新"在新窗口打开"按钮的URL
                     openNewWindowBtn.setAttribute('data-url', `https://preview.websitelm.site/en/${id}`);
+                    editPageBtn.setAttribute('data-url', `https://preview.websitelm.site/en/${id}`); // 更新 Edit 按钮 URL
+                    deployPageBtn.setAttribute('data-url', `https://preview.websitelm.site/en/${id}`); // 更新 Deploy 按钮 URL
                   }
                 });
                 
@@ -2364,6 +2369,39 @@ const ResearchTool = () => {
                 window.open(previewIframe.src, '_blank');
               });
               
+              // 编辑页面按钮 (添加占位符功能)
+              editPageBtn.addEventListener('click', () => {
+                // 直接使用 previewIframe.src 获取当前显示的 URL，与 openNewWindowBtn 保持一致
+                const url = previewIframe.src;
+                console.log('Edit page clicked for:', url);
+                
+                // 从 localStorage 获取 accessToken
+                const accessToken = localStorage.getItem('alternativelyAccessToken');
+                
+                if (!accessToken) {
+                  alert('Authentication required. Please log in first.');
+                  return;
+                }
+                
+                // 提取 resultId 从 URL
+                const urlParts = url.split('/');
+                const resultId = urlParts[urlParts.length - 1];
+                
+                // 构建编辑页面 URL
+                const editUrl = `https://app.websitelm.com/alternatively-edit/${resultId}?authKey=${accessToken}&&websiteId=${item.websiteId}`;
+                
+                // 在新窗口中打开编辑页面
+                window.open(editUrl, '_blank');
+              });
+              
+              // 部署页面按钮 (添加占位符功能)
+              deployPageBtn.addEventListener('click', () => {
+                const url = deployPageBtn.getAttribute('data-url');
+                console.log('Deploy page clicked for:', url);
+                // 在这里添加实际的部署逻辑
+                alert('Deploy functionality not yet implemented.');
+              });
+              
               // 外部链接按钮
               modalContent.querySelectorAll('.open-external').forEach(btn => {
                 btn.addEventListener('click', (e) => {
@@ -2383,11 +2421,7 @@ const ResearchTool = () => {
               setActiveTab(`result-${codesResultIds[0]}`);
               setRightPanelTab('browser');
             } else {
-              setNotification({
-                show: true,
-                message: 'No preview data available for this task.',
-                type: 'info'
-              });
+              messageApi.info('No preview data available for this task.');
             }
           }
         } catch (error) {
@@ -2397,11 +2431,7 @@ const ResearchTool = () => {
             document.body.removeChild(loadingOverlay);
           }
           
-          setNotification({
-            show: true,
-            message: 'Failed to load preview data. Please try again.',
-            type: 'error'
-          });
+          messageApi.error('Failed to load preview data. Please try again.');
         } finally {
           setLoadingResultIds(false);
         }
@@ -2463,11 +2493,7 @@ const ResearchTool = () => {
         }
       } catch (error) {
         console.error('Failed to fetch task status:', error);
-        setNotification({
-          show: true,
-          message: 'Failed to check task status. Please try again.',
-          type: 'error'
-        });
+        messageApi.error('Failed to check task status. Please try again.');
       }
     }
   };
@@ -3073,41 +3099,6 @@ const ResearchTool = () => {
           ))}
         </div>
       </Modal>
-      
-      {/* 通知组件（如果还没有的话） */}
-      {notification.show && (
-        <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg transition-all duration-300 ${
-          notification.type === 'success' ? 'bg-green-500' : 
-          notification.type === 'error' ? 'bg-red-500' : 'bg-blue-500'
-        }`}>
-          <div className="flex items-center">
-            {notification.type === 'success' && (
-              <svg className="w-6 h-6 mr-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-            )}
-            {notification.type === 'error' && (
-              <svg className="w-6 h-6 mr-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-            )}
-            {notification.type === 'info' && (
-              <svg className="w-6 h-6 mr-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              )}
-            <p className="text-white font-medium">{notification.message}</p>
-            <button 
-              onClick={() => setNotification(prev => ({ ...prev, show: false }))}
-              className="ml-4 text-white hover:text-gray-200 transition-colors"
-            >
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-            </div>
-            </div>
-      )}
     </ConfigProvider>
   );
 };
