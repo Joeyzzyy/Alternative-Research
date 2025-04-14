@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Input, Button, Card, Spin, message, Tag, Tooltip, Avatar, ConfigProvider, Pagination, Dropdown, Menu, Modal } from 'antd';
-import { SearchOutlined, ClearOutlined, ArrowRightOutlined, InfoCircleOutlined, SendOutlined, UserOutlined, RobotOutlined, LoadingOutlined } from '@ant-design/icons';
+import { SearchOutlined, ClearOutlined, ArrowRightOutlined, InfoCircleOutlined, SendOutlined, UserOutlined, RobotOutlined, LoadingOutlined, BulbOutlined, BulbFilled } from '@ant-design/icons';
 import apiClient from '../../../lib/api/index.js';
 import { EventSourcePolyfill } from 'event-source-polyfill';
 import MessageHandler from '../../../utils/MessageHandler';
@@ -663,10 +663,10 @@ const ResearchTool = () => {
                     {difyContent.data && typeof difyContent.data === 'object' ? (
                       <div className="mb-2">
                         <span className="font-semibold text-gray-300 text-[11px]">
-                          Current Node: {difyContent.data.title || 'N/A'}
+                          Current Node: {difyContent.data.title || ''}
                         </span>
                         <span className={`ml-2 font-medium ${getStatusColor(difyContent.data.status)}`}>
-                          ({difyContent.data.status || 'N/A'})
+                          ({difyContent.data.status | ''})
                         </span>
                         {difyContent.data.elapsed_time !== undefined && (
                            <span className="ml-2 text-gray-500 text-[9px]">
@@ -681,27 +681,27 @@ const ResearchTool = () => {
                     {/* 上下文信息 */}
                     <div>
                       <span className="font-semibold w-16 inline-block">Event:</span> 
-                      {difyContent.event || 'N/A'}
+                      {difyContent.event || ''}
                     </div>
                     <div>
                       <span className="font-semibold w-16 inline-block">Step Name:</span> 
-                      {log.step || difyContent.step || 'N/A'}
+                      {log.step || difyContent.step || ''}
                     </div>
 
                     {/* 详细标识信息 */}
                     {difyContent.data && typeof difyContent.data === 'object' && (
                       <div>
                         <span className="font-semibold w-16 inline-block">Node ID:</span> 
-                        {difyContent.data.id || 'N/A'}
+                        {difyContent.data.id || ''}
                       </div>
                     )}
                     <div>
                       <span className="font-semibold w-16 inline-block">Workflow ID:</span> 
-                      {difyContent.workflow_id || 'N/A'}
+                      {difyContent.workflow_id || ''}
                     </div>
                     <div>
                       <span className="font-semibold w-16 inline-block">Task ID:</span> 
-                      {difyContent.task_id || 'N/A'}
+                      {difyContent.task_id || ''}
                     </div>
 
                     {/* 错误信息 */}
@@ -2569,7 +2569,7 @@ const ResearchTool = () => {
 
   // 格式化日期时间
   const formatDateTime = (dateString) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return '';
     
     try {
       const date = new Date(dateString);
@@ -2817,24 +2817,35 @@ const ResearchTool = () => {
         {/* Ensure content is above the effects - 保持原有布局不变 */}
         <div className={`relative z-10 w-full max-w-4xl px-8 py-12 initial-screen-content rounded-xl bg-transparent`}> {/* 移除背景和模糊 */}
           <div className={`text-center mb-8 text-shadow`}> {/* 应用 text-shadow */}
-            <h1 className={`text-4xl font-bold ${currentBackground === 'DAY_GHIBLI' ? 'text-amber-100' : 'text-white'} mb-6 drop-shadow-lg`}> {/* 应用 drop-shadow */}
-            Turn Competitors'<span className={currentBackground === 'DAY_GHIBLI' ? 'text-amber-400' : 'text-blue-400'}>&nbsp;Popularity&nbsp;</span>
-            Into Your Success
-              <button 
-                onClick={toggleBackground}
-                className={`ml-4 inline-flex items-center px-3 py-1.5 text-xs ${getButtonStyle()} rounded-full
-                         backdrop-blur-sm transition-all gap-1.5 border
-                         shadow-lg hover:scale-105 align-middle`} // 使用 hover:scale-105 替代 hover:bg-blue-500/50
-              >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"/>
-                </svg>
-                {/* 更新按钮文本 */}
-                {currentBackground === 'DAY_GHIBLI' ? 'Switch to Night Ghibli' : 'Switch to Day Ghibli'}
-              </button>
+            {/* highlight-start */}
+            {/* 修改 h1 以使用 Flexbox 进行对齐 */}
+            <h1 className={`text-4xl font-bold ${currentBackground === 'DAY_GHIBLI' ? 'text-amber-100' : 'text-white'} mb-6 drop-shadow-lg flex items-center justify-center gap-3`}> {/* 应用 drop-shadow, 添加 flex, items-center, justify-center, gap */}
+              <span> {/* 将文本包裹在 span 中 */}
+                Turn Competitors'<span className={currentBackground === 'DAY_GHIBLI' ? 'text-amber-400' : 'text-blue-400'}>&nbsp;Popularity&nbsp;</span>
+                Into Your Success
+              </span>
+              {/* 修改切换背景按钮 */}
+              <Tooltip title={currentBackground === 'DAY_GHIBLI' ? "Switch to Night Mode" : "Switch to Day Mode"}>
+                <button
+                  onClick={toggleBackground}
+                  // 调整 padding, 移除 gap, 保持其他样式
+                  // 移除 ml-4, 因为 gap 已经提供了间距
+                  className={`inline-flex items-center justify-center p-2 text-xs ${getButtonStyle()} rounded-full
+                           backdrop-blur-sm transition-all border
+                           shadow-lg hover:scale-105 align-middle`} // 保持 align-middle 或移除，因为 flex 会处理对齐
+                >
+                  {/* 根据状态显示不同图标 */}
+                  {currentBackground === 'DAY_GHIBLI'
+                    ? <BulbOutlined className="w-4 h-4" /> // 夜间模式图标 (显示为未点亮)
+                    : <BulbFilled className="w-4 h-4" />   // 白天模式图标 (显示为点亮)
+                  }
+                  {/* 移除原有 SVG 和文本 */}
+                </button>
+              </Tooltip>
             </h1>
+            {/* highlight-end */}
             <p className={`text-lg ${currentBackground === 'DAY_GHIBLI' ? 'text-amber-200/90' : 'text-gray-300'} mb-8 drop-shadow-md`}> {/* 应用 drop-shadow */}
-            
+
             Create strategic alternative pages that capture high-intent traffic and convert browsers into customers.
             </p>
           </div>

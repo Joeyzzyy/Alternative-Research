@@ -51,6 +51,10 @@ const AlternativePageFeature = () => {
                 Looking for options beyond [Competitor Name]? We reviewed dozens of tools. See our list of the top alternatives, pros, cons, and pricing... Often biased or outdated.
               </p>
             </div>
+            {/* Edit 1: Add explanatory text below the search result */}
+            <p className="text-xs text-gray-400 mt-2 italic text-center">
+              Low-quality comparison with no clear winner.
+            </p>
           </div>
 
           {/* "To This" Card with enhanced styling */}
@@ -69,78 +73,62 @@ const AlternativePageFeature = () => {
              </div>
             <div className="p-4 bg-white rounded-lg shadow text-left">
                {/* Google-like URL color (adjusted for light bg) */}
-               <span className="text-sm text-green-700 block mb-1">www.yourproduct.com › compare › competitor-alternative</span>
-               {/* Google-like Title color and size (adjusted for light bg) */}
+               <span className="text-sm text-green-700 block mb-1">www.yourproduct.com › competitor-alternative</span>
+               {/* Example search result title */}
                <h4 className="text-lg text-blue-700 hover:underline cursor-pointer mb-1 font-medium">
-                 [Your Product] vs [Competitor]: Why We're the Better Choice
+                 Best [Competitor Name] Alternative for [Specific Use Case/Year]
                </h4>
-               {/* Google-like Description color (adjusted for light bg) */}
+               {/* Example search result description */}
                <p className="text-sm text-gray-700">
-                 See a direct comparison between [Your Product] and [Competitor Name]. Discover key advantages in features, pricing, and support. Make the switch today...
+                 [Your Product] is a top alternative to [Competitor Name]. See how we compare on features, pricing, and support. Get started free today...
                </p>
              </div>
+             {/* Edit 2: Add explanatory text below the search result */}
+             <p className="text-xs text-purple-300 mt-2 italic font-medium text-center">
+               Clear comparison highlighting your advantages.
+             </p>
           </div>
         </div>
 
         <div className="max-w-5xl mx-auto text-left text-gray-300 mt-16">
           <h3 className="text-3xl font-bold mb-8 text-center bg-gradient-to-r from-cyan-400 to-purple-500 text-transparent bg-clip-text">
-            Differences in Conversion Rates
+            The Evolution: From Broad Info Pages to High-Converting Alternatives
           </h3>
           <p className="text-lg mb-8 text-center">
-            Conversion rates can vary considerably across these page types due to the stage of the customer journey they cater to:
+            Content strategy isn't static; it evolves. We've moved beyond the era of simply casting a wide net. Today, success lies in precision – transitioning from general information to laser-focused Alternative Pages that capture users at the cusp of decision. This isn't just a minor tweak; it's a fundamental shift in how we convert interest into action.
           </p>
 
-          <div className="flex flex-col md:flex-row gap-8">
-            {/* Informational Pages - Standard Styling */}
-            <div className="flex-1 p-6 bg-slate-800/60 rounded-xl border border-slate-700 shadow-lg shadow-slate-900/30 transition-all duration-300 hover:border-cyan-500/80 hover:shadow-xl hover:shadow-cyan-500/20">
-              <h4 className="text-xl font-semibold mb-4 text-cyan-400">Informational Pages</h4>
-              <p className="mb-3">
-                <strong className="block text-sm font-medium text-white mb-1">Conversion Behavior:</strong>
-                Since the primary goal here is education rather than immediate conversion, users may spend more time reading without taking a direct action.
-              </p>
-              <p>
-                <strong className="block text-sm font-medium text-white mb-1">Typical Conversion Rates:</strong>
-                These pages tend to have lower immediate conversion rates (often in the range of{' '}
+          <div className="space-y-8 text-lg">
+
+            <div>
+              <h4 className="text-2xl font-semibold mb-3 text-cyan-400">The Age of the Wide Net</h4>
+              <p className="text-gray-400">
+                Traditional content like guides aimed for broad awareness, attracting many early-stage researchers with low purchase intent. This resulted in modest direct conversions (typically{' '}
                 <span className="inline-block bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded-md font-semibold text-sm">
                   1–3%
                 </span>
-                ). However, they play a critical role in funneling high-quality leads over time by building trust and informing the purchase decision.
+                ) and required significant nurturing.
               </p>
             </div>
 
-            {/* Transactional Pages - Enhanced Highlighting */}
-            <div className="flex-1 p-6 bg-slate-800/60 rounded-xl border border-slate-700 shadow-lg shadow-slate-900/30 transition-all duration-300 hover:border-purple-400 hover:shadow-xl hover:shadow-purple-400/40 hover:scale-[1.03] hover:bg-slate-700/80 ring-2 ring-transparent hover:ring-purple-500/50">
-              <h4 className="text-xl font-semibold mb-4 text-purple-400">Transactional Pages ✨</h4>
-              <p className="mb-3">
-                <strong className="block text-sm font-medium text-white mb-1">Conversion Behavior:</strong>
-                Optimized for clarity, reduced distractions, and prompt CTAs, these pages tend to convert visitors who are ready to act. <strong className='text-purple-300'>(This is what we help you build!)</strong>
+            <div>
+              <h4 className="text-2xl font-semibold mb-3 text-purple-400">The Pivot to Precision Targeting ✨</h4>
+              <p className="text-gray-300">
+                The strategy evolved: <strong className="text-purple-300">Alternative Pages</strong> focus sharply on users actively searching for <em className="italic text-purple-200">"[Competitor Name] alternatives"</em> or <em className="italic text-purple-200">"[Your Product] vs [Competitor]"</em>. This intercepts high-intent users precisely when they are comparing options and ready to be persuaded.
               </p>
-              <p>
-                <strong className="block text-sm font-medium text-white mb-1">Typical Conversion Rates:</strong>
-                They may see conversion rates ranging from{' '}
+            </div>
+
+            <div>
+              <h4 className="text-2xl font-semibold mb-3 text-gray-400">The Payoff: Converting Intent into Action</h4>
+              <p className="text-gray-300">
+                Because these pages directly address the specific comparisons sought by qualified, decision-ready prospects, they convert at much higher rates (often{' '}
                 <span className="inline-block bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-md font-semibold text-sm">
-                  3–10%
-                </span>{' '}
-                or even higher, depending on industry norms, user experience, and offer competitiveness. The direct alignment between ad copy and on-page messaging can boost these numbers.
+                  3–10%+
+                </span>
+                ). It's the powerful result of shifting from broad awareness to capturing high-intent moments.
               </p>
             </div>
 
-            {/* Navigational/Brand-Specific Pages - Standard Styling */}
-            <div className="flex-1 p-6 bg-slate-800/60 rounded-xl border border-slate-700 shadow-lg shadow-slate-900/30 transition-all duration-300 hover:border-gray-500/80 hover:shadow-xl hover:shadow-gray-500/20">
-              <h4 className="text-xl font-semibold mb-4 text-gray-400">Navigational/Brand-Specific Pages</h4>
-              <p className="mb-3">
-                <strong className="block text-sm font-medium text-white mb-1">Conversion Behavior:</strong>
-                This type strikes a middle ground. While they incorporate both educational content and conversion elements, the conversion action might be less immediate compared to a pure transactional page, but more direct than an in-depth research page.
-              </p>
-              <p>
-                <strong className="block text-sm font-medium text-white mb-1">Typical Conversion Rates:</strong>
-                These pages often yield moderate conversion rates, reflecting a user's readiness to engage after a brand-focused reassurance. They might convert in the mid-range, say around{' '}
-                <span className="inline-block bg-gray-500/20 text-gray-300 px-2 py-0.5 rounded-md font-semibold text-sm">
-                  2–5%
-                </span>
-                .
-              </p>
-            </div>
           </div>
         </div>
       </div>
