@@ -35,7 +35,10 @@ const BACKGROUNDS = {
   }
 };
 
-const ResearchTool = () => {
+const ResearchTool = ({ 
+  // ... other existing props like initialLoading, showInitialScreen, etc. ...
+  setTargetShowcaseTab // <--- 在这里添加 setTargetShowcaseTab
+}) => {
   const [messageApi, contextHolder] = message.useMessage();
   const [domain, setDomain] = useState('');
   const [loading, setLoading] = useState(false);
@@ -1980,12 +1983,22 @@ const ResearchTool = () => {
   };
 
   const handleExampleClick = (example) => {
-    const showcaseSection = document.getElementById(`showcase-${example}`);
+    // 1. 调用从父组件传入的函数，设置目标 Tab Key
+    // 现在可以直接使用 setTargetShowcaseTab 了
+    if (setTargetShowcaseTab) { 
+      setTargetShowcaseTab(example); // e.g., 'hix', 'joggai', 'jtracking'
+    } else {
+      console.warn("setTargetShowcaseTab prop is missing in ResearchTool");
+    }
+
+    // 2. 滚动到 showcase 组件的容器
+    const showcaseSection = document.getElementById('showcase-section');
     if (showcaseSection) {
-      showcaseSection.scrollIntoView({ behavior: 'smooth' });
+      showcaseSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      console.warn("Element with ID 'showcase-section' not found for scrolling.");
     }
   };
-
   // 添加历史记录状态
   const [historyList, setHistoryList] = useState([]);
   const [historyCollapsed, setHistoryCollapsed] = useState(false);
@@ -2706,56 +2719,56 @@ const ResearchTool = () => {
   if (showInitialScreen) {
     return (
       <div className={`w-full h-screen flex items-center justify-center relative bg-cover bg-center bg-no-repeat`} // 保留原有布局
-           style={getBackgroundStyle()}>
-        {/* Inject contextHolder */}
-        {contextHolder}
+             style={getBackgroundStyle()}>
+          {/* Inject contextHolder */}
+          {contextHolder}
 
-        {/* 覆盖层 */}
-        <div className={`absolute inset-0 ${getOverlayClass()}`}></div>
+          {/* 覆盖层 */}
+          <div className={`absolute inset-0 ${getOverlayClass()}`}></div>
 
         {/* 添加历史记录侧边栏 - 修改定位方式，使其在组件内部 */}
-        <div className={`absolute left-0 top-0 bottom-0 w-56 bg-slate-900/60 backdrop-blur-[2px] border-r border-slate-700/30 z-10 overflow-y-auto overflow-x-hidden pt-20 transition-all duration-300 ${historyCollapsed ? '-translate-x-52' : 'translate-x-0'}`}>
-          <div className="p-3 relative">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="text-gray-400 text-sm font-medium">History</h3>
-              <button 
-                onClick={() => setHistoryCollapsed(!historyCollapsed)}
-                className="absolute -right-1 top-3 bg-slate-800/70 border border-slate-700/30 rounded-full p-1 text-gray-500 hover:text-gray-300 transition-colors"
-              >
-                {historyCollapsed ? (
-                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-                  </svg>
-                ) : (
-                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-                  </svg>
-                )}
-              </button>
-            </div>
-            
-            <button 
-              onClick={fetchHistoryData}
-              className="w-full py-1 mb-3 text-xs text-gray-500 hover:text-gray-300 bg-slate-800/30 hover:bg-slate-800/50 rounded-lg transition-colors flex items-center justify-center"
-            >
-              <svg className="w-2.5 h-2.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Refresh
-            </button>
-            
-            {historyLoading ? (
-              <div className="flex justify-center py-2">
-                <Spin size="small" />
-              </div>
-            ) : historyList.length > 0 ? (
-              <div className="space-y-1.5 pr-1">
-                {historyList.map((item) => (
-                <div 
-                  key={item.websiteId}
-                  className="p-1.5 rounded-lg bg-slate-800/40 hover:bg-slate-800/70 border border-slate-700/30 cursor-pointer transition-all duration-300"
-                  onClick={(e) => handleHistoryItemClick(item, e)}  // 传递 event 参数
+          <div className={`absolute left-0 top-0 bottom-0 w-56 bg-slate-900/60 backdrop-blur-[2px] border-r border-slate-700/30 z-10 overflow-y-auto overflow-x-hidden pt-20 transition-all duration-300 ${historyCollapsed ? '-translate-x-52' : 'translate-x-0'}`}>
+            <div className="p-3 relative">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="text-gray-400 text-sm font-medium">History</h3>
+                <button
+                  onClick={() => setHistoryCollapsed(!historyCollapsed)}
+                  className="absolute -right-1 top-3 bg-slate-800/70 border border-slate-700/30 rounded-full p-1 text-gray-500 hover:text-gray-300 transition-colors"
                 >
+                  {historyCollapsed ? (
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                    </svg>
+                  ) : (
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+
+              <button
+                onClick={fetchHistoryData}
+                className="w-full py-1 mb-3 text-xs text-gray-500 hover:text-gray-300 bg-slate-800/30 hover:bg-slate-800/50 rounded-lg transition-colors flex items-center justify-center"
+              >
+                <svg className="w-2.5 h-2.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Refresh
+              </button>
+
+              {historyLoading ? (
+                <div className="flex justify-center py-2">
+                  <Spin size="small" />
+                </div>
+              ) : historyList.length > 0 ? (
+                <div className="space-y-1.5 pr-1">
+                  {historyList.map((item) => (
+                  <div
+                    key={item.websiteId}
+                    className="p-1.5 rounded-lg bg-slate-800/40 hover:bg-slate-800/70 border border-slate-700/30 cursor-pointer transition-all duration-300"
+                    onClick={(e) => handleHistoryItemClick(item, e)}  // 传递 event 参数
+                  >
                   <div className="flex justify-between items-center">
                     <div>
                       <div className="text-xs text-gray-400 font-medium truncate max-w-full">{getDomainFromUrl(item.website)}</div>
@@ -2784,35 +2797,35 @@ const ResearchTool = () => {
                       </svg>
                     </button>
                   </div>
+                  </div>
+                ))}
                 </div>
-              ))}
-              </div>
-            ) : (
-              <div className="text-center py-2 text-gray-500 text-[10px]">
-                No history records found
-              </div>
-            )}
+              ) : (
+                <div className="text-center py-2 text-gray-500 text-[10px]">
+                  No history records found
+                </div>
+              )}
+            </div>
           </div>
-        </div>
 
         {/* 添加折叠状态下的小标签 - 更加低调 */}
-        {historyCollapsed && (
-          <div 
-            onClick={() => setHistoryCollapsed(false)}
-            className="absolute left-0 top-1/2 transform -translate-y-1/2 bg-slate-800/70 text-gray-400 py-2 px-1 rounded-r-md cursor-pointer z-20 border-t border-r border-b border-slate-700/30 hover:text-gray-300 transition-colors"
-          >
-            <div className="vertical-text text-[10px] font-medium">History</div>
-          </div>
-        )}
+          {historyCollapsed && (
+            <div
+              onClick={() => setHistoryCollapsed(false)}
+              className="absolute left-0 top-1/2 transform -translate-y-1/2 bg-slate-800/70 text-gray-400 py-2 px-1 rounded-r-md cursor-pointer z-20 border-t border-r border-b border-slate-700/30 hover:text-gray-300 transition-colors"
+            >
+              <div className="vertical-text text-[10px] font-medium">History</div>
+            </div>
+          )}
 
         {/* 添加垂直文本样式 */}
-        <style jsx>{`
-          .vertical-text {
-            writing-mode: vertical-rl;
-            text-orientation: mixed;
-            transform: rotate(180deg);
-          }
-        `}</style>
+          <style jsx>{`
+            .vertical-text {
+              writing-mode: vertical-rl;
+              text-orientation: mixed;
+              transform: rotate(180deg);
+            }
+          `}</style>
 
         {/* Ensure content is above the effects - 保持原有布局不变 */}
         <div className={`relative z-10 w-full max-w-4xl px-8 py-12 initial-screen-content rounded-xl bg-transparent`}> {/* 移除背景和模糊 */}
@@ -2843,14 +2856,14 @@ const ResearchTool = () => {
                   }
                 </button>
               </Tooltip>
-            </h1>
+              </h1>
             <p className={`text-lg ${currentBackground === 'DAY_GHIBLI' ? 'text-amber-200/90' : 'text-gray-300'} mb-8 drop-shadow-md`}> {/* 应用 drop-shadow */}
 
-            Create strategic alternative pages that capture high-intent traffic and convert browsers into customers.
-            </p>
-          </div>
-          
-          <div className="relative max-w-3xl mx-auto">
+                Create strategic alternative pages that capture high-intent traffic and convert browsers into customers.
+              </p>
+            </div>
+
+            <div className="relative max-w-3xl mx-auto">
             <form onSubmit={(e) => {
               // ... (form submission logic remains the same) ...
               e.preventDefault();
@@ -2928,8 +2941,8 @@ const ResearchTool = () => {
                   </>
                 )}
               </button>
-            </form>
-          </div>
+              </form>
+            </div>
 
           {/* 添加免费credits提示 - 样式更加醒目 */}
           <div className={`mt-4 text-center mb-8 drop-shadow-md`}> {/* 应用 drop-shadow */}
@@ -2949,93 +2962,93 @@ const ResearchTool = () => {
               <svg className="w-6 h-6 ml-3 text-yellow-300 animate-bounce-strong" style={{animationDelay: '0.3s'}} viewBox="0 0 24 24" fill="currentColor" stroke="none">
                 <path d="M13 9V3.5L18.5 9M6 2c-1.11 0-2 .89-2 2v16c0 1.11.89 2 2 2h12c1.11 0 2-.89 2-2V8l-6-6H6z"/>
               </svg>
+              </div>
             </div>
-          </div>
 
-          <div className="mt-12 max-w-4xl mx-auto">
+            <div className="mt-12 max-w-4xl mx-auto">
             <h3 className={`text-xl font-semibold ${currentBackground === 'DAY_GHIBLI' ? 'text-amber-100' : 'text-white'} mb-6 text-center drop-shadow-lg`}>Some Outstanding Alternative Pages Cases Generated By Us</h3> {/* 应用 drop-shadow */}
-            <div className="grid grid-cols-3 gap-6">
+              <div className="grid grid-cols-3 gap-6">
               {/* Example Card 1: Page Ranking */}
-              <div
+                <div
                 onClick={() => handleExampleClick('hix')} // 保留 onClick，但内容已更改
                 // 使用 getCardStyle 获取样式
-                className={`${getCardStyle()} backdrop-blur-sm p-5 rounded-xl
-                         border cursor-pointer hover:-translate-y-1
-                         transition-all duration-300
+                  className={`${getCardStyle()} backdrop-blur-sm p-5 rounded-xl
+                           border cursor-pointer hover:-translate-y-1
+                           transition-all duration-300
                          relative overflow-hidden group`} // Add group for hover effects
-              >
+                >
                 {/* 根据主题设置光晕效果 */}
-                <div className={`absolute -right-6 -top-6 w-16 h-16 ${currentBackground === 'DAY_GHIBLI' ? 'bg-amber-400/20 group-hover:bg-amber-400/30' : 'bg-blue-400/20 group-hover:bg-blue-400/30'} rounded-full blur-xl transition-all`}></div>
-                <div className="w-10 h-10 mb-3 flex items-center justify-center bg-white/90 rounded-lg">
+                  <div className={`absolute -right-6 -top-6 w-16 h-16 ${currentBackground === 'DAY_GHIBLI' ? 'bg-amber-400/20 group-hover:bg-amber-400/30' : 'bg-blue-400/20 group-hover:bg-blue-400/30'} rounded-full blur-xl transition-all`}></div>
+                  <div className="w-10 h-10 mb-3 flex items-center justify-center bg-white/90 rounded-lg">
                   {/* 根据主题设置文字颜色 - 可以保留或更改图标 */}
-                  <svg className={`w-6 h-6 ${currentBackground === 'DAY_GHIBLI' ? 'text-amber-600' : 'text-blue-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                  </svg>
-                </div>
+                    <svg className={`w-6 h-6 ${currentBackground === 'DAY_GHIBLI' ? 'text-amber-600' : 'text-blue-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                    </svg>
+                  </div>
                 {/* 根据主题设置文字颜色 */}
                 <div className={`${currentBackground === 'DAY_GHIBLI' ? 'text-amber-300 group-hover:text-amber-200' : 'text-blue-300 group-hover:text-blue-200'} font-medium mb-2 text-base`}>Improve Search Ranking</div> {/* <-- 修改标题 */}
                 <div className="text-xs text-gray-400 group-hover:text-gray-300">SEO-focused pages designed to rank higher.</div> {/* <-- 修改描述 */}
-                <div className="absolute bottom-3 right-3">
+                  <div className="absolute bottom-3 right-3">
                   {/* 根据主题设置箭头颜色 */}
-                  <ArrowRightOutlined className={`${currentBackground === 'DAY_GHIBLI' ? 'text-amber-400/50 group-hover:text-amber-300' : 'text-blue-400/50 group-hover:text-blue-300'} transition-all`} />
+                    <ArrowRightOutlined className={`${currentBackground === 'DAY_GHIBLI' ? 'text-amber-400/50 group-hover:text-amber-300' : 'text-blue-400/50 group-hover:text-blue-300'} transition-all`} />
+                  </div>
                 </div>
-              </div>
 
               {/* Example Card 2: Conversion Rate */}
-              <div
+                <div
                 onClick={() => handleExampleClick('joggai')} // 保留 onClick，但内容已更改
                 // 使用 getCardStyle 获取样式
-                 className={`${getCardStyle()} backdrop-blur-sm p-5 rounded-xl
-                         border cursor-pointer hover:-translate-y-1
-                         transition-all duration-300
-                         group relative overflow-hidden`}
-              >
+                  className={`${getCardStyle()} backdrop-blur-sm p-5 rounded-xl
+                           border cursor-pointer hover:-translate-y-1
+                           transition-all duration-300
+                           group relative overflow-hidden`}
+                >
                  {/* 根据主题设置光晕效果 */}
-                <div className={`absolute -right-6 -top-6 w-16 h-16 ${currentBackground === 'DAY_GHIBLI' ? 'bg-amber-800/20 group-hover:bg-amber-800/30' : 'bg-indigo-400/20 group-hover:bg-indigo-400/30'} rounded-full blur-xl transition-all`}></div>
-                <div className="w-10 h-10 mb-3 flex items-center justify-center bg-white/90 rounded-lg">
+                   <div className={`absolute -right-6 -top-6 w-16 h-16 ${currentBackground === 'DAY_GHIBLI' ? 'bg-amber-800/20 group-hover:bg-amber-800/30' : 'bg-indigo-400/20 group-hover:bg-indigo-400/30'} rounded-full blur-xl transition-all`}></div>
+                  <div className="w-10 h-10 mb-3 flex items-center justify-center bg-white/90 rounded-lg">
                    {/* 根据主题设置文字颜色 - 可以保留或更改图标 */}
-                   <svg className={`w-6 h-6 ${currentBackground === 'DAY_GHIBLI' ? 'text-purple-600' : 'text-indigo-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5l-3 3m0 0l-3-3m3 3V8" />
-                   </svg>
-                </div>
+                     <svg className={`w-6 h-6 ${currentBackground === 'DAY_GHIBLI' ? 'text-purple-600' : 'text-indigo-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5l-3 3m0 0l-3-3m3 3V8" />
+                     </svg>
+                  </div>
                  {/* 根据主题设置文字颜色 */}
                 <div className={`${currentBackground === 'DAY_GHIBLI' ? 'text-amber-400 group-hover:text-amber-300' : 'text-indigo-300 group-hover:text-indigo-200'} font-medium mb-2 text-base`}>Maximize Conversion Rates</div> {/* <-- 修改标题 */}
                 <div className="text-xs text-gray-400 group-hover:text-gray-300">Convert more visitors with intent-driven pages.</div> {/* <-- 修改描述 */}
-                <div className="absolute bottom-3 right-3">
+                  <div className="absolute bottom-3 right-3">
                    {/* 根据主题设置箭头颜色 */}
-                  <ArrowRightOutlined className={`${currentBackground === 'DAY_GHIBLI' ? 'text-amber-500/50 group-hover:text-amber-400' : 'text-indigo-400/50 group-hover:text-indigo-300'} transition-all`} />
+                    <ArrowRightOutlined className={`${currentBackground === 'DAY_GHIBLI' ? 'text-amber-500/50 group-hover:text-amber-400' : 'text-indigo-400/50 group-hover:text-indigo-300'} transition-all`} />
+                  </div>
                 </div>
-              </div>
 
               {/* Example Card 3: PPC Landing Page */}
-              <div
+                <div
                 onClick={() => handleExampleClick('jtracking')} // 保留 onClick，但内容已更改
                 // 使用 getCardStyle 获取样式
-                 className={`${getCardStyle()} backdrop-blur-sm p-5 rounded-xl
-                         border cursor-pointer hover:-translate-y-1
-                         transition-all duration-300
-                         group relative overflow-hidden`}
-              >
+                  className={`${getCardStyle()} backdrop-blur-sm p-5 rounded-xl
+                           border cursor-pointer hover:-translate-y-1
+                           transition-all duration-300
+                           group relative overflow-hidden`}
+                >
                  {/* 根据主题设置光晕效果 */}
-                <div className={`absolute -right-6 -top-6 w-16 h-16 ${currentBackground === 'DAY_GHIBLI' ? 'bg-amber-600/20 group-hover:bg-amber-600/30' : 'bg-cyan-400/20 group-hover:bg-cyan-400/30'} rounded-full blur-xl transition-all`}></div>
-                <div className="w-10 h-10 mb-3 flex items-center justify-center bg-white/90 rounded-lg">
+                  <div className={`absolute -right-6 -top-6 w-16 h-16 ${currentBackground === 'DAY_GHIBLI' ? 'bg-amber-600/20 group-hover:bg-amber-600/30' : 'bg-cyan-400/20 group-hover:bg-cyan-400/30'} rounded-full blur-xl transition-all`}></div>
+                  <div className="w-10 h-10 mb-3 flex items-center justify-center bg-white/90 rounded-lg">
                    {/* 根据主题设置文字颜色 - 可以保留或更改图标 */}
-                   <svg className={`w-6 h-6 ${currentBackground === 'DAY_GHIBLI' ? 'text-amber-600' : 'text-cyan-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
-                   </svg>
-                </div>
+                     <svg className={`w-6 h-6 ${currentBackground === 'DAY_GHIBLI' ? 'text-amber-600' : 'text-cyan-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+                     </svg>
+                  </div>
                  {/* 根据主题设置文字颜色 */}
                 <div className={`${currentBackground === 'DAY_GHIBLI' ? 'text-amber-300 group-hover:text-amber-200' : 'text-cyan-300 group-hover:text-cyan-200'} font-medium mb-2 text-base`}>Effective PPC Landing Pages</div> {/* <-- 修改标题 */}
                 <div className="text-xs text-gray-400 group-hover:text-gray-300">Optimize ad spend with targeted landing pages.</div> {/* <-- 修改描述 */}
-                <div className="absolute bottom-3 right-3">
+                  <div className="absolute bottom-3 right-3">
                    {/* 根据主题设置箭头颜色 */}
-                  <ArrowRightOutlined className={`${currentBackground === 'DAY_GHIBLI' ? 'text-amber-400/50 group-hover:text-amber-300' : 'text-cyan-400/50 group-hover:text-cyan-300'} transition-all`} />
+                    <ArrowRightOutlined className={`${currentBackground === 'DAY_GHIBLI' ? 'text-amber-400/50 group-hover:text-amber-300' : 'text-cyan-400/50 group-hover:text-cyan-300'} transition-all`} />
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
     );
   }
 

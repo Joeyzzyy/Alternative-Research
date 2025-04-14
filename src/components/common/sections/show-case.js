@@ -1,25 +1,26 @@
 'use client';
-import React from 'react';
+import React, { useState, useEffect, forwardRef } from 'react';
+import { Tabs } from 'antd';
 
-const CustomizableResearchUI = () => {
-  return (
-    <div className="bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 py-24 relative overflow-hidden">
-      {/* AI-style background decorations */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_#22d3ee15_0%,_transparent_60%)]"></div>
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_#a78bfa15_0%,_transparent_60%)]"></div>
-      
-      <div className="max-w-7xl mx-auto px-4 relative z-10">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-6 bg-gradient-to-r from-cyan-400 to-purple-500 text-transparent bg-clip-text">
-            Our Customers See Real Results
-          </h2>
-          <p className="text-gray-300 max-w-3xl mx-auto">
-            Here's what our customers are saying about their alternative page strategy.
-          </p>
-        </div>
+const CustomizableResearchUI = forwardRef(({ initialActiveKey = 'hix', targetKey }, ref) => {
+  const [activeTabKey, setActiveTabKey] = useState(initialActiveKey);
 
-        {/* Case Study 1: HIX - Left Text, Right Image */}
-        <div className="grid md:grid-cols-2 gap-16 items-center mb-24" id="showcase-hix">
+  useEffect(() => {
+    setActiveTabKey(initialActiveKey);
+  }, [initialActiveKey]);
+
+  useEffect(() => {
+    if (targetKey && targetKey !== activeTabKey) {
+      setActiveTabKey(targetKey);
+    }
+  }, [targetKey]);
+
+  const items = [
+    {
+      key: 'hix',
+      label: 'HIX: Improve Search Ranking',
+      children: (
+        <div className="grid md:grid-cols-2 gap-16 items-center">
           <div className="py-12 space-y-8">
             <div className="flex items-center space-x-3 mb-4">
               <div className="h-10 w-10 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center">
@@ -73,9 +74,13 @@ const CustomizableResearchUI = () => {
             </div>
           </div>
         </div>
-        
-        {/* Case Study 2: Joggai - Right Text, Left Image */}
-        <div className="grid md:grid-cols-2 gap-16 items-center mb-24" id="showcase-joggai">
+      ),
+    },
+    {
+      key: 'joggai',
+      label: 'Joggai: Maximize Conversion Rates',
+      children: (
+        <div className="grid md:grid-cols-2 gap-16 items-center">
           <div className="flex justify-center order-2 md:order-1">
             <div className="aspect-w-16 aspect-h-9 w-full rounded-lg shadow-2xl shadow-slate-900/70 border border-slate-800/50 bg-slate-800 flex flex-col p-4 overflow-hidden">
               <div className="flex items-center space-x-1.5 mb-3">
@@ -129,9 +134,13 @@ const CustomizableResearchUI = () => {
             </button>
           </div>
         </div>
-        
-        {/* Case Study 3: JTracking - Left Text, Right Image */}
-        <div className="grid md:grid-cols-2 gap-16 items-center" id="showcase-jtracking">
+      ),
+    },
+    {
+      key: 'jtracking',
+      label: 'JTracking: Effective PPC Landing Pages',
+      children: (
+        <div className="grid md:grid-cols-2 gap-16 items-center">
           <div className="py-12 space-y-8">
             <div className="flex items-center space-x-3 mb-4">
               <div className="h-10 w-10 bg-gradient-to-r from-amber-500 to-rose-500 rounded-lg flex items-center justify-center">
@@ -185,8 +194,33 @@ const CustomizableResearchUI = () => {
             </div>
           </div>
         </div>
-        
-        {/* CTA Button */}
+      ),
+    },
+  ];
+
+  return (
+    <div id="showcase-section" ref={ref} className="bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 py-24 relative overflow-hidden">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_#22d3ee15_0%,_transparent_60%)]"></div>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_#a78bfa15_0%,_transparent_60%)]"></div>
+      
+      <div className="max-w-7xl mx-auto px-4 relative z-10">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-6 bg-gradient-to-r from-cyan-400 to-purple-500 text-transparent bg-clip-text">
+            Our Customers See Real Results
+          </h2>
+          <p className="text-gray-300 max-w-3xl mx-auto">
+            Here's what our customers are saying about their alternative page strategy.
+          </p>
+        </div>
+
+        <Tabs
+          activeKey={activeTabKey}
+          onChange={setActiveTabKey}
+          items={items}
+          centered
+          className="showcase-tabs"
+        />
+
         <div className="mt-20 text-center">
           <button 
             className="px-8 py-3.5 rounded-full relative overflow-hidden group"
@@ -204,8 +238,32 @@ const CustomizableResearchUI = () => {
           </button>
         </div>
       </div>
+
+      <style jsx global>{`
+        .showcase-tabs .ant-tabs-nav {
+          margin-bottom: 40px !important;
+        }
+        .showcase-tabs .ant-tabs-tab {
+          padding: 12px 20px !important;
+          font-size: 1rem !important;
+          color: #94a3b8 !important;
+        }
+        .showcase-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
+          color: #67e8f9 !important;
+          font-weight: 600 !important;
+        }
+        .showcase-tabs .ant-tabs-ink-bar {
+          background: linear-gradient(to right, #22d3ee, #a78bfa) !important;
+          height: 3px !important;
+        }
+        .showcase-tabs .ant-tabs-tab:hover {
+          color: #cbd5e1 !important;
+        }
+      `}</style>
     </div>
   );
-};
+});
+
+CustomizableResearchUI.displayName = 'CustomizableResearchUI';
 
 export default CustomizableResearchUI;

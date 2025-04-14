@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect, useMemo, memo } from 'react';
+import React, { useEffect, useMemo, memo, useState } from 'react';
 import Header from './header-template';
 import Footer from './footer-template';
 /* divider */
@@ -56,6 +56,8 @@ const CommonLayout = ({ article, keywords }) => {
     return article?.pageLayout?.pageFooters;
   }, [article?.pageLayout?.pageFooters]);
 
+  const [targetShowcaseTab, setTargetShowcaseTab] = useState(null);
+
   useEffect(() => {
   }, [article]);
 
@@ -85,7 +87,7 @@ const CommonLayout = ({ article, keywords }) => {
                 {currentTool === 'restore' ? (
                   <TaskRestoreTool />
                 ) : (
-                  <ResearchTool />
+                  <ResearchTool setTargetShowcaseTab={setTargetShowcaseTab} />
                 )}
               </div>
             );
@@ -93,6 +95,24 @@ const CommonLayout = ({ article, keywords }) => {
 
           const Component = COMPONENT_MAP[section.componentName];
           if (!Component) return null;
+
+          if (section.componentName === "ShowCase") {
+            return (
+              <div
+                key={`${section.componentName}-${section.sectionId}`}
+                className="w-full bg-white"
+                id={section.sectionId}
+              >
+                <Component
+                  data={section}
+                  author={author}
+                  date={article.createdAt}
+                  targetKey={targetShowcaseTab}
+                  initialActiveKey="hix"
+                />
+              </div>
+            );
+          }
 
           return (
             <div 
