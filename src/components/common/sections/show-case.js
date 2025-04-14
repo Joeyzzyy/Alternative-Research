@@ -1,8 +1,9 @@
 'use client';
 import React, { useState, useEffect, forwardRef } from 'react';
 import { Tabs } from 'antd';
+import { LineChartOutlined, ShoppingCartOutlined, AimOutlined } from '@ant-design/icons';
 
-const CustomizableResearchUI = forwardRef(({ initialActiveKey = 'hix', targetKey }, ref) => {
+const CustomizableResearchUI = forwardRef(({ initialActiveKey = 'ranking', targetKey }, ref) => {
   const [activeTabKey, setActiveTabKey] = useState(initialActiveKey);
 
   useEffect(() => {
@@ -17,16 +18,16 @@ const CustomizableResearchUI = forwardRef(({ initialActiveKey = 'hix', targetKey
 
   const items = [
     {
-      key: 'hix',
-      label: 'HIX: Improve Search Ranking',
+      key: 'ranking',
+      label: 'Case Study: SEO Ranking',
       children: (
         <div className="grid md:grid-cols-2 gap-16 items-center">
           <div className="py-12 space-y-8">
             <div className="flex items-center space-x-3 mb-4">
-              <div className="h-10 w-10 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold">H</span>
+              <div className="h-10 w-10 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center text-white text-xl">
+                <LineChartOutlined />
               </div>
-              <h3 className="text-2xl font-bold text-white">HIX</h3>
+              <h3 className="text-2xl font-bold text-white">Ranking Improvement Case</h3>
             </div>
             
             <h2 className="text-3xl font-bold text-white mb-6">
@@ -34,13 +35,13 @@ const CustomizableResearchUI = forwardRef(({ initialActiveKey = 'hix', targetKey
             </h2>
             
             <p className="text-gray-300 leading-relaxed mb-8">
-              HIX had invested heavily in traditional SEO for months with minimal results. Within just 2 weeks of implementing our AI-generated alternative pages, they jumped from page 5 to the top 3 results for their most competitive keywords. The alternative approach unlocked traffic and conversion potential that conventional methods couldn't reach.
+              A tech company struggled with slow organic growth despite SEO efforts. By deploying AI-generated alternative pages targeting specific competitor weaknesses, they achieved significant ranking improvements for high-value keywords within weeks, capturing previously inaccessible organic traffic.
             </p>
             
             <div className="flex items-center space-x-2 text-cyan-400 mb-8">
-              <span className="font-medium">Results:</span>
-              <span className="px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-400 text-sm">+215% Traffic</span>
-              <span className="px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-400 text-sm">Top 3 Ranking</span>
+              <span className="font-medium">Key Results:</span>
+              <span className="px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-400 text-sm">+45% Organic Traffic</span>
+              <span className="px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-400 text-sm">Page 1 Ranking for Target Keywords</span>
             </div>
             
             <button 
@@ -77,8 +78,8 @@ const CustomizableResearchUI = forwardRef(({ initialActiveKey = 'hix', targetKey
       ),
     },
     {
-      key: 'joggai',
-      label: 'Joggai: Maximize Conversion Rates',
+      key: 'conversion',
+      label: 'Case Study: Conversion Lift',
       children: (
         <div className="grid md:grid-cols-2 gap-16 items-center">
           <div className="flex justify-center order-2 md:order-1">
@@ -99,24 +100,24 @@ const CustomizableResearchUI = forwardRef(({ initialActiveKey = 'hix', targetKey
           
           <div className="py-12 space-y-8 order-1 md:order-2">
             <div className="flex items-center space-x-3 mb-4">
-              <div className="h-10 w-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold">J</span>
+              <div className="h-10 w-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center text-white text-xl">
+                <ShoppingCartOutlined />
               </div>
-              <h3 className="text-2xl font-bold text-white">Joggai</h3>
+              <h3 className="text-2xl font-bold text-white">Conversion Optimization Case</h3>
             </div>
             
             <h2 className="text-3xl font-bold text-white mb-6">
-              Competing Against Industry Giants
+              Turning Clicks into Customers
             </h2>
             
             <p className="text-gray-300 leading-relaxed mb-8">
-              As a startup, Joggai was struggling to compete with established fitness apps with massive SEO budgets. Their alternative pages created unique value propositions that major competitors weren't addressing, allowing them to capture highly targeted traffic and outrank three major competitors for niche keywords that drove qualified users.
+              An e-commerce startup faced challenges converting visitors from comparison searches. Alternative pages highlighting their unique selling points and addressing specific user intents led to a measurable increase in conversion rates, particularly for high-intent traffic segments.
             </p>
             
             <div className="flex items-center space-x-2 text-purple-400 mb-8">
-              <span className="font-medium">Results:</span>
-              <span className="px-3 py-1 rounded-full bg-purple-500/10 text-purple-400 text-sm">+340% Downloads</span>
-              <span className="px-3 py-1 rounded-full bg-purple-500/10 text-purple-400 text-sm">Outranked Competitors</span>
+              <span className="font-medium">Key Results:</span>
+              <span className="px-3 py-1 rounded-full bg-purple-500/10 text-purple-400 text-sm">+25% Registration Conversion</span>
+              <span className="px-3 py-1 rounded-full bg-purple-500/10 text-purple-400 text-sm">Improved Ranking for Niche Keywords</span>
             </div>
             
             <button 
@@ -137,30 +138,30 @@ const CustomizableResearchUI = forwardRef(({ initialActiveKey = 'hix', targetKey
       ),
     },
     {
-      key: 'jtracking',
-      label: 'JTracking: Effective PPC Landing Pages',
+      key: 'sem',
+      label: 'Case Study: SEM Landing Pages',
       children: (
         <div className="grid md:grid-cols-2 gap-16 items-center">
           <div className="py-12 space-y-8">
             <div className="flex items-center space-x-3 mb-4">
-              <div className="h-10 w-10 bg-gradient-to-r from-amber-500 to-rose-500 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold">J</span>
+              <div className="h-10 w-10 bg-gradient-to-r from-amber-500 to-rose-500 rounded-lg flex items-center justify-center text-white text-xl">
+                <AimOutlined />
               </div>
-              <h3 className="text-2xl font-bold text-white">JTracking</h3>
+              <h3 className="text-2xl font-bold text-white">High-ROI SEM Case</h3>
             </div>
             
             <h2 className="text-3xl font-bold text-white mb-6">
-              Converting Traffic That Matters
+              Maximizing Paid Ad Spend
             </h2>
             
             <p className="text-gray-300 leading-relaxed mb-8">
-              JTracking had decent traffic but poor conversion rates. Their alternative pages didn't just attract more visitors—they attracted the right visitors. By addressing specific pain points and offering tailored solutions through AI-generated content, they doubled their conversion rate and ranked for 12 high-value keywords that traditional content strategies had missed.
+              A marketing agency sought better ROI from SEM campaigns. By using AI-generated alternative pages as highly targeted landing destinations, they significantly improved lead quality and conversion rates from paid traffic, leading to a better return on ad spend compared to generic landing pages.
             </p>
             
             <div className="flex items-center space-x-2 text-amber-400 mb-8">
-              <span className="font-medium">Results:</span>
-              <span className="px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 text-sm">+104% Conversions</span>
-              <span className="px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 text-sm">12 First-Page Rankings</span>
+              <span className="font-medium">Key Results:</span>
+              <span className="px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 text-sm">+15% Lead Conversion Rate</span>
+              <span className="px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 text-sm">Ranked for 8 High-Intent Keywords</span>
             </div>
             
             <button 
