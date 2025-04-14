@@ -2958,7 +2958,7 @@ const ResearchTool = ({
                 ) : (
                   <>
                     <ArrowRightOutlined className="w-6 h-6" />
-                    <span className="relative z-10">Analyze Now</span>
+                    <span className="relative z-10">Start Generating!</span>
                   </>
                 )}
               </button>

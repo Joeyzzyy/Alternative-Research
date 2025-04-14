@@ -233,8 +233,8 @@ async function getPageData() {
                 "newsletterText": "#FFFFFF",
                 "newsletterTitle": "#FFFFFF"
             },
-            "companyName": "Alternatively",
-            "copyright": "© 2025 Alternatively. All rights reserved.",
+            "companyName": "AltPage.ai",
+            "copyright": "© 2025 AltPage.ai. All rights reserved.",
             "description": "The Best AI Alternative Research Tool.",
             "sections": [
                 {
