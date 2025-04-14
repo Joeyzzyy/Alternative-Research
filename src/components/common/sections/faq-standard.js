@@ -19,11 +19,11 @@ const faqData = [
   },
   {
     question: "Can I integrate AltPage.ai with my existing website?",
-    answer: "Yes! AltPage.ai works with all major website platforms including WordPress, Shopify, Webflow, and custom websites. We provide easy integration options or can host your alternative pages on our high-performance servers."
+    answer: "Of course, we can deploy to your subdomain or subdirectory."
   },
   {
     question: "What if I need help creating my alternative pages?",
-    answer: "We offer comprehensive support including detailed tutorials, templates, and responsive customer service. Enterprise plans include a dedicated account manager to help you create and optimize your alternative pages."
+    answer: "You can contact us via Intercom in the bottom right corner of the page or email us at contact@intelick.com. We will reply within 12 hours."
   }
 ];
 

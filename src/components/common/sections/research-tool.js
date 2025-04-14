@@ -2817,7 +2817,6 @@ const ResearchTool = () => {
         {/* Ensure content is above the effects - 保持原有布局不变 */}
         <div className={`relative z-10 w-full max-w-4xl px-8 py-12 initial-screen-content rounded-xl bg-transparent`}> {/* 移除背景和模糊 */}
           <div className={`text-center mb-8 text-shadow`}> {/* 应用 text-shadow */}
-            {/* highlight-start */}
             {/* 修改 h1 以使用 Flexbox 进行对齐 */}
             <h1 className={`text-4xl font-bold ${currentBackground === 'DAY_GHIBLI' ? 'text-amber-100' : 'text-white'} mb-6 drop-shadow-lg flex items-center justify-center gap-3`}> {/* 应用 drop-shadow, 添加 flex, items-center, justify-center, gap */}
               <span> {/* 将文本包裹在 span 中 */}
@@ -2830,20 +2829,21 @@ const ResearchTool = () => {
                   onClick={toggleBackground}
                   // 调整 padding, 移除 gap, 保持其他样式
                   // 移除 ml-4, 因为 gap 已经提供了间距
+                  // 移除 align-middle，因为它在 flex 布局中是多余的
                   className={`inline-flex items-center justify-center p-2 text-xs ${getButtonStyle()} rounded-full
                            backdrop-blur-sm transition-all border
-                           shadow-lg hover:scale-105 align-middle`} // 保持 align-middle 或移除，因为 flex 会处理对齐
+                           shadow-lg hover:scale-105`} 
                 >
                   {/* 根据状态显示不同图标 */}
                   {currentBackground === 'DAY_GHIBLI'
-                    ? <BulbOutlined className="w-4 h-4" /> // 夜间模式图标 (显示为未点亮)
-                    : <BulbFilled className="w-4 h-4" />   // 白天模式图标 (显示为点亮)
+                    // 添加 flex-shrink-0 确保图标不收缩
+                    ? <BulbOutlined className="w-4 h-4 flex-shrink-0" /> 
+                    // 添加 flex-shrink-0 确保图标不收缩
+                    : <BulbFilled className="w-4 h-4 flex-shrink-0" />   
                   }
-                  {/* 移除原有 SVG 和文本 */}
                 </button>
               </Tooltip>
             </h1>
-            {/* highlight-end */}
             <p className={`text-lg ${currentBackground === 'DAY_GHIBLI' ? 'text-amber-200/90' : 'text-gray-300'} mb-8 drop-shadow-md`}> {/* 应用 drop-shadow */}
 
             Create strategic alternative pages that capture high-intent traffic and convert browsers into customers.
