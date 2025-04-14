@@ -86,6 +86,11 @@ const ResearchTool = () => {
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [isProcessingTask, setIsProcessingTask] = useState(false);
+  const [dynamicPlaceholder, setDynamicPlaceholder] = useState(''); // 新增状态
+  const placeholderIntervalRef = useRef(null); // Ref for interval ID
+  const placeholderIndexRef = useRef(0); // Ref for current character index
+  const placeholderDirectionRef = useRef('typing'); // Ref for direction ('typing' or 'deleting')
+  const placeholderTimeoutRef = useRef(null); // Ref for pause timeout
 
   const filterMessageTags = (message) => {
     let filteredMessage = message;
@@ -2526,6 +2531,92 @@ const ResearchTool = () => {
     }
   };
 
+  // Typewriter effect refs (moved outside useEffect)
+  const currentTextIndexRef = useRef(0); // Track which sentence to display
+  const isDeletingRef = useRef(false); // Track if currently deleting
+  const charIndexRef = useRef(0); // Track character index within the sentence
+
+  // Typewriter effect for placeholder
+  useEffect(() => {
+    const placeholderTexts = [
+      "Enter product website URL to get started.",
+      "For example: altpage.ai"
+    ];
+    const typingSpeed = 50; // milliseconds per character
+    const deletingSpeed = 20;
+    const pauseBetweenSentences = 1500; // Pause after typing a sentence
+    const pauseAtEnd = 1000; // Pause after deleting a sentence
+
+    // Refs are now accessed directly, no need to declare them here
+
+    const clearTimers = () => {
+      if (placeholderIntervalRef.current) {
+        clearInterval(placeholderIntervalRef.current);
+        placeholderIntervalRef.current = null;
+      }
+      if (placeholderTimeoutRef.current) {
+        clearTimeout(placeholderTimeoutRef.current);
+        placeholderTimeoutRef.current = null;
+      }
+    };
+
+    const type = () => {
+      clearTimers();
+      const currentText = placeholderTexts[currentTextIndexRef.current];
+      const currentSpeed = isDeletingRef.current ? deletingSpeed : typingSpeed;
+
+      placeholderIntervalRef.current = setInterval(() => {
+        if (isDeletingRef.current) {
+          // Deleting logic
+          if (charIndexRef.current > 0) {
+            charIndexRef.current -= 1;
+            setDynamicPlaceholder(currentText.substring(0, charIndexRef.current));
+          } else {
+            // Finished deleting current sentence
+            isDeletingRef.current = false;
+            // Move to the next sentence (looping back to 0 if needed)
+            currentTextIndexRef.current = (currentTextIndexRef.current + 1) % placeholderTexts.length;
+            clearTimers();
+            // Pause before typing the next sentence
+            placeholderTimeoutRef.current = setTimeout(type, pauseAtEnd);
+          }
+        } else {
+          // Typing logic
+          if (charIndexRef.current < currentText.length) {
+            charIndexRef.current += 1;
+            setDynamicPlaceholder(currentText.substring(0, charIndexRef.current));
+          } else {
+            // Finished typing current sentence
+            isDeletingRef.current = true;
+            clearTimers();
+            // Pause before deleting
+            placeholderTimeoutRef.current = setTimeout(type, pauseBetweenSentences);
+          }
+        }
+      }, currentSpeed);
+    };
+
+    if (showInitialScreen) {
+      // Reset state before starting
+      currentTextIndexRef.current = 0;
+      charIndexRef.current = 0;
+      isDeletingRef.current = false;
+      setDynamicPlaceholder('');
+      // Start the effect after a short delay
+      placeholderTimeoutRef.current = setTimeout(type, 500);
+    } else {
+      // Clear timers and set static placeholder if not on initial screen
+      clearTimers();
+      // 保留原始的静态 placeholder
+      setDynamicPlaceholder("Enter product website URL to get started (e.g., example.com)");
+    }
+
+    // Cleanup function
+    return () => {
+      clearTimers();
+    };
+  }, [showInitialScreen]); // Rerun effect when showInitialScreen changes
+
   if (initialLoading) {
     return (
       <div className="w-full min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 
@@ -2663,8 +2754,8 @@ const ResearchTool = () => {
         <div className={`relative z-10 w-full max-w-4xl px-8 py-12 initial-screen-content rounded-xl bg-transparent`}> {/* 移除背景和模糊 */}
           <div className={`text-center mb-8 text-shadow`}> {/* 应用 text-shadow */}
             <h1 className={`text-4xl font-bold ${currentBackground === 'DAY_GHIBLI' ? 'text-amber-100' : 'text-white'} mb-6 drop-shadow-lg`}> {/* 应用 drop-shadow */}
-              Welcome to <span className={currentBackground === 'DAY_GHIBLI' ? 'text-amber-400' : 'text-blue-400'}>Alternatively</span>
-
+            Turn Competitors'<span className={currentBackground === 'DAY_GHIBLI' ? 'text-amber-400' : 'text-blue-400'}>&nbsp;Popularity&nbsp;</span>
+            Into Your Success
               <button 
                 onClick={toggleBackground}
                 className={`ml-4 inline-flex items-center px-3 py-1.5 text-xs ${getButtonStyle()} rounded-full
@@ -2679,7 +2770,8 @@ const ResearchTool = () => {
               </button>
             </h1>
             <p className={`text-lg ${currentBackground === 'DAY_GHIBLI' ? 'text-amber-200/90' : 'text-gray-300'} mb-8 drop-shadow-md`}> {/* 应用 drop-shadow */}
-              Which product would you like to analyze and create an SEO-friendly Alternatively page for?
+            
+            Create strategic alternative pages that capture high-intent traffic and convert browsers into customers.
             </p>
           </div>
           
@@ -2699,14 +2791,14 @@ const ResearchTool = () => {
                 setValidationError('Please enter a valid domain (e.g., example.com)');
                 return;
               }
-              
+
               setValidationError('');
               const formattedInput = userInput.trim().startsWith('http') ? userInput.trim() : `https://${userInput.trim()}`;
               initializeChat(formattedInput);
             }}>
                 <div className="relative">
                 <Input
-                  placeholder="Enter product website URL (e.g., example.com)"
+                  placeholder={dynamicPlaceholder} // 使用动态 placeholder
                   value={userInput}
                     onChange={(e) => {
                     setUserInput(e.target.value);
