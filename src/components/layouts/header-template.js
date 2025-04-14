@@ -590,7 +590,7 @@ export default function Header() {
                             }}
                           ></div>
                         </div>
-                        <p className="mb-3 text-gray-300">Total Limit: {userCredits.pageGeneratorLimit}</p>
+                        <p className="mb-3 text-gray-300">Total Credits: {userCredits.pageGeneratorLimit}</p>
                         <p className="mb-3 text-gray-300">Used: {userCredits.pageGeneratorUsage}</p>
                         <p className="text-gray-400 text-xs mb-4">Note: Changing the overall color scheme or style of the page will also consume credits.</p>
                         

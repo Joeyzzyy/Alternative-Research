@@ -464,7 +464,7 @@ const ResearchTool = () => {
         if (!formattedAction) return '';
         
         return `<div class="action-block p-2 my-2 bg-blue-50 rounded text-xs text-blue-600">
-                  <div class="font-medium mb-1">Action:</div>
+                  <div class="font-medium mb-1">Executing:</div>
                   <div>${formattedAction}</div>
                 </div>`;
       }
@@ -898,6 +898,41 @@ const ResearchTool = () => {
           opacity: 1;
           transform: translateY(0);
         }
+      }
+      
+      /* 美化滚动条样式 */
+      .h-full::-webkit-scrollbar,
+      .overflow-y-auto::-webkit-scrollbar,
+      .chat-messages-container::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      
+      .h-full::-webkit-scrollbar-track,
+      .overflow-y-auto::-webkit-scrollbar-track,
+      .chat-messages-container::-webkit-scrollbar-track {
+        background: rgba(15, 23, 42, 0.1);
+        border-radius: 10px;
+      }
+      
+      .h-full::-webkit-scrollbar-thumb,
+      .overflow-y-auto::-webkit-scrollbar-thumb,
+      .chat-messages-container::-webkit-scrollbar-thumb {
+        background: rgba(59, 130, 246, 0.5);
+        border-radius: 10px;
+        transition: all 0.3s ease;
+      }
+      
+      .h-full::-webkit-scrollbar-thumb:hover,
+      .overflow-y-auto::-webkit-scrollbar-thumb:hover,
+      .chat-messages-container::-webkit-scrollbar-thumb:hover {
+        background: rgba(59, 130, 246, 0.8);
+      }
+      
+      /* 针对 Firefox 的滚动条样式 */
+      .h-full, .overflow-y-auto, .chat-messages-container {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(59, 130, 246, 0.5) rgba(15, 23, 42, 0.1);
       }
     `;
     document.head.appendChild(style);
