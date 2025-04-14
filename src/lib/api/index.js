@@ -143,11 +143,12 @@ const getAlternativeStatus = async (websiteId) => {
   }
 };
 
-const searchCompetitor = async (website, deepResearch) => {
+const searchCompetitor = async (website, deepResearch, websiteId) => {
   try {
     const response = await apiClient.post(`/alternatively/search`, {
       deepResearch,
-      website
+      website,
+      websiteId
     });
     return response.data;
   } catch (error) {
@@ -316,6 +317,20 @@ const deletePage = async (websiteId) => {
   }
 };
 
+// 新增：生成 websiteId 接口
+const generateWebsiteId = async () => {
+  try {
+    // 发送 POST 请求到 /alternatively/generate/websiteId
+    const response = await apiClient.post('/alternatively/generate/websiteId');
+    // 返回响应数据，通常包含生成的 websiteId
+    return response.data;
+  } catch (error) {
+    // 记录错误信息并重新抛出，以便调用者处理
+    console.error('Failed to generate websiteId:', error);
+    throw error;
+  }
+};
+
 apiClient.getCompetitorResearch = getCompetitorResearch;
 apiClient.login = login;
 apiClient.register = register;
@@ -337,5 +352,6 @@ apiClient.getCustomerPackage = getCustomerPackage;
 apiClient.getAlternativeChatHistory = getAlternativeChatHistory;
 apiClient.googleOneTapLogin = googleOneTapLogin;
 apiClient.deletePage = deletePage;
+apiClient.generateWebsiteId = generateWebsiteId;
 
 export default apiClient;

@@ -13,7 +13,7 @@ const AlternativePageFeature = () => {
       <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-purple-600/10 rounded-full filter blur-3xl opacity-40 animate-pulse"></div>
       <div className="absolute bottom-1/4 right-1/4 w-72 h-72 bg-cyan-600/10 rounded-full filter blur-3xl opacity-40 animate-pulse animation-delay-2000"></div>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
         <h2 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-6 bg-gradient-to-r from-cyan-400 to-purple-500 text-transparent bg-clip-text">
           What is an Alternative Page?
         </h2>
@@ -82,9 +82,67 @@ const AlternativePageFeature = () => {
           </div>
         </div>
 
-        <p className="text-lg text-gray-300 max-w-3xl mx-auto text-center">
-          Alternative pages work because they target users who are actively looking for alternatives and have high purchase intent. These users already understand the problem your product solves.
-        </p>
+        <div className="max-w-5xl mx-auto text-left text-gray-300 mt-16">
+          <h3 className="text-3xl font-bold mb-8 text-center bg-gradient-to-r from-cyan-400 to-purple-500 text-transparent bg-clip-text">
+            Differences in Conversion Rates
+          </h3>
+          <p className="text-lg mb-8 text-center">
+            Conversion rates can vary considerably across these page types due to the stage of the customer journey they cater to:
+          </p>
+
+          <div className="flex flex-col md:flex-row gap-8">
+            {/* Informational Pages - Standard Styling */}
+            <div className="flex-1 p-6 bg-slate-800/60 rounded-xl border border-slate-700 shadow-lg shadow-slate-900/30 transition-all duration-300 hover:border-cyan-500/80 hover:shadow-xl hover:shadow-cyan-500/20">
+              <h4 className="text-xl font-semibold mb-4 text-cyan-400">Informational Pages</h4>
+              <p className="mb-3">
+                <strong className="block text-sm font-medium text-white mb-1">Conversion Behavior:</strong>
+                Since the primary goal here is education rather than immediate conversion, users may spend more time reading without taking a direct action.
+              </p>
+              <p>
+                <strong className="block text-sm font-medium text-white mb-1">Typical Conversion Rates:</strong>
+                These pages tend to have lower immediate conversion rates (often in the range of{' '}
+                <span className="inline-block bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded-md font-semibold text-sm">
+                  1–3%
+                </span>
+                ). However, they play a critical role in funneling high-quality leads over time by building trust and informing the purchase decision.
+              </p>
+            </div>
+
+            {/* Transactional Pages - Enhanced Highlighting */}
+            <div className="flex-1 p-6 bg-slate-800/60 rounded-xl border border-slate-700 shadow-lg shadow-slate-900/30 transition-all duration-300 hover:border-purple-400 hover:shadow-xl hover:shadow-purple-400/40 hover:scale-[1.03] hover:bg-slate-700/80 ring-2 ring-transparent hover:ring-purple-500/50">
+              <h4 className="text-xl font-semibold mb-4 text-purple-400">Transactional Pages ✨</h4>
+              <p className="mb-3">
+                <strong className="block text-sm font-medium text-white mb-1">Conversion Behavior:</strong>
+                Optimized for clarity, reduced distractions, and prompt CTAs, these pages tend to convert visitors who are ready to act. <strong className='text-purple-300'>(This is what we help you build!)</strong>
+              </p>
+              <p>
+                <strong className="block text-sm font-medium text-white mb-1">Typical Conversion Rates:</strong>
+                They may see conversion rates ranging from{' '}
+                <span className="inline-block bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-md font-semibold text-sm">
+                  3–10%
+                </span>{' '}
+                or even higher, depending on industry norms, user experience, and offer competitiveness. The direct alignment between ad copy and on-page messaging can boost these numbers.
+              </p>
+            </div>
+
+            {/* Navigational/Brand-Specific Pages - Standard Styling */}
+            <div className="flex-1 p-6 bg-slate-800/60 rounded-xl border border-slate-700 shadow-lg shadow-slate-900/30 transition-all duration-300 hover:border-gray-500/80 hover:shadow-xl hover:shadow-gray-500/20">
+              <h4 className="text-xl font-semibold mb-4 text-gray-400">Navigational/Brand-Specific Pages</h4>
+              <p className="mb-3">
+                <strong className="block text-sm font-medium text-white mb-1">Conversion Behavior:</strong>
+                This type strikes a middle ground. While they incorporate both educational content and conversion elements, the conversion action might be less immediate compared to a pure transactional page, but more direct than an in-depth research page.
+              </p>
+              <p>
+                <strong className="block text-sm font-medium text-white mb-1">Typical Conversion Rates:</strong>
+                These pages often yield moderate conversion rates, reflecting a user's readiness to engage after a brand-focused reassurance. They might convert in the mid-range, say around{' '}
+                <span className="inline-block bg-gray-500/20 text-gray-300 px-2 py-0.5 rounded-md font-semibold text-sm">
+                  2–5%
+                </span>
+                .
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

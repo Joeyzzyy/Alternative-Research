@@ -344,7 +344,7 @@ const ResearchTool = () => {
             <div className="relative">
               <div className="absolute -top-6 left-0 w-full">
                 <div className="flex items-center space-x-2">
-                  <span className="text-xs font-medium text-blue-300 whitespace-nowrap">Alternatively</span>
+                  <span className="text-xs font-medium text-blue-300 whitespace-nowrap">AltPage.ai</span>
                 </div>
               </div>
               <div className="p-4 rounded-2xl text-sm bg-gradient-to-br from-slate-800 to-slate-900 
@@ -559,6 +559,17 @@ const ResearchTool = () => {
     // 按时间戳排序
     mergedLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
     
+    // Helper function for status color
+    const getStatusColor = (status) => {
+      if (!status) return 'text-gray-400'; // Default
+      status = status.toLowerCase();
+      if (status === 'succeeded' || status === 'success') return 'text-green-400';
+      if (status === 'failed' || status === 'error') return 'text-red-400';
+      if (status === 'running' || status === 'processing') return 'text-yellow-400';
+      if (status === 'skipped') return 'text-gray-500';
+      return 'text-gray-400'; // Fallback
+    };
+
     return (
       <div className="h-full flex flex-col" ref={detailsRef}>
         <div className="p-3 space-y-2 overflow-y-auto">
@@ -572,7 +583,7 @@ const ResearchTool = () => {
                   style={{ animationDelay: '0.5s' }}
                 >
                   <div className="flex items-center mb-2">
-                    <img src="/images/alternatively-logo.png" alt="Alternatively" className="w-4 h-4 mr-2" />
+                    <img src="/images/alternatively-logo.png" alt="AltPage.ai" className="w-4 h-4 mr-2" />
                     <div className="text-[11px] text-gray-300 font-medium">Agent Message</div>
                   </div>
                   <div 
@@ -594,6 +605,8 @@ const ResearchTool = () => {
               } catch (e) {
                 console.error('Failed to parse Dify content:', e);
               }
+            } else if (log.type === 'Dify' && typeof log.content === 'object' && log.content !== null) {
+              difyContent = log.content;
             }
 
             // 获取当前日志的累积内容
@@ -611,7 +624,7 @@ const ResearchTool = () => {
               >
                 <div className="flex items-center mb-2">
                   {log.type === 'Dify' && (
-                    <img src="/images/alternatively-logo.png" alt="Alternatively" className="w-4 h-4 mr-2" />
+                    <img src="/images/alternatively-logo.png" alt="AltPage.ai" className="w-4 h-4 mr-2" />
                   )}
                   {log.type === 'Error' && (
                     <svg className="w-4 h-4 mr-2 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -636,40 +649,77 @@ const ResearchTool = () => {
                   <div className="text-[11px] text-gray-300 font-medium">
                     {log.type === 'Dify' && 'Running Page Content Generation Workflow'}
                     {log.type === 'Error' && 'Error Message'}
-                    {log.type === 'API' && 'API Request'}
+                    {log.type === 'API' && 'Agent Action Result'}
                     {log.type === 'Codes' && 'Code Execution'}
-                    {log.type === 'Info' && 'Information'}
+                    {log.type === 'Info' && 'Please wait...'}
                   </div>
                 </div>
 
-                {/* Dify 日志内容渲染 */}
+                {/* Dify 日志内容渲染 - 优化布局和重点 */}
                 {log.type === 'Dify' && difyContent && (
-                  <div className="text-[10px] text-gray-400 break-words leading-relaxed">
-                    <div className="mb-1">
-                      <span className="font-semibold">Workflow ID:</span> {difyContent.workflow_id}
+                  <div className="text-[10px] text-gray-400 break-words leading-relaxed space-y-1">
+                    
+                    {/* 核心节点信息 - 突出显示 */}
+                    {difyContent.data && typeof difyContent.data === 'object' ? (
+                      <div className="mb-2">
+                        <span className="font-semibold text-gray-300 text-[11px]">
+                          Current Node: {difyContent.data.title || 'N/A'}
+                        </span>
+                        <span className={`ml-2 font-medium ${getStatusColor(difyContent.data.status)}`}>
+                          ({difyContent.data.status || 'N/A'})
+                        </span>
+                        {difyContent.data.elapsed_time !== undefined && (
+                           <span className="ml-2 text-gray-500 text-[9px]">
+                             ({difyContent.data.elapsed_time.toFixed(2)}s)
+                           </span>
+                        )}
+                      </div>
+                    ) : (
+                       <div className="mb-2 text-gray-500 italic">Node data unavailable.</div>
+                    )}
+
+                    {/* 上下文信息 */}
+                    <div>
+                      <span className="font-semibold w-16 inline-block">Event:</span> 
+                      {difyContent.event || 'N/A'}
                     </div>
-                    <div className="mb-1">
-                      <span className="font-semibold">Task ID:</span> {difyContent.task_id}
+                    <div>
+                      <span className="font-semibold w-16 inline-block">Step Name:</span> 
+                      {log.step || difyContent.step || 'N/A'}
                     </div>
-                    <div className="mb-1">
-                      <span className="font-semibold">Step:</span> {difyContent.step}
-                    </div>
-                    <div className="mb-1">
-                      <span className="font-semibold">Status:</span> {difyContent.event}
-                    </div>
-                    {difyContent.data && (
-                      <div className="mb-1">
-                        <span className="font-semibold">Node Info:</span>
-                        <pre className="mt-1 p-2 bg-gray-700/50 rounded text-xs overflow-auto">
-                          {JSON.stringify({
-                            id: difyContent.data.id,
-                            title: difyContent.data.title,
-                            status: difyContent.data.status,
-                            elapsed_time: difyContent.data.elapsed_time
-                          }, null, 2)}
-                        </pre>
+
+                    {/* 详细标识信息 */}
+                    {difyContent.data && typeof difyContent.data === 'object' && (
+                      <div>
+                        <span className="font-semibold w-16 inline-block">Node ID:</span> 
+                        {difyContent.data.id || 'N/A'}
                       </div>
                     )}
+                    <div>
+                      <span className="font-semibold w-16 inline-block">Workflow ID:</span> 
+                      {difyContent.workflow_id || 'N/A'}
+                    </div>
+                    <div>
+                      <span className="font-semibold w-16 inline-block">Task ID:</span> 
+                      {difyContent.task_id || 'N/A'}
+                    </div>
+
+                    {/* 错误信息 */}
+                    {difyContent.data?.error && (
+                      <div className="mt-1 pt-1 border-t border-gray-700/50 text-red-400">
+                        <span className="font-semibold">Error:</span> {difyContent.data.error}
+                      </div>
+                    )}
+                    
+                    {/* 原始 data (可选，用于调试) */}
+                    {/*
+                    <details className="mt-2">
+                      <summary className="text-gray-500 cursor-pointer text-[9px]">Show Raw Data</summary>
+                      <pre className="mt-1 p-2 bg-gray-700/50 rounded text-xs overflow-auto">
+                        {JSON.stringify(difyContent.data, null, 2)}
+                      </pre>
+                    </details>
+                    */}
                   </div>
                 )}
 
@@ -1033,11 +1083,11 @@ const ResearchTool = () => {
                 
                 const title = document.createElement('h3');
                 title.className = 'text-xl font-semibold text-white mb-4';
-                title.textContent = 'Task In Progress';
+                title.textContent = 'Your Task Is In Progress';
                 
                 const description = document.createElement('p');
                 description.className = 'text-gray-300 mb-3';
-                description.textContent = 'You already have a product comparison task in progress. Please wait for it to complete before starting a new one.';
+                description.textContent = 'You already have a generation task in progress. Please wait for it to complete before starting a new one.';
                 
                 const emailNote = document.createElement('p');
                 emailNote.className = 'text-gray-400 text-sm mb-6';
@@ -1137,10 +1187,20 @@ const ResearchTool = () => {
       while (messageHandler.isProcessing) {
         await new Promise(resolve => setTimeout(resolve, 100));
       }
+
+      // 1. 先调用 generateWebsiteId 获取 websiteId
+      const generateIdResponse = await apiClient.generateWebsiteId();
+      if (generateIdResponse?.code !== 200 || !generateIdResponse?.data?.websiteId) {
+        console.error("Failed to generate websiteId:", generateIdResponse);
+        return;
+      }
+      const websiteId = generateIdResponse.data.websiteId;
+      setCurrentWebsiteId(websiteId); 
       
       const searchResponse = await apiClient.searchCompetitor(
         inputForAPI,
-        deepResearchMode
+        deepResearchMode,
+        websiteId
       );
 
       // 检查网络错误
@@ -1150,9 +1210,6 @@ const ResearchTool = () => {
       }
 
       if (searchResponse?.code === 200 && searchResponse?.data?.websiteId) {
-        const websiteId = searchResponse.data.websiteId;
-        setCurrentWebsiteId(websiteId);
-
         setShouldConnectSSE(true);
         
         const greetingResponse = await apiClient.chatWithAI(
@@ -1561,42 +1618,48 @@ const ResearchTool = () => {
 
   // 修改 SSE 连接的 useEffect
   useEffect(() => {
-    if (!shouldConnectSSE) {
+    // --- 添加 currentWebsiteId 到依赖项 ---
+    if (!shouldConnectSSE || !currentWebsiteId) {
       return;
     }
     const customerId = localStorage.getItem('alternativelyCustomerId');
     const token = localStorage.getItem('alternativelyAccessToken');
     const isLoggedIn = localStorage.getItem('alternativelyIsLoggedIn') === 'true';
-    
+
     if (!isLoggedIn || !customerId || !token) {
       setSseConnected(false);
       return;
     }
-    
+
     let eventSource = null;
-    
+
     const connectSSE = () => {
       if (eventSource) {
         eventSource.close();
       }
-      
+
       const currentToken = localStorage.getItem('alternativelyAccessToken');
       if (!currentToken) {
         setSseConnected(false);
         return;
       }
-      
-      eventSource = new EventSourcePolyfill(`https://api.websitelm.com/events/${customerId}-chat`, {
+
+      // --- 修改 SSE 连接 URL，加入 websiteId ---
+      const sseUrl = `https://api.websitelm.com/events/${customerId}-${currentWebsiteId}-chat`;
+      console.log('[DEBUG] Connecting to SSE:', sseUrl); // 添加日志方便调试
+
+      eventSource = new EventSourcePolyfill(sseUrl, {
         headers: {
           'Authorization': `Bearer ${currentToken}`
         },
         heartbeatTimeout: 15 * 45000
       });
+      // --- ---
 
       eventSource.onopen = () => {
         setSseConnected(true);
         retryCountRef.current = 0;
-        
+
         if (retryTimeoutRef.current) {
           clearTimeout(retryTimeoutRef.current);
           retryTimeoutRef.current = null;
@@ -1606,17 +1669,17 @@ const ResearchTool = () => {
       eventSource.onmessage = (event) => {
         try {
           const logData = JSON.parse(event.data);
-          
+
           // 打印每个数据包
           console.log('logData', logData);
-          
+
           if (logData.type === 'Html') {
             // 如果是新的流式输出开始，重置累积的内容
             if (!isStreamingRef.current || currentStreamIdRef.current !== logData.id) {
               htmlStreamRef.current = '';
               currentStreamIdRef.current = logData.id;
               isStreamingRef.current = true;
-              
+
               // 添加新的日志项
               setLogs(prevLogs => [...prevLogs, {
                 id: logData.id,
@@ -1625,17 +1688,17 @@ const ResearchTool = () => {
                 timestamp: new Date().toISOString()
               }]);
             }
-            
+
             // 累积 HTML 内容
             htmlStreamRef.current += logData.content;
-            
+
             // 更新对应的日志项
-            setLogs(prevLogs => prevLogs.map(log => 
-              log.id === currentStreamIdRef.current 
-                ? {...log, content: htmlStreamRef.current} 
+            setLogs(prevLogs => prevLogs.map(log =>
+              log.id === currentStreamIdRef.current
+                ? {...log, content: htmlStreamRef.current}
                 : log
             ));
-          } 
+          }
           else if (logData.type === 'Codes') {
             // 收到 Codes 类型，表示流式输出结束
             isStreamingRef.current = false;
@@ -1661,25 +1724,25 @@ const ResearchTool = () => {
           readyState: eventSource.readyState,
           timestamp: new Date().toISOString()
         });
-        
+
         // 关闭当前连接
         eventSource.close();
-        
+
         // 检查是否是401错误
         if (error.status === 401) {
           console.log('SSE connection unauthorized, token may be invalid');
           return;
         }
-        
+
         // 实现指数退避重试策略
         if (retryCountRef.current < MAX_RETRY_COUNT) {
           const delay = Math.min(1000 * Math.pow(2, retryCountRef.current), 30000);
           console.log(`Retrying SSE connection in ${delay}ms (attempt ${retryCountRef.current + 1}/${MAX_RETRY_COUNT})`);
-          
+
           if (retryTimeoutRef.current) {
             clearTimeout(retryTimeoutRef.current);
           }
-          
+
           retryTimeoutRef.current = setTimeout(() => {
             retryCountRef.current += 1;
             connectSSE();
@@ -1689,9 +1752,9 @@ const ResearchTool = () => {
         }
       };
     };
-    
+
     connectSSE();
-    
+
     return () => {
       if (eventSource) {
         eventSource.close();
@@ -1703,7 +1766,8 @@ const ResearchTool = () => {
       }
       retryCountRef.current = 0;
     };
-  }, [shouldConnectSSE]);
+  // --- 将 currentWebsiteId 添加到依赖数组 ---
+  }, [shouldConnectSSE, currentWebsiteId]);
 
   useEffect(() => {
     // 检查是否有任务完成的日志
@@ -2624,10 +2688,10 @@ const ResearchTool = () => {
         <div className="text-center">
           <img 
             src="/images/alternatively-logo.png" 
-            alt="Alternatively" 
+            alt="AltPage.ai" 
             className="w-16 h-16 mx-auto mb-4 animate-pulse" 
           />
-          <h2 className="text-xl font-semibold text-white mb-2">Loading Alternatively</h2>
+          <h2 className="text-xl font-semibold text-white mb-2">Loading</h2>
           <p className="text-gray-300">Preparing your research environment...</p>
           <div className="mt-4 flex justify-center space-x-2">
             <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
@@ -2992,7 +3056,7 @@ const ResearchTool = () => {
             {/* ... (聊天面板内容保持不变) ... */}
             <div className="h-10 px-4 border-b border-gray-300/20 flex-shrink-0">
               <div className="flex items-center">
-                <img src="/images/alternatively-logo.png" alt="Alternatively" className="w-5 h-5 mr-1.5" />
+                <img src="/images/alternatively-logo.png" alt="AltPage.ai" className="w-5 h-5 mr-1.5" />
                 <h2 className="text-sm font-semibold text-gray-100">Copilot</h2>
               </div>
             </div>
@@ -3173,7 +3237,8 @@ const ResearchTool = () => {
         width={400}
         className="result-ids-modal"
         zIndex={1500}
-        maskStyle={{ backgroundColor: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(8px)' }}
+        // 将 maskStyle 替换为 styles.mask
+        styles={{ mask: { backgroundColor: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(8px)' } }}
       >
         <div className="space-y-3">
           {resultIds.map((id, index) => (
