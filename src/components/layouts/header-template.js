@@ -204,8 +204,9 @@ export default function Header() {
 
   // 加载 Google One Tap 脚本
   useEffect(() => {
+    const isUserLoggedIn = localStorage.getItem('alternativelyIsLoggedIn') === 'true';
     console.log('Checking One Tap script load. isLoggedIn:', isLoggedIn, 'googleOneTapInitialized:', googleOneTapInitialized); // 添加日志
-    if (typeof window !== 'undefined' && !isLoggedIn && !googleOneTapInitialized) {
+    if (typeof window !== 'undefined' && !isUserLoggedIn && !googleOneTapInitialized) {
       // 检查脚本是否已加载
       if (!document.querySelector('script[src="https://accounts.google.com/gsi/client"]')) {
         console.log('Google GSI script not found. Appending script...'); // 添加日志
