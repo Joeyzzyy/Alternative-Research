@@ -217,7 +217,7 @@ const ResearchTool = ({
                     // );
                     setInputDisabledDueToUrlGet(true);
                     setIsProcessingTask(true);
-                    messageHandler.setMessageLoading(thinkingMessageId, true)
+                    
                   } else {
                     messageHandler.addSystemMessage(`⚠️ Failed to generate alternative: Invalid server response`);
                   }
@@ -1335,7 +1335,7 @@ const ResearchTool = ({
             }
             
             messageHandler.addSystemMessage('Searching for competitors. Please wait a moment...');
-
+          
             while (messageHandler.isProcessing) {
               await new Promise(resolve => setTimeout(resolve, 100));
             }
@@ -1817,6 +1817,13 @@ const ResearchTool = ({
                 ? {...log, content: htmlStreamRef.current}
                 : log
             ));
+            
+            // 在下一个微任务中执行滚动，确保 DOM 已更新
+            setTimeout(() => {
+              if (codeContainerRef.current) {
+                codeContainerRef.current.scrollTop = codeContainerRef.current.scrollHeight;
+              }
+            }, 0);
           }
           else if (logData.type === 'Codes') {
             // 收到 Codes 类型，表示流式输出结束
