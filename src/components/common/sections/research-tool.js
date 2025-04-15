@@ -172,7 +172,8 @@ const ResearchTool = ({
           messageHandler.updateAgentMessage(messageBody, thinkingMessageId);
           
           // 提取竞品数组部分
-          const competitorArrayMatch = rawAnswer.match(/\[COMPETITOR_SELECTED\]\s*\[(.*?)\]$/s);
+          // 修改正则表达式：移除末尾的 $，并允许标签和列表之间有其他字符
+          const competitorArrayMatch = rawAnswer.match(/\[COMPETITOR_SELECTED\][^\[]*\[(.*?)\]/s);
           
           if (competitorArrayMatch && competitorArrayMatch[1]) {
             try {
@@ -215,6 +216,8 @@ const ResearchTool = ({
                     //   `We are generating alternative solutions for ${domainArray.join(', ')}. This may take some time, please wait...`
                     // );
                     setInputDisabledDueToUrlGet(true);
+                    setIsProcessingTask(true);
+                    messageHandler.setMessageLoading(thinkingMessageId, true)
                   } else {
                     messageHandler.addSystemMessage(`⚠️ Failed to generate alternative: Invalid server response`);
                   }
@@ -362,12 +365,23 @@ const ResearchTool = ({
                       <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
                     </div>
                   ) : (
-                    filteredContent.split('\n').map((line, i) => (
-                      <React.Fragment key={i}>
-                        {line}
-                        {i < filteredContent.split('\n').length - 1 && <br />}
-                      </React.Fragment>
-                    ))
+                    <div>
+                      {filteredContent.split('\n').map((line, i) => (
+                        <React.Fragment key={i}>
+                          {line}
+                          {i < filteredContent.split('\n').length - 1 && <br />}
+                        </React.Fragment>
+                      ))}
+                      
+                      {/* 添加消息后的加载动画 - 当 message.showLoading 为 true 时显示 */}
+                      {message.showLoading && (
+                        <div className="inline-flex items-center ml-2 mt-1">
+                          <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce"></div>
+                          <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce ml-1" style={{ animationDelay: '0.2s' }}></div>
+                          <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce ml-1" style={{ animationDelay: '0.4s' }}></div>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -389,13 +403,6 @@ const ResearchTool = ({
       }
     }
   }, [messages]); // 当消息数组变化时触发
-
-  // 修改：使用 useLayoutEffect 确保在 DOM 更新后滚动
-  useLayoutEffect(() => {
-    if (codeContainerRef.current) {
-      codeContainerRef.current.scrollTop = codeContainerRef.current.scrollHeight;
-    }
-  }, [htmlStream]); // 当 htmlStream 变化时触发
 
   useEffect(() => {
       const timer = setTimeout(() => {
@@ -783,10 +790,9 @@ const ResearchTool = ({
                       <span className="font-semibold">HTML Code Generation:</span>
                       <pre 
                         ref={log.id === currentStreamIdRef.current ? codeContainerRef : null}
-                        className="mt-1 p-2 bg-gray-700/50 rounded text-xs whitespace-pre-wrap break-words"
+                        className="mt-1 p-2 bg-gray-700/50 rounded text-xs whitespace-pre-wrap break-words overflow-y-auto"
                         style={{ 
                           maxHeight: '400px', 
-                          overflowY: 'auto',
                           color: '#a5d6ff' // 使用浅蓝色显示代码
                         }}
                       >
@@ -1606,7 +1612,7 @@ const ResearchTool = ({
             </li>
             <li class="flex items-start">
               <div class="w-4 h-4 mr-2 rounded-full flex-shrink-0 flex items-center justify-center bg-purple-500/20">
-                <svg class="w-2.5 h-2.5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg class="w-2.5 h-2.5 text-purple-400" fill="none" viewBodangerouslySetInnerHTMLx="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
                 </svg>
               </div>
@@ -1937,6 +1943,7 @@ const ResearchTool = ({
       ));
       
       // 处理改色任务完成 - 告知用户任务已完成
+      setIsProcessingTask(false);
       messageHandler.addSystemMessage("Task completed! Thank you for using our service. You can find your generated page in the history records in the upper right corner of the page, where you can deploy and adjust it further.");
       // 保持输入框禁用
       // setInputDisabledDueToUrlGet(false); - 移除这行代码，保持输入框禁用
@@ -1961,6 +1968,7 @@ const ResearchTool = ({
           const response = await apiClient.chatWithAI(completionMessage, currentWebsiteId);
           
           if (response?.code === 200 && response.data?.answer) {
+            messageHandler.setMessageLoading(thinkingMessageId, false)
             const answer = filterMessageTags(response.data.answer);
 
             const thinkingMessageId = messageHandler.addAgentThinkingMessage();

@@ -95,6 +95,22 @@ class MessageHandler {
   handleErrorMessage(error, messageId) {
     this.updateAgentMessage(`⚠️ Failed to get response: ${error.message}`, messageId);
   }
+
+  setMessageLoading(messageId, isLoading) {
+    this.isProcessing = true;
+    
+    this.setMessages(prevMessages => {
+      const updatedMessages = prevMessages.map(msg => {
+        if (msg.id === messageId) {
+          return { ...msg, showLoading: isLoading };
+        }
+        return msg;
+      });
+      
+      this.isProcessing = false;
+      return updatedMessages;
+    });
+  }
 }
 
 export default MessageHandler; 
