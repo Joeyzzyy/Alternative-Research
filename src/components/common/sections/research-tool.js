@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import { Input, Button, Card, Spin, message, Tag, Tooltip, Avatar, ConfigProvider, Pagination, Dropdown, Menu, Modal } from 'antd';
 import { SearchOutlined, ClearOutlined, ArrowRightOutlined, InfoCircleOutlined, SendOutlined, UserOutlined, RobotOutlined, LoadingOutlined, BulbOutlined, BulbFilled } from '@ant-design/icons';
 import apiClient from '../../../lib/api/index.js';
@@ -390,6 +390,13 @@ const ResearchTool = ({
     }
   }, [messages]); // 当消息数组变化时触发
 
+  // 修改：使用 useLayoutEffect 确保在 DOM 更新后滚动
+  useLayoutEffect(() => {
+    if (codeContainerRef.current) {
+      codeContainerRef.current.scrollTop = codeContainerRef.current.scrollHeight;
+    }
+  }, [htmlStream]); // 当 htmlStream 变化时触发
+
   useEffect(() => {
       const timer = setTimeout(() => {
       setInitialLoading(false);
@@ -712,7 +719,7 @@ const ResearchTool = ({
                           Current Node: {difyContent.data.title || ''}
                         </span>
                         <span className={`ml-2 font-medium ${getStatusColor(difyContent.data.status)}`}>
-                          ({difyContent.data.status | ''})
+                          ({difyContent.data.status})
                         </span>
                         {difyContent.data.elapsed_time !== undefined && (
                            <span className="ml-2 text-gray-500 text-[9px]">
