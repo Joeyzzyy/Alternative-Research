@@ -331,6 +331,17 @@ const generateWebsiteId = async () => {
   }
 };
 
+// 新增：根据 websiteId 获取生成 alternatively 页面列表
+const getAlternativeWebsiteResultList = async (websiteId) => {
+  try {
+    const response = await apiClient.get(`/alternatively/results/${websiteId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to get alternative website result list:', error);
+    throw error;
+  }
+};
+
 apiClient.getCompetitorResearch = getCompetitorResearch;
 apiClient.login = login;
 apiClient.register = register;
@@ -353,5 +364,6 @@ apiClient.getAlternativeChatHistory = getAlternativeChatHistory;
 apiClient.googleOneTapLogin = googleOneTapLogin;
 apiClient.deletePage = deletePage;
 apiClient.generateWebsiteId = generateWebsiteId;
+apiClient.getAlternativeWebsiteResultList = getAlternativeWebsiteResultList;
 
 export default apiClient;

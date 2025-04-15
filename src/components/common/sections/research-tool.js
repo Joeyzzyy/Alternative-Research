@@ -211,9 +211,9 @@ const ResearchTool = ({
                   const generateResponse = await apiClient.generateAlternative(currentWebsiteId, domainArray);
                   
                   if (generateResponse?.code === 200) {
-                    messageHandler.addSystemMessage(
-                      `We are generating alternative solutions for ${domainArray.join(', ')}. This may take some time, please wait...`
-                    );
+                    // messageHandler.addSystemMessage(
+                    //   `We are generating alternative solutions for ${domainArray.join(', ')}. This may take some time, please wait...`
+                    // );
                     setInputDisabledDueToUrlGet(true);
                   } else {
                     messageHandler.addSystemMessage(`⚠️ Failed to generate alternative: Invalid server response`);
@@ -1713,6 +1713,11 @@ const ResearchTool = ({
     const token = localStorage.getItem('alternativelyAccessToken');
     const isLoggedIn = localStorage.getItem('alternativelyIsLoggedIn') === 'true';
 
+    // 定义重试相关常量
+    const MAX_RETRY_COUNT = 5;
+    const BASE_RETRY_DELAY = 5000; // 基础重试延迟 5 秒
+    const MAX_RETRY_DELAY = 60000; // 最大重试延迟 60 秒
+
     if (!isLoggedIn || !customerId || !token) {
       setSseConnected(false);
       return;
@@ -1735,23 +1740,37 @@ const ResearchTool = ({
       const sseUrl = `https://api.websitelm.com/events/${customerId}-${currentWebsiteId}-chat`;
       console.log('[DEBUG] Connecting to SSE:', sseUrl); // 添加日志方便调试
 
-      eventSource = new EventSourcePolyfill(sseUrl, {
-        headers: {
-          'Authorization': `Bearer ${currentToken}`
-        },
-        heartbeatTimeout: 15 * 45000
-      });
+      // 修复：增加错误处理和超时设置
+      try {
+        eventSource = new EventSourcePolyfill(sseUrl, {
+          headers: {
+            'Authorization': `Bearer ${currentToken}`
+          },
+          // 增加超时时间，避免频繁断开重连
+          heartbeatTimeout: 20000, // 20秒
+          // 增加连接超时
+          connectionTimeout: 15000 // 15秒连接超时
+        });
+      } catch (error) {
+        console.error('Error creating EventSource:', error);
+        setSseConnected(false);
+        return;
+      }
       // --- ---
 
       eventSource.onopen = () => {
+        console.log('[DEBUG] SSE connection opened successfully');
         setSseConnected(true);
-        retryCountRef.current = 0;
+        retryCountRef.current = 0;  // 这里在连接成功时重置了计数器
 
         if (retryTimeoutRef.current) {
           clearTimeout(retryTimeoutRef.current);
           retryTimeoutRef.current = null;
         }
       };
+
+      // 在这里添加一个调试日志，查看重试计数
+      console.log('Current retry count before error handler:', retryCountRef.current);
 
       eventSource.onmessage = (event) => {
         try {
@@ -1803,36 +1822,44 @@ const ResearchTool = ({
       };
 
       eventSource.onerror = (error) => {
-        setSseConnected(false);
-        console.error('SSE Connection Error:', {
-          error,
-          status: error.status,
-          statusText: error.statusText,
-          readyState: eventSource.readyState,
-          timestamp: new Date().toISOString()
-        });
-
-        // 关闭当前连接
-        eventSource.close();
-
-        // 检查是否是401错误
-        if (error.status === 401) {
-          console.log('SSE connection unauthorized, token may be invalid');
-          return;
+        console.log('SSE Connection Error:', error);
+        
+        // 确保在关闭连接前记录当前的重试次数
+        const currentRetryCount = retryCountRef.current;
+        
+        if (eventSource) {
+          eventSource.close();
+          eventSource = null;
         }
-
-        // 实现指数退避重试策略
-        if (retryCountRef.current < MAX_RETRY_COUNT) {
-          const delay = Math.min(1000 * Math.pow(2, retryCountRef.current), 30000);
-          console.log(`Retrying SSE connection in ${delay}ms (attempt ${retryCountRef.current + 1}/${MAX_RETRY_COUNT})`);
-
+        
+        setSseConnected(false);
+        
+        // 使用之前保存的计数值，而不是直接使用ref
+        if (currentRetryCount < MAX_RETRY_COUNT) {
+          // 先增加计数，再保存到ref
+          const newRetryCount = currentRetryCount + 1;
+          retryCountRef.current = newRetryCount;
+          
+          console.log('Retry count after increment:', newRetryCount);
+          
+          // 使用指数退避策略计算延迟
+          const delay = Math.min(BASE_RETRY_DELAY * Math.pow(2, newRetryCount - 1), MAX_RETRY_DELAY);
+          
+          console.log(`Retrying SSE connection in ${delay}ms (attempt ${newRetryCount}/${MAX_RETRY_COUNT})`);
+          
+          // 清除之前的超时
           if (retryTimeoutRef.current) {
             clearTimeout(retryTimeoutRef.current);
           }
-
+          
           retryTimeoutRef.current = setTimeout(() => {
-            retryCountRef.current += 1;
-            connectSSE();
+            retryTimeoutRef.current = null;
+            // 检查是否仍需要连接
+            if (shouldConnectSSE) {
+              connectSSE();
+            } else {
+              console.log('SSE connection no longer needed, skipping retry');
+            }
           }, delay);
         } else {
           console.log(`Maximum retry attempts (${MAX_RETRY_COUNT}) reached. Giving up.`);
@@ -1843,8 +1870,10 @@ const ResearchTool = ({
     connectSSE();
 
     return () => {
+      console.log('[DEBUG] Cleaning up SSE connection');
       if (eventSource) {
         eventSource.close();
+        eventSource = null;
         setSseConnected(false);
       }
       if (retryTimeoutRef.current) {
@@ -2372,7 +2401,7 @@ const ResearchTool = ({
         setCurrentWebsiteId(item.websiteId);
         
         try {
-          const historyResponse = await apiClient.getAlternativeWebsiteHistory(item.websiteId);
+          const resultListResponse = await apiClient.getAlternativeWebsiteResultList(item.websiteId);
           
           // Remove loading modal
           const loadingOverlay = document.getElementById('loading-preview-overlay');
@@ -2380,11 +2409,8 @@ const ResearchTool = ({
             document.body.removeChild(loadingOverlay);
           }
           
-          if (historyResponse?.code === 200 && historyResponse.data) {
-            const codesResultIds = historyResponse.data
-              .filter(record => record.type === 'Codes' && record.content?.resultId)
-              .map(record => record.content.resultId);
-            
+          if (resultListResponse?.code === 200 && Array.isArray(resultListResponse.data)) {
+            const codesResultIds = resultListResponse.data.map(item => item.resultId);
             if (codesResultIds.length > 0) {
               setResultIds(codesResultIds);
               
