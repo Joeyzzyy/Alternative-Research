@@ -255,7 +255,10 @@ export default function Header() {
     const isValidJWT = accessToken?.split('.').length === 3;
     if (accessToken && isValidJWT && customerId && email) {
       try {
-        localStorage.clear();
+        localStorage.removeItem('alternativelyAccessToken');
+        localStorage.removeItem('alternativelyIsLoggedIn');
+        localStorage.removeItem('alternativelyCustomerId');
+        localStorage.removeItem('alternativelyCustomerEmail');
         const decodedEmail = decodeURIComponent(email);
         localStorage.setItem('alternativelyIsLoggedIn', 'true');
         localStorage.setItem('alternativelyAccessToken', accessToken);
@@ -271,7 +274,10 @@ export default function Header() {
       } catch (error) {
         console.error('Login process failed:', error);
         messageApi.error({ content: 'Authentication failed', duration: 2 });
-        localStorage.clear();
+        localStorage.removeItem('alternativelyAccessToken');
+        localStorage.removeItem('alternativelyIsLoggedIn');
+        localStorage.removeItem('alternativelyCustomerId');
+        localStorage.removeItem('alternativelyCustomerEmail');
       }
     }
   }, [messageApi]);
