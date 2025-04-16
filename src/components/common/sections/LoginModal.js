@@ -66,12 +66,6 @@ const LoginModal = ({
     };
   }, [cooldownTimer]);
 
-  // 在组件顶部添加一个调试日志，查看组件是否被多次渲染
-  useEffect(() => {
-    console.log('LoginModal rendered, showLoginModal:', showLoginModal);
-  }, [showLoginModal]);
-
-  // Handle error messages with useEffect
   useEffect(() => {
     if (errorMessage) {
       messageApi.error(errorMessage);

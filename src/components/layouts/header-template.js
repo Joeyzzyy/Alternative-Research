@@ -127,7 +127,7 @@ export default function Header() {
       
       if (apiResponse && apiResponse.data) {
         // 存储用户数据
-        localStorage.setItem('alternativelyAccessToken', apiResponse.data.accessToken);
+        localStorage.setItem('alternativelyAccessToken', apiResponse.accessToken);
         localStorage.setItem('alternativelyIsLoggedIn', 'true');
         localStorage.setItem('alternativelyCustomerEmail', apiResponse.data.email);
         localStorage.setItem('alternativelyCustomerId', apiResponse.data.customerId);
@@ -165,7 +165,6 @@ export default function Header() {
     }
     
     try {
-      console.log('Initializing Google One Tap...'); // 添加日志
       window.google.accounts.id.initialize({
         client_id: '491914743416-1o5v2lv5582cvc7lrrmslg5g5b4kr6c1.apps.googleusercontent.com', 
         callback: handleGoogleOneTapResponse, // Now handleGoogleOneTapResponse is defined
@@ -174,13 +173,8 @@ export default function Header() {
         use_fedcm_for_prompt: false // Explicitly disable FedCM for testing
       });
       
-      console.log('Google One Tap Initialized. Calling prompt...'); // 添加日志
-      
       // 使用更详细的日志记录 prompt notification
       window.google.accounts.id.prompt((notification) => {
-        console.log('Google One Tap Prompt Notification:', notification); // Log the raw notification object
-        
-        // Log specific reasons if available
         if (notification.isNotDisplayed?.()) {
           console.log('One Tap prompt not displayed. Reason:', notification.getNotDisplayedReason?.());
         } else if (notification.isSkippedMoment?.()) {
@@ -195,7 +189,6 @@ export default function Header() {
       });
       
       setGoogleOneTapInitialized(true);
-      console.log('googleOneTapInitialized set to true'); // 添加日志
     } catch (error) {
       console.error('Google One Tap initialization failed:', error);
     }
@@ -205,38 +198,30 @@ export default function Header() {
   // 加载 Google One Tap 脚本
   useEffect(() => {
     const isUserLoggedIn = localStorage.getItem('alternativelyIsLoggedIn') === 'true';
-    console.log('Checking One Tap script load. isLoggedIn:', isLoggedIn, 'googleOneTapInitialized:', googleOneTapInitialized); // 添加日志
     if (typeof window !== 'undefined' && !isUserLoggedIn && !googleOneTapInitialized) {
       // 检查脚本是否已加载
       if (!document.querySelector('script[src="https://accounts.google.com/gsi/client"]')) {
-        console.log('Google GSI script not found. Appending script...'); // 添加日志
         const script = document.createElement('script');
         script.src = "https://accounts.google.com/gsi/client";
         script.async = true;
         script.defer = true;
         script.onload = () => {
-          console.log('Google GSI script loaded via onload.'); // 添加日志
-          // 确保 google.accounts.id 可用后再初始化
           if (window.google?.accounts?.id) {
             initializeGoogleOneTap();
           } else {
-            console.warn('GSI script loaded, but google.accounts.id not immediately available. Retrying initialization shortly.');
-            // 可以选择稍作延迟重试，或依赖 initializeGoogleOneTap 内部的检查
             setTimeout(initializeGoogleOneTap, 100); 
           }
         };
         script.onerror = () => {
-          console.error('Failed to load Google GSI script.'); // 添加错误处理
+          console.error('Failed to load Google GSI script.'); 
         };
         document.body.appendChild(script);
       } else {
         console.log('Google GSI script already exists. Attempting to initialize One Tap...'); // 添加日志
-        // 即使脚本存在，也需要确保 google.accounts.id 可用
         if (window.google?.accounts?.id) {
           initializeGoogleOneTap();
         } else {
            console.warn('GSI script tag exists, but google.accounts.id not available. Waiting for potential late initialization.');
-           // GSI 库可能仍在初始化，稍等片刻
            setTimeout(initializeGoogleOneTap, 500);
         }
       }
@@ -251,29 +236,16 @@ export default function Header() {
     }
   }, [isLoggedIn]);
 
-  // 处理预览选择
-  const handlePreviewSelect = (resultId, index) => {
-    setIsPreviewLoading(true);
-    setSelectedPreviewUrl(`https://preview.websitelm.site/en/${resultId}`);
-    setActivePreviewTab(index);
-  };
-
   useEffect(() => {
-    // Check URL parameters
+    // 从后台直接登录账号
     const urlParams = new URLSearchParams(window.location.search);
     const accessToken = urlParams.get('accessToken');
     const customerId = urlParams.get('customerId');
     const email = urlParams.get('email');
-    
-    // Validate JWT token format
     const isValidJWT = accessToken?.split('.').length === 3;
-
     if (accessToken && isValidJWT && customerId && email) {
       try {
-        // Clear existing storage
         localStorage.clear();
-        
-        // Store new login information
         const decodedEmail = decodeURIComponent(email);
         localStorage.setItem('alternativelyIsLoggedIn', 'true');
         localStorage.setItem('alternativelyAccessToken', accessToken);
@@ -282,45 +254,32 @@ export default function Header() {
         
         setIsLoggedIn(true);
         setUserEmail(decodedEmail);
-        // 使用 messageApi 显示成功消息
         messageApi.success({ content: 'Login successful!', duration: 2 });
-        
-        // Clear URL parameters
         window.history.replaceState({}, document.title, window.location.pathname);
-        
-        // 触发登录成功事件，通知其他组件
         const loginSuccessEvent = new CustomEvent('alternativelyLoginSuccess');
         window.dispatchEvent(loginSuccessEvent);
       } catch (error) {
         console.error('Login process failed:', error);
-        // 使用 messageApi 显示错误消息
         messageApi.error({ content: 'Authentication failed', duration: 2 });
         localStorage.clear();
       }
     }
-  // 移除 showNotification 依赖，添加 messageApi
   }, [messageApi]);
 
   const handleGoogleLogin = async () => {
     const key = 'googleLogin';
     try {
       setLoading(true);
-      // 使用 messageApi 显示加载中消息
       messageApi.loading({ content: 'Connecting to Google...', key, duration: 0 });
-      
       const response = await apiClient.googleLogin();
-      
       if (response && response.data) {
-        // 移除加载消息，因为页面即将跳转
         messageApi.destroy(key);
         window.location.href = response.data;
       } else {
-        // 使用 messageApi 显示错误消息
         messageApi.error({ content: 'Failed to get Google login URL', key, duration: 2 });
       }
     } catch (error) {
       console.error("Google login failed:", error);
-      // 使用 messageApi 显示错误消息
       messageApi.error({ content: 'Google login request failed, please try again later', key, duration: 2 });
     } finally {
       setLoading(false);
