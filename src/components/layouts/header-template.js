@@ -114,6 +114,50 @@ export default function Header() {
   const tokenExpiredHandledRef = useRef(false);
   const [showConstructionModal, setShowConstructionModal] = useState(false);
 
+  useEffect(() => {
+    // 检查本地存储中的登录信息
+    const storedIsLoggedIn = localStorage.getItem('alternativelyIsLoggedIn');
+    const storedEmail = localStorage.getItem('alternativelyCustomerEmail');
+    
+    if (storedIsLoggedIn === 'true' && storedEmail) {
+      setIsLoggedIn(true);
+      setUserEmail(storedEmail);
+    }
+  }, []);
+
+  // 加载 Google One Tap 脚本
+  useEffect(() => {
+    const isUserLoggedIn = localStorage.getItem('alternativelyIsLoggedIn') === 'true';
+    if (typeof window !== 'undefined' && !isUserLoggedIn && !googleOneTapInitialized) {
+      if (!document.querySelector('script[src="https://accounts.google.com/gsi/client"]')) {
+        const script = document.createElement('script');
+        script.src = "https://accounts.google.com/gsi/client";
+        script.async = true;
+        script.defer = true;
+        script.onload = () => {
+          if (window.google?.accounts?.id) {
+            initializeGoogleOneTap();
+          } else {
+            setTimeout(initializeGoogleOneTap, 100); 
+          }
+        };
+        script.onerror = () => {
+          console.error('Failed to load Google GSI script.'); 
+        };
+        document.body.appendChild(script);
+      } else {
+        console.log('Google GSI script already exists. Attempting to initialize One Tap...'); // 添加日志
+        if (window.google?.accounts?.id) {
+          initializeGoogleOneTap();
+        } else {
+           console.warn('GSI script tag exists, but google.accounts.id not available. Waiting for potential late initialization.');
+           setTimeout(initializeGoogleOneTap, 500);
+        }
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [googleOneTapInitialized]); // 移除 initializeGoogleOneTap，因为它现在是 useCallback 包裹的稳定函数
+
   // 处理 Google One Tap 响应 (Moved Up)
   const handleGoogleOneTapResponse = useCallback(async (response) => {
     const key = 'googleOneTapLogin'; // 定义一个唯一的 key
@@ -194,51 +238,6 @@ export default function Header() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [googleOneTapInitialized, isLoggedIn, handleGoogleOneTapResponse]); // Keep handleGoogleOneTapResponse dependency
-
-  useEffect(() => {
-    // 检查本地存储中的登录信息
-    const storedIsLoggedIn = localStorage.getItem('alternativelyIsLoggedIn');
-    const storedEmail = localStorage.getItem('alternativelyCustomerEmail');
-    
-    if (storedIsLoggedIn === 'true' && storedEmail) {
-      setIsLoggedIn(true);
-      setUserEmail(storedEmail);
-    }
-  }, []);
-
-  // 加载 Google One Tap 脚本
-  useEffect(() => {
-    const isUserLoggedIn = localStorage.getItem('alternativelyIsLoggedIn') === 'true';
-    if (typeof window !== 'undefined' && !isUserLoggedIn && !googleOneTapInitialized) {
-      // 检查脚本是否已加载
-      if (!document.querySelector('script[src="https://accounts.google.com/gsi/client"]')) {
-        const script = document.createElement('script');
-        script.src = "https://accounts.google.com/gsi/client";
-        script.async = true;
-        script.defer = true;
-        script.onload = () => {
-          if (window.google?.accounts?.id) {
-            initializeGoogleOneTap();
-          } else {
-            setTimeout(initializeGoogleOneTap, 100); 
-          }
-        };
-        script.onerror = () => {
-          console.error('Failed to load Google GSI script.'); 
-        };
-        document.body.appendChild(script);
-      } else {
-        console.log('Google GSI script already exists. Attempting to initialize One Tap...'); // 添加日志
-        if (window.google?.accounts?.id) {
-          initializeGoogleOneTap();
-        } else {
-           console.warn('GSI script tag exists, but google.accounts.id not available. Waiting for potential late initialization.');
-           setTimeout(initializeGoogleOneTap, 500);
-        }
-      }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoggedIn, googleOneTapInitialized]); // 移除 initializeGoogleOneTap，因为它现在是 useCallback 包裹的稳定函数
 
   // 当用户登出时重置 One Tap 状态
   useEffect(() => {
