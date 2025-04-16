@@ -195,6 +195,17 @@ export default function Header() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [googleOneTapInitialized, isLoggedIn, handleGoogleOneTapResponse]); // Keep handleGoogleOneTapResponse dependency
 
+  useEffect(() => {
+    // 检查本地存储中的登录信息
+    const storedIsLoggedIn = localStorage.getItem('alternativelyIsLoggedIn');
+    const storedEmail = localStorage.getItem('alternativelyCustomerEmail');
+    
+    if (storedIsLoggedIn === 'true' && storedEmail) {
+      setIsLoggedIn(true);
+      setUserEmail(storedEmail);
+    }
+  }, []);
+
   // 加载 Google One Tap 脚本
   useEffect(() => {
     const isUserLoggedIn = localStorage.getItem('alternativelyIsLoggedIn') === 'true';
@@ -405,16 +416,7 @@ export default function Header() {
   // 移除 showNotification 依赖，添加 messageApi
   }, [setIsLoginForm, showLoginModal, messageApi]); // 添加所有依赖项 (added showLoginModal, messageApi)
 
-  useEffect(() => {
-    // 检查本地存储中的登录信息
-    const storedIsLoggedIn = localStorage.getItem('alternativelyIsLoggedIn');
-    const storedEmail = localStorage.getItem('alternativelyCustomerEmail');
-    
-    if (storedIsLoggedIn === 'true' && storedEmail) {
-      setIsLoggedIn(true);
-      setUserEmail(storedEmail);
-    }
-  }, []);
+  
 
   return (
     <>

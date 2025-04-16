@@ -12,7 +12,6 @@ const LoginModal = ({
   onLoginSuccess,
   showNotification,
   handleGoogleLogin,
-  googleLoading,
   onRegisterSuccess
 }) => {
   const [messageApi, contextHolder] = message.useMessage();
@@ -56,6 +55,9 @@ const LoginModal = ({
   // Add state to track all types of error messages
   const [errorMessage, setErrorMessage] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
+
+  // 新增：Google 登录 loading 状态
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   // Clean up timer
   useEffect(() => {
@@ -306,6 +308,18 @@ const LoginModal = ({
     setIsLoginForm(true);
   };
 
+  // 修改 handleGoogleLogin
+  const handleGoogleLoginClick = async () => {
+    setGoogleLoading(true);
+    try {
+      await handleGoogleLogin(); // 调用父组件传进来的 Google 登录逻辑
+    } catch (e) {
+      // 可以加错误提示
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
   // 确保模态框只渲染一次的防御性代码
   if (!showLoginModal) return null;
 
@@ -384,7 +398,7 @@ const LoginModal = ({
               </div>
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || googleLoading}
                 className="w-full px-4 py-2 text-white bg-gradient-to-r from-indigo-600 to-purple-600 rounded-md hover:from-indigo-500 hover:to-purple-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-300 transform hover:scale-[1.02]"
               >
                 {loading ? (
@@ -401,8 +415,8 @@ const LoginModal = ({
               {/* Google login button */}
               <button
                 type="button"
-                onClick={handleGoogleLogin}
-                disabled={googleLoading}
+                onClick={handleGoogleLoginClick}
+                disabled={loading || googleLoading}
                 className="w-full mt-4 px-4 py-2 text-sm font-medium text-white bg-slate-800/50 backdrop-blur-sm rounded-lg hover:bg-slate-700/60 transition-all duration-300 border border-slate-700/50 hover:border-purple-500/30 flex items-center justify-center"
               >
                 {googleLoading ? (
