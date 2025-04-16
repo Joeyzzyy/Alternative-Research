@@ -41,7 +41,6 @@ const ResearchTool = ({
   const [initialLoading, setInitialLoading] = useState(true);
   const [messages, setMessages] = useState([]);
   const [userInput, setUserInput] = useState('');
-  const [lastUrlInput, setLastUrlInput] = useState('');
   const [isMessageSending, setIsMessageSending] = useState(false);
   const [rightPanelTab, setRightPanelTab] = useState('details');
   const [customerId, setCustomerId] = useState(null);
@@ -102,7 +101,7 @@ const ResearchTool = ({
   useEffect(() => {
     const lastInput = localStorage.getItem('urlInput');
     if (lastInput) {
-      setLastUrlInput(lastInput);
+      setUserInput(lastInput);
     }
   }, []);
 
@@ -1214,7 +1213,6 @@ const ResearchTool = ({
       
       setUserInput('');
       localStorage.removeItem('urlInput');
-      setLastUrlInput('');
 
       messageHandler.addUserMessage(formattedInput);
       while (messageHandler.isProcessing) {
@@ -3014,9 +3012,7 @@ const ResearchTool = ({
                 messageApi.error('Please enter a valid domain (e.g., example.com or https://example.com)');
                 return;
               }
-
               const formattedInput = userInput.trim();
-              
               initializeChat(formattedInput);
             }}>
                 <div className="relative">
@@ -3027,7 +3023,6 @@ const ResearchTool = ({
                     setUserInput(e.target.value);
                     // 保存输入值到 localStorage
                     localStorage.setItem('urlInput', e.target.value);
-                    setLastUrlInput(e.target.value);
                   }}
                   // 强制使用 Day Ghibli 的边框/阴影样式，并保留 research-tool-input 类
                   className={`research-tool-input bg-white/10 border rounded-xl text-lg w-full`}
@@ -3072,62 +3067,6 @@ const ResearchTool = ({
               </button>
               </form>
             </div>
-
-            {lastUrlInput && lastUrlInput !== userInput && (
-              <div
-                className="mt-2 flex items-center space-x-2"
-                style={{ maxWidth: 600, marginLeft: 'auto', marginRight: 'auto' }}
-              >
-                <span
-                  className="text-xs font-bold px-2 py-0.5 rounded shadow"
-                  style={{
-                    letterSpacing: '0.5px',
-                    background: currentBackground === 'DAY_GHIBLI'
-                      ? 'linear-gradient(90deg, #fbc687 0%, #a8e063 100%)'
-                      : 'linear-gradient(90deg, #6c63ff 0%, #232946 100%)',
-                    color: currentBackground === 'DAY_GHIBLI' ? '#5b4636' : '#e0e6f7'
-                  }}
-                >
-                  Last Input
-                </span>
-                <span
-                  className="text-xs font-bold px-2 py-0.5 rounded border break-all"
-                  style={{
-                    maxWidth: 220,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    background: currentBackground === 'DAY_GHIBLI'
-                      ? '#f6e9c3'
-                      : '#393e6e',
-                    color: currentBackground === 'DAY_GHIBLI' ? '#3b7a57' : '#b8c1ec',
-                    borderColor: currentBackground === 'DAY_GHIBLI' ? '#e0c097' : '#6c63ff'
-                  }}
-                >
-                  {lastUrlInput}
-                </span>
-                <Button
-                  size="small"
-                  type="primary"
-                  style={{
-                    background: currentBackground === 'DAY_GHIBLI'
-                      ? 'linear-gradient(90deg, #fbc687 0%, #a8e063 100%)'
-                      : 'linear-gradient(90deg, #6c63ff 0%, #232946 100%)',
-                    color: currentBackground === 'DAY_GHIBLI' ? '#5b4636' : '#e0e6f7',
-                    fontWeight: 700,
-                    border: 'none',
-                    boxShadow: '0 2px 8px 0 rgba(251,198,135,0.15)'
-                  }}
-                  onClick={() => {
-                    if (lastUrlInput) {
-                      setUserInput(lastUrlInput);
-                      localStorage.setItem('urlInput', lastUrlInput);
-                    }
-                  }}
-                >
-                  One-click fill
-                </Button>
-              </div>
-            )}
 
           {/* 添加免费credits提示 - 样式更加醒目 */}
           <div className={`mt-4 text-center mb-8 drop-shadow-md`}> {/* 应用 drop-shadow */}
