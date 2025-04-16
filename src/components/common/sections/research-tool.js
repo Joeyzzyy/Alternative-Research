@@ -1211,7 +1211,11 @@ const ResearchTool = ({
       } catch (error) {
         console.error('Error extracting domain:', error);
       }
+      
       setUserInput('');
+      localStorage.removeItem('urlInput');
+      setLastUrlInput('');
+
       messageHandler.addUserMessage(formattedInput);
       while (messageHandler.isProcessing) {
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -3012,8 +3016,7 @@ const ResearchTool = ({
               }
 
               const formattedInput = userInput.trim();
-              localStorage.removeItem('urlInput');
-              setLastUrlInput('');
+              
               initializeChat(formattedInput);
             }}>
                 <div className="relative">
