@@ -3045,13 +3045,11 @@ const ResearchTool = ({
                   // 强制使用 Day Ghibli 的边框/阴影样式，并保留 research-tool-input 类
                   className={`research-tool-input bg-white/10 border rounded-xl text-lg w-full`}
                   style={{
-                    // 颜色由 #433422 改为更深的 #2d1a06
+                    backgroundColor: 'white',
+                    color: '#fff',  
                     color: '#2d1a06',
                     height: '80px',
                     paddingRight: '120px',
-                    transition: 'all 0.3s ease',
-                    // 强制使用 Day Ghibli 的阴影
-                    boxShadow: '0 10px 25px -5px rgba(120, 80, 40, 0.3)'
                   }}
                 />
                 </div>
@@ -3090,23 +3088,17 @@ const ResearchTool = ({
 
           {/* 添加免费credits提示 - 样式更加醒目 */}
           <div className={`mt-4 text-center mb-8 drop-shadow-md`}> {/* 应用 drop-shadow */}
-            <div className={`inline-flex items-center px-5 py-4 ${
-              currentBackground === 'DAY_GHIBLI'
-                ? 'bg-gradient-to-r from-amber-600/70 to-amber-700/70 text-white border-4 border-yellow-300 animate-pulse-strong'
-                : 'bg-gradient-to-r from-blue-600/70 to-indigo-700/70 text-white border-4 border-yellow-300 animate-pulse-strong' // Night: blue gradient
-            } rounded-lg shadow-2xl transform hover:scale-105 transition-all duration-300 relative overflow-hidden`}> {/* 应用 drop-shadow */}
-              {/* ... (rest of the credits banner remains the same) ... */}
-              <div className="absolute inset-0 bg-white/20 animate-shimmer-fast"></div>
-              <div className="absolute -left-4 -top-4 w-16 h-16 bg-yellow-300/30 rounded-full blur-xl"></div>
-              <div className="absolute -right-4 -bottom-4 w-16 h-16 bg-yellow-300/30 rounded-full blur-xl"></div>
-              <svg className="w-6 h-6 mr-3 text-yellow-300 animate-bounce-strong" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+          <div className="mt-4 text-center mb-8">
+            <div
+              className="inline-flex items-center px-4 py-3 rounded-lg shadow-lg border-2 border-yellow-400 bg-yellow-100 text-yellow-900 font-bold text-base justify-center"
+              style={{ minWidth: 0 }}
+            >
+              <svg className="w-5 h-5 mr-2 text-yellow-500" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm-1.06 13.54L7.4 12l1.41-1.41 2.12 2.12 4.24-4.24 1.41 1.41-5.64 5.66z"/>
               </svg>
-              <span className="font-extrabold text-lg relative z-10">Generate And Deploy <span className="text-yellow-300 underline decoration-2 decoration-wavy decoration-yellow-300/70">5 FREE alternative pages</span> - no credit card required!</span>
-              <svg className="w-6 h-6 ml-3 text-yellow-300 animate-bounce-strong" style={{animationDelay: '0.3s'}} viewBox="0 0 24 24" fill="currentColor" stroke="none">
-                <path d="M13 9V3.5L18.5 9M6 2c-1.11 0-2 .89-2 2v16c0 1.11.89 2 2 2h12c1.11 0 2-.89 2-2V8l-6-6H6z"/>
-              </svg>
-              </div>
+              Generate and deploy <span className="mx-1 underline decoration-wavy decoration-yellow-400">5 FREE alternative pages</span> – no credit card required!
+            </div>
+          </div>
             </div>
 
             <div className="mt-12 max-w-4xl mx-auto">
