@@ -140,27 +140,37 @@ const SubscriptionCard = () => {
 
                 <h3 className="text-2xl font-bold text-white mt-4">{plan.name}</h3>
 
-                <div className="mt-4 flex items-baseline justify-center">
-                  <div className="flex items-baseline">
-                    <span className={`text-5xl font-bold tracking-tight ${
-                      plan.popular ? 'bg-gradient-to-r from-purple-400 to-rose-400 bg-clip-text text-transparent' : 'text-white'
-                    }`}>
-                      ${plan.price[selectedPeriod]}
-                    </span>
-                    <span className="text-xl text-gray-400 ml-1">/mo</span>
-                  </div>
-                </div>
-
-                {selectedPeriod === 'yearly' && plan.discount && (
-                  <div className="mt-3">
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-emerald-900/30 text-emerald-400 border border-emerald-700/30">
-                      <svg className="w-4 h-4 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 14a6 6 0 110-12 6 6 0 010 12zm-1-5h2v2H9v-2zm0-6h2v4H9V5z"/>
+                <div className="mt-8 mb-4 flex items-center justify-center space-x-4">
+                  <span className={`text-4xl font-extrabold tracking-tight
+                    ${plan.popular ? 'bg-gradient-to-r from-purple-400 to-rose-400 bg-clip-text text-transparent' : 'text-cyan-400'}
+                  `}>
+                    ${plan.price[selectedPeriod]}
+                  </span>
+                  <span className="text-lg text-gray-400 font-medium">/mo</span>
+                  <span className="mx-2">
+                    <svg className="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </span>
+                  <span className="relative flex items-center">
+                    <span className="absolute -left-4 -top-2 opacity-40 pointer-events-none">
+                      <svg className="w-10 h-10 text-yellow-400 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M11.3 1.046a1 1 0 00-1.6 0l-7 10A1 1 0 003 13h5v5a1 1 0 001.6.8l7-10A1 1 0 0017 7h-5V2a1 1 0 00-.7-.954z"/>
                       </svg>
-                      Save {plan.discount}
                     </span>
-                  </div>
-                )}
+                    <span className={`
+                      text-5xl font-extrabold tracking-tight drop-shadow-lg animate-bounce
+                      ${plan.popular 
+                        ? 'bg-gradient-to-r from-yellow-300 via-pink-400 to-purple-500 bg-clip-text text-transparent'
+                        : 'bg-gradient-to-r from-cyan-300 via-blue-400 to-green-400 bg-clip-text text-transparent'
+                      }
+                    `}>
+                      {plan.name === "Standard" && "30"}
+                      {plan.name === "Professional" && "100"}
+                    </span>
+                  </span>
+                  <span className="text-base text-gray-300 ml-1">alterpages/month</span>
+                </div>
 
                 <p className="mt-4 text-gray-300">{plan.description}</p>
 
