@@ -105,12 +105,28 @@ const ResearchTool = ({
   };
 
   const validateDomain = (input) => {
+    if (!input || !input.trim()) return false;
+    
     let domain = input.trim();
-    if (domain.startsWith('http://')) domain = domain.substring(7);
-    if (domain.startsWith('https://')) domain = domain.substring(8);
-    if (domain.startsWith('www.')) domain = domain.substring(4);
-    const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
-    return domainRegex.test(domain);
+    
+    try {
+      // 尝试将输入解析为URL
+      // 如果输入不包含协议，添加临时协议以便解析
+      if (!domain.match(/^https?:\/\//i)) {
+        domain = 'https://' + domain;
+      }
+      
+      // 使用URL API解析域名
+      const url = new URL(domain);
+      domain = url.hostname;
+      
+      // 验证域名格式
+      const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+      return domainRegex.test(domain);
+    } catch (error) {
+      // URL解析失败
+      return false;
+    }
   };
   const [shouldConnectSSE, setShouldConnectSSE] = useState(false);
 
@@ -142,9 +158,21 @@ const ResearchTool = ({
 
     if (!userInput.trim() || isMessageSending) return;
 
-    const formattedInput = showInitialScreen && !userInput.trim().startsWith('http') 
-      ? `https://${userInput.trim()}`
-      : userInput.trim();
+    // 验证输入
+    if (!validateDomain(userInput.trim())) {
+      setValidationError('Please enter a valid website URL (e.g., example.com or https://example.com)');
+      return;
+    } else {
+      setValidationError('');
+    }
+
+    // 格式化输入
+    let formattedInput = userInput.trim();
+    
+    // 确保URL有协议前缀
+    if (!formattedInput.match(/^https?:\/\//i)) {
+      formattedInput = `https://${formattedInput}`;
+    }
 
     // Add user message
     messageHandler.addUserMessage(formattedInput);
@@ -2770,7 +2798,7 @@ const ResearchTool = ({
   useEffect(() => {
     const placeholderTexts = [
       "Enter product website URL to get started.",
-      "For example: altpage.ai"
+      "For example: altpage.ai or https://altpage.ai"
     ];
     const typingSpeed = 50; // milliseconds per character
     const deletingSpeed = 20;
@@ -3041,26 +3069,21 @@ const ResearchTool = ({
                 <Input
                   placeholder={dynamicPlaceholder} // 使用动态 placeholder
                   value={userInput}
-                    onChange={(e) => {
+                  onChange={(e) => {
                     setUserInput(e.target.value);
                     if (validationError) setValidationError('');
                   }}
                   // 强制使用 Day Ghibli 的边框/阴影样式，并保留 research-tool-input 类
                   className={`research-tool-input bg-white/10 border rounded-xl text-lg w-full ${validationError ? 'border-red-500' : BACKGROUNDS.DAY_GHIBLI.cardStyle} shadow-xl`}
                   style={{
-                    // 强制使用 Day Ghibli 的文字和背景色
-                    color: '#433422',
-                    backgroundColor: 'rgba(253, 230, 190, 0.85)',
+                    // 颜色由 #433422 改为更深的 #2d1a06
+                    color: '#2d1a06',
                     height: '80px',
                     paddingRight: '120px',
                     transition: 'all 0.3s ease',
                     // 强制使用 Day Ghibli 的阴影
                     boxShadow: '0 10px 25px -5px rgba(120, 80, 40, 0.3)'
                   }}
-                  prefix={
-                    // 强制使用 Day Ghibli 的前缀颜色
-                    <span className={`font-mono text-amber-800/70`} style={{ marginLeft: '16px' }}>https://</span>
-                  }
                   status={validationError ? "error" : ""}
                 />
                 </div>
