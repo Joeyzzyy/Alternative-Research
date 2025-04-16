@@ -5,9 +5,7 @@ import { SearchOutlined, ClearOutlined, ArrowRightOutlined, InfoCircleOutlined, 
 import apiClient from '../../../lib/api/index.js';
 import { EventSourcePolyfill } from 'event-source-polyfill';
 import MessageHandler from '../../../utils/MessageHandler';
-import LoginModal from './LoginModal';
 import { useUser } from '../../../contexts/UserContext';
-
 const TAG_FILTERS = {
   '\\[URL_GET\\]': '',  // 过滤 [URL_GET]
   '\\[COMPETITOR_SELECTED\\]': '',  // 过滤 [COMPETITOR_SELECTED]
@@ -20,7 +18,6 @@ const BACKGROUNDS = {
     type: 'image', // 类型改为 image
     value: 'url("/images/GHIBLI-NIGHT.png")', // 使用夜间图片
     overlay: 'bg-slate-950/60', // 统一覆盖层样式
-    // 添加夜间模式的样式
     buttonStyle: 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border-blue-500/30 hover:border-blue-400/60',
     inputStyle: 'border-blue-400/30 focus:border-blue-300/50 shadow-blue-700/20',
     cardStyle: 'border-blue-500/30 hover:border-blue-400/50 shadow-blue-700/20'
@@ -36,8 +33,7 @@ const BACKGROUNDS = {
 };
 
 const ResearchTool = ({ 
-  // ... other existing props like initialLoading, showInitialScreen, etc. ...
-  setTargetShowcaseTab // <--- 在这里添加 setTargetShowcaseTab
+  setTargetShowcaseTab
 }) => {
   const [messageApi, contextHolder] = message.useMessage();
   const [domain, setDomain] = useState('');
@@ -46,7 +42,6 @@ const ResearchTool = ({
   const [messages, setMessages] = useState([]);
   const [userInput, setUserInput] = useState('');
   const [isMessageSending, setIsMessageSending] = useState(false);
-  const [deepResearchMode, setDeepResearchMode] = useState(false);
   const [rightPanelTab, setRightPanelTab] = useState('details');
   const [customerId, setCustomerId] = useState(null);
   const [currentWebsiteId, setCurrentWebsiteId] = useState(null);
@@ -62,7 +57,6 @@ const ResearchTool = ({
   const [browserTabs, setBrowserTabs] = useState([]);
   const [activeTab, setActiveTab] = useState(null);
   const [inputDisabledDueToUrlGet, setInputDisabledDueToUrlGet] = useState(false);
-  const [validationError, setValidationError] = useState('');
   const lastProcessedLogIdRef = useRef(null);
   const [currentBackground, setCurrentBackground] = useState('DAY_GHIBLI'); // 默认使用 NIGHT_GHIBLI
   const [exampleDisabled, setExampleDisabled] = useState(false); // 添加 exampleDisabled 状态
@@ -79,10 +73,7 @@ const ResearchTool = ({
   const [showResultIdsModal, setShowResultIdsModal] = useState(false);
   const lastLogCountRef = useRef(0);
   const [pendingUserInput, setPendingUserInput] = useState('');
-  // 从 UserContext 获取用户信用额度
   const { userCredits, loading: userCreditsLoading } = useUser();
-
-  // Add necessary state variables
   const [loadingResultIds, setLoadingResultIds] = useState(false);
   const [activePreviewTab, setActivePreviewTab] = useState(0);
   const [selectedPreviewUrl, setSelectedPreviewUrl] = useState('');
@@ -94,7 +85,9 @@ const ResearchTool = ({
   const placeholderIndexRef = useRef(0); // Ref for current character index
   const placeholderDirectionRef = useRef('typing'); // Ref for direction ('typing' or 'deleting')
   const placeholderTimeoutRef = useRef(null); // Ref for pause timeout
-
+  const [clearingHistory, setClearingHistory] = useState(false);
+  const [clearProgress, setClearProgress] = useState({ visible: false, current: 0, total: 0 });
+  const [currentStep, setCurrentStep] = useState(1); // 添加这一行来跟踪当前步骤
   const filterMessageTags = (message) => {
     let filteredMessage = message;
     Object.entries(TAG_FILTERS).forEach(([tag, replacement]) => {
@@ -103,23 +96,26 @@ const ResearchTool = ({
     
     return filteredMessage;
   };
-
   const validateDomain = (input) => {
     if (!input || !input.trim()) return false;
-    
     let domain = input.trim();
-    
     try {
+      // 首先检查是否是纯数字，如果是则直接拒绝
+      if (/^\d+$/.test(domain)) {
+        return false;
+      }
       // 尝试将输入解析为URL
       // 如果输入不包含协议，添加临时协议以便解析
       if (!domain.match(/^https?:\/\//i)) {
         domain = 'https://' + domain;
       }
-      
       // 使用URL API解析域名
       const url = new URL(domain);
       domain = url.hostname;
-      
+      // 验证域名格式 - 必须至少包含一个点，表示有顶级域名
+      if (!domain.includes('.')) {
+        return false;
+      }
       // 验证域名格式
       const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
       return domainRegex.test(domain);
@@ -150,152 +146,6 @@ const ResearchTool = ({
     }
   }, [messages]);
 
-  const handleUserInput = async (e) => {
-    if (e && e.preventDefault) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-
-    if (!userInput.trim() || isMessageSending) return;
-
-    // 验证输入
-    if (!validateDomain(userInput.trim())) {
-      setValidationError('Please enter a valid website URL (e.g., example.com or https://example.com)');
-      return;
-    } else {
-      setValidationError('');
-    }
-
-    // 格式化输入
-    let formattedInput = userInput.trim();
-    
-    // 确保URL有协议前缀
-    if (!formattedInput.match(/^https?:\/\//i)) {
-      formattedInput = `https://${formattedInput}`;
-    }
-
-    // Add user message
-    messageHandler.addUserMessage(formattedInput);
-    // Add agent thinking message
-    const thinkingMessageId = messageHandler.addAgentThinkingMessage();
-    setUserInput('');
-    setIsMessageSending(true);
-
-    try {
-      const response = await apiClient.chatWithAI(formattedInput, currentWebsiteId);
-
-      if (response?.code === 200 && response.data?.answer) {
-        const rawAnswer = response.data.answer;
-
-        if (rawAnswer.includes('[URL_GET]')) {
-          setInputDisabledDueToUrlGet(true);
-          // Update agent message
-          const answer = filterMessageTags(rawAnswer);
-          messageHandler.updateAgentMessage(answer, thinkingMessageId);
-          // Add system message
-          messageHandler.addSystemMessage('Searching for competitors. Please wait a moment...');
-        } else if (rawAnswer.includes('[COMPETITOR_SELECTED]')) {
-          const messageBody = rawAnswer.replace(/\[COMPETITOR_SELECTED\].*$/s, '').trim();
-          
-          messageHandler.updateAgentMessage(messageBody, thinkingMessageId);
-          
-          // 提取竞品数组部分
-          // 修改正则表达式：移除末尾的 $，并允许标签和列表之间有其他字符
-          const competitorArrayMatch = rawAnswer.match(/\[COMPETITOR_SELECTED\][^\[]*\[(.*?)\]/s);
-          
-          if (competitorArrayMatch && competitorArrayMatch[1]) {
-            try {
-              // 清理字符串，处理引号和转义字符
-              const cleanedString = competitorArrayMatch[1]
-                .replace(/\\'/g, "'")  // 处理转义的单引号
-                .replace(/\\"/g, '"')  // 处理转义的双引号
-                .replace(/'/g, '"')    // 将单引号替换为双引号
-                .trim();
-              
-              let competitors;
-              try {
-                // 尝试解析 JSON
-                competitors = JSON.parse(`[${cleanedString}]`);
-              } catch (e) {
-                // 如果 JSON 解析失败，使用更智能的字符串分割
-                competitors = cleanedString
-                  .replace(/[\[\]'"`]/g, '') // 移除所有引号和方括号
-                  .split(',')
-                  .map(s => s.trim())
-                  .filter(s => s.length > 0); // 过滤空字符串
-              }
-              
-              // 确保结果是数组并且每个元素都是有效的
-              if (Array.isArray(competitors) && competitors.length > 0) {
-                // 清理域名格式
-                const domainArray = competitors.map(comp => 
-                  String(comp)
-                    .trim()
-                    .replace(/^https?:\/\//, '')  // 移除协议
-                    .replace(/\/$/, '')           // 移除末尾斜杠
-                    .replace(/\s+/g, '')          // 移除所有空格
-                ).filter(domain => domain.length > 0);  // 过滤掉空域名
-
-                if (domainArray.length > 0) {
-                  const generateResponse = await apiClient.generateAlternative(currentWebsiteId, domainArray);
-                  
-                  if (generateResponse?.code === 200) {
-                    // messageHandler.addSystemMessage(
-                    //   `We are generating alternative solutions for ${domainArray.join(', ')}. This may take some time, please wait...`
-                    // );
-                    setInputDisabledDueToUrlGet(true);
-                    setIsProcessingTask(true);
-                    
-                  } else {
-                    messageHandler.addSystemMessage(`⚠️ Failed to generate alternative: Invalid server response`);
-                  }
-                } else {
-                  throw new Error('No valid competitors found after processing');
-                }
-              } else {
-                throw new Error('No valid competitors found in the response');
-              }
-            } catch (error) {
-              messageHandler.addSystemMessage(`⚠️ Failed to process competitor selection: ${error.message}`);
-            }
-          } else {
-            messageHandler.addSystemMessage(`⚠️ Failed to extract competitor information from the response`);
-          }
-        } else if (rawAnswer.includes('[END]')) {
-          // 处理 [END] 标记
-          // 1. 过滤掉 [END] 标记
-          const answer = filterMessageTags(rawAnswer);
-          messageHandler.updateAgentMessage(answer, thinkingMessageId);
-          
-          // 2. 提取样式要求（即过滤后的消息内容）
-          const styleRequirement = answer.trim();
-          
-          // 3. 调用 changeStyle API
-          try {
-            const styleResponse = await apiClient.changeStyle(styleRequirement, currentWebsiteId);
-            if (styleResponse?.code === 200) {
-              // 可以添加一个系统消息表示样式已更新
-              messageHandler.addSystemMessage('I am updating the style, please wait a moment...');
-            } else {
-              messageHandler.addSystemMessage('⚠️ Failed to update style: Invalid server response');
-            }
-          } catch (styleError) {
-            messageHandler.addSystemMessage(`⚠️ Failed to update style: ${styleError.message}`);
-          }
-        } else {
-          const answer = filterMessageTags(rawAnswer);
-          messageHandler.updateAgentMessage(answer, thinkingMessageId);
-        }
-      } else {
-        messageHandler.updateAgentMessage('⚠️ Failed to get valid response from server', thinkingMessageId);
-      }
-    } catch (error) {
-      messageHandler.handleErrorMessage(error, thinkingMessageId);
-    } finally {
-      setIsMessageSending(false);
-    }
-  };
-
   const handleCompetitorListRequest = async (competitors) => {
     setIsMessageSending(true);
     const thinkingMessageId = messageHandler.addAgentThinkingMessage();
@@ -304,6 +154,8 @@ const ResearchTool = ({
       const response = await apiClient.chatWithAI(JSON.stringify(competitors), currentWebsiteId);
 
       if (response?.code === 200 && response.data?.answer) {
+        // 更新当前步骤为2，表示已完成"Find Competitors"，现在处于"Select Competitors"阶段
+        setCurrentStep(2);
         const answer = filterMessageTags(response.data.answer);
         messageHandler.updateAgentMessage(answer, thinkingMessageId);
       } else {
@@ -340,7 +192,8 @@ const ResearchTool = ({
               <div className="p-4 rounded-2xl text-sm bg-gradient-to-br from-blue-500 to-blue-600 
                             text-white shadow-xl backdrop-blur-sm
                             hover:shadow-blue-500/20 transition-all duration-300
-                            rounded-tr-none transform hover:-translate-y-0.5">
+                            rounded-tr-none transform hover:-translate-y-0.5"
+                  style={{maxWidth: '350px', wordWrap: 'break-word'}}>
                 <div className="relative z-10">
                   {message.content.split('\n').map((line, i) => (
                     <React.Fragment key={i}>
@@ -384,7 +237,8 @@ const ResearchTool = ({
               <div className="p-4 rounded-2xl text-sm bg-gradient-to-br from-slate-800 to-slate-900 
                             text-white shadow-xl backdrop-blur-sm
                             hover:shadow-slate-500/20 transition-all duration-300
-                            rounded-tl-none transform hover:-translate-y-0.5">
+                            rounded-tl-none transform hover:-translate-y-0.5"
+                  style={{maxWidth: '350px', wordWrap: 'break-word'}}>
                 <div className="relative z-10">
                   {message.isThinking ? (
                     <div className="flex space-x-1">
@@ -440,8 +294,6 @@ const ResearchTool = ({
     return () => clearTimeout(timer);
   }, []);
 
-
-  // 添加监听登录成功事件的 useEffect
   useEffect(() => {
     const handleLoginSuccess = () => {
       // 检查是否有待处理的用户输入
@@ -469,10 +321,6 @@ const ResearchTool = ({
       setCustomerId(storedCustomerId);
     }
   }, []);
-
-  const toggleDeepResearchMode = () => {
-    setDeepResearchMode(!deepResearchMode);
-  };
 
   const detailsRef = useRef(null);
   const codeContainerRef = useRef(null);
@@ -546,7 +394,6 @@ const ResearchTool = ({
     return filteredContent;
   };
 
-  // 渲染日志内容
   const renderDetails = (details) => {
     // 首先，合并相同 message_id 的 Agent 消息
     const mergedLogs = [];
@@ -624,42 +471,66 @@ const ResearchTool = ({
     return (
       <div className="h-full flex flex-col" ref={detailsRef}>
         <div className="p-3 space-y-2 overflow-y-auto">
-          {/* 添加加载动画 - 仅在SSE连接成功且任务未完成时显示 */}
-          {sseConnected && !isTaskFinished && (
-            <div className="bg-blue-900/30 p-3 rounded-lg border border-blue-500/30 flex items-center space-x-3 overflow-hidden relative">
-              {/* Background pulse effect */}
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/0 via-blue-500/10 to-blue-500/0 animate-pulse-slow"></div>
-              
-              {/* Animated loader with glow effect */}
-              <div className="relative w-7 h-7 flex-shrink-0">
-                <div className="absolute inset-0 rounded-full border-2 border-blue-400 border-t-transparent animate-spin"></div>
-                <div className="absolute inset-0 rounded-full border-2 border-blue-300/30 border-t-transparent animate-spin" style={{animationDuration: '3s'}}></div>
-                <div className="absolute inset-0 rounded-full bg-blue-400/10 animate-ping" style={{animationDuration: '2s'}}></div>
+          {/* 添加加载动画 - 更酷炫的进度指示器 */}
+          {(
+          <div className="bg-gradient-to-r from-slate-900/90 to-slate-800/90 p-4 rounded-lg border border-slate-700/50 relative backdrop-blur-sm overflow-hidden shadow-lg">
+            {/* 背景装饰效果 */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,#6366f115,transparent_50%)]"></div>
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,#a855f715,transparent_50%)]"></div>
+            
+            <div className="flex items-center space-x-4 relative z-10">
+              {/* 更酷炫的加载指示器 */}
+              <div className="relative w-8 h-8 flex-shrink-0">
+                <div className="absolute inset-0 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin"></div>
+                <div className="absolute inset-1 rounded-full border-2 border-purple-500 border-b-transparent animate-spin" style={{animationDirection: 'reverse', animationDuration: '1.5s'}}></div>
               </div>
               
-              <div className="text-blue-300 text-sm font-medium flex flex-col z-10">
-                <div className="flex items-center">
-                  <span className="mr-1 bg-gradient-to-r from-blue-300 to-cyan-300 bg-clip-text text-transparent font-semibold">Working on your page</span>
-                  <span className="inline-flex">
-                    <span className="animate-bounce delay-0">.</span>
-                    <span className="animate-bounce delay-100">.</span>
-                    <span className="animate-bounce delay-200">.</span>
-                  </span>
+              <div className="text-slate-200 text-sm font-medium flex flex-col z-10 w-full">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-semibold text-white text-lg">Generation Progress</span>
                 </div>
-                <div className="text-xs text-blue-300/70 mt-0.5 flex items-center">
-                  <span className="mr-2">We're analyzing content and generating alternatives</span>
-                  <span className="inline-block w-16 h-1 bg-gradient-to-r from-blue-500/50 to-cyan-400/50 rounded-full overflow-hidden relative">
-                    <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-blue-400 to-cyan-300 rounded-full animate-progress"></span>
-                  </span>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 w-full">
+                  <div className={`text-xs rounded-md px-2 py-2 flex items-center justify-center transition-all duration-500 ${currentStep >= 1 
+                    ? 'bg-gradient-to-r from-indigo-500/30 to-blue-500/30 text-white border border-indigo-500/50 shadow-md shadow-indigo-500/20' 
+                    : 'bg-slate-700/40 text-slate-400 border border-slate-600/30'}`}>
+                    <span className={currentStep === 1 ? 'animate-pulse font-medium' : ''}>1. Find Competitors</span>
+                  </div>
+                  <div className={`text-xs rounded-md px-2 py-2 flex items-center justify-center transition-all duration-500 ${currentStep >= 2 
+                    ? 'bg-gradient-to-r from-indigo-500/30 to-blue-500/30 text-white border border-indigo-500/50 shadow-md shadow-indigo-500/20' 
+                    : 'bg-slate-700/40 text-slate-400 border border-slate-600/30'}`}>
+                    <span className={currentStep === 2 ? 'animate-pulse font-medium' : ''}>2. Select Competitors</span>
+                  </div>
+                  <div className={`text-xs rounded-md px-2 py-2 flex items-center justify-center transition-all duration-500 ${currentStep >= 3 
+                    ? 'bg-gradient-to-r from-indigo-500/30 to-blue-500/30 text-white border border-indigo-500/50 shadow-md shadow-indigo-500/20' 
+                    : 'bg-slate-700/40 text-slate-400 border border-slate-600/30'}`}>
+                    <span className={currentStep === 3 ? 'animate-pulse font-medium' : ''}>3. Analyze Competitors</span>
+                  </div>
+                  <div className={`text-xs rounded-md px-2 py-2 flex items-center justify-center transition-all duration-500 ${currentStep >= 4 
+                    ? 'bg-gradient-to-r from-indigo-500/30 to-blue-500/30 text-white border border-indigo-500/50 shadow-md shadow-indigo-500/20' 
+                    : 'bg-slate-700/40 text-slate-400 border border-slate-600/30'}`}>
+                    <span className={currentStep === 4 ? 'animate-pulse font-medium' : ''}>4. Generate HTML</span>
+                  </div>
+                  <div className={`text-xs rounded-md px-2 py-2 flex items-center justify-center transition-all duration-500 ${
+                      currentStep >= 5
+                        ? 'bg-gradient-to-r from-green-500/30 to-emerald-500/30 text-white border border-green-500/50 shadow-md shadow-green-500/20'
+                        : 'bg-slate-700/40 text-slate-400 border border-slate-600/30'
+                    }`}>
+                    <span className={currentStep === 5 ? 'animate-pulse font-medium' : ''}>5. Adjust Page Style</span>
+                  </div>
                 </div>
+                {currentStep >= 5 && (
+                <div className="flex items-center mt-3 space-x-2">
+                  <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-green-400 font-semibold text-sm">Page generation completed!</span>
+                </div>
+                )}
               </div>
-              
-              {/* Floating particles */}
-              <div className="absolute w-1 h-1 bg-blue-400 rounded-full top-1/4 left-1/4 animate-float-slow"></div>
-              <div className="absolute w-1 h-1 bg-cyan-400 rounded-full bottom-1/4 right-1/3 animate-float-slow" style={{animationDelay: '1s'}}></div>
-              <div className="absolute w-0.5 h-0.5 bg-blue-300 rounded-full top-1/2 right-1/4 animate-float-slow" style={{animationDelay: '1.5s'}}></div>
             </div>
-          )}
+          </div>
+        )}
           
           {mergedLogs.map((log, index) => {
             // 渲染 Agent 类型的日志
@@ -798,16 +669,6 @@ const ResearchTool = ({
                         <span className="font-semibold">Error:</span> {difyContent.data.error}
                       </div>
                     )}
-                    
-                    {/* 原始 data (可选，用于调试) */}
-                    {/*
-                    <details className="mt-2">
-                      <summary className="text-gray-500 cursor-pointer text-[9px]">Show Raw Data</summary>
-                      <pre className="mt-1 p-2 bg-gray-700/50 rounded text-xs overflow-auto">
-                        {JSON.stringify(difyContent.data, null, 2)}
-                      </pre>
-                    </details>
-                    */}
                   </div>
                 )}
 
@@ -855,27 +716,29 @@ const ResearchTool = ({
                       </div>
                     )}
                   </div>
-                ) : log.type === 'Codes' ? (
-                  <div className="text-[10px] text-gray-400 break-words leading-relaxed">
-                    {log.content?.html && (
-                      <div className="mb-1">
-                        <span className="font-semibold">Result ID:</span>
-                        {log.content.resultId}
-                      </div>
-                    )}
-                  </div>
-                ) : log.type === 'Info' ? (
-                  <div className="text-[10px] text-gray-400 break-words leading-relaxed">
-                    {log.content?.planningId && (
-                      <div className="mb-1">
-                        <span className="font-semibold">Planning ID:</span> {log.content.planningId}
-                      </div>
-                    )}
-                    <div className="mb-1">
-                      <span className="font-semibold">Status:</span> {log.content.status}
-                    </div>
-                  </div>
-                ) : null}
+                ) 
+                // : log.type === 'Codes' ? (
+                //   <div className="text-[10px] text-gray-400 break-words leading-relaxed">
+                //     {log.content?.html && (
+                //       <div className="mb-1">
+                //         <span className="font-semibold">Result ID:</span>
+                //         {log.content.resultId}
+                //       </div>
+                //     )}
+                //   </div>
+                // ) : log.type === 'Info' ? (
+                //   <div className="text-[10px] text-gray-400 break-words leading-relaxed">
+                //     {log.content?.planningId && (
+                //       <div className="mb-1">
+                //         <span className="font-semibold">Planning ID:</span> {log.content.planningId}
+                //       </div>
+                //     )}
+                //     <div className="mb-1">
+                //       <span className="font-semibold">Status:</span> {log.content.status}
+                //     </div>
+                //   </div>
+                // ) 
+                : null}
 
                 <div className="text-[9px] text-gray-500 mt-1.5">
                   {new Date(log.timestamp).toLocaleString()}
@@ -888,27 +751,17 @@ const ResearchTool = ({
     );
   };
 
-  // 切换背景函数
   const toggleBackground = () => {
     // 使用新的主题名称
     setCurrentBackground(prev => prev === 'DAY_GHIBLI' ? 'NIGHT_GHIBLI' : 'DAY_GHIBLI');
   };
 
-  // 获取当前背景配置
   const getBackgroundStyle = () => {
     const bg = BACKGROUNDS[currentBackground];
     // 两种模式现在都是 image
     return { backgroundImage: bg.value };
   };
 
-  // 获取当前背景类名 - 现在不需要了，因为都是图片背景
-  const getBackgroundClass = () => {
-    // const bg = BACKGROUNDS[currentBackground];
-    // return bg.type === 'gradient' ? bg.value : '';
-    return ''; // 返回空字符串
-  };
-
-  // 获取覆盖层类名
   const getOverlayClass = () => {
     return BACKGROUNDS[currentBackground].overlay;
   };
@@ -1120,49 +973,137 @@ const ResearchTool = ({
     };
   }, []);
 
-  const [showConstructionModal, setShowConstructionModal] = useState(false);
-  const initializeChat = async (userInput) => {
+  const handleUserInput = async (e) => {
+    if (e && e.preventDefault) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (!userInput.trim() || isMessageSending) return;
+    let formattedInput = userInput.trim();
+    messageHandler.addUserMessage(formattedInput);
+    const thinkingMessageId = messageHandler.addAgentThinkingMessage();
+    setUserInput('');
+    setIsMessageSending(true);
+
     try {
-      // 设置处理状态为 true，禁用按钮
+      const response = await apiClient.chatWithAI(formattedInput, currentWebsiteId);
+      if (response?.code === 200 && response.data?.answer) {
+        const rawAnswer = response.data.answer;
+        if (rawAnswer.includes('[URL_GET]')) {
+          console.log('rawAnswer', rawAnswer);
+          setInputDisabledDueToUrlGet(true);
+          const answer = filterMessageTags(rawAnswer);
+          messageHandler.updateAgentMessage(answer, thinkingMessageId);
+          messageHandler.addSystemMessage('Searching for competitors. Please wait a moment...');
+        } else if (rawAnswer.includes('[COMPETITOR_SELECTED]')) {
+          const messageBody = rawAnswer.replace(/\[COMPETITOR_SELECTED\].*$/s, '').trim();
+          messageHandler.updateAgentMessage(messageBody, thinkingMessageId);
+          const competitorArrayMatch = rawAnswer.match(/\[COMPETITOR_SELECTED\][^\[]*\[(.*?)\]/s);
+          if (competitorArrayMatch && competitorArrayMatch[1]) {
+            try {
+              const cleanedString = competitorArrayMatch[1]
+                .replace(/\\'/g, "'")  // 处理转义的单引号
+                .replace(/\\"/g, '"')  // 处理转义的双引号
+                .replace(/'/g, '"')    // 将单引号替换为双引号
+                .trim();
+              let competitors;
+              try {
+                competitors = JSON.parse(`[${cleanedString}]`);
+              } catch (e) {
+                competitors = cleanedString
+                  .replace(/[\[\]'"`]/g, '') // 移除所有引号和方括号
+                  .split(',')
+                  .map(s => s.trim())
+                  .filter(s => s.length > 0); // 过滤空字符串
+              }
+              if (Array.isArray(competitors) && competitors.length > 0) {
+                const domainArray = competitors.map(comp => 
+                  String(comp)
+                    .trim()
+                    .replace(/^https?:\/\//, '')  // 移除协议
+                    .replace(/\/$/, '')           // 移除末尾斜杠
+                    .replace(/\s+/g, '')          // 移除所有空格
+                ).filter(domain => domain.length > 0);  // 过滤掉空域名
+
+                if (domainArray.length > 0) {
+                  const generateResponse = await apiClient.generateAlternative(currentWebsiteId, domainArray);
+                  if (generateResponse?.code === 200) {
+                    setCurrentStep(3);
+                    setInputDisabledDueToUrlGet(true);
+                    setIsProcessingTask(true);
+                  } else {
+                    messageHandler.addSystemMessage(`⚠️ Failed to generate alternative page: Invalid server response`);
+                  }
+                } else {
+                  throw new Error('No valid competitors found after processing');
+                }
+              } else {
+                throw new Error('No valid competitors found in the response');
+              }
+            } catch (error) {
+              messageHandler.addSystemMessage(`⚠️ Failed to process competitor selection: ${error.message}`);
+            }
+          } else {
+            messageHandler.addSystemMessage(`⚠️ Failed to extract competitor information from the response, task eneded, please try again`);
+          }
+        } else if (rawAnswer.includes('[END]')) {
+          const answer = filterMessageTags(rawAnswer);
+          messageHandler.updateAgentMessage(answer, thinkingMessageId);
+          const styleRequirement = answer.trim();
+          try {
+            const styleResponse = await apiClient.changeStyle(styleRequirement, currentWebsiteId);
+            if (styleResponse?.code === 200) {
+              // 可以添加一个系统消息表示样式已更新
+              messageHandler.addSystemMessage('I am updating the style, please wait a moment...');
+            } else {
+              messageHandler.addSystemMessage('⚠️ Failed to update style: Invalid server response');
+            }
+          } catch (styleError) {
+            messageHandler.addSystemMessage(`⚠️ Failed to update style: ${styleError.message}`);
+          }
+        } else {
+          const answer = filterMessageTags(rawAnswer);
+          messageHandler.updateAgentMessage(answer, thinkingMessageId);
+        }
+      } else {
+        messageHandler.updateAgentMessage('⚠️ Failed to get valid response from server', thinkingMessageId);
+      }
+    } catch (error) {
+      messageHandler.handleErrorMessage(error, thinkingMessageId);
+    } finally {
+      setIsMessageSending(false);
+    }
+  };
+
+  const initializeChat = async (userInput) => {
+    let thinkingMessageId;
+    try {
       setIsProcessingTask(true);
-      
-      // Check if user is logged in
       const isLoggedIn = localStorage.getItem('alternativelyIsLoggedIn') === 'true';
       const token = localStorage.getItem('alternativelyAccessToken');
-
       console.log('[DEBUG] Login status check:', { isLoggedIn, hasToken: !!token });
-      
-      // If user is not logged in, save current input and trigger login modal
+      // 处理未登录情况
       if (!isLoggedIn || !token) {
-        // Save user input to continue after login
         setPendingUserInput(userInput);
-        
-        // Create and dispatch custom event to notify header-template to show login modal
         const showLoginEvent = new CustomEvent('showAlternativelyLoginModal');
         window.dispatchEvent(showLoginEvent);
-        setIsProcessingTask(false); // 重置处理状态
+        setIsProcessingTask(false); 
         return;
       }
-      
-      // Check user credits - directly fetch from API
+      // 获取用户套餐信息
       try {
-        // Directly fetch user package information from API
         const packageResponse = await apiClient.getCustomerPackage();
-        
         if (packageResponse?.code === 200 && packageResponse.data) {
           const { pageGeneratorLimit, pageGeneratorUsage } = packageResponse.data;
           const availableCredits = pageGeneratorLimit - pageGeneratorUsage;
-          
           console.log('[DEBUG] Available credits from API:', {
             limit: pageGeneratorLimit,
             usage: pageGeneratorUsage,
             available: availableCredits
           });
-          
-          // If credit is 0, show subscription modal
           if (availableCredits <= 0) {
             showSubscriptionModal();
-            setIsProcessingTask(false); // 重置处理状态
+            setIsProcessingTask(false); 
             return;
           }
         } else {
@@ -1170,74 +1111,58 @@ const ResearchTool = ({
         }
       } catch (creditError) {
         console.error('Error checking user credit:', creditError);
-        // Continue execution on error, don't block user operation
       }
 
+      // 获取历史任务列表
       try {
-        // Get the most recent 3 tasks
         const historyResponse = await apiClient.getAlternativeWebsiteList(1, 3);
-        
-        console.log('[DEBUG] 历史任务检查:', historyResponse?.data);
-        
+        console.log('[DEBUG] History task check:', historyResponse?.data);
         if (historyResponse?.code === 200 && historyResponse.data) {
-          // Find processing tasks
           const processingTasks = historyResponse.data.filter(item => 
             item.generatorStatus === 'processing'
           );
-          
-          console.log('[DEBUG] 正在处理的任务:', processingTasks);
-          
-          // Check if any processing task has a non-init third planning
+          console.log('[DEBUG] Processing tasks:', processingTasks);
           for (const task of processingTasks) {
             const statusResponse = await apiClient.getAlternativeStatus(task.websiteId);
-            
-            console.log('[DEBUG] 任务状态检查 (websiteId=' + task.websiteId + '):', statusResponse?.data);
-            
+            console.log('[DEBUG] Task status check (websiteId=' + task.websiteId + '):', statusResponse?.data);
             if (statusResponse?.code === 200 && statusResponse.data) {
               const planningStatuses = statusResponse.data;
               const productComparisonStatus = planningStatuses.find(planning => 
                 planning.planningName === 'PRODUCT_COMPARISON'
               );
-              
-              console.log('[DEBUG] 产品比较状态:', productComparisonStatus);
-              
+              console.log('[DEBUG] Product comparison status:', productComparisonStatus);
               if (productComparisonStatus && productComparisonStatus.status !== 'init') {
-                // 创建自定义弹窗，参考 header-template.js 中的样式
                 const modalContainer = document.createElement('div');
                 modalContainer.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm';
-                
                 const modalContent = document.createElement('div');
                 modalContent.className = 'bg-slate-800 rounded-lg shadow-xl p-6 max-w-sm w-full border border-slate-700 animate-fadeIn';
-                
                 const title = document.createElement('h3');
                 title.className = 'text-xl font-semibold text-white mb-4';
                 title.textContent = 'Your Task Is In Progress';
-                
                 const description = document.createElement('p');
                 description.className = 'text-gray-300 mb-3';
                 description.textContent = 'You already have a generation task in progress. Please wait for it to complete before starting a new one.';
-                
+                const limitNote = document.createElement('p');
+                limitNote.className = 'text-gray-400 text-sm mb-2';
+                limitNote.textContent = 'Our system currently allows only one active task at a time to ensure optimal performance.';
                 const emailNote = document.createElement('p');
                 emailNote.className = 'text-gray-400 text-sm mb-6';
                 emailNote.textContent = 'You will receive an email notification when your current task is complete.';
-                
                 const buttonContainer = document.createElement('div');
                 buttonContainer.className = 'flex justify-end';
-                
                 const closeButton = document.createElement('button');
                 closeButton.className = 'px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 transition-colors';
                 closeButton.textContent = 'Got it';
                 closeButton.onclick = () => {
                   document.body.removeChild(modalContainer);
                 };
-                
                 buttonContainer.appendChild(closeButton);
                 modalContent.appendChild(title);
                 modalContent.appendChild(description);
+                modalContent.appendChild(limitNote);
                 modalContent.appendChild(emailNote);
                 modalContent.appendChild(buttonContainer);
                 modalContainer.appendChild(modalContent);
-                
                 document.body.appendChild(modalContainer);
                 return;
               }
@@ -1245,40 +1170,30 @@ const ResearchTool = ({
           }
         }
       } catch (error) {
-        console.error('[DEBUG] 检查任务状态时出错:', error);
+        console.error('[DEBUG] Error checking task status:', error);
       }
-      
-      // 1. Fade out form
+
+      // 淡出初始页面
       const formElement = document.querySelector('.initial-screen-content form');
       if (formElement) {
         formElement.classList.add('form-transition', 'fade-out');
       }
-      
-      // 2. Fade out initial screen
       setTimeout(() => {
         const initialScreenElement = document.querySelector('.initial-screen-container');
         if (initialScreenElement) {
           initialScreenElement.classList.add('fade-out-animation');
-          
           setTimeout(() => {
             setShowInitialScreen(false);
-            
-            // 3. Show loading animation
             const loadingContainer = document.createElement('div');
             loadingContainer.className = 'loading-container';
-            
             const loadingSpinner = document.createElement('div');
             loadingSpinner.className = 'loading-spinner';
             loadingContainer.appendChild(loadingSpinner);
-            
             const loadingText = document.createElement('div');
             loadingText.className = 'loading-text';
             loadingText.textContent = 'Analyzing your product...';
             loadingContainer.appendChild(loadingText);
-            
             document.body.appendChild(loadingContainer);
-            
-            // 4. Remove loading animation, enter chat interface
             setTimeout(() => {
               document.body.removeChild(loadingContainer);
             }, 1200);
@@ -1287,36 +1202,45 @@ const ResearchTool = ({
           setShowInitialScreen(false);
         }
       }, 300);
-      
       setLoading(true);
-
-      const formattedInput = showInitialScreen && !userInput.trim().startsWith('http') 
-        ? `https://${userInput.trim()}`
-        : userInput.trim();
-      
-      // 保存用户输入的内容用于API请求
-      const inputForAPI = formattedInput;
-      
-      // 清除输入框
+      const formattedInput = userInput.trim();
+      // 抽取url中的host
+      let inputForAPI = formattedInput;
+      try {
+        // 检查是否是URL格式
+        if (formattedInput.includes('://') || formattedInput.includes('.')) {
+          // 尝试创建URL对象
+          let url;
+          try {
+            // 如果没有协议，添加一个临时协议
+            if (!formattedInput.includes('://')) {
+              url = new URL('https://' + formattedInput);
+            } else {
+              url = new URL(formattedInput);
+            }
+            // 只提取主机名部分
+            inputForAPI = url.hostname;
+          } catch (e) {
+            // 如果URL解析失败，尝试使用正则表达式提取域名
+            const domainMatch = formattedInput.match(/(?:https?:\/\/)?(?:www\.)?([^\/\s]+)/i);
+            if (domainMatch && domainMatch[1]) {
+              inputForAPI = domainMatch[1];
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error extracting domain:', error);
+      }
       setUserInput('');
-      
-      // 添加用户消息
       messageHandler.addUserMessage(formattedInput);
-      
-      // 等待用户消息处理完成
       while (messageHandler.isProcessing) {
         await new Promise(resolve => setTimeout(resolve, 100));
       }
-      
-      // 添加思考消息
-      const thinkingMessageId = messageHandler.addAgentThinkingMessage();
-      
-      // 等待思考消息处理完成
+      thinkingMessageId = messageHandler.addAgentThinkingMessage();
       while (messageHandler.isProcessing) {
         await new Promise(resolve => setTimeout(resolve, 100));
       }
-
-      // 1. 先调用 generateWebsiteId 获取 websiteId
+      // 生成websiteId
       const generateIdResponse = await apiClient.generateWebsiteId();
       if (generateIdResponse?.code !== 200 || !generateIdResponse?.data?.websiteId) {
         console.error("Failed to generate websiteId:", generateIdResponse);
@@ -1324,53 +1248,47 @@ const ResearchTool = ({
       }
       const websiteId = generateIdResponse.data.websiteId;
       setCurrentWebsiteId(websiteId); 
-      
-      const searchResponse = await apiClient.searchCompetitor(
-        inputForAPI,
-        deepResearchMode,
-        websiteId
+      // 把用户在初始界面输入的url作为第一句话给chat接口
+      const greetingResponse = await apiClient.chatWithAI(
+        formattedInput,
+        websiteId,
       );
-
-      // 检查网络错误
-      if (searchResponse?.code === 1058) {
+      if (greetingResponse?.code === 1058) {
         messageHandler.updateAgentMessage("⚠️ Network error occurred. Please try again.", thinkingMessageId);
         return;
       }
-
-      if (searchResponse?.code === 200 && searchResponse?.data?.websiteId) {
-        setShouldConnectSSE(true);
-        
-        const greetingResponse = await apiClient.chatWithAI(
-          formattedInput,
-          websiteId,
-        );
-        
-        // 检查网络错误
-        if (greetingResponse?.code === 1058) {
-          messageHandler.updateAgentMessage("⚠️ Network error occurred. Please try again.", thinkingMessageId);
-          return;
-        }
-        
-        if (greetingResponse?.code === 200 && greetingResponse.data?.answer) {
-          const answer = filterMessageTags(greetingResponse.data.answer);
-          
-          if (greetingResponse.data.answer.includes('[URL_GET]')) {
-            setInputDisabledDueToUrlGet(true);
-            messageHandler.updateAgentMessage(answer, thinkingMessageId);
-
-            while (messageHandler.isProcessing) {
-              await new Promise(resolve => setTimeout(resolve, 100));
-            }
-            
-            messageHandler.addSystemMessage('Searching for competitors. Please wait a moment...');
-          
-            while (messageHandler.isProcessing) {
-              await new Promise(resolve => setTimeout(resolve, 100));
-            }
-            setCanProcessCompetitors(true);
-          } else {
-            messageHandler.updateAgentMessage(answer, thinkingMessageId);
+      
+      if (greetingResponse?.code === 200 && greetingResponse.data?.answer) {
+        const answer = filterMessageTags(greetingResponse.data.answer);
+        if (greetingResponse.data.answer.includes('[URL_GET]')) {
+          console.log('greetingResponse.data.answer', greetingResponse.data.answer);
+          setInputDisabledDueToUrlGet(true);
+          messageHandler.updateAgentMessage(answer, thinkingMessageId);
+          // 在chat接口成功接收URL后，发送URL给search接口进行任务初始化
+          const searchResponse = await apiClient.searchCompetitor(
+            inputForAPI,
+            false,
+            websiteId
+          );
+          console.log('searchResponse', searchResponse);
+          if (searchResponse?.code === 1058) {
+            messageHandler.updateAgentMessage("⚠️ Network error occurred. Please try again.", thinkingMessageId);
+            return;
           }
+          if (searchResponse?.code === 200 && searchResponse?.data?.websiteId) {
+            setShouldConnectSSE(true);
+          }
+
+          while (messageHandler.isProcessing) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+          messageHandler.addSystemMessage('Searching for competitors. Please wait a moment...');
+          while (messageHandler.isProcessing) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+          setCanProcessCompetitors(true);
+        } else {
+          messageHandler.updateAgentMessage(answer, thinkingMessageId);
         }
       }
     } catch (error) {
@@ -1381,7 +1299,6 @@ const ResearchTool = ({
     }
   };
 
-  // Add function to show subscription modal
   const showSubscriptionModal = () => {
     // 创建模态容器
     const modalContainer = document.createElement('div');
@@ -1632,14 +1549,6 @@ const ResearchTool = ({
             </li>
             <li class="flex items-start">
               <div class="w-4 h-4 mr-2 rounded-full flex-shrink-0 flex items-center justify-center bg-purple-500/20">
-                <svg class="w-2.5 h-2.5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <span class="text-gray-300 text-left">Unlimited onboarding calls</span>
-            </li>
-            <li class="flex items-start">
-              <div class="w-4 h-4 mr-2 rounded-full flex-shrink-0 flex items-center justify-center bg-purple-500/20">
                 <svg class="w-2.5 h-2.5 text-purple-400" fill="none" viewBodangerouslySetInnerHTMLx="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
                 </svg>
@@ -1744,7 +1653,6 @@ const ResearchTool = ({
     document.body.appendChild(modalContainer);
   };
 
-  // 修改 SSE 连接的 useEffect
   useEffect(() => {
     // --- 添加 currentWebsiteId 到依赖项 ---
     if (!shouldConnectSSE || !currentWebsiteId) {
@@ -1822,6 +1730,7 @@ const ResearchTool = ({
 
           if (logData.type === 'Html') {
             // 如果是新的流式输出开始，重置累积的内容
+            setCurrentStep(4);
             if (!isStreamingRef.current || currentStreamIdRef.current !== logData.id) {
               htmlStreamRef.current = '';
               currentStreamIdRef.current = logData.id;
@@ -1939,8 +1848,23 @@ const ResearchTool = ({
       (log.type === 'Info' && log.step === 'GENERATION_FINISHED') ||
       (log.type === 'Info' && log.step === 'GENERATION_CHANGE_FINISHED')
     );
-    
-    if (finishedLog && shouldConnectSSE) {
+
+    // 检查是否存在 GENERATION_FINISHED 日志,是的话，就可以标记第5步生成完成
+    const generationFinishedLog = logs.find(log => 
+      log.type === 'Info' && 
+      log.step === 'GENERATION_FINISHED'
+    );
+
+    if (generationFinishedLog) {
+      setCurrentStep(5);
+    }
+
+    const colorChangeFinishedLog = logs.find(log => 
+      log.type === 'Info' && 
+      log.step === 'GENERATION_CHANGE_FINISHED'
+    );
+
+    if ((generationFinishedLog || colorChangeFinishedLog) && shouldConnectSSE) {
       // 任务完成后，关闭 SSE 连接
       setShouldConnectSSE(false);
     }
@@ -2003,7 +1927,6 @@ const ResearchTool = ({
           const response = await apiClient.chatWithAI(completionMessage, currentWebsiteId);
           
           if (response?.code === 200 && response.data?.answer) {
-            messageHandler.setMessageLoading(thinkingMessageId, false)
             const answer = filterMessageTags(response.data.answer);
 
             const thinkingMessageId = messageHandler.addAgentThinkingMessage();
@@ -2028,16 +1951,12 @@ const ResearchTool = ({
     }
   }, [logs, canProcessCompetitors]); // 当日志更新时检查
 
-  // 组件卸载时重置标记
   useEffect(() => {
     return () => {
       competitorListProcessedRef.current = false;
     };
   }, []);
 
-  
-
-  // 修改标签页处理逻辑
   useEffect(() => {
     const allCodesLogs = logs.filter(log => log.type === 'Codes' && log.content?.resultId);
     
@@ -2084,7 +2003,6 @@ const ResearchTool = ({
   // 确保 processedLogIdsRef 被正确初始化
   const processedLogIdsRef = useRef([]);
 
-  // 组件卸载时清理
   useEffect(() => {
     return () => {
       processedLogIdsRef.current = [];
@@ -2096,32 +2014,9 @@ const ResearchTool = ({
     return BACKGROUNDS[currentBackground].buttonStyle;
   };
   
-  // 获取当前主题的输入框样式
-  const getInputStyle = () => {
-    return BACKGROUNDS[currentBackground].inputStyle;
-  };
-  
   // 获取当前主题的卡片样式
   const getCardStyle = () => {
     return BACKGROUNDS[currentBackground].cardStyle;
-  };
-
-  const handlePreview = (data) => {
-    // 找到 type 为 "Codes" 的项
-    const codesData = data.find(item => item.type === "Codes");
-
-    if (codesData) {
-      // 提取 resultId
-      const resultId = codesData.content.resultId;
-
-      // 拼接预览 URL
-      const previewUrl = `https://preview.websitelm.site/en/${resultId}`;
-
-      // 展示预览 URL 在弹窗中
-      window.open(previewUrl, '_blank', 'noopener,noreferrer');
-    } else {
-      alert("未找到 Codes 类型的数据");
-    }
   };
 
   const [exampleDropdownVisible, setExampleDropdownVisible] = useState({
@@ -2928,15 +2823,99 @@ const ResearchTool = ({
                 </button>
               </div>
 
-              <button
-                onClick={fetchHistoryData}
-                className="w-full py-1 mb-3 text-xs text-gray-500 hover:text-gray-300 bg-slate-800/30 hover:bg-slate-800/50 rounded-lg transition-colors flex items-center justify-center"
-              >
-                <svg className="w-2.5 h-2.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                Refresh
-              </button>
+              {/* 将两个按钮放在History标题下面的一行 */}
+              <div className="flex items-center gap-1 mb-3">
+                <button
+                  onClick={fetchHistoryData}
+                  className="flex-1 px-2 py-1 text-xs text-gray-500 hover:text-gray-300 bg-slate-800/30 hover:bg-slate-800/50 rounded transition-colors flex items-center justify-center"
+                >
+                  <svg className="w-2.5 h-2.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  Refresh
+                </button>
+                <button
+                  onClick={() => {
+                    if (historyList.length === 0 || clearingHistory) return;
+                    // 创建英文确认弹窗
+                    const modalOverlay = document.createElement('div');
+                    modalOverlay.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[2000]';
+                    const modalContent = document.createElement('div');
+                    modalContent.className = 'bg-slate-900 border border-slate-700/50 rounded-xl shadow-2xl p-6 max-w-md w-full relative animate-fadeIn';
+                    modalContent.innerHTML = `
+                      <div class="relative">
+                        <h3 class="text-xl font-bold text-white mb-2">Clear All History</h3>
+                        <p class="text-gray-300 mb-6">Are you sure you want to delete all history records? This action cannot be undone.</p>
+                        <div class="flex space-x-3">
+                          <button class="cancel-btn flex-1 py-2 px-4 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors">
+                            Cancel
+                          </button>
+                          <button class="confirm-btn flex-1 py-2 px-4 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white rounded-lg transition-colors">
+                            Clear All
+                          </button>
+                        </div>
+                      </div>
+                    `;
+                    document.body.appendChild(modalOverlay);
+                    // 样式
+                    const style = document.createElement('style');
+                    style.textContent = `
+                      @keyframes fadeIn {
+                        from { opacity: 0; transform: scale(0.95); }
+                        to { opacity: 1; transform: scale(1); }
+                      }
+                      .animate-fadeIn {
+                        animation: fadeIn 0.2s ease-out forwards;
+                      }
+                    `;
+                    document.head.appendChild(style);
+                    // 关闭弹窗
+                    const closeModal = () => {
+                      document.body.removeChild(modalOverlay);
+                      document.head.removeChild(style);
+                    };
+                    // 取消按钮
+                    modalContent.querySelector('.cancel-btn').addEventListener('click', closeModal);
+                    // 确认按钮
+                    modalContent.querySelector('.confirm-btn').addEventListener('click', async () => {
+                      closeModal();
+                      setClearingHistory(true);
+                      let deleted = 0;
+                      for (const item of historyList) {
+                        try {
+                          const deleteResponse = await apiClient.deletePage(item.websiteId);
+                          if (!(deleteResponse && deleteResponse.code === 200)) {
+                            messageApi.error(`Failed to delete record: ${item.website}`);
+                          }
+                        } catch (error) {
+                          messageApi.error(`Failed to delete record: ${item.website}`);
+                        }
+                        deleted += 1;
+                        // 每删除5个或最后一个时刷新
+                        if (deleted % 5 === 0 || deleted === historyList.length) {
+                          await fetchHistoryData();
+                        }
+                      }
+                      setHistoryList([]); // 清空本地列表
+                      setClearingHistory(false);
+                      setClearProgress({ visible: false, current: 0, total: 0 }); // 关闭进度弹窗
+                      messageApi.success('All history records deleted successfully');
+                    });
+                    // 点击背景关闭
+                    modalOverlay.addEventListener('click', (e) => {
+                      if (e.target === modalOverlay) {
+                        closeModal();
+                      }
+                    });
+                    modalOverlay.appendChild(modalContent);
+                  }}
+                  className="flex-1 px-2 py-1 text-xs text-gray-400 hover:text-red-400 bg-transparent border border-slate-700/30 rounded transition-colors disabled:opacity-50 cursor-pointer"
+                  disabled={historyList.length === 0 || clearingHistory}
+                  title="Clear all history"
+                >
+                  Clear
+                </button>
+              </div>
 
               {historyLoading ? (
                 <div className="flex justify-center py-2">
@@ -3046,23 +3025,14 @@ const ResearchTool = ({
 
             <div className="relative max-w-3xl mx-auto">
             <form onSubmit={(e) => {
-              // ... (form submission logic remains the same) ...
               e.preventDefault();
-
-              if (!userInput.trim()) {
-                messageApi.error('Please enter a website URL');
-                setValidationError('Please enter a website URL');
-                return;
-              }
-
               if (!validateDomain(userInput)) {
-                messageApi.error('Please enter a valid domain (e.g., example.com)');
-                setValidationError('Please enter a valid domain (e.g., example.com)');
+                console.log('[DEBUG] Invalid domain:', userInput);
+                messageApi.error('Please enter a valid domain (e.g., example.com or https://example.com)');
                 return;
               }
 
-              setValidationError('');
-              const formattedInput = userInput.trim().startsWith('http') ? userInput.trim() : `https://${userInput.trim()}`;
+              const formattedInput = userInput.trim();
               initializeChat(formattedInput);
             }}>
                 <div className="relative">
@@ -3071,10 +3041,9 @@ const ResearchTool = ({
                   value={userInput}
                   onChange={(e) => {
                     setUserInput(e.target.value);
-                    if (validationError) setValidationError('');
                   }}
                   // 强制使用 Day Ghibli 的边框/阴影样式，并保留 research-tool-input 类
-                  className={`research-tool-input bg-white/10 border rounded-xl text-lg w-full ${validationError ? 'border-red-500' : BACKGROUNDS.DAY_GHIBLI.cardStyle} shadow-xl`}
+                  className={`research-tool-input bg-white/10 border rounded-xl text-lg w-full`}
                   style={{
                     // 颜色由 #433422 改为更深的 #2d1a06
                     color: '#2d1a06',
@@ -3084,7 +3053,6 @@ const ResearchTool = ({
                     // 强制使用 Day Ghibli 的阴影
                     boxShadow: '0 10px 25px -5px rgba(120, 80, 40, 0.3)'
                   }}
-                  status={validationError ? "error" : ""}
                 />
                 </div>
                 <button
@@ -3101,7 +3069,7 @@ const ResearchTool = ({
                          after:from-transparent after:via-white/20 after:to-transparent
                          after:translate-x-[-200%] hover:after:translate-x-[200%] after:transition-all after:duration-1000
                          after:rounded-xl overflow-hidden
-                         ${isProcessingTask ? 'opacity-70 cursor-not-allowed hover:scale-100' : ''}`}
+                         ${isProcessingTask ? 'opacity-70 cursor-not-allowed hover:scale-100' : 'cursor-pointer'}`}
                 style={{ height: '64px' }}
                 disabled={!userInput.trim() || isProcessingTask}
               >
@@ -3477,123 +3445,5 @@ const ResearchTool = ({
     </ConfigProvider>
   );
 };
-
-// 添加浮动动画
-const style = document.createElement('style');
-style.innerHTML = `
-  @keyframes float {
-    0% { transform: translateY(0px) rotate(0deg); }
-    50% { transform: translateY(-15px) rotate(5deg); }
-    100% { transform: translateY(0px) rotate(0deg); }
-  }
-  
-  .animate-float {
-    animation: float 8s ease-in-out infinite;
-  }
-  
-  @keyframes pulse-slow {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.9; transform: scale(1.03); }
-  }
-  
-  .animate-pulse-slow {
-    animation: pulse-slow 3s ease-in-out infinite;
-  }
-  
-  @keyframes pulse-strong {
-    0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 15px rgba(253, 224, 71, 0.5); }
-    50% { opacity: 1; transform: scale(1.05); box-shadow: 0 0 30px rgba(253, 224, 71, 0.8); }
-  }
-  
-  .animate-pulse-strong {
-    animation: pulse-strong 2s ease-in-out infinite;
-  }
-  
-  @keyframes shimmer {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
-  }
-  
-  .animate-shimmer {
-    animation: shimmer 2s infinite;
-    background: linear-gradient(
-      to right,
-      rgba(255, 255, 255, 0) 0%,
-      rgba(255, 255, 255, 0.2) 50%,
-      rgba(255, 255, 255, 0) 100%
-    );
-  }
-  
-  @keyframes shimmer-fast {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
-  }
-  
-  .animate-shimmer-fast {
-    animation: shimmer-fast 1.5s infinite;
-    background: linear-gradient(
-      to right,
-      rgba(255, 255, 255, 0) 0%,
-      rgba(255, 255, 255, 0.3) 50%,
-      rgba(255, 255, 255, 0) 100%
-    );
-  }
-  
-  @keyframes bounce-strong {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
-  }
-  
-  .animate-bounce-strong {
-    animation: bounce-strong 1s ease-in-out infinite;
-  }
-`;
-document.head.appendChild(style);
-
-// 添加样式来强制设置 placeholder 颜色 (保留，因为 Day Ghibli 背景也是浅色)
-const placeholderStyle = document.createElement('style');
-placeholderStyle.innerHTML = `
-  .research-tool-input::placeholder {
-    color: #d1d5db !important; /* text-gray-300 */
-    opacity: 1 !important; /* 确保不透明度为 1 */
-  }
-
-  /* 针对 Ant Design 可能使用的特定选择器 (以防万一) */
-  .research-tool-input.ant-input::placeholder {
-     color: #d1d5db !important; /* text-gray-300 */
-     opacity: 1 !important;
-  }
-`;
-document.head.appendChild(placeholderStyle);
-
-// 添加样式
-const modalStyle = document.createElement('style');
-modalStyle.innerHTML = `
-  .result-ids-modal .ant-modal-content {
-    background: rgba(15, 23, 42, 0.95);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(100, 116, 139, 0.2);
-  }
-  .result-ids-modal .ant-modal-header {
-    background: transparent;
-    border-bottom: 1px solid rgba(100, 116, 139, 0.2);
-  }
-  .result-ids-modal .ant-modal-title {
-    color: white;
-  }
-  .result-ids-modal .ant-modal-close {
-    color: rgba(255, 255, 255, 0.45);
-  }
-  .result-ids-modal .ant-modal-close:hover {
-    color: rgba(255, 255, 255, 0.85);
-  }
-  .result-ids-modal {
-    pointer-events: auto !important;
-  }
-  .result-ids-modal .ant-modal-wrap {
-    z-index: 1500;
-  }
-`;
-document.head.appendChild(modalStyle);
 
 export default ResearchTool;

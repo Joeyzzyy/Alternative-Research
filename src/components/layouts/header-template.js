@@ -383,7 +383,7 @@ export default function Header() {
 
   // Handle login success callback
   const handleLoginSuccess = (userData) => {
-    // Store user data
+    // 存储用户数据
     localStorage.setItem('alternativelyAccessToken', userData.accessToken);
     localStorage.setItem('alternativelyIsLoggedIn', 'true');
     localStorage.setItem('alternativelyCustomerEmail', userData.email);
@@ -396,7 +396,7 @@ export default function Header() {
     // 使用 messageApi 显示成功消息
     messageApi.success({ content: 'Login successful!', duration: 2 });
     
-    // Close login modal
+    // 关闭登录模态框
     setShowLoginModal(false);
     
     // 触发登录成功事件，通知其他组件
