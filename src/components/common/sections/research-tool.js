@@ -72,7 +72,6 @@ const ResearchTool = ({
   const [resultIds, setResultIds] = useState([]);
   const [showResultIdsModal, setShowResultIdsModal] = useState(false);
   const lastLogCountRef = useRef(0);
-  const [pendingUserInput, setPendingUserInput] = useState('');
   const { userCredits, loading: userCreditsLoading } = useUser();
   const [loadingResultIds, setLoadingResultIds] = useState(false);
   const [activePreviewTab, setActivePreviewTab] = useState(0);
@@ -309,12 +308,12 @@ const ResearchTool = ({
   useEffect(() => {
     const handleLoginSuccess = () => {
       // 检查是否有待处理的用户输入
-      if (pendingUserInput) {
+      if (localStorage.getItem('urlInput')) {
         // 延迟一点执行，确保登录状态已完全更新
         setTimeout(() => {
-          initializeChat(pendingUserInput);
+          initializeChat(localStorage.getItem('urlInput'));
           // 清除待处理的输入
-          setPendingUserInput('');
+          localStorage.removeItem('urlInput');
         }, 500);
       }
     };
@@ -324,7 +323,7 @@ const ResearchTool = ({
     return () => {
       window.removeEventListener('alternativelyLoginSuccess', handleLoginSuccess);
     };
-  }, [pendingUserInput, setPendingUserInput]); // 添加 setPendingUserInput 到依赖数组
+  }, []); 
 
   useEffect(() => {
     const storedCustomerId = localStorage.getItem('alternativelyCustomerId');
@@ -1063,7 +1062,7 @@ const ResearchTool = ({
       console.log('[DEBUG] Login status check:', { isLoggedIn, hasToken: !!token });
       // 处理未登录情况
       if (!isLoggedIn || !token) {
-        setPendingUserInput(userInput);
+        localStorage.setItem('urlInput', userInput);
         const showLoginEvent = new CustomEvent('showAlternativelyLoginModal');
         window.dispatchEvent(showLoginEvent);
         setIsProcessingTask(false); 
