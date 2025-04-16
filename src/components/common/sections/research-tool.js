@@ -125,6 +125,9 @@ const ResearchTool = ({
     }
   };
   const [shouldConnectSSE, setShouldConnectSSE] = useState(false);
+  // 1. 新增状态
+  const [showAbortModal, setShowAbortModal] = useState(false);
+  const [aborting, setAborting] = useState(false);
 
   // 监听日志变化，在有新日志时自动切回 execution log
   useEffect(() => {
@@ -595,22 +598,10 @@ const ResearchTool = ({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                   )}
-                  {log.type === 'Codes' && (
-                    <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 4l-4 4 4 4" />
-                    </svg>
-                  )}
-                  {log.type === 'Info' && (
-                    <svg className="w-4 h-4 mr-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  )}
                   <div className="text-[11px] text-gray-300 font-medium">
                     {log.type === 'Dify' && 'Running Page Content Generation Workflow'}
                     {log.type === 'Error' && 'Error Message'}
                     {log.type === 'API' && 'Agent Action Result'}
-                    {log.type === 'Codes' && 'Code Execution'}
-                    {log.type === 'Info' && 'Please wait...'}
                   </div>
                 </div>
 
@@ -701,7 +692,7 @@ const ResearchTool = ({
                     )}
                   </div>
                 ) : log.type === 'API' ? (
-                  <div className="text-[10px] text-gray-400 break-words leading-relaxed">
+                  <div className="text-[8px] text-gray-400 break-words leading-relaxed">
                     {log.content?.status && (
                       <div className="mb-1">
                         <span className="font-semibold">Status:</span> {log.content.status}
@@ -710,34 +701,13 @@ const ResearchTool = ({
                     {log.content?.data && (
                       <div className="mb-1">
                         <span className="font-semibold">Data:</span>
-                        <pre className="mt-1 p-2 bg-gray-700/50 rounded text-xs overflow-auto">
+                        <pre className="mt-1 p-2 bg-gray-700/50 rounded text-[8px] overflow-auto">
                           {JSON.stringify(log.content.data, null, 2)}
                         </pre>
                       </div>
                     )}
                   </div>
                 ) 
-                // : log.type === 'Codes' ? (
-                //   <div className="text-[10px] text-gray-400 break-words leading-relaxed">
-                //     {log.content?.html && (
-                //       <div className="mb-1">
-                //         <span className="font-semibold">Result ID:</span>
-                //         {log.content.resultId}
-                //       </div>
-                //     )}
-                //   </div>
-                // ) : log.type === 'Info' ? (
-                //   <div className="text-[10px] text-gray-400 break-words leading-relaxed">
-                //     {log.content?.planningId && (
-                //       <div className="mb-1">
-                //         <span className="font-semibold">Planning ID:</span> {log.content.planningId}
-                //       </div>
-                //     )}
-                //     <div className="mb-1">
-                //       <span className="font-semibold">Status:</span> {log.content.status}
-                //     </div>
-                //   </div>
-                // ) 
                 : null}
 
                 <div className="text-[9px] text-gray-500 mt-1.5">
@@ -1295,7 +1265,6 @@ const ResearchTool = ({
       messageHandler.handleErrorMessage(error, thinkingMessageId);
     } finally {
       setLoading(false);
-      setIsProcessingTask(false); // 重置处理状态
     }
   };
 
@@ -3277,8 +3246,37 @@ const ResearchTool = ({
                       }
                     }}
                   />
+                  {/* 仅在任务进行中时显示中止按钮 */}
+                  {isProcessingTask && (
+                    <button
+                      type="button"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 z-10 p-0"
+                      title="Abort Task"
+                      onClick={() => setShowAbortModal(true)}
+                      style={{
+                        height: '32px',
+                        width: '32px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)',
+                        borderRadius: '8px',
+                        boxShadow: '0 2px 8px 0 rgba(255,65,108,0.15)',
+                        border: 'none',
+                        transition: 'box-shadow 0.2s',
+                      }}
+                    >
+                      {/* 白色方块 */}
+                      <div style={{
+                        width: '16px',
+                        height: '16px',
+                        background: 'white',
+                        borderRadius: '3px',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
+                      }} />
+                    </button>
+                  )}
                 </div>
-
                 <div className="flex justify-end mt-3 px-1">
                   <div className="text-xs text-gray-400">
                     Press Enter ↵ to submit
@@ -3432,6 +3430,71 @@ const ResearchTool = ({
               </Button>
             </div>
           ))}
+        </div>
+      </Modal>
+      {/* 弹窗和终止逻辑 */}
+      <Modal
+        open={showAbortModal}
+        title="Abort Task"
+        onCancel={() => setShowAbortModal(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setShowAbortModal(false)} disabled={aborting}>
+            Cancel
+          </Button>,
+          <Button
+            key="abort"
+            type="primary"
+            danger
+            loading={aborting}
+            onClick={async () => {
+              if (Array.isArray(resultIds) && resultIds.length > 0) {
+                // 已有结果，不执行删除，直接刷新
+                setShowAbortModal(false);
+                window.location.reload();
+              } else {
+                // 没有结果，执行删除
+                setAborting(true);
+                try {
+                  const res = await apiClient.deletePage(currentWebsiteId);
+                  if (res && res.code === 200) {
+                    window.location.reload();
+                  } else {
+                    messageApi.error('Failed to abort the task. Please try again.');
+                  }
+                } catch (err) {
+                  messageApi.error('Failed to abort the task. Please try again.');
+                } finally {
+                  setAborting(false);
+                  setShowAbortModal(false);
+                }
+              }
+            }}
+          >
+            Abort Anyway
+          </Button>
+        ]}
+        zIndex={2000}
+      >
+        <div>
+          {Array.isArray(resultIds) && resultIds.length > 0 ? (
+            <>
+              Are you sure you want to abort this task?<br />
+              <b>
+                This action will immediately terminate the current process.<br />
+                <span style={{color: 'orange'}}>
+                  The generated results will <u>not</u> be deleted. You can view and manually delete them from the history list on the homepage.
+                </span>
+              </b>
+            </>
+          ) : (
+            <>
+              Are you sure you want to abort this task?<br />
+              <b>
+                This action will immediately terminate the current process and <span style={{color: 'red'}}>no data will be saved</span>.<br />
+                <span style={{color: 'green'}}>Since no results have been generated yet, aborting will not consume your credit.</span>
+              </b>
+            </>
+          )}
         </div>
       </Modal>
     </ConfigProvider>
