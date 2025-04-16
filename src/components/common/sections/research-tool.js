@@ -3076,17 +3076,32 @@ const ResearchTool = ({
             {lastUrlInput && lastUrlInput !== userInput && (
               <div
                 className="mt-2 flex items-center space-x-2"
-                style={{ maxWidth: 600, marginLeft: 'auto', marginRight: 'auto' }} // 与输入框对齐
+                style={{ maxWidth: 600, marginLeft: 'auto', marginRight: 'auto' }}
               >
                 <span
-                  className="text-xs font-bold px-2 py-0.5 rounded bg-gradient-to-r from-blue-500 to-blue-400 text-white shadow"
-                  style={{ letterSpacing: '0.5px' }}
+                  className="text-xs font-bold px-2 py-0.5 rounded shadow"
+                  style={{
+                    letterSpacing: '0.5px',
+                    background: currentBackground === 'DAY_GHIBLI'
+                      ? 'linear-gradient(90deg, #fbc687 0%, #a8e063 100%)'
+                      : 'linear-gradient(90deg, #6c63ff 0%, #232946 100%)',
+                    color: currentBackground === 'DAY_GHIBLI' ? '#5b4636' : '#e0e6f7'
+                  }}
                 >
                   Last Input
                 </span>
                 <span
-                  className="text-xs font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-300 break-all"
-                  style={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis' }}
+                  className="text-xs font-bold px-2 py-0.5 rounded border break-all"
+                  style={{
+                    maxWidth: 220,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    background: currentBackground === 'DAY_GHIBLI'
+                      ? '#f6e9c3'
+                      : '#393e6e',
+                    color: currentBackground === 'DAY_GHIBLI' ? '#3b7a57' : '#b8c1ec',
+                    borderColor: currentBackground === 'DAY_GHIBLI' ? '#e0c097' : '#6c63ff'
+                  }}
                 >
                   {lastUrlInput}
                 </span>
@@ -3094,11 +3109,13 @@ const ResearchTool = ({
                   size="small"
                   type="primary"
                   style={{
-                    background: 'linear-gradient(90deg, #2563eb 0%, #60a5fa 100%)',
-                    color: '#fff',
+                    background: currentBackground === 'DAY_GHIBLI'
+                      ? 'linear-gradient(90deg, #fbc687 0%, #a8e063 100%)'
+                      : 'linear-gradient(90deg, #6c63ff 0%, #232946 100%)',
+                    color: currentBackground === 'DAY_GHIBLI' ? '#5b4636' : '#e0e6f7',
                     fontWeight: 700,
                     border: 'none',
-                    boxShadow: '0 2px 8px 0 rgba(59,130,246,0.15)'
+                    boxShadow: '0 2px 8px 0 rgba(251,198,135,0.15)'
                   }}
                   onClick={() => {
                     if (lastUrlInput) {
