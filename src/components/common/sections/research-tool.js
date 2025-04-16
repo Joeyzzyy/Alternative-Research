@@ -41,6 +41,7 @@ const ResearchTool = ({
   const [initialLoading, setInitialLoading] = useState(true);
   const [messages, setMessages] = useState([]);
   const [userInput, setUserInput] = useState('');
+  const [lastUrlInput, setLastUrlInput] = useState('');
   const [isMessageSending, setIsMessageSending] = useState(false);
   const [rightPanelTab, setRightPanelTab] = useState('details');
   const [customerId, setCustomerId] = useState(null);
@@ -96,6 +97,15 @@ const ResearchTool = ({
     
     return filteredMessage;
   };
+
+  // 页面加载时读取 localStorage 的 urlInput
+  useEffect(() => {
+    const lastInput = localStorage.getItem('urlInput');
+    if (lastInput) {
+      setLastUrlInput(lastInput);
+    }
+  }, []);
+
   const validateDomain = (input) => {
     if (!input || !input.trim()) return false;
     let domain = input.trim();
@@ -3002,6 +3012,8 @@ const ResearchTool = ({
               }
 
               const formattedInput = userInput.trim();
+              localStorage.removeItem('urlInput');
+              setLastUrlInput('');
               initializeChat(formattedInput);
             }}>
                 <div className="relative">
@@ -3010,6 +3022,9 @@ const ResearchTool = ({
                   value={userInput}
                   onChange={(e) => {
                     setUserInput(e.target.value);
+                    // 保存输入值到 localStorage
+                    localStorage.setItem('urlInput', e.target.value);
+                    setLastUrlInput(e.target.value);
                   }}
                   // 强制使用 Day Ghibli 的边框/阴影样式，并保留 research-tool-input 类
                   className={`research-tool-input bg-white/10 border rounded-xl text-lg w-full`}
@@ -3054,6 +3069,45 @@ const ResearchTool = ({
               </button>
               </form>
             </div>
+
+            {lastUrlInput && lastUrlInput !== userInput && (
+              <div
+                className="mt-2 flex items-center space-x-2"
+                style={{ maxWidth: 600, marginLeft: 'auto', marginRight: 'auto' }} // 与输入框对齐
+              >
+                <span
+                  className="text-xs font-bold px-2 py-0.5 rounded bg-gradient-to-r from-blue-500 to-blue-400 text-white shadow"
+                  style={{ letterSpacing: '0.5px' }}
+                >
+                  Last Input
+                </span>
+                <span
+                  className="text-xs font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-300 break-all"
+                  style={{ maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis' }}
+                >
+                  {lastUrlInput}
+                </span>
+                <Button
+                  size="small"
+                  type="primary"
+                  style={{
+                    background: 'linear-gradient(90deg, #2563eb 0%, #60a5fa 100%)',
+                    color: '#fff',
+                    fontWeight: 700,
+                    border: 'none',
+                    boxShadow: '0 2px 8px 0 rgba(59,130,246,0.15)'
+                  }}
+                  onClick={() => {
+                    if (lastUrlInput) {
+                      setUserInput(lastUrlInput);
+                      localStorage.setItem('urlInput', lastUrlInput);
+                    }
+                  }}
+                >
+                  One-click fill
+                </Button>
+              </div>
+            )}
 
           {/* 添加免费credits提示 - 样式更加醒目 */}
           <div className={`mt-4 text-center mb-8 drop-shadow-md`}> {/* 应用 drop-shadow */}
