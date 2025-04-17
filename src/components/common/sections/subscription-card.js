@@ -7,7 +7,7 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Modal, Button, Input, message as antdMessage } from 'antd';
 import LoginModal from './LoginModal';
 
-const stripePromise = loadStripe('pk_live_你的公钥');
+const stripePromise = loadStripe('pk_live_51QzBUgG7uNS0P061vxzgyNH6xBkE2jb3R8myNWI61y288DupEs9W0asrS5gtlIubp6sCCEaIrXSVvyVG3z4DjBAU00ISuF1DvJ');
 
 const SubscriptionCard = () => {
   const [selectedPeriod, setSelectedPeriod] = React.useState('yearly');
@@ -45,20 +45,22 @@ const SubscriptionCard = () => {
     apiClient.getPackageFeatures().then(res => {
       if (!res || !Array.isArray(res.data)) return;
 
-      // 只保留4个指定套餐
+      // 只保留正式套餐和测试套餐
       const filtered = res.data.filter(pkg =>
         [
           'Standard-Annual',
           'Standard-Monthly',
           'Professional-Annual',
-          'Professional-Monthly '
+          'Professional-Monthly ',
+          'Testing-Standard-Monthly' // 只加这个测试套餐
         ].includes(pkg.packageName)
       );
 
       // 归类
       const planMap = {
         Standard: { monthly: null, yearly: null },
-        Professional: { monthly: null, yearly: null }
+        Professional: { monthly: null, yearly: null },
+        Testing: { monthly: null }
       };
 
       filtered.forEach(pkg => {
@@ -74,6 +76,8 @@ const SubscriptionCard = () => {
           } else {
             planMap.Professional.yearly = pkg;
           }
+        } else if (pkg.packageName === 'Testing-Standard-Monthly') {
+          planMap.Testing.monthly = pkg;
         }
       });
 
@@ -126,6 +130,29 @@ const SubscriptionCard = () => {
               ]
             }
           ]
+        },
+        {
+          name: "Test (0.01 USD)",
+          price: {
+            monthly: planMap.Testing.monthly?.packagePrice ?? '-',
+            yearly: '-'
+          },
+          description: "For payment testing only. No real service will be provided.",
+          buttonText: "Choose Test Plan",
+          popular: false,
+          features: [
+            {
+              title: "Test Features",
+              items: [
+                "Only for payment test",
+                "No real service",
+                "You can verify payment flow with this plan"
+              ]
+            }
+          ],
+          priceId: {
+            monthly: planMap.Testing.monthly?.priceId
+          }
         }
       ]);
     });
