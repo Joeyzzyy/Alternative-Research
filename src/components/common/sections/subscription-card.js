@@ -1,40 +1,77 @@
 'use client';
 import React from 'react';
 import themeConfig from '../../../styles/themeConfig';
+import apiClient from '../../../lib/api/index.js';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
+import { Modal, Button, Input, message } from 'antd';
+
+const stripePromise = loadStripe('pk_live_你的公钥');
 
 const SubscriptionCard = () => {
   const [selectedPeriod, setSelectedPeriod] = React.useState('yearly');
+  const [plans, setPlans] = React.useState([]);
+  const [showPaymentModal, setShowPaymentModal] = React.useState(false);
+  const [selectedPlan, setSelectedPlan] = React.useState(null);
   
   const billingPeriods = [
     { id: 'yearly', label: 'Annual · Save 20%' },
     { id: 'monthly', label: 'Monthly' }
   ];
 
-  const displayData = {
-    title: "While You Enjoy Your Free Pro Trial, Explore Our Plans",
-    subTitle: "Compare our plans and features to see how Pro plan benefits can help grow your business.",
-    bottomContent: {
-      plans: [
+  React.useEffect(() => {
+    apiClient.getPackageFeatures().then(res => {
+      if (!res || !Array.isArray(res.data)) return;
+
+      // 只保留4个指定套餐
+      const filtered = res.data.filter(pkg =>
+        [
+          'Standard-Annual',
+          'Standard-Monthly',
+          'Professional-Annual',
+          'Professional-Monthly '
+        ].includes(pkg.packageName)
+      );
+
+      // 归类
+      const planMap = {
+        Standard: { monthly: null, yearly: null },
+        Professional: { monthly: null, yearly: null }
+      };
+
+      filtered.forEach(pkg => {
+        if (pkg.packageName.startsWith('Standard')) {
+          if (pkg.packageName.endsWith('Monthly')) {
+            planMap.Standard.monthly = pkg;
+          } else {
+            planMap.Standard.yearly = pkg;
+          }
+        } else if (pkg.packageName.startsWith('Professional')) {
+          if (pkg.packageName.endsWith('Monthly ')) {
+            planMap.Professional.monthly = pkg;
+          } else {
+            planMap.Professional.yearly = pkg;
+          }
+        }
+      });
+
+      setPlans([
         {
           name: "Standard",
-          price: { 
-            monthly: "45",
-            yearly: "36"
+          price: {
+            monthly: planMap.Standard.monthly?.packagePrice ?? '-',
+            yearly: planMap.Standard.yearly?.packagePrice ?? '-'
           },
-          discount: "20%",
-          description: "Everything you need to start creating alternative pages",
-          buttonText: "Coming Soon...",
+          description: planMap.Standard.monthly?.packageDescription || planMap.Standard.yearly?.packageDescription || '',
+          buttonText: "Subscribe Now",
           popular: false,
           features: [
             {
               title: "Features include:",
               items: [
-                "30 alternative pages generation & style change/month",
-                "Auto AI images generation",
-                "Auto internal links insertion",
-                "AI page design and generation",
-                "Standard support",
-                "1 Free onboarding call"
+                `Page generation limit: ${planMap.Standard.monthly?.pageGeneratorLimit ?? '-'} / month`,
+                `Image storage limit: ${planMap.Standard.monthly?.imageStorageLimit ?? '-'}`,
+                ...(planMap.Standard.monthly?.additionalBenefits || [])
               ]
             }
           ]
@@ -42,37 +79,38 @@ const SubscriptionCard = () => {
         {
           name: "Professional",
           price: {
-            monthly: "129",
-            yearly: "99"
+            monthly: planMap.Professional.monthly?.packagePrice ?? '-',
+            yearly: planMap.Professional.yearly?.packagePrice ?? '-'
           },
-          discount: "23%",
-          description: "Perfect for teams scaling alternative page production",
-          buttonText: "Coming Soon...",
+          description: planMap.Professional.monthly?.packageDescription || planMap.Professional.yearly?.packageDescription || '',
+          buttonText: "Subscribe Now",
           popular: true,
           features: [
             {
               title: "Everything in Standard, plus:",
               items: [
-                "100 alternative pages generation/month",
-                "Auto AI images generation",
-                "Auto internal links insertion",
-                "AI page design and generation",
-                "Priority page generation"
-              ]
-            },
-            {
-              title: "Pro features:",
-              items: [
-                "More alternative pages generation",
-                "Unlimited Page Section Re-generation",
-                "Unlimited onboarding calls",
-                "Priority support"
+                `Page generation limit: ${planMap.Professional.monthly?.pageGeneratorLimit ?? '-'} / month`,
+                `Image storage limit: ${planMap.Professional.monthly?.imageStorageLimit ?? '-'}`,
+                ...(planMap.Professional.monthly?.additionalBenefits || [])
               ]
             }
           ]
         }
-      ]
+      ]);
+    });
+  }, []);
+
+  const displayData = {
+    title: "While You Enjoy Your Free Pro Trial, Explore Our Plans",
+    subTitle: "Compare our plans and features to see how Pro plan benefits can help grow your business.",
+    bottomContent: {
+      plans: plans
     }
+  };
+
+  const handleSelectPlan = (plan) => {
+    setSelectedPlan(plan);
+    setShowPaymentModal(true);
   };
 
   return (
@@ -144,7 +182,7 @@ const SubscriptionCard = () => {
                   <span className={`text-4xl font-extrabold tracking-tight
                     ${plan.popular ? 'bg-gradient-to-r from-purple-400 to-rose-400 bg-clip-text text-transparent' : 'text-cyan-400'}
                   `}>
-                    ${plan.price[selectedPeriod]}
+                    ¥{plan.price[selectedPeriod]}
                   </span>
                   <span className="text-lg text-gray-400 font-medium">/mo</span>
                   <span className="mx-2">
@@ -180,9 +218,12 @@ const SubscriptionCard = () => {
                       ? 'from-purple-500 via-fuchsia-500 to-rose-500 opacity-70 group-hover:opacity-100' 
                       : 'from-cyan-500 to-blue-500 opacity-50 group-hover:opacity-70'
                     } transition duration-300`}></div>
-                  <button className={`relative w-full py-4 px-6 rounded-xl text-white text-base font-medium bg-slate-900
-                    transition-all duration-300 transform hover:-translate-y-1 active:translate-y-0`}>
-                    {plan.buttonText}
+                  <button
+                    className={`relative w-full py-4 px-6 rounded-xl text-white text-base font-medium bg-slate-900
+                      transition-all duration-300 transform hover:-translate-y-1 active:translate-y-0`}
+                    onClick={() => handleSelectPlan(plan)}
+                  >
+                    {plan.buttonText || 'Select Plan'}
                   </button>
                 </div>
 
@@ -217,8 +258,205 @@ const SubscriptionCard = () => {
           </div>
         </div>
       </div>
+      <Elements stripe={stripePromise}>
+        <PaymentModal
+          visible={showPaymentModal}
+          onClose={() => setShowPaymentModal(false)}
+          plan={selectedPlan}
+          period={selectedPeriod}
+          onSuccess={() => {
+            // 支付成功后的回调，比如刷新套餐状态
+          }}
+        />
+      </Elements>
     </div>
   );
 };
+
+function PaymentModal({ visible, onClose, plan, period, onSuccess }) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [processing, setProcessing] = React.useState(false);
+  const [name, setName] = React.useState('');
+  const [email, setEmail] = React.useState('');
+  const [postalCode, setPostalCode] = React.useState('');
+  const [cardError, setCardError] = React.useState('');
+
+  const handleSubmit = async () => {
+    if (!stripe || !elements) return;
+    setProcessing(true);
+    try {
+      const cardElement = elements.getElement(CardElement);
+      const { paymentMethod, error } = await stripe.createPaymentMethod({
+        type: 'card',
+        card: cardElement,
+        billing_details: {
+          name,
+          email,
+          address: { postal_code: postalCode }
+        }
+      });
+      if (error) {
+        setCardError(error.message);
+        setProcessing(false);
+        return;
+      }
+      // Call backend to create subscription
+      const res = await apiClient.createSubscription({
+        email,
+        name,
+        packageId: plan.priceId[period],
+        paymentMethodId: paymentMethod.id,
+        billingAddress: { postalCode }
+      });
+      if (res?.code === 200) {
+        message.success('Subscription successful!');
+        onSuccess();
+        onClose();
+      } else {
+        message.error(res?.message || 'Subscription failed, please try again later.');
+      }
+    } catch (err) {
+      message.error('Payment failed: ' + err.message);
+    }
+    setProcessing(false);
+  };
+
+  return (
+    <Modal
+      open={visible}
+      onCancel={onClose}
+      footer={null}
+      title="Complete Your Subscription"
+      centered
+      width={520}
+    >
+      <div style={{
+        padding: 0,
+        background: "#fff",
+        borderRadius: 12,
+        overflow: "hidden"
+      }}>
+        {/* 价格展示区 */}
+        <div style={{
+          background: "#f5f7fa",
+          padding: "24px 24px 16px 24px",
+          borderBottom: "1px solid #f0f0f0",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between"
+        }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 20, marginBottom: 4 }}>
+              {plan?.name} Plan
+            </div>
+            <div style={{ color: "#888", fontSize: 15, marginBottom: 8 }}>
+              {period === 'yearly' ? 'Annual Billing' : 'Monthly Billing'}
+            </div>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+              <span style={{
+                fontSize: 32,
+                fontWeight: 800,
+                color: "#6f3ff5"
+              }}>
+                ¥{plan?.price?.[period] ?? '-'}
+              </span>
+              <span style={{ color: "#888", fontSize: 16 }}>/mo</span>
+            </div>
+          </div>
+          {period === 'yearly' && plan?.price?.[period] && !isNaN(Number(plan.price[period])) && (
+            <div style={{
+              marginLeft: 24,
+              padding: "8px 16px",
+              background: "#ede9fe",
+              borderRadius: 8,
+              fontWeight: 600,
+              color: "#6f3ff5",
+              fontSize: 16,
+              minWidth: 120,
+              textAlign: "center"
+            }}>
+              <div style={{ fontSize: 13, color: "#888", fontWeight: 400, marginBottom: 2 }}>Total per year</div>
+              <div>¥{Number(plan.price[period]) * 12}</div>
+            </div>
+          )}
+        </div>
+        {/* 表单区 */}
+        <div style={{ padding: 24 }}>
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 6 }}>
+              Payment Information
+            </div>
+            <div style={{ color: '#888', fontSize: 13, marginBottom: 12 }}>
+              Please enter your details to complete the subscription.
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontWeight: 500 }}>Full Name</label>
+              <Input
+                placeholder="Enter your full name"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                style={{ marginTop: 4 }}
+              />
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontWeight: 500 }}>Email Address</label>
+              <Input
+                placeholder="Enter your email address"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                style={{ marginTop: 4 }}
+              />
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontWeight: 500 }}>Postal Code</label>
+              <Input
+                placeholder="Postal code"
+                value={postalCode}
+                onChange={e => setPostalCode(e.target.value)}
+                style={{ marginTop: 4 }}
+              />
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontWeight: 500 }}>Card Information</label>
+              <div style={{
+                border: '1px solid #d9d9d9',
+                borderRadius: 6,
+                padding: 12,
+                marginTop: 4,
+                background: '#fafbfc'
+              }}>
+                <CardElement
+                  options={{
+                    style: {
+                      base: { fontSize: '16px', color: '#32325d', '::placeholder': { color: '#bfbfbf' } },
+                      invalid: { color: '#fa755a' }
+                    }
+                  }}
+                  onChange={e => setCardError(e.error ? e.error.message : '')}
+                />
+              </div>
+              {cardError && <div style={{ color: '#fa755a', marginTop: 8, fontSize: 13 }}>{cardError}</div>}
+            </div>
+          </div>
+          <div style={{ borderTop: '1px solid #f0f0f0', margin: '16px 0' }} />
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={onClose} disabled={processing}>
+              Cancel
+            </Button>
+            <Button
+              type="primary"
+              loading={processing}
+              onClick={handleSubmit}
+              style={{ minWidth: 160, fontWeight: 700, fontSize: 16 }}
+            >
+              {processing ? 'Processing Payment...' : 'Confirm & Subscribe'}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </Modal>
+  );
+}
 
 export default SubscriptionCard;

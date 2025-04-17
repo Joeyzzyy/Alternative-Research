@@ -433,6 +433,34 @@ const updateAlternativeSlug = async (resultId, slug) => {
   }
 };
 
+// 新增：获取套餐功能列表接口
+const getPackageFeatures = async () => {
+  try {
+    const response = await apiClient.get('/features-package');
+    return response.data;
+  } catch (error) {
+    console.error('获取套餐功能列表失败:', error);
+    return null;
+  }
+};
+
+// 新增：创建订阅接口
+const createSubscription = async (subscriptionData) => {
+  try {
+    const response = await apiClient.post('/payment/subscribe', {
+      customerId: subscriptionData.customerId,
+      email: subscriptionData.email,
+      name: subscriptionData.name,
+      packageId: subscriptionData.packageId,
+      paymentMethodId: subscriptionData.paymentMethodId
+    });
+    return response.data;
+  } catch (error) {
+    console.error('创建订阅失败:', error);
+    return null;
+  }
+};
+
 apiClient.getCompetitorResearch = getCompetitorResearch;
 apiClient.login = login;
 apiClient.register = register;
@@ -462,5 +490,7 @@ apiClient.getVercelDomainInfo = getVercelDomainInfo;
 apiClient.getVercelDomainConfig = getVercelDomainConfig;
 apiClient.updateAlternativePublishStatus = updateAlternativePublishStatus;
 apiClient.updateAlternativeSlug = updateAlternativeSlug;
+apiClient.getPackageFeatures = getPackageFeatures;
+apiClient.createSubscription = createSubscription;
 
 export default apiClient;

@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import apiClient from '../../../lib/api/index.js';
-import { getAlternativeStatus } from '../../../lib/api/index.js';
 import { Modal, Button, Spin, message } from 'antd';
 import { DeleteOutlined, ExclamationCircleOutlined, ReloadOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
 
