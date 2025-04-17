@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import apiClient from '../../../lib/api/index.js';
 import { getAlternativeStatus } from '../../../lib/api/index.js';
 import { Modal, Button, Spin, message } from 'antd';
-import { DeleteOutlined, ExclamationCircleOutlined, ReloadOutlined } from '@ant-design/icons';
+import { DeleteOutlined, ExclamationCircleOutlined, ReloadOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
 
 const HistoryCardList = () => {
   const [historyList, setHistoryList] = useState([]);
@@ -20,6 +20,7 @@ const HistoryCardList = () => {
   const [deployLoading, setDeployLoading] = useState(false);
   const [deployPreviewUrl, setDeployPreviewUrl] = useState('');
   const [domainLoading, setDomainLoading] = useState(false);
+  const scrollRef = useRef(null);
 
   const currentItem = resultDetail?.data?.find(item => item.resultId === selectedPreviewId) || {};
 
@@ -144,6 +145,13 @@ const HistoryCardList = () => {
     }
   }, [selectedPublishUrl, resultDetail, selectedPreviewId]);
 
+  // 滚动到左/右
+  const scrollBy = (offset) => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollBy({ left: offset, behavior: 'smooth' });
+    }
+  };
+
   return (
     <div id="result-preview-section" className="min-h-[320px] flex flex-col items-center justify-center bg-gradient-to-b from-slate-950 via-slate-900 to-black text-white relative overflow-hidden">
       {/* 背景装饰 */}
@@ -177,91 +185,122 @@ const HistoryCardList = () => {
             )}
           </button>
         </div>
-        <div className="flex flex-row flex-wrap gap-x-6 gap-y-8 justify-center w-full max-w-7xl px-4 py-2">
-          {loading ? (
-            <div className="flex items-center justify-center w-full h-[120px]">
-              <Spin />
-            </div>
-          ) : historyList.length === 0 ? (
-            <div className="flex items-center justify-center w-full text-gray-400 text-lg h-[120px]">
-              No history available
-            </div>
-          ) : (
-            historyList.map((item, idx) => {
-              // 状态颜色
-              let statusColor = "text-blue-400";
-              let statusText = "Processing";
-              if (item.generatorStatus === "finished") {
-                statusColor = "text-green-400";
-                statusText = "Finished";
-              } else if (item.generatorStatus === "failed") {
-                statusColor = "text-red-400";
-                statusText = "Failed";
-              }
-              return (
-                <div
-                  key={item.websiteId}
-                  className={`
-                    group relative rounded-xl bg-white/5 hover:bg-white/10 transition
-                    shadow-lg p-6 flex flex-col items-center justify-between
-                    min-h-[120px] w-full max-w-[340px] mx-auto
-                    border border-white/10 hover:border-primary-500
-                    cursor-pointer
-                  `}
-                  onClick={() => handleCardClick(item)}
-                >
-                  <div className="w-full flex flex-col items-center">
-                    <div className="font-semibold text-base text-gray-300 mb-1">
-                      Task Origin Website
-                    </div>
-                    <div className="font-semibold text-lg text-white mb-2">{item.website}</div>
-                    <div className={`text-xs font-bold mb-2 ${statusColor}`}>
-                      {statusText}
-                    </div>
-                    <div className="text-xs text-gray-400 mb-1">
-                      ID: <span className="text-gray-300">{item.websiteId}</span>
-                    </div>
-                    {item.created_at && (
-                      <div className="text-xs text-gray-500 mb-1">
-                        Created: {new Date(item.created_at).toLocaleString()}
-                      </div>
-                    )}
-                    {/* 新增：生成开始和结束时间 */}
-                    <div className="text-xs text-gray-500 mb-1">
-                      Start Time: {item.generatedStart ? new Date(item.generatedStart).toLocaleString() : '-'}
-                    </div>
-                    <div className="text-xs text-gray-500 mb-1">
-                      End Time: {item.generatedEnd ? new Date(item.generatedEnd).toLocaleString() : '-'}
-                    </div>
-                    {/* finished 状态小预览 */}
-                    {item.generatorStatus === 'finished' && item.resultId && (
-                      <div className="w-full h-16 rounded-md overflow-hidden border border-white/10 mb-2">
-                        <iframe
-                          src={`https://preview.websitelm.site/en/${item.resultId}`}
-                          title="Preview"
-                          className="w-full h-full"
-                          frameBorder="0"
-                        />
-                      </div>
-                    )}
-                  </div>
-                  {/* Delete button - 深红色半透明纯圆icon，点击弹出确认 */}
-                  <button
-                    className="absolute top-3 right-3 bg-red-700/70 hover:bg-red-800/80 text-white rounded-full p-2 shadow transition"
-                    title="Delete"
-                    style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                    onClick={e => {
-                      e.stopPropagation();
-                      setDeleteConfirm({ open: true, id: item.websiteId });
-                    }}
-                    disabled={deletingId === item.websiteId}
+        {/* 左右滚动按钮 */}
+        <button
+          className="absolute left-64 top-1/2 -translate-y-1/2 z-20 bg-slate-800/80 hover:bg-slate-700/80 rounded-full p-2 shadow border border-slate-700 transition disabled:opacity-40"
+          style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => scrollBy(-360)}
+          aria-label="left scroll"
+        >
+          <span className="flex items-center justify-center w-full h-full">
+            <LeftOutlined style={{ fontSize: 20, color: '#38bdf8' }} />
+          </span>
+        </button>
+        <button
+          className="absolute right-64 top-1/2 -translate-y-1/2 z-20 bg-slate-800/80 hover:bg-slate-700/80 rounded-full p-2 shadow border border-slate-700 transition disabled:opacity-40"
+          style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => scrollBy(360)}
+          aria-label="right scroll"
+        >
+          <span className="flex items-center justify-center w-full h-full">
+            <RightOutlined style={{ fontSize: 20, color: '#38bdf8' }} />
+          </span>
+        </button>
+        <div
+          ref={scrollRef}
+          className="w-full max-w-7xl px-4 py-2 overflow-x-scroll scrollbar-hide relative"
+          style={{
+            scrollBehavior: 'smooth',
+            scrollbarWidth: 'none', // Firefox
+            msOverflowStyle: 'none', // IE/Edge
+          }}
+        >
+          <div className="inline-flex flex-row flex-nowrap gap-x-6 gap-y-8 justify-start min-w-0">
+            {loading ? (
+              <div className="flex items-center justify-center w-full h-[120px] min-w-full">
+                <Spin />
+              </div>
+            ) : historyList.length === 0 ? (
+              <div className="flex items-center justify-center w-full text-gray-400 text-lg h-[120px]">
+                No history available
+              </div>
+            ) : (
+              historyList.map((item, idx) => {
+                // 状态颜色
+                let statusColor = "text-blue-400";
+                let statusText = "Processing";
+                if (item.generatorStatus === "finished") {
+                  statusColor = "text-green-400";
+                  statusText = "Finished";
+                } else if (item.generatorStatus === "failed") {
+                  statusColor = "text-red-400";
+                  statusText = "Failed";
+                }
+                return (
+                  <div
+                    key={item.websiteId}
+                    className={`
+                      group relative rounded-xl bg-white/5 hover:bg-white/10 transition
+                      shadow-lg p-6 flex flex-col items-center justify-between
+                      min-h-[120px] w-[340px] max-w-[340px]
+                      border border-white/10 hover:border-primary-500
+                      cursor-pointer
+                    `}
+                    onClick={() => handleCardClick(item)}
                   >
-                    <DeleteOutlined style={{ fontSize: 18 }} />
-                  </button>
-                </div>
-              );
-            })
-          )}
+                    <div className="w-full flex flex-col items-center">
+                      <div className="font-semibold text-base text-gray-300 mb-1">
+                        Task Origin Website
+                      </div>
+                      <div className="font-semibold text-lg text-white mb-2">{item.website}</div>
+                      <div className={`text-xs font-bold mb-2 ${statusColor}`}>
+                        {statusText}
+                      </div>
+                      <div className="text-xs text-gray-400 mb-1">
+                        ID: <span className="text-gray-300">{item.websiteId}</span>
+                      </div>
+                      {item.created_at && (
+                        <div className="text-xs text-gray-500 mb-1">
+                          Created: {new Date(item.created_at).toLocaleString()}
+                        </div>
+                      )}
+                      {/* 新增：生成开始和结束时间 */}
+                      <div className="text-xs text-gray-500 mb-1">
+                        Start Time: {item.generatedStart ? new Date(item.generatedStart).toLocaleString() : '-'}
+                      </div>
+                      <div className="text-xs text-gray-500 mb-1">
+                        End Time: {item.generatedEnd ? new Date(item.generatedEnd).toLocaleString() : '-'}
+                      </div>
+                      {/* finished 状态小预览 */}
+                      {item.generatorStatus === 'finished' && item.resultId && (
+                        <div className="w-full h-16 rounded-md overflow-hidden border border-white/10 mb-2">
+                          <iframe
+                            src={`https://preview.websitelm.site/en/${item.resultId}`}
+                            title="Preview"
+                            className="w-full h-full"
+                            frameBorder="0"
+                          />
+                        </div>
+                      )}
+                    </div>
+                    {/* Delete button - 深红色半透明纯圆icon，点击弹出确认 */}
+                    <button
+                      className="absolute top-3 right-3 bg-red-700/70 hover:bg-red-800/80 text-white rounded-full p-2 shadow transition"
+                      title="Delete"
+                      style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      onClick={e => {
+                        e.stopPropagation();
+                        setDeleteConfirm({ open: true, id: item.websiteId });
+                      }}
+                      disabled={deletingId === item.websiteId}
+                    >
+                      <DeleteOutlined style={{ fontSize: 18 }} />
+                    </button>
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
         {/* 删除确认弹窗 */}
         <Modal
@@ -672,5 +711,26 @@ const loadVerifiedDomains = async (setVerifiedDomains, setDomainLoading) => {
     setDomainLoading?.(false);
   }
 };
+
+// 隐藏滚动条样式
+// 可以放到全局 CSS，也可以放到组件底部
+<style jsx global>{`
+  .scrollbar-hide {
+    scrollbar-width: none !important;         /* Firefox */
+    -ms-overflow-style: none !important;      /* IE/Edge */
+    overflow: -moz-scrollbars-none;           /* Firefox 老版本 */
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    width: 0 !important;                      /* Chrome/Safari/Opera */
+    height: 0 !important;
+    display: none !important;
+    background: transparent !important;
+  }
+  /* 进一步隐藏横向滚动条 */
+  .scrollbar-hide::-webkit-scrollbar:horizontal {
+    height: 0 !important;
+    display: none !important;
+  }
+`}</style>
 
 export default HistoryCardList;
