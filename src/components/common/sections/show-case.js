@@ -4,10 +4,12 @@ import { Tabs } from 'antd';
 import { LineChartOutlined, ShoppingCartOutlined, AimOutlined } from '@ant-design/icons';
 
 const CustomizableResearchUI = forwardRef(({ initialActiveKey = 'ranking', targetKey }, ref) => {
-  const [activeTabKey, setActiveTabKey] = useState(initialActiveKey);
+  const [activeTabKey, setActiveTabKey] = useState(initialActiveKey || 'ranking');
+  const validTabKeys = ['ranking', 'conversion', 'sem'];
+  const getValidKey = (key) => validTabKeys.includes(key) ? key : 'ranking';
 
   useEffect(() => {
-    setActiveTabKey(initialActiveKey);
+    setActiveTabKey(getValidKey(initialActiveKey));
   }, [initialActiveKey]);
 
   useEffect(() => {
