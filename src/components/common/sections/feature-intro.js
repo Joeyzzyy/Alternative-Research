@@ -59,21 +59,18 @@ const AlternativePageFeature = () => {
               <div className="relative group ml-2">
                 <span className="text-gray-400 cursor-pointer border border-gray-400 rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold bg-slate-800/80 group-hover:bg-slate-700 transition" tabIndex={0}>?</span>
                 <div className="absolute left-1/2 -translate-x-1/2 mb-2 bottom-full w-[350px] max-w-xs bg-gray-900 text-gray-100 text-xs rounded-lg shadow-lg p-4 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition z-20 text-left whitespace-pre-line">
-                  <strong>The Evolution: From Broad Info Pages to High-Converting Alternatives</strong>
+                  {/* 修改内容：更突出唱衰 informational page */}
+                  <strong>Informational Pages</strong>
                   <br /><br />
-                  Content strategy isn't static; it evolves. We've moved beyond the era of simply casting a wide net. Today, success lies in precision – transitioning from general information to laser-focused Alternative Pages that capture users at the cusp of decision. This isn't just a minor tweak; it's a fundamental shift in how we convert interest into action.
-                  <br /><br />
-                  <strong>The Age of the Wide Net</strong>
+                  <strong>Conversion Behavior:</strong>
                   <br />
-                  Traditional content like guides aimed for broad awareness, attracting many early-stage researchers with low purchase intent. This resulted in modest direct conversions (typically 1–3%) and required significant nurturing.
-                  <br /><br />
-                  <strong>The Pivot to Precision Targeting ✨</strong>
+                  Since the primary goal here is education rather than immediate conversion, users may spend more time reading without taking a direct action.<br /><br />
+                  <strong>Typical Conversion Rates:</strong>
                   <br />
-                  The strategy evolved: Alternative Pages focus sharply on users actively searching for "[Competitor Name] alternatives" or "[Your Product] vs [Competitor]". This intercepts high-intent users precisely when they are comparing options and ready to be persuaded.
-                  <br /><br />
-                  <strong>The Payoff: Converting Intent into Action</strong>
-                  <br />
-                  Because these pages directly address the specific comparisons sought by qualified, decision-ready prospects, they convert at much higher rates (often 3–10%+). It's the powerful result of shifting from broad awareness to capturing high-intent moments.
+                  These pages tend to have lower immediate conversion rates (often in the range of 1–3%). However, they play a critical role in funneling high-quality leads over time by building trust and informing the purchase decision.<br /><br />
+                  <span className="text-red-400 font-semibold">
+                    Traditional informational pages often fail to drive immediate results, as most visitors leave without converting. While they help with awareness, they rarely capture users who are ready to make a decision.
+                  </span>
                 </div>
               </div>
             </div>
@@ -113,21 +110,17 @@ const AlternativePageFeature = () => {
                <div className="relative group ml-2">
                  <span className="text-purple-300 cursor-pointer border border-purple-300 rounded-full w-4 h-4 flex items-center justify-center text-[10px] font-bold bg-slate-800/80 group-hover:bg-slate-700 transition" tabIndex={0}>?</span>
                  <div className="absolute left-1/2 -translate-x-1/2 mb-2 bottom-full w-[350px] max-w-xs bg-gray-900 text-purple-100 text-xs rounded-lg shadow-lg p-4 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition z-20 text-left whitespace-pre-line">
-                   <strong>The Evolution: From Broad Info Pages to High-Converting Alternatives</strong>
+                   <strong>Why Alternative Pages Work</strong>
                    <br /><br />
-                   Content strategy isn't static; it evolves. We've moved beyond the era of simply casting a wide net. Today, success lies in precision – transitioning from general information to laser-focused Alternative Pages that capture users at the cusp of decision. This isn't just a minor tweak; it's a fundamental shift in how we convert interest into action.
+                   Alternative Pages combine the best of both worlds:
                    <br /><br />
-                   <strong>The Age of the Wide Net</strong>
-                   <br />
-                   Traditional content like guides aimed for broad awareness, attracting many early-stage researchers with low purchase intent. This resulted in modest direct conversions (typically 1–3%) and required significant nurturing.
+                   <strong>Transactional Page Strengths:</strong> Clear structure, focused messaging, and strong CTAs drive high-intent users to convert (often 3–10%+).
                    <br /><br />
-                   <strong>The Pivot to Precision Targeting ✨</strong>
-                   <br />
-                   The strategy evolved: Alternative Pages focus sharply on users actively searching for "[Competitor Name] alternatives" or "[Your Product] vs [Competitor]". This intercepts high-intent users precisely when they are comparing options and ready to be persuaded.
+                   <strong>Navigational/Brand Page Strengths:</strong> Educational content and brand reassurance build trust, supporting users who need more information before taking action (typically 2–5% conversion).
                    <br /><br />
-                   <strong>The Payoff: Converting Intent into Action</strong>
-                   <br />
-                   Because these pages directly address the specific comparisons sought by qualified, decision-ready prospects, they convert at much higher rates (often 3–10%+). It's the powerful result of shifting from broad awareness to capturing high-intent moments.
+                   <span className="text-purple-300 font-semibold">
+                     Our Alternative Pages are designed to both convert ready-to-buy visitors and nurture those still comparing options—maximizing results from high-intent traffic.
+                   </span>
                  </div>
                </div>
              </div>
