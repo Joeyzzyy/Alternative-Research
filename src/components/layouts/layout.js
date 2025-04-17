@@ -12,6 +12,7 @@ import FeatureIntroLeftRight from '../common/sections/feature-intro-left-right';
 import FeatureIntroRightLeft from '../common/sections/feature-intro-right-left';
 import Recommendations from '../common/sections/recommendations';
 import ShowCase from '../common/sections/show-case';
+import ResultPreview from '../common/sections/result-preview';
 import { useToolContext } from '../../contexts/ToolContext';
 
 const COMPONENT_MAP = {
@@ -23,6 +24,7 @@ const COMPONENT_MAP = {
   FeatureIntroLeftRight: FeatureIntroLeftRight,
   FeatureIntroRightLeft: FeatureIntroRightLeft,
   Recommendations: Recommendations,
+  ResultPreview: ResultPreview,
   ShowCase: ShowCase,
 };
 

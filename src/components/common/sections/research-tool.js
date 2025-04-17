@@ -84,7 +84,6 @@ const ResearchTool = ({
   const placeholderIndexRef = useRef(0); // Ref for current character index
   const placeholderDirectionRef = useRef('typing'); // Ref for direction ('typing' or 'deleting')
   const placeholderTimeoutRef = useRef(null); // Ref for pause timeout
-  const [clearingHistory, setClearingHistory] = useState(false);
   const [clearProgress, setClearProgress] = useState({ visible: false, current: 0, total: 0 });
   const [currentStep, setCurrentStep] = useState(1); // 添加这一行来跟踪当前步骤
   const filterMessageTags = (message) => {
@@ -103,6 +102,123 @@ const ResearchTool = ({
       setUserInput(lastInput);
     }
   }, []);
+
+  let verifiedDomains = [];
+  let productInfo = null;
+  let subfolders = [];
+
+  // 添加加载产品信息的函数
+  const loadProductInfo = async () => {
+    try {
+      const response = await apiClient.getProductsByCustomerId();
+      if (response?.code === 200) {
+        productInfo = response.data;
+        return productInfo;
+      }
+      return null;
+    } catch (error) {
+      console.error('Failed to load product info:', error);
+      return null;
+    }
+  };
+
+  const loadSubfolders = async () => {
+    try {
+      const response = await apiClient.getSubfolders();
+      if (response?.code === 200 && response?.data) {
+        subfolders = response.data;
+      } else {
+        subfolders = []; // 确保 subfolders 是一个数组
+      }
+      return subfolders;
+    } catch (error) {
+      console.error('Failed to load subfolders:', error);
+      subfolders = []; // 出错时也确保 subfolders 是一个数组
+      return subfolders;
+    }
+  };
+
+  // 添加加载域名的函数
+  const loadVerifiedDomains = async () => {
+    try {
+      const projectId = 'prj_ySV5jK2SgENiBpE5D2aTaeI3KfAo'; 
+      
+      // 1. 获取域名列表
+      const domainsResponse = await apiClient.getVercelDomainInfo(projectId);
+      console.log('API Response domains:', domainsResponse?.domains);
+      
+      // 2. 获取当前项目的根域名
+      if (!productInfo) {
+        productInfo = await loadProductInfo();
+      }
+      const rootDomain = productInfo?.projectWebsite;
+      if (!rootDomain) {
+        console.warn('No root domain configured');
+        return [];
+      }
+      
+      // 3. 过滤并检查域名 - 包含根域名和子域名
+      const verifiedDomainsPromises = domainsResponse?.domains
+        ?.filter(domain => 
+          domain.verified && 
+          !domain.name.includes('vercel.app') && 
+          (domain.name === rootDomain || domain.name.endsWith(`.${rootDomain}`))
+        )
+        ?.map(async domain => {
+          try {
+            const config = await apiClient.getVercelDomainConfig(domain.name);
+            return !config.misconfigured ? domain.name : null;
+          } catch (error) {
+            console.error(`Failed to check domain config for ${domain.name}:`, error);
+            return null;
+          }
+        }) || [];
+  
+      // 4. 等待所有配置检查完成
+      const verifiedDomainsList = (await Promise.all(verifiedDomainsPromises))
+        .filter(Boolean);
+      
+      // 5. 加载子文件夹
+      await loadSubfolders();
+      
+      console.log('Root domain:', rootDomain);
+      console.log('Verified domains before merge:', verifiedDomainsList);
+      console.log('Subfolders:', subfolders);
+      
+      // 6. 合并验证过的域名、子域名和子路径
+      const combinedDomains = [
+        ...verifiedDomainsList,
+        // 添加子域名形式 (blog.example.com)
+        ...subfolders.map(subfolder => `${subfolder}.${rootDomain}`),
+        // 添加子路径形式 (example.com/blog)
+        ...subfolders.map(subfolder => `${rootDomain}/${subfolder}`)
+      ];
+      
+      verifiedDomains = combinedDomains;
+      console.log('Final verified domains:', verifiedDomains);
+      return verifiedDomains;
+    } catch (error) {
+      console.error('Failed to load domain info:', error);
+      return [];
+    }
+  };
+
+  const getFullPublishUrl = (record) => {
+    if (!record) return '';
+    
+    // 使用提供的 publishURL 或默认值
+    const baseUrl = record.publishURL || '';
+    
+    // 如果没有基础 URL，返回空字符串
+    if (!baseUrl) return '';
+    
+    // 获取 slug
+    const slug = record.slug || '';
+    
+    // 组合 URL 和 slug
+    return slug ? `${baseUrl}/${slug}` : baseUrl;
+  };
+  
 
   const validateDomain = (input) => {
     if (!input || !input.trim()) return false;
@@ -2037,604 +2153,6 @@ const ResearchTool = ({
       console.warn("Element with ID 'showcase-section' not found for scrolling.");
     }
   };
-  // 添加历史记录状态
-  const [historyList, setHistoryList] = useState([]);
-  const [historyCollapsed, setHistoryCollapsed] = useState(false);
-  const [historyLoading, setHistoryLoading] = useState(false);
-
-  // 添加获取历史记录的函数
-  const fetchHistoryData = async () => {
-    try {
-      setHistoryLoading(true);
-      // 获取历史记录数据
-      const historyResponse = await apiClient.getAlternativeWebsiteList(1, 200);
-      
-      if (historyResponse?.code === 200 && historyResponse.data) {
-        // 创建一个数组来存储过滤后的历史记录
-        let filteredHistory = [];
-        
-        // 处理每个历史记录项
-        for (const item of historyResponse.data) {
-          // 如果状态不是processing，直接添加到过滤后的列表
-          if (item.generatorStatus !== 'processing') {
-            filteredHistory.push(item);
-            continue;
-          }
-          
-          // 如果状态是processing，检查第三个planning的状态
-          try {
-            const statusResponse = await apiClient.getAlternativeStatus(item.websiteId);
-            if (statusResponse?.code === 200 && statusResponse.data) {
-              const planningStatuses = statusResponse.data;
-              const productComparisonStatus = planningStatuses.find(planning => 
-                planning.planningName === 'PRODUCT_COMPARISON'
-              );
-              
-              // 如果第三个planning不是init状态，添加到过滤后的列表
-              if (!productComparisonStatus || productComparisonStatus.status !== 'init') {
-                filteredHistory.push(item);
-              }
-              // 如果是init状态，则不添加（过滤掉）
-            }
-          } catch (error) {
-            console.error('Error checking planning status:', error);
-            // 如果获取状态失败，仍然添加到列表中
-            filteredHistory.push(item);
-          }
-        }
-        
-        // 按创建时间降序排序
-        filteredHistory.sort((a, b) => new Date(b.generatedStart) - new Date(a.generatedStart));
-        setHistoryList(filteredHistory);
-      } else {
-        console.warn('[DEBUG] Failed to get history data');
-      }
-    } catch (error) {
-      console.error('Error fetching history:', error);
-    } finally {
-      setHistoryLoading(false);
-    }
-  };
-
-  // 添加加载历史记录的 useEffect
-  useEffect(() => {
-    // 检查用户是否登录
-    const isLoggedIn = localStorage.getItem('alternativelyIsLoggedIn') === 'true';
-    const token = localStorage.getItem('alternativelyAccessToken');
-    
-    if (isLoggedIn && token) {
-      fetchHistoryData();
-    }
-    
-    // 监听登录成功事件
-    const handleLoginSuccess = () => {
-      fetchHistoryData();
-    };
-    
-    window.addEventListener('alternativelyLoginSuccess', handleLoginSuccess);
-    
-    return () => {
-      window.removeEventListener('alternativelyLoginSuccess', handleLoginSuccess);
-    };
-  }, []);
-
-  // 处理历史记录项点击
-  const handleHistoryItemClick = async(item, event) =>  {  // 添加 event 参数
-    // 添加删除按钮点击处理
-    if (event.target.closest('.delete-btn')) {  // 使用 closest 来确保点击的是删除按钮
-      event.stopPropagation();  // 阻止事件冒泡
-      try {
-        // 创建自定义删除确认弹窗
-        const modalOverlay = document.createElement('div');
-        modalOverlay.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[2000]';
-        
-        const modalContent = document.createElement('div');
-        modalContent.className = 'bg-slate-900 border border-slate-700/50 rounded-xl shadow-2xl p-6 max-w-md w-full relative animate-fadeIn';
-        modalContent.innerHTML = `
-          <div class="relative">
-            <h3 class="text-xl font-bold text-white mb-2">Delete Record</h3>
-            <p class="text-gray-300 mb-6">Are you sure you want to delete this record? This action cannot be undone.</p>
-            
-            <div class="flex space-x-3">
-              <button class="cancel-btn flex-1 py-2 px-4 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors">
-                Cancel
-              </button>
-              <button class="confirm-btn flex-1 py-2 px-4 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white rounded-lg transition-colors">
-                Delete
-              </button>
-            </div>
-          </div>
-        `;
-        
-        document.body.appendChild(modalOverlay);
-        
-        // 添加样式
-        const style = document.createElement('style');
-        style.textContent = `
-          @keyframes fadeIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
-          }
-          .animate-fadeIn {
-            animation: fadeIn 0.2s ease-out forwards;
-          }
-        `;
-        document.head.appendChild(style);
-        
-        // 绑定事件
-        const closeModal = () => {
-          document.body.removeChild(modalOverlay);
-          document.head.removeChild(style);
-        };
-        
-        // 取消按钮
-        const cancelBtn = modalContent.querySelector('.cancel-btn');
-        cancelBtn.addEventListener('click', closeModal);
-        
-        // 确认删除按钮
-        const confirmBtn = modalContent.querySelector('.confirm-btn');
-        confirmBtn.addEventListener('click', async () => {
-          try {
-            console.log('Deleting website with ID:', item.websiteId); // 添加日志
-            const deleteResponse = await apiClient.deletePage(item.websiteId);
-            console.log('Delete response:', deleteResponse); // 添加日志
-            
-            // 检查响应是否成功 (适配新的 API 返回)
-            if (deleteResponse && deleteResponse.code === 200) {
-              // 更新历史记录列表
-              setHistoryList(prev => prev.filter(record => record.websiteId !== item.websiteId));
-              // *** 成功反馈 ***
-              messageApi.success('Record deleted successfully'); // <--- 只修改这里
-              console.log('Attempting to show SUCCESS notification via messageApi');
-            } else {
-              // 处理 API 调用失败或返回非 200 code 的情况
-              const errorMessage = deleteResponse?.message || 'Failed to delete record due to an unknown error.';
-              console.error('Delete API failed:', deleteResponse);
-              // *** API 失败反馈 ***
-              messageApi.error(`Failed to delete record: ${errorMessage}`); // 替换 setNotification
-              console.log('Attempting to show ERROR notification (API fail) via messageApi');
-            }
-            closeModal();
-          } catch (error) {
-            // 处理网络错误或其他异常
-            console.error('Failed to delete record (exception):', error);
-            // *** 异常失败反馈 ***
-            messageApi.error(`Failed to delete record: ${error.message || 'An unexpected error occurred.'}`); // 替换 setNotification
-            console.log('Attempting to show ERROR notification (exception) via messageApi');
-            closeModal();
-          }
-        });
-        
-        // 点击背景关闭
-        modalOverlay.addEventListener('click', (e) => {
-          if (e.target === modalOverlay) {
-            closeModal();
-          }
-        });
-        
-        modalOverlay.appendChild(modalContent);
-        return;
-      } catch (error) {
-        // 处理创建弹窗时的错误
-        console.error('Error creating delete confirmation modal:', error);
-        messageApi.error('Failed to initiate delete action'); // 替换 setNotification
-      }
-      return; // 确保在处理完删除逻辑后返回
-    }
-  
-    if (item.generatorStatus === 'failed') {
-      // 创建自定义弹窗
-      const modalOverlay = document.createElement('div');
-      modalOverlay.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[2000]';
-      
-      const modalContent = document.createElement('div');
-      modalContent.className = 'bg-slate-900 border border-red-500/30 rounded-xl shadow-2xl p-6 max-w-md w-full relative animate-fadeIn';
-      modalContent.innerHTML = `
-        <div class="absolute -inset-0.5 bg-gradient-to-r from-red-500/20 to-rose-500/20 rounded-xl blur opacity-30"></div>
-        <div class="relative">
-          <button class="absolute top-0 right-0 text-gray-400 hover:text-white p-1 rounded-full hover:bg-gray-800/50 transition-colors">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-          
-          <h3 class="text-xl font-bold text-white mb-2">Task Failed</h3>
-          <p class="text-gray-300 mb-6">This task could not be completed successfully. Would you like to restart with the same URL?</p>
-          
-          <div class="flex space-x-3">
-            <button class="cancel-btn flex-1 py-2 px-4 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors">
-              Cancel
-            </button>
-            <button class="restart-btn flex-1 py-2 px-4 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white rounded-lg transition-colors">
-              Restart Task
-            </button>
-          </div>
-        </div>
-      `;
-      
-      document.body.appendChild(modalOverlay);
-      
-      // 添加样式
-      const style = document.createElement('style');
-      style.textContent = `
-        @keyframes fadeIn {
-          from { opacity: 0; transform: scale(0.95); }
-          to { opacity: 1; transform: scale(1); }
-        }
-        .animate-fadeIn {
-          animation: fadeIn 0.2s ease-out forwards;
-        }
-      `;
-      document.head.appendChild(style);
-      
-      // 绑定事件
-      const closeModal = () => {
-        document.body.removeChild(modalOverlay);
-        document.head.removeChild(style);
-      };
-      
-      // 关闭按钮
-      const closeBtn = modalContent.querySelector('button');
-      closeBtn.addEventListener('click', closeModal);
-      
-      // 取消按钮
-      const cancelBtn = modalContent.querySelector('.cancel-btn');
-      cancelBtn.addEventListener('click', closeModal);
-      
-      // 重启按钮
-      const restartBtn = modalContent.querySelector('.restart-btn');
-      restartBtn.addEventListener('click', () => {
-        closeModal();
-        initializeChat(item.website);
-      });
-      
-      // 点击背景关闭
-      modalOverlay.addEventListener('click', (e) => {
-        if (e.target === modalOverlay) {
-          closeModal();
-        }
-      });
-      
-      modalOverlay.appendChild(modalContent);
-      
-      return false;
-    }
-  
-    if (item.generatorStatus === 'finished') {
-      // 创建加载中弹窗
-      const loadingModalOverlay = document.createElement('div');
-      loadingModalOverlay.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[2000]';
-      loadingModalOverlay.id = 'loading-preview-overlay';
-      
-      const loadingModalContent = document.createElement('div');
-      loadingModalContent.className = 'bg-slate-900 border border-blue-500/30 rounded-xl shadow-2xl p-8 max-w-md w-full relative animate-fadeIn text-center';
-      
-      loadingModalContent.innerHTML = `
-        <div class="flex flex-col items-center">
-          <div class="w-12 h-12 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-          <h3 class="text-xl font-bold text-white mb-2">Loading Preview Data</h3>
-          <p class="text-gray-300">Please wait while we fetch your generated results...</p>
-        </div>
-      `;
-      
-      document.body.appendChild(loadingModalOverlay);
-      loadingModalOverlay.appendChild(loadingModalContent);
-      
-      setLoadingResultIds(true);
-
-      if (item.websiteId) {
-        setCurrentWebsiteId(item.websiteId);
-        
-        try {
-          const resultListResponse = await apiClient.getAlternativeWebsiteResultList(item.websiteId);
-          
-          // Remove loading modal
-          const loadingOverlay = document.getElementById('loading-preview-overlay');
-          if (loadingOverlay) {
-            document.body.removeChild(loadingOverlay);
-          }
-          
-          if (resultListResponse?.code === 200 && Array.isArray(resultListResponse.data)) {
-            const codesResultIds = resultListResponse.data.map(item => item.resultId);
-            if (codesResultIds.length > 0) {
-              setResultIds(codesResultIds);
-              
-              // 创建自定义预览弹窗
-              const modalOverlay = document.createElement('div');
-              modalOverlay.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[2000]';
-              
-              const modalContent = document.createElement('div');
-              modalContent.className = 'bg-slate-900 border border-blue-500/30 rounded-xl shadow-2xl p-6 w-[90%] h-[80vh] relative animate-fadeIn';
-              
-              // 添加标题和关闭按钮
-              modalContent.innerHTML = `
-                <div class="flex justify-between items-center mb-4">
-                  <h3 class="text-xl font-bold text-white">Generated Results</h3>
-                  <button class="text-gray-400 hover:text-white p-1 rounded-full hover:bg-gray-800/50 transition-colors">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-                
-                <div class="flex h-[calc(100%-3rem)] gap-4">
-                  <div class="w-1/5 border-r border-slate-700/50 pr-4 overflow-y-auto" id="preview-list">
-                    <!-- Preview list will be added here dynamically -->
-                  </div>
-                  
-                  <div class="w-4/5 pl-4 relative">
-                    <div class="mb-3 flex items-center justify-between">
-                      <h3 class="text-gray-300 text-sm font-medium">Live Preview</h3>
-                      <div class="flex items-center gap-2">
-                        <button id="edit-page" class="flex items-center gap-1.5 px-3 py-1.5 bg-yellow-600 hover:bg-yellow-500 text-white text-xs rounded transition-colors">
-                          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                          Edit this page
-                        </button>
-                        <button id="deploy-page" class="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white text-xs rounded transition-colors">
-                          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                          </svg>
-                          Go deploy this page with WebsiteLM
-                        </button>
-                        <button id="open-new-window" class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded transition-colors">
-                          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                          </svg>
-                          Open in New Window
-                        </button>
-                      </div>
-                    </div>
-                    
-                    <div class="h-[calc(100%-3rem)] bg-white rounded-lg overflow-hidden relative">
-                      <div id="loading-indicator" class="absolute inset-0 bg-slate-900/80 flex items-center justify-center z-10">
-                        <div class="flex flex-col items-center">
-                          <div class="w-10 h-10 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mb-3"></div>
-                          <p class="text-gray-300">Loading preview...</p>
-                        </div>
-                      </div>
-                      <iframe id="preview-iframe" src="" class="w-full h-full border-0"></iframe>
-                    </div>
-                  </div>
-                </div>
-              `;
-              
-              document.body.appendChild(modalOverlay);
-              modalOverlay.appendChild(modalContent);
-              
-              // 获取DOM元素
-              const closeBtn = modalContent.querySelector('button');
-              const previewList = modalContent.querySelector('#preview-list');
-              const previewIframe = modalContent.querySelector('#preview-iframe');
-              const loadingIndicator = modalContent.querySelector('#loading-indicator');
-              const openNewWindowBtn = modalContent.querySelector('#open-new-window');
-              const editPageBtn = modalContent.querySelector('#edit-page'); // 获取 Edit 按钮
-              const deployPageBtn = modalContent.querySelector('#deploy-page'); // 获取 Deploy 按钮
-              
-              // 设置初始预览URL
-              const initialPreviewUrl = `https://preview.websitelm.site/en/${codesResultIds[0]}`;
-              previewIframe.src = initialPreviewUrl;
-              
-              // 添加预览列表项
-              codesResultIds.forEach((id, index) => {
-                const listItem = document.createElement('div');
-                listItem.className = `p-3 rounded-lg cursor-pointer transition-all duration-200 ${index === 0 ? 'bg-blue-500/20 border border-blue-500/50' : 'bg-slate-800/50 border border-slate-700/50 hover:bg-slate-700/50'}`;
-                listItem.innerHTML = `
-                  <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-2">
-                      <div class="w-2 h-2 rounded-full ${index === 0 ? 'bg-blue-400' : 'bg-gray-500'}"></div>
-                      <span class="text-gray-200 font-medium">Preview Version #${index + 1}</span>
-                    </div>
-                    <button class="text-xs text-blue-400 hover:text-blue-300 open-external" data-url="https://preview.websitelm.site/en/${id}">
-                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                      </svg>
-                    </button>
-                  </div>
-                  <div class="mt-1.5 text-xs text-gray-400">
-                    Result ID: ${id.substring(0, 8)}...${id.substring(id.length - 4)}
-                  </div>
-                `;
-                
-                // 点击预览项切换预览
-                listItem.addEventListener('click', (e) => {
-                  if (!e.target.closest('.open-external')) {
-                    // 更新选中状态
-                    previewList.querySelectorAll('div[class^="p-3"]').forEach(item => {
-                      item.className = 'p-3 rounded-lg cursor-pointer transition-all duration-200 bg-slate-800/50 border border-slate-700/50 hover:bg-slate-700/50';
-                      item.querySelector('.w-2').className = 'w-2 h-2 rounded-full bg-gray-500';
-                    });
-                    listItem.className = 'p-3 rounded-lg cursor-pointer transition-all duration-200 bg-blue-500/20 border border-blue-500/50';
-                    listItem.querySelector('.w-2').className = 'w-2 h-2 rounded-full bg-blue-400';
-                    
-                    // 显示加载指示器
-                    loadingIndicator.style.display = 'flex';
-                    
-                    // 更新iframe源
-                    previewIframe.src = `https://preview.websitelm.site/en/${id}`;
-                    
-                    // 更新"在新窗口打开"按钮的URL
-                    openNewWindowBtn.setAttribute('data-url', `https://preview.websitelm.site/en/${id}`);
-                    editPageBtn.setAttribute('data-url', `https://preview.websitelm.site/en/${id}`); // 更新 Edit 按钮 URL
-                    deployPageBtn.setAttribute('data-url', `https://preview.websitelm.site/en/${id}`); // 更新 Deploy 按钮 URL
-                  }
-                });
-                
-                previewList.appendChild(listItem);
-              });
-              
-              // 绑定事件
-              closeBtn.addEventListener('click', () => {
-                document.body.removeChild(modalOverlay);
-              });
-              
-              // 点击背景关闭
-              modalOverlay.addEventListener('click', (e) => {
-                if (e.target === modalOverlay) {
-                  document.body.removeChild(modalOverlay);
-                }
-              });
-              
-              // iframe加载完成后隐藏加载指示器
-              previewIframe.addEventListener('load', () => {
-                loadingIndicator.style.display = 'none';
-              });
-              
-              // 在新窗口打开按钮
-              openNewWindowBtn.addEventListener('click', () => {
-                window.open(previewIframe.src, '_blank');
-              });
-              
-              // 编辑页面按钮 (添加占位符功能)
-              editPageBtn.addEventListener('click', () => {
-                // 直接使用 previewIframe.src 获取当前显示的 URL，与 openNewWindowBtn 保持一致
-                const url = previewIframe.src;
-                console.log('Edit page clicked for:', url);
-                
-                // 从 localStorage 获取 accessToken
-                const accessToken = localStorage.getItem('alternativelyAccessToken');
-                
-                if (!accessToken) {
-                  alert('Authentication required. Please log in first.');
-                  return;
-                }
-                
-                // 提取 resultId 从 URL
-                const urlParts = url.split('/');
-                const resultId = urlParts[urlParts.length - 1];
-                
-                // 构建编辑页面 URL
-                const editUrl = `https://app.websitelm.com/alternatively-edit/${resultId}?authKey=${accessToken}&&websiteId=${item.websiteId}`;
-                
-                // 在新窗口中打开编辑页面
-                window.open(editUrl, '_blank');
-              });
-              
-              // 部署页面按钮 (添加占位符功能)
-              deployPageBtn.addEventListener('click', () => {
-                // 获取必要的参数
-                const accessToken = localStorage.getItem('alternativelyAccessToken');
-                const customerId = localStorage.getItem('alternativelyCustomerId');
-                const customerEmail = localStorage.getItem('alternativelyCustomerEmail');
-                const websiteId = item.websiteId; // 从 item 对象获取 websiteId
-
-                console.log('Deploy page clicked. Data:', { accessToken, customerId, websiteId }); // 添加日志
-
-                // 检查参数是否存在
-                if (!accessToken || !customerId || !websiteId) {
-                  console.error('Missing required data for deployment:', { hasToken: !!accessToken, hasCustomerId: !!customerId, hasWebsiteId: !!websiteId });
-                  messageApi.error('Missing required information (token, customer ID, or website ID) to proceed with deployment. Please ensure you are logged in.');
-                  return; // 阻止进一步执行
-                }
-
-                // 构建目标 URL
-                const deployUrl = `https://app.websitelm.com/alternatively?authKey=${encodeURIComponent(accessToken)}&customerId=${encodeURIComponent(customerId)}&websiteId=${encodeURIComponent(websiteId)}&email=${encodeURIComponent(customerEmail)}`;
-
-                console.log('Opening deploy URL:', deployUrl); // 添加日志
-
-                // 在新窗口中打开部署页面
-                window.open(deployUrl, '_blank');
-
-                // 可选：关闭预览弹窗
-                // document.body.removeChild(modalOverlay);
-              });
-              
-              // 外部链接按钮
-              modalContent.querySelectorAll('.open-external').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                  e.stopPropagation();
-                  window.open(btn.getAttribute('data-url'), '_blank');
-                });
-              });
-              
-              // 更新浏览器标签页
-              const newTabs = codesResultIds.map((id, index) => ({
-                id: `result-${id}`,
-                title: `Result ${index + 1}`,
-                url: `https://preview.websitelm.site/en/${id}`
-              }));
-              
-              setBrowserTabs(newTabs);
-              setActiveTab(`result-${codesResultIds[0]}`);
-              setRightPanelTab('browser');
-            } else {
-              messageApi.info('No preview data available for this task.');
-            }
-          }
-        } catch (error) {
-          // Remove loading modal in case of error
-          const loadingOverlay = document.getElementById('loading-preview-overlay');
-          if (loadingOverlay) {
-            document.body.removeChild(loadingOverlay);
-          }
-          
-          messageApi.error('Failed to load preview data. Please try again.');
-        } finally {
-          setLoadingResultIds(false);
-        }
-      }
-      return;
-    }
-  
-    if (item.generatorStatus === 'processing') {
-      try {
-        const statusResponse = await apiClient.getAlternativeStatus(item.websiteId);
-  
-        if (statusResponse?.code === 200 && statusResponse.data) {
-          const planningStatuses = statusResponse.data;
-          const productComparisonStatus = planningStatuses.find(planning => 
-            planning.planningName === 'PRODUCT_COMPARISON'
-          );
-  
-          if (productComparisonStatus && productComparisonStatus.status !== 'init') {
-            // 创建自定义弹窗，参考 header-template.js 中的样式
-            const modalContainer = document.createElement('div');
-            modalContainer.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm';
-            
-            const modalContent = document.createElement('div');
-            modalContent.className = 'bg-slate-800 rounded-lg shadow-xl p-6 max-w-sm w-full border border-slate-700 animate-fadeIn';
-            
-            const title = document.createElement('h3');
-            title.className = 'text-xl font-semibold text-white mb-4';
-            title.textContent = 'Task In Progress';
-            
-            const description = document.createElement('p');
-            description.className = 'text-gray-300 mb-3';
-            description.textContent = 'You already have a product comparison task in progress. Please wait for it to complete before starting a new one.';
-            
-            const emailNote = document.createElement('p');
-            emailNote.className = 'text-gray-400 text-sm mb-6';
-            emailNote.textContent = 'You will receive an email notification when your current task is complete.';
-            
-            const buttonContainer = document.createElement('div');
-            buttonContainer.className = 'flex justify-end';
-            
-            const closeButton = document.createElement('button');
-            closeButton.className = 'px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 transition-colors';
-            closeButton.textContent = 'Got it';
-            closeButton.onclick = () => {
-              document.body.removeChild(modalContainer);
-            };
-            
-            buttonContainer.appendChild(closeButton);
-            modalContent.appendChild(title);
-            modalContent.appendChild(description);
-            modalContent.appendChild(emailNote);
-            modalContent.appendChild(buttonContainer);
-            modalContainer.appendChild(modalContent);
-            
-            document.body.appendChild(modalContainer);
-            return;
-          }
-
-        }
-      } catch (error) {
-        console.error('Failed to fetch task status:', error);
-        messageApi.error('Failed to check task status. Please try again.');
-      }
-    }
-  };
 
   // 格式化日期时间
   const formatDateTime = (dateString) => {
@@ -2750,6 +2268,10 @@ const ResearchTool = ({
     };
   }, [showInitialScreen]); // Rerun effect when showInitialScreen changes
 
+  // 在组件的顶部，与其他 useState 声明一起添加这两个状态
+  const [selectedHistoryItem, setSelectedHistoryItem] = useState(null);
+  const [resultModalVisible, setResultModalVisible] = useState(false);
+
   if (initialLoading) {
     return (
       <div className="w-full min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 
@@ -2781,182 +2303,6 @@ const ResearchTool = ({
 
           {/* 覆盖层 */}
           <div className={`absolute inset-0 ${getOverlayClass()}`}></div>
-
-        {/* 添加历史记录侧边栏 - 修改定位方式，使其在组件内部 */}
-          <div className={`absolute left-0 top-0 bottom-0 w-56 bg-slate-900/60 backdrop-blur-[2px] border-r border-slate-700/30 z-10 overflow-y-auto overflow-x-hidden pt-20 transition-all duration-300 ${historyCollapsed ? '-translate-x-52' : 'translate-x-0'}`}>
-            <div className="p-3 relative">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="text-gray-400 text-sm font-medium">History</h3>
-                <button
-                  onClick={() => setHistoryCollapsed(!historyCollapsed)}
-                  className="absolute -right-1 top-3 bg-slate-800/70 border border-slate-700/30 rounded-full p-1 text-gray-500 hover:text-gray-300 transition-colors"
-                >
-                  {historyCollapsed ? (
-                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-                    </svg>
-                  ) : (
-                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-
-              {/* 将两个按钮放在History标题下面的一行 */}
-              <div className="flex items-center gap-1 mb-3">
-                <button
-                  onClick={fetchHistoryData}
-                  className="flex-1 px-2 py-1 text-xs text-gray-500 hover:text-gray-300 bg-slate-800/30 hover:bg-slate-800/50 rounded transition-colors flex items-center justify-center"
-                >
-                  <svg className="w-2.5 h-2.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  Refresh
-                </button>
-                <button
-                  onClick={() => {
-                    if (historyList.length === 0 || clearingHistory) return;
-                    // 创建英文确认弹窗
-                    const modalOverlay = document.createElement('div');
-                    modalOverlay.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[2000]';
-                    const modalContent = document.createElement('div');
-                    modalContent.className = 'bg-slate-900 border border-slate-700/50 rounded-xl shadow-2xl p-6 max-w-md w-full relative animate-fadeIn';
-                    modalContent.innerHTML = `
-                      <div class="relative">
-                        <h3 class="text-xl font-bold text-white mb-2">Clear All History</h3>
-                        <p class="text-gray-300 mb-6">Are you sure you want to delete all history records? This action cannot be undone.</p>
-                        <div class="flex space-x-3">
-                          <button class="cancel-btn flex-1 py-2 px-4 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition-colors">
-                            Cancel
-                          </button>
-                          <button class="confirm-btn flex-1 py-2 px-4 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white rounded-lg transition-colors">
-                            Clear All
-                          </button>
-                        </div>
-                      </div>
-                    `;
-                    document.body.appendChild(modalOverlay);
-                    // 样式
-                    const style = document.createElement('style');
-                    style.textContent = `
-                      @keyframes fadeIn {
-                        from { opacity: 0; transform: scale(0.95); }
-                        to { opacity: 1; transform: scale(1); }
-                      }
-                      .animate-fadeIn {
-                        animation: fadeIn 0.2s ease-out forwards;
-                      }
-                    `;
-                    document.head.appendChild(style);
-                    // 关闭弹窗
-                    const closeModal = () => {
-                      document.body.removeChild(modalOverlay);
-                      document.head.removeChild(style);
-                    };
-                    // 取消按钮
-                    modalContent.querySelector('.cancel-btn').addEventListener('click', closeModal);
-                    // 确认按钮
-                    modalContent.querySelector('.confirm-btn').addEventListener('click', async () => {
-                      closeModal();
-                      setClearingHistory(true);
-                      let deleted = 0;
-                      for (const item of historyList) {
-                        try {
-                          const deleteResponse = await apiClient.deletePage(item.websiteId);
-                          if (!(deleteResponse && deleteResponse.code === 200)) {
-                            messageApi.error(`Failed to delete record: ${item.website}`);
-                          }
-                        } catch (error) {
-                          messageApi.error(`Failed to delete record: ${item.website}`);
-                        }
-                        deleted += 1;
-                        // 每删除5个或最后一个时刷新
-                        if (deleted % 5 === 0 || deleted === historyList.length) {
-                          await fetchHistoryData();
-                        }
-                      }
-                      setHistoryList([]); // 清空本地列表
-                      setClearingHistory(false);
-                      setClearProgress({ visible: false, current: 0, total: 0 }); // 关闭进度弹窗
-                      messageApi.success('All history records deleted successfully');
-                    });
-                    // 点击背景关闭
-                    modalOverlay.addEventListener('click', (e) => {
-                      if (e.target === modalOverlay) {
-                        closeModal();
-                      }
-                    });
-                    modalOverlay.appendChild(modalContent);
-                  }}
-                  className="flex-1 px-2 py-1 text-xs text-gray-400 hover:text-red-400 bg-transparent border border-slate-700/30 rounded transition-colors disabled:opacity-50 cursor-pointer"
-                  disabled={historyList.length === 0 || clearingHistory}
-                  title="Clear all history"
-                >
-                  Clear
-                </button>
-              </div>
-
-              {historyLoading ? (
-                <div className="flex justify-center py-2">
-                  <Spin size="small" />
-                </div>
-              ) : historyList.length > 0 ? (
-                <div className="space-y-1.5 pr-1">
-                  {historyList.map((item) => (
-                  <div
-                    key={item.websiteId}
-                    className="p-1.5 rounded-lg bg-slate-800/40 hover:bg-slate-800/70 border border-slate-700/30 cursor-pointer transition-all duration-300"
-                    onClick={(e) => handleHistoryItemClick(item, e)}  // 传递 event 参数
-                  >
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <div className="text-xs text-gray-400 font-medium truncate max-w-full">{getDomainFromUrl(item.website)}</div>
-                      <div className="text-[9px] text-gray-500 mt-0.5 truncate">
-                        {formatDateTime(item.generatedStart)}
-                      </div>
-                      <div className="flex items-center mt-0.5">
-                        <span className={`text-[8px] px-1 py-0.5 rounded ${
-                          item.generatorStatus === 'processing' 
-                            ? 'bg-blue-900/30 text-blue-400/80' 
-                            : item.generatorStatus === 'finished'
-                            ? 'bg-green-900/30 text-green-400/80'
-                            : 'bg-red-900/30 text-red-400/80'
-                        }`}>
-                          {item.generatorStatus === 'processing' ? 'Processing' : 
-                          item.generatorStatus === 'finished' ? 'Completed' : 'Failed'}
-                        </span>
-                      </div>
-                    </div>
-                    <button 
-                      className="delete-btn p-1 text-gray-500 hover:text-red-500 transition-colors"
-                      title="Delete this record"
-                    >
-                      <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  </div>
-                  </div>
-                ))}
-                </div>
-              ) : (
-                <div className="text-center py-2 text-gray-500 text-[10px]">
-                  No history records found
-                </div>
-              )}
-            </div>
-          </div>
-
-        {/* 添加折叠状态下的小标签 - 更加低调 */}
-          {historyCollapsed && (
-            <div
-              onClick={() => setHistoryCollapsed(false)}
-              className="absolute left-0 top-1/2 transform -translate-y-1/2 bg-slate-800/70 text-gray-400 py-2 px-1 rounded-r-md cursor-pointer z-20 border-t border-r border-b border-slate-700/30 hover:text-gray-300 transition-colors"
-            >
-              <div className="vertical-text text-[10px] font-medium">History</div>
-            </div>
-          )}
 
         {/* 添加垂直文本样式 */}
           <style jsx>{`
@@ -3030,41 +2376,59 @@ const ResearchTool = ({
                     color: '#fff',  
                     color: '#2d1a06',
                     height: '80px',
-                    paddingRight: '120px',
+                    paddingRight: '220px', // 增加右侧内边距，容纳两个按钮
+                    // 新增以下样式，防止 placeholder 溢出
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    maxWidth: '100%',
                   }}
                 />
+                {/* 按钮区：用flex包裹两个按钮，绝对定位到输入框右侧 */}
+                <div className="absolute right-2 top-1/2 transform -translate-y-1/2 z-10 flex gap-2">
+                  <button
+                    type="submit"
+                    className={`px-6 py-4 text-base
+                      ${currentBackground === 'DAY_GHIBLI'
+                        ? 'bg-gradient-to-r from-amber-600 to-amber-700 text-amber-100 border-amber-400/50 hover:border-amber-300 shadow-[0_0_15px_rgba(217,119,6,0.5)] hover:shadow-[0_0_25px_rgba(217,119,6,0.7)] hover:from-amber-500 hover:to-amber-600'
+                        : 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white border-blue-400/50 hover:border-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.5)] hover:shadow-[0_0_25px_rgba(59,130,246,0.7)] hover:from-blue-500 hover:to-indigo-600'
+                      } rounded-xl
+                      transition-all duration-300 flex items-center gap-2
+                      border hover:scale-105 shadow-lg
+                      ${isProcessingTask ? 'opacity-70 cursor-not-allowed hover:scale-100' : 'cursor-pointer'}`}
+                    style={{ height: '64px' }}
+                    disabled={!userInput.trim() || isProcessingTask}
+                  >
+                    {isProcessingTask ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span className="relative z-10">Processing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <ArrowRightOutlined className="w-6 h-6" />
+                        <span className="relative z-10">Start Generating!</span>
+                      </>
+                    )}
+                  </button>
+                  {/* 新增 History 按钮 */}
+                  <button
+                    type="button"
+                    className="px-6 py-4 text-base bg-gradient-to-r from-gray-600 to-gray-800 text-white rounded-xl border border-gray-400/50 hover:border-gray-300 shadow-lg transition-all duration-300 flex items-center gap-2"
+                    style={{ height: '64px' }}
+                    onClick={() => {
+                      const el = document.getElementById('result-preview-section');
+                      if (el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }
+                    }}
+                  >
+                    <span className="relative z-10">History</span>
+                  </button>
                 </div>
-                <button
-                  type="submit"
-                // 根据主题设置按钮样式
-                className={`absolute right-2 top-1/2 transform -translate-y-1/2 z-10 px-6 py-4 text-base
-                         ${currentBackground === 'DAY_GHIBLI'
-                           ? 'bg-gradient-to-r from-amber-600 to-amber-700 text-amber-100 border-amber-400/50 hover:border-amber-300 shadow-[0_0_15px_rgba(217,119,6,0.5)] hover:shadow-[0_0_25px_rgba(217,119,6,0.7)] hover:from-amber-500 hover:to-amber-600'
-                           : 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white border-blue-400/50 hover:border-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.5)] hover:shadow-[0_0_25px_rgba(59,130,246,0.7)] hover:from-blue-500 hover:to-indigo-600'
-                         } rounded-xl
-                         transition-all duration-300 flex items-center gap-2
-                         border hover:scale-105 shadow-lg
-                         after:content-[''] after:absolute after:inset-0 after:bg-gradient-to-r
-                         after:from-transparent after:via-white/20 after:to-transparent
-                         after:translate-x-[-200%] hover:after:translate-x-[200%] after:transition-all after:duration-1000
-                         after:rounded-xl overflow-hidden
-                         ${isProcessingTask ? 'opacity-70 cursor-not-allowed hover:scale-100' : 'cursor-pointer'}`}
-                style={{ height: '64px' }}
-                disabled={!userInput.trim() || isProcessingTask}
-              >
-                {isProcessingTask ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span className="relative z-10">Processing...</span>
-                  </>
-                ) : (
-                  <>
-                    <ArrowRightOutlined className="w-6 h-6" />
-                    <span className="relative z-10">Start Generating!</span>
-                  </>
-                )}
-              </button>
+                </div>
               </form>
+              
             </div>
 
           {/* 添加免费credits提示 - 样式更加醒目 */}
@@ -3509,6 +2873,16 @@ const ResearchTool = ({
           )}
         </div>
       </Modal>
+      
+      {/* 结果预览弹窗 */}
+      <ResultPreviewModal
+        open={resultModalVisible}
+        onClose={() => {
+          console.log('Modal close triggered');
+          setResultModalVisible(false);
+        }}
+        historyItem={selectedHistoryItem}
+      />
     </ConfigProvider>
   );
 };

@@ -1,7 +1,15 @@
 import axios from 'axios';
 
+const vercelApiClient = axios.create({
+  baseURL: 'https://api.vercel.com',
+  timeout: 10000,
+  headers: {
+    'Authorization': 'Bearer 3LSBxZQ35VdhqRW7tzGs1oYo',
+    'Content-Type': 'application/json',
+  },
+});
+
 const API_URL = 'https://api.websitelm.com/v1';
-// const API_URL = 'http://192.168.10.89:9091/v1';
 
 // 创建 axios 实例，更新配置
 const apiClient = axios.create({
@@ -342,6 +350,69 @@ const getAlternativeWebsiteResultList = async (websiteId) => {
   }
 };
 
+// 新增：根据客户ID获取产品列表
+const getProductsByCustomerId = async () => {
+  try {
+    const response = await apiClient.get(`/products/customer`);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to get customer product list:', error);
+    return null;
+  }
+};
+
+// 新增：获取用户子文件夹
+const getSubfolders = async () => {
+  try {
+    const response = await apiClient.get('/customer/subfolder');
+    return response.data;
+  } catch (error) {
+    console.error('Failed to get user subfolder:', error);
+    return null;
+  }
+};
+
+// 新增：获取 Vercel 项目域名信息
+const getVercelDomainInfo = async (projectId) => {
+  try {
+    const response = await vercelApiClient.get(`/v9/projects/${projectId}/domains`);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to get Vercel domain info:', error);
+    throw error;
+  }
+};
+
+// 新增：获取 Vercel 域名配置
+const getVercelDomainConfig = async (domainName, params = {}) => {
+  try {
+    const queryParams = new URLSearchParams({
+      ...(params.slug && { slug: params.slug }),
+      ...(params.strict && { strict: params.strict }),
+      ...(params.teamId && { teamId: params.teamId })
+    }).toString();
+    
+    const response = await vercelApiClient.get(
+      `/v6/domains/${domainName}/config${queryParams ? `?${queryParams}` : ''}`
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Failed to get Vercel domain config:', error);
+    throw error;
+  }
+};
+
+// 新增：更新 alternatively 发布状态
+const updateAlternativePublishStatus = async (resultId, status) => {
+  try {
+    const response = await apiClient.put(`/alternatively/${resultId}/${status}`);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to update alternative publish status:', error);
+    throw error;
+  }
+};
+
 apiClient.getCompetitorResearch = getCompetitorResearch;
 apiClient.login = login;
 apiClient.register = register;
@@ -365,5 +436,10 @@ apiClient.googleOneTapLogin = googleOneTapLogin;
 apiClient.deletePage = deletePage;
 apiClient.generateWebsiteId = generateWebsiteId;
 apiClient.getAlternativeWebsiteResultList = getAlternativeWebsiteResultList;
+apiClient.getProductsByCustomerId = getProductsByCustomerId;
+apiClient.getSubfolders = getSubfolders;
+apiClient.getVercelDomainInfo = getVercelDomainInfo;
+apiClient.getVercelDomainConfig = getVercelDomainConfig;
+apiClient.updateAlternativePublishStatus = updateAlternativePublishStatus;
 
 export default apiClient;
