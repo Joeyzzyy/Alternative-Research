@@ -421,7 +421,21 @@ export default function Header() {
   // 移除 showNotification 依赖，添加 messageApi
   }, [setIsLoginForm, showLoginModal, messageApi]); // 添加所有依赖项 (added showLoginModal, messageApi)
 
-  
+  useEffect(() => {
+    const handleLoginSuccess = () => {
+      // 重新获取登录信息
+      const storedIsLoggedIn = localStorage.getItem('alternativelyIsLoggedIn');
+      const storedEmail = localStorage.getItem('alternativelyCustomerEmail');
+      if (storedIsLoggedIn === 'true' && storedEmail) {
+        setIsLoggedIn(true);
+        setUserEmail(storedEmail);
+      }
+    };
+    window.addEventListener('alternativelyLoginSuccess', handleLoginSuccess);
+    return () => {
+      window.removeEventListener('alternativelyLoginSuccess', handleLoginSuccess);
+    };
+  }, []);
 
   return (
     <>

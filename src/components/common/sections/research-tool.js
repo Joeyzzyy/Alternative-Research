@@ -1412,7 +1412,7 @@ const ResearchTool = ({
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <span class="text-gray-300 text-left">Auto AI images generation</span>
+              <span class="text-gray-300 text-left">Auto AI images grabbing and generation</span>
             </li>
             <li class="flex items-start">
               <div class="w-4 h-4 mr-2 rounded-full flex-shrink-0 flex items-center justify-center bg-cyan-500/20">
@@ -1497,7 +1497,7 @@ const ResearchTool = ({
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <span class="text-gray-300 text-left">Auto AI images generation</span>
+              <span class="text-gray-300 text-left">Auto AI images grabbing and generation</span>
             </li>
             <li class="flex items-start">
               <div class="w-4 h-4 mr-2 rounded-full flex-shrink-0 flex items-center justify-center bg-purple-500/20">
@@ -1592,13 +1592,25 @@ const ResearchTool = ({
     
     // 添加点击事件处理程序
     standardPlan.querySelector('button').onclick = () => {
-      window.open('/pricing?plan=standard', '_blank');
       document.body.removeChild(modalContainer);
+      // ★★★ 新增：滚动到订阅卡片 ★★★
+      setTimeout(() => {
+        const el = document.getElementById('subscription-card');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
     };
     
     proPlan.querySelector('button').onclick = () => {
-      window.open('/pricing?plan=professional', '_blank');
       document.body.removeChild(modalContainer);
+      // ★★★ 新增：滚动到订阅卡片 ★★★
+      setTimeout(() => {
+        const el = document.getElementById('subscription-card');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
     };
     
     // 添加月付/年付切换功能

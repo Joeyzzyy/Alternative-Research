@@ -116,6 +116,22 @@ const CommonLayout = ({ article, keywords }) => {
             );
           }
 
+          if (section.componentName === "SubscriptionCard") {
+            return (
+              <div
+                key={`${section.componentName}-${section.sectionId}`}
+                className="w-full bg-white"
+                id="subscription-card"
+              >
+                <Component
+                  data={section}
+                  author={author}
+                  date={article.createdAt}
+                />
+              </div>
+            );
+          }
+
           return (
             <div 
               key={`${section.componentName}-${section.sectionId}`}
