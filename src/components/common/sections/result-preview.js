@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import apiClient from '../../../lib/api/index.js';
+import { getAlternativeStatus } from '../../../lib/api/index.js';
 import { Modal, Button, Spin, message } from 'antd';
-import { DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { DeleteOutlined, ExclamationCircleOutlined, ReloadOutlined } from '@ant-design/icons';
 
 const HistoryCardList = () => {
   const [historyList, setHistoryList] = useState([]);
@@ -26,16 +27,33 @@ const HistoryCardList = () => {
   const fetchHistory = async () => {
     setLoading(true);
     try {
-      // 使用 getAlternativeWebsiteList API，支持分页
       const res = await apiClient.getAlternativeWebsiteList(1, 200);
+      let list = [];
       if (res && Array.isArray(res.data)) {
-        setHistoryList(res.data);
+        list = res.data;
       } else if (res && Array.isArray(res.list)) {
-        // 兼容返回字段为 list 的情况
-        setHistoryList(res.list);
-      } else {
-        setHistoryList([]);
+        list = res.list;
       }
+      console.log('list', list)
+      const statusResults = await Promise.all(
+        list.map(async item => {
+          try {
+            const statusRes = await apiClient.getAlternativeStatus(item.websiteId);
+            // statusRes.data 是数组
+            const arr = statusRes.data;
+            // 只有最后一项是 init 才过滤
+            const keep = !(Array.isArray(arr) && arr.length > 0 && arr[arr.length - 1].status === 'init');
+            return { item, keep };
+          } catch {
+            // 查询失败，默认保留
+            return { item, keep: true };
+          }
+        })
+      );
+      const filteredList = statusResults
+        .filter(({ keep }) => keep)
+        .map(({ item }) => item);
+      setHistoryList(filteredList);
     } catch (e) {
       setHistoryList([]);
     }
@@ -144,6 +162,20 @@ const HistoryCardList = () => {
           >
             My tasks
           </div>
+          {/* 刷新按钮 */}
+          <button
+            className="ml-3 flex items-center justify-center bg-slate-800/80 hover:bg-slate-700/80 rounded-full p-2 transition border border-slate-700"
+            style={{ width: 32, height: 32 }}
+            onClick={fetchHistory}
+            disabled={loading}
+            title="Refresh"
+          >
+            {loading ? (
+              <Spin size="small" />
+            ) : (
+              <ReloadOutlined style={{ fontSize: 18, color: '#38bdf8' }} />
+            )}
+          </button>
         </div>
         <div className="flex flex-row flex-wrap gap-x-6 gap-y-8 justify-center w-full max-w-7xl px-4 py-2">
           {loading ? (
@@ -194,6 +226,13 @@ const HistoryCardList = () => {
                         Created: {new Date(item.created_at).toLocaleString()}
                       </div>
                     )}
+                    {/* 新增：生成开始和结束时间 */}
+                    <div className="text-xs text-gray-500 mb-1">
+                      Start Time: {item.generatedStart ? new Date(item.generatedStart).toLocaleString() : '-'}
+                    </div>
+                    <div className="text-xs text-gray-500 mb-1">
+                      End Time: {item.generatedEnd ? new Date(item.generatedEnd).toLocaleString() : '-'}
+                    </div>
                     {/* finished 状态小预览 */}
                     {item.generatorStatus === 'finished' && item.resultId && (
                       <div className="w-full h-16 rounded-md overflow-hidden border border-white/10 mb-2">

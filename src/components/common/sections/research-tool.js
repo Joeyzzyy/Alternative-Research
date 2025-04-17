@@ -2873,16 +2873,6 @@ const ResearchTool = ({
           )}
         </div>
       </Modal>
-      
-      {/* 结果预览弹窗 */}
-      <ResultPreviewModal
-        open={resultModalVisible}
-        onClose={() => {
-          console.log('Modal close triggered');
-          setResultModalVisible(false);
-        }}
-        historyItem={selectedHistoryItem}
-      />
     </ConfigProvider>
   );
 };
