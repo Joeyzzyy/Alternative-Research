@@ -403,12 +403,32 @@ const getVercelDomainConfig = async (domainName, params = {}) => {
 };
 
 // 新增：更新 alternatively 发布状态
-const updateAlternativePublishStatus = async (resultId, status) => {
+const updateAlternativePublishStatus = async (resultId, status, siteURL) => {
   try {
-    const response = await apiClient.put(`/alternatively/${resultId}/${status}`);
+    const params = {};
+    if (siteURL) params.siteURL = siteURL;
+    const response = await apiClient.put(
+      `/alternatively/${resultId}/${status}`,
+      {},
+      { params }
+    );
     return response.data;
   } catch (error) {
     console.error('Failed to update alternative publish status:', error);
+    throw error;
+  }
+};
+
+// 新增：编辑生成内容的 slug
+const updateAlternativeSlug = async (resultId, slug) => {
+  try {
+    const response = await apiClient.put(
+      `/alternatively/slug/${resultId}`,
+      { slug }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Failed to update alternative slug:', error);
     throw error;
   }
 };
@@ -441,5 +461,6 @@ apiClient.getSubfolders = getSubfolders;
 apiClient.getVercelDomainInfo = getVercelDomainInfo;
 apiClient.getVercelDomainConfig = getVercelDomainConfig;
 apiClient.updateAlternativePublishStatus = updateAlternativePublishStatus;
+apiClient.updateAlternativeSlug = updateAlternativeSlug;
 
 export default apiClient;

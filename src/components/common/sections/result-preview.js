@@ -21,6 +21,10 @@ const HistoryCardList = () => {
   const [deployPreviewUrl, setDeployPreviewUrl] = useState('');
   const [domainLoading, setDomainLoading] = useState(false);
   const scrollRef = useRef(null);
+  const [hasToken, setHasToken] = useState(true);
+  const [slugEditing, setSlugEditing] = useState(false);
+  const [slugInput, setSlugInput] = useState('');
+  const [slugSaving, setSlugSaving] = useState(false);
 
   const currentItem = resultDetail?.data?.find(item => item.resultId === selectedPreviewId) || {};
 
@@ -28,6 +32,13 @@ const HistoryCardList = () => {
   const fetchHistory = async () => {
     setLoading(true);
     try {
+      const token = localStorage.getItem('alternativelyAccessToken');
+      if (!token) {
+        setHasToken(false);
+        setLoading(false);
+        return;
+      }
+      setHasToken(true);
       const res = await apiClient.getAlternativeWebsiteList(1, 200);
       let list = [];
       if (res && Array.isArray(res.data)) {
@@ -62,7 +73,30 @@ const HistoryCardList = () => {
   };
 
   useEffect(() => {
+    const token = localStorage.getItem('alternativelyAccessToken');
+    if (!token) {
+      setHasToken(false);
+      setLoading(false);
+      return;
+    }
+    setHasToken(true);
     fetchHistory();
+  }, []);
+
+  // === 新增：监听登录成功事件，自动刷新历史数据 ===
+  useEffect(() => {
+    const handleLoginSuccess = () => {
+      // 检查 token 是否存在
+      const token = localStorage.getItem('alternativelyAccessToken');
+      if (token) {
+        setHasToken(true);
+        fetchHistory();
+      }
+    };
+    window.addEventListener('alternativelyLoginSuccess', handleLoginSuccess);
+    return () => {
+      window.removeEventListener('alternativelyLoginSuccess', handleLoginSuccess);
+    };
   }, []);
 
   // 删除历史记录
@@ -108,6 +142,7 @@ const HistoryCardList = () => {
       // 默认选中第一个
       if (Array.isArray(res?.data) && res.data.length > 0) {
         setSelectedPreviewId(res.data[0].resultId);
+        setSlugInput(res.data[0].slug || '');
       }
     } catch (e) {
       setResultDetail({ error: 'Failed to load details.' });
@@ -145,12 +180,27 @@ const HistoryCardList = () => {
     }
   }, [selectedPublishUrl, resultDetail, selectedPreviewId]);
 
+  useEffect(() => {
+    if (
+      resultDetail &&
+      Array.isArray(resultDetail.data) &&
+      selectedPreviewId
+    ) {
+      const current = resultDetail.data.find(i => i.resultId === selectedPreviewId);
+      setSlugInput(current?.slug || '');
+    }
+  }, [selectedPreviewId, resultDetail]);
+
   // 滚动到左/右
   const scrollBy = (offset) => {
     if (scrollRef.current) {
       scrollRef.current.scrollBy({ left: offset, behavior: 'smooth' });
     }
   };
+
+  if (!hasToken) {
+    return null;
+  }
 
   return (
     <div id="result-preview-section" className="min-h-[320px] flex flex-col items-center justify-center bg-gradient-to-b from-slate-950 via-slate-900 to-black text-white relative overflow-hidden">
@@ -215,7 +265,7 @@ const HistoryCardList = () => {
             msOverflowStyle: 'none', // IE/Edge
           }}
         >
-          <div className="inline-flex flex-row flex-nowrap gap-x-6 gap-y-8 justify-start min-w-0">
+          <div className="inline-flex flex-row flex-nowrap gap-x-6 gap-y-8 justify-center min-w-full">
             {loading ? (
               <div className="flex items-center justify-center w-full h-[120px] min-w-full">
                 <Spin />
@@ -376,176 +426,103 @@ const HistoryCardList = () => {
             styles={{
               body: { 
                 padding: 0, 
-                background: 'transparent', 
+                background: '#18181c', // 深色背景
                 minHeight: '80vh', 
                 maxHeight: 'none',
-                paddingRight: 24 
+                paddingRight: 24,
+                // 保证内容撑满高度
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
               }
             }}
             className="custom-large-modal"
             title={null}
           >
             {resultLoading ? (
-              <div className="flex items-center justify-center min-h-[240px]">
+              <div
+                className="flex items-center justify-center"
+                style={{ minHeight: '60vh', height: '100%', width: '100%' }} // 保证居中
+              >
                 <Spin size="large" />
               </div>
             ) : Array.isArray(resultDetail?.data) && resultDetail.data.length > 0 ? (
               <div className="flex flex-row min-h-[80vh] bg-gradient-to-br from-slate-900 via-slate-950 to-black rounded-2xl shadow-2xl overflow-hidden border border-slate-800">
                 {/* Left: List */}
-                <div className="w-[320px] p-4 flex flex-col gap-2 overflow-y-auto border-r border-slate-800 bg-slate-900/80">
-                  <div className="mb-2 text-base font-bold text-cyan-300 tracking-wide pl-1">All Results</div>
-                  {resultDetail.data.map((item, idx) => (
-                    <div
-                      key={item.resultId || idx}
-                      className={`
-                        group mb-2 rounded-lg px-3 py-2 cursor-pointer transition
-                        border border-transparent
-                        ${selectedPreviewId === item.resultId
-                          ? 'bg-gradient-to-r from-cyan-900/60 to-slate-800/80 border-cyan-400 shadow-lg'
-                          : 'hover:bg-slate-800/60 hover:border-cyan-700'}
-                      `}
-                      onClick={() => setSelectedPreviewId(item.resultId)}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="font-semibold text-sm text-white truncate max-w-[160px]">{item.slug || item.websiteId}</div>
-                        {selectedPreviewId === item.resultId && (
-                          <span className="ml-2 text-cyan-400 text-xs font-bold">Selected</span>
-                        )}
-                      </div>
-                      <div className="text-xs text-gray-400 break-all mt-1">Result ID: {item.resultId}</div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        {item.created_at ? new Date(item.created_at).toLocaleString() : ''}
-                      </div>
-                    </div>
-                  ))}
-                  {/* === 新增：发布相关内容，放在左侧列表下方 === */}
-                  <div className="mt-6 flex flex-col gap-6">
-                    <div>
-                      <div className="text-sm font-semibold text-cyan-300 mb-1">Deploy Status</div>
-                      {currentItem.deploymentStatus === 'publish' ? (
-                        <span className="text-green-400 font-bold">
-                          Published
-                          {deployPreviewUrl && (
-                            <span className="ml-2 text-xs text-green-300">
-                              Deployed to {selectedPublishUrl}
-                            </span>
-                          )}
-                          {/* 取消发布按钮 */}
-                          <button
-                            className="ml-3 px-3 py-1 rounded bg-red-500 hover:bg-red-400 text-white text-xs font-semibold transition"
-                            disabled={deployLoading}
-                            onClick={async () => {
-                              setDeployLoading(true);
-                              try {
-                                const resp = await apiClient.updateAlternativePublishStatus(selectedPreviewId, 'unpublish');
-                                if (resp?.code === 200) {
-                                  messageApi.success('Unpublished successfully!');
-                                  // 更新 deployStatus
-                                  setResultDetail(prev => {
-                                    if (!prev || !Array.isArray(prev.data)) return prev;
-                                    return {
-                                      ...prev,
-                                      data: prev.data.map(item =>
-                                        item.resultId === selectedPreviewId
-                                          ? { ...item, deploymentStatus: 'unpublish' }
-                                          : item
-                                      )
-                                    };
-                                  });
-                                } else {
-                                  messageApi.error(resp?.message || 'Unpublish failed');
-                                }
-                              } catch (e) {
-                                messageApi.error(e.message || 'Unpublish failed');
-                              } finally {
-                                setDeployLoading(false);
-                              }
-                            }}
-                          >
-                            {deployLoading ? 'Unpublishing...' : 'Unpublish'}
-                          </button>
-                        </span>
-                      ) : (
-                        <span className="text-gray-300 font-bold">Not Published</span>
-                      )}
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold text-cyan-300 mb-1">Publish URL</div>
-                      <select
-                        value={selectedPublishUrl}
-                        onChange={e => setSelectedPublishUrl(e.target.value)}
-                        disabled={domainLoading}
-                        className="w-full bg-slate-800/80 text-gray-100 border border-slate-700 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition"
-                      >
-                        <option value="" className="text-gray-400">Select domain or subfolder</option>
-                        {verifiedDomains.map(domain => (
-                          <option key={domain} value={domain}>{domain}</option>
-                        ))}
-                      </select>
-                      {domainLoading && <Spin size="small" className="ml-2" />}
-                    </div>
-                    {deployPreviewUrl && (
-                      <div>
-                        <div className="text-sm font-semibold text-cyan-300 mb-1">Preview URL</div>
-                        <a
-                          href={deployPreviewUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-cyan-400 underline break-all hover:text-cyan-300 transition"
+                <div className="w-[320px] p-4 flex flex-col gap-4 overflow-y-auto border-r border-slate-800 bg-slate-900/80">
+                  {/* Results List */}
+                  <div>
+                    <div className="mb-2 text-base font-bold text-cyan-300 tracking-wide pl-1">All Results</div>
+                    <div className="flex flex-col gap-2">
+                      {resultDetail.data.map((item, idx) => (
+                        <div
+                          key={item.resultId || idx}
+                          className={`
+                            group rounded-lg px-3 py-2 cursor-pointer transition
+                            border
+                            ${selectedPreviewId === item.resultId
+                              ? 'bg-gradient-to-r from-cyan-900/60 to-slate-800/80 border-cyan-400 shadow-lg'
+                              : 'bg-slate-800/40 hover:bg-slate-800/60 border-slate-700'}
+                          `}
+                          onClick={() => setSelectedPreviewId(item.resultId)}
                         >
-                          {deployPreviewUrl}
-                        </a>
-                      </div>
-                    )}
-                    <div className="flex gap-3 mt-2">
-                      <button
-                        disabled={!selectedPublishUrl || deployLoading}
-                        onClick={async () => {
-                          setDeployLoading(true);
-                          try {
-                            // 1. 调用接口发布
-                            const resp = await apiClient.updateAlternativePublishStatus(selectedPreviewId, 'publish');
-                            if (resp?.code === 200) {
-                              messageApi.success('Published successfully!');
-                              // 2. 更新 deployStatus
-                              setResultDetail(prev => {
-                                if (!prev || !Array.isArray(prev.data)) return prev;
-                                return {
-                                  ...prev,
-                                  data: prev.data.map(item =>
-                                    item.resultId === selectedPreviewId
-                                      ? { ...item, deploymentStatus: 'publish' }
-                                      : item
-                                  )
-                                };
-                              });
-                            } else {
-                              messageApi.error(resp?.message || 'Publish failed');
-                            }
-                          } catch (e) {
-                            messageApi.error(e.message || 'Publish failed');
-                          } finally {
-                            setDeployLoading(false);
-                          }
-                        }}
-                        className={`
-                          px-4 py-2 rounded font-semibold transition
-                          ${(!selectedPublishUrl || deployLoading)
-                            ? 'bg-cyan-900 text-cyan-300 cursor-not-allowed'
-                            : 'bg-cyan-500 hover:bg-cyan-400 text-white shadow'}
-                        `}
-                      >
-                        {deployLoading ? 'Publishing...' : 'Publish'}
-                      </button>
-                      {selectedItem.publishStatus === 'publish' && (
+                          <div className="flex items-center justify-between">
+                            <div className="font-semibold text-sm text-white truncate max-w-[160px]">{item.slug || item.websiteId}</div>
+                            {selectedPreviewId === item.resultId && (
+                              <span className="ml-2 text-cyan-400 text-xs font-bold">Selected</span>
+                            )}
+                          </div>
+                          <div className="text-xs text-gray-400 break-all mt-1">Result ID: {item.resultId}</div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {item.created_at ? new Date(item.created_at).toLocaleString() : ''}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 分隔线 */}
+                  <div className="border-t border-slate-700 my-2"></div>
+
+                  {/* Deploy Status */}
+                  <div>
+                    <div className="text-sm font-semibold text-cyan-300 mb-1">Deploy Status</div>
+                    {currentItem.deploymentStatus === 'publish' ? (
+                      <div className="flex flex-col gap-1">
+                        <span className="text-green-400 font-semibold">Published</span>
+                        {currentItem.siteUrl && currentItem.slug && (
+                          <div className="text-cyan-400 text-xs mt-1 break-all">
+                            View Published Site:&nbsp;
+                            <a
+                              href={`${currentItem.siteUrl.replace(/\/$/, '')}/${currentItem.slug}`}
+                              className="underline hover:text-cyan-300 transition"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              {`${currentItem.siteUrl.replace(/\/$/, '')}/${currentItem.slug}`}
+                            </a>
+                          </div>
+                        )}
                         <button
+                          className="mt-2 px-3 py-1 rounded bg-red-500 hover:bg-red-400 text-white text-xs font-semibold transition w-fit"
                           disabled={deployLoading}
                           onClick={async () => {
                             setDeployLoading(true);
                             try {
-                              const resp = await apiClient.updatePageStatus(selectedItem.pageId, 'unpublish');
+                              const resp = await apiClient.updateAlternativePublishStatus(selectedPreviewId, 'unpublish');
                               if (resp?.code === 200) {
                                 messageApi.success('Unpublished successfully!');
+                                setResultDetail(prev => {
+                                  if (!prev || !Array.isArray(prev.data)) return prev;
+                                  return {
+                                    ...prev,
+                                    data: prev.data.map(item =>
+                                      item.resultId === selectedPreviewId
+                                        ? { ...item, deploymentStatus: 'unpublish' }
+                                        : item
+                                    )
+                                  };
+                                });
                               } else {
                                 messageApi.error(resp?.message || 'Unpublish failed');
                               }
@@ -555,19 +532,196 @@ const HistoryCardList = () => {
                               setDeployLoading(false);
                             }
                           }}
-                          className={`
-                            px-4 py-2 rounded font-semibold transition
-                            ${deployLoading
-                              ? 'bg-slate-800 text-gray-400 cursor-not-allowed'
-                              : 'bg-slate-700 hover:bg-slate-600 text-gray-100 shadow'}
-                          `}
                         >
                           {deployLoading ? 'Unpublishing...' : 'Unpublish'}
                         </button>
-                      )}
-                    </div>
+                      </div>
+                    ) : (
+                      <span className="text-gray-300 font-bold">Not Published</span>
+                    )}
                   </div>
-                  {/* === 发布相关内容结束 === */}
+
+                  {/* 只在未发布状态下显示发布相关区域 */}
+                  {currentItem.deploymentStatus !== 'publish' && (
+                    <>
+                      {/* Publish URL */}
+                      <div>
+                        <div className="text-sm font-semibold text-cyan-300 mb-1">The Publish URL You Can Choose From</div>
+                        {verifiedDomains.length === 0 ? (
+                          <div className="flex flex-col items-start gap-2">
+                            <div className="text-gray-400 mb-2">No available publish URL</div>
+                            <button
+                              className="px-4 py-2 rounded bg-cyan-500 hover:bg-cyan-400 text-white font-semibold transition"
+                              onClick={() => {
+                                const accessToken = localStorage.getItem('alternativelyAccessToken') || '';
+                                const customerEmail = localStorage.getItem('alternativelyCustomerEmail') || '';
+                                const customerId = localStorage.getItem('alternativelyCustomerId') || '';
+                                let url = 'https://app.websitelm.com/dashboard';
+                                const params = [];
+                                if (accessToken) params.push(`authKey=${encodeURIComponent(accessToken)}`);
+                                if (customerEmail) params.push(`customerEmail=${encodeURIComponent(customerEmail)}`);
+                                if (customerId) params.push(`customerId=${encodeURIComponent(customerId)}`);
+                                if (params.length > 0) {
+                                  url += '?' + params.join('&');
+                                }
+                                window.open(url, '_blank');
+                              }}
+                            >
+                              Go to verify domain
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <select
+                              value={selectedPublishUrl}
+                              onChange={e => setSelectedPublishUrl(e.target.value)}
+                              disabled={domainLoading}
+                              className="w-full bg-slate-800/80 text-gray-100 border border-slate-700 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition"
+                            >
+                              <option value="" className="text-gray-400">Select domain or subfolder</option>
+                              {verifiedDomains.map(domain => (
+                                <option key={domain} value={domain}>{domain}</option>
+                              ))}
+                            </select>
+                            {domainLoading && <Spin size="small" className="ml-2" />}
+                          </>
+                        )}
+                      </div>
+
+                      {/* Preview URL */}
+                      {deployPreviewUrl && (
+                        <div>
+                          <div className="text-sm font-semibold text-cyan-300 mb-1">Preview URL</div>
+                          <div className="text-cyan-400 underline break-all hover:text-cyan-300 transition cursor-default">
+                            {deployPreviewUrl}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Publish/Unpublish Buttons */}
+                      <div className="flex gap-3 mt-2">
+                        {verifiedDomains.length > 0 && (
+                          <button
+                            disabled={!selectedPublishUrl || deployLoading}
+                            onClick={async () => {
+                              setDeployLoading(true);
+                              try {
+                                const resp = await apiClient.updateAlternativePublishStatus(
+                                  selectedPreviewId,
+                                  'publish',
+                                  selectedPublishUrl
+                                );
+                                if (resp?.code === 200) {
+                                  messageApi.success('Published successfully!');
+                                  setResultDetail(prev => {
+                                    if (!prev || !Array.isArray(prev.data)) return prev;
+                                    return {
+                                      ...prev,
+                                      data: prev.data.map(item =>
+                                        item.resultId === selectedPreviewId
+                                          ? { ...item, deploymentStatus: 'publish' }
+                                          : item
+                                      )
+                                    };
+                                  });
+                                  await handleCardClick(selectedItem);
+                                } else {
+                                  messageApi.error(resp?.message || 'Publish failed');
+                                }
+                              } catch (e) {
+                                messageApi.error(e.message || 'Publish failed');
+                              } finally {
+                                setDeployLoading(false);
+                              }
+                            }}
+                            className={`
+                              px-4 py-2 rounded font-semibold transition
+                              ${(!selectedPublishUrl || deployLoading)
+                                ? 'bg-cyan-900 text-cyan-300 cursor-not-allowed'
+                                : 'bg-cyan-500 hover:bg-cyan-400 text-white shadow'}
+                            `}
+                          >
+                            {deployLoading ? 'Publishing...' : 'Publish'}
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  )}
+
+                  {/* 分隔线 */}
+                  <div className="border-t border-slate-700 my-2"></div>
+
+                  {/* Slug Editor */}
+                  <div>
+                    <div className="text-sm font-semibold text-cyan-300 mb-1">Slug</div>
+                    {slugEditing ? (
+                      <div className="flex flex-col gap-2 w-full max-w-xs">
+                        <textarea
+                          className="px-2 py-3 rounded bg-slate-800 text-white border border-slate-700 resize-none"
+                          style={{ fontSize: 16, minHeight: 60, lineHeight: '1.5' }}
+                          value={slugInput}
+                          onChange={e => setSlugInput(e.target.value)}
+                          disabled={slugSaving}
+                          rows={3}
+                        />
+                        <div className="flex gap-2">
+                          <button
+                            className="px-3 py-1 rounded bg-cyan-500 hover:bg-cyan-400 text-white text-xs font-semibold transition"
+                            disabled={slugSaving}
+                            onClick={async () => {
+                              setSlugSaving(true);
+                              try {
+                                const resp = await apiClient.updateAlternativeSlug(selectedPreviewId, slugInput);
+                                if (resp?.code === 1071) {
+                                  messageApi.error('Slug already exists. Please choose a different slug.');
+                                } else {
+                                  messageApi.success('Slug updated successfully');
+                                  setResultDetail(prev => {
+                                    if (!prev || !Array.isArray(prev.data)) return prev;
+                                    return {
+                                      ...prev,
+                                      data: prev.data.map(item =>
+                                        item.resultId === selectedPreviewId
+                                          ? { ...item, slug: slugInput }
+                                          : item
+                                      )
+                                    };
+                                  });
+                                  setSlugEditing(false);
+                                }
+                              } catch (e) {
+                                messageApi.error('Failed to update slug');
+                              }
+                              setSlugSaving(false);
+                            }}
+                          >
+                            Save
+                          </button>
+                          <button
+                            className="px-3 py-1 rounded bg-slate-700 text-white text-xs font-semibold transition"
+                            onClick={() => {
+                              const current = resultDetail?.data?.find(i => i.resultId === selectedPreviewId);
+                              setSlugInput(current?.slug || '');
+                              setSlugEditing(false);
+                            }}
+                            disabled={slugSaving}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-200">{slugInput}</span>
+                        <button
+                          className="px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold transition"
+                          onClick={() => setSlugEditing(true)}
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 {/* Right: Preview */}
                 <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-black via-slate-950 to-slate-900 p-4">
@@ -580,6 +734,11 @@ const HistoryCardList = () => {
                         </div>
                       );
                     }
+                    // 新增：判断是否已发布，决定使用哪个URL
+                    const isPublished = previewItem.deploymentStatus === 'publish' && previewItem.siteUrl && previewItem.slug;
+                    const previewUrl = isPublished
+                      ? `${previewItem.siteUrl.replace(/\/$/, '')}/${previewItem.slug}`
+                      : `https://preview.websitelm.site/en/${previewItem.resultId}`;
                     return (
                       <div className="w-full max-w-6xl h-[70vh] bg-black/90 rounded-2xl shadow-2xl flex flex-col border border-slate-800 overflow-hidden">
                         {/* 操作区 */}
@@ -590,7 +749,7 @@ const HistoryCardList = () => {
                             <div className="w-2 h-2 rounded-full bg-yellow-400 mr-2"></div>
                             <div className="w-2 h-2 rounded-full bg-green-400 mr-4"></div>
                             <div className="flex-1 bg-gray-900 text-gray-200 text-xs px-2 py-1 rounded border border-gray-700 truncate">
-                              {`https://preview.websitelm.site/en/${previewItem.resultId}`}
+                              {previewUrl}
                             </div>
                           </div>
                           {/* 操作按钮区 */}
@@ -611,16 +770,16 @@ const HistoryCardList = () => {
                             <Button
                               size="small"
                               type="default"
-                              onClick={() => window.open(`https://preview.websitelm.site/en/${previewItem.resultId}`, '_blank')}
+                              onClick={() => window.open(previewUrl, '_blank')}
                             >
-                              Preview in new window
+                            View in new window
                             </Button>
                           </div>
                         </div>
                         {/* iframe preview */}
                         <div className="flex-1 overflow-hidden rounded-b-2xl">
                           <iframe
-                            src={`https://preview.websitelm.site/en/${previewItem.resultId}`}
+                            src={previewUrl}
                             title="Preview"
                             className="w-full h-full"
                             frameBorder="0"
