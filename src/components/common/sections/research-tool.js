@@ -72,19 +72,10 @@ const ResearchTool = ({
   const [resultIds, setResultIds] = useState([]);
   const [showResultIdsModal, setShowResultIdsModal] = useState(false);
   const lastLogCountRef = useRef(0);
-  const { userCredits, loading: userCreditsLoading } = useUser();
-  const [loadingResultIds, setLoadingResultIds] = useState(false);
-  const [activePreviewTab, setActivePreviewTab] = useState(0);
-  const [selectedPreviewUrl, setSelectedPreviewUrl] = useState('');
-  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
-  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [isProcessingTask, setIsProcessingTask] = useState(false);
   const [dynamicPlaceholder, setDynamicPlaceholder] = useState(''); // 新增状态
   const placeholderIntervalRef = useRef(null); // Ref for interval ID
-  const placeholderIndexRef = useRef(0); // Ref for current character index
-  const placeholderDirectionRef = useRef('typing'); // Ref for direction ('typing' or 'deleting')
   const placeholderTimeoutRef = useRef(null); // Ref for pause timeout
-  const [clearProgress, setClearProgress] = useState({ visible: false, current: 0, total: 0 });
   const [currentStep, setCurrentStep] = useState(1); // 添加这一行来跟踪当前步骤
   const filterMessageTags = (message) => {
     let filteredMessage = message;
@@ -138,88 +129,6 @@ const ResearchTool = ({
     }
   };
 
-  // 添加加载域名的函数
-  const loadVerifiedDomains = async () => {
-    try {
-      const projectId = 'prj_ySV5jK2SgENiBpE5D2aTaeI3KfAo'; 
-      
-      // 1. 获取域名列表
-      const domainsResponse = await apiClient.getVercelDomainInfo(projectId);
-      console.log('API Response domains:', domainsResponse?.domains);
-      
-      // 2. 获取当前项目的根域名
-      if (!productInfo) {
-        productInfo = await loadProductInfo();
-      }
-      const rootDomain = productInfo?.projectWebsite;
-      if (!rootDomain) {
-        console.warn('No root domain configured');
-        return [];
-      }
-      
-      // 3. 过滤并检查域名 - 包含根域名和子域名
-      const verifiedDomainsPromises = domainsResponse?.domains
-        ?.filter(domain => 
-          domain.verified && 
-          !domain.name.includes('vercel.app') && 
-          (domain.name === rootDomain || domain.name.endsWith(`.${rootDomain}`))
-        )
-        ?.map(async domain => {
-          try {
-            const config = await apiClient.getVercelDomainConfig(domain.name);
-            return !config.misconfigured ? domain.name : null;
-          } catch (error) {
-            console.error(`Failed to check domain config for ${domain.name}:`, error);
-            return null;
-          }
-        }) || [];
-  
-      // 4. 等待所有配置检查完成
-      const verifiedDomainsList = (await Promise.all(verifiedDomainsPromises))
-        .filter(Boolean);
-      
-      // 5. 加载子文件夹
-      await loadSubfolders();
-      
-      console.log('Root domain:', rootDomain);
-      console.log('Verified domains before merge:', verifiedDomainsList);
-      console.log('Subfolders:', subfolders);
-      
-      // 6. 合并验证过的域名、子域名和子路径
-      const combinedDomains = [
-        ...verifiedDomainsList,
-        // 添加子域名形式 (blog.example.com)
-        ...subfolders.map(subfolder => `${subfolder}.${rootDomain}`),
-        // 添加子路径形式 (example.com/blog)
-        ...subfolders.map(subfolder => `${rootDomain}/${subfolder}`)
-      ];
-      
-      verifiedDomains = combinedDomains;
-      console.log('Final verified domains:', verifiedDomains);
-      return verifiedDomains;
-    } catch (error) {
-      console.error('Failed to load domain info:', error);
-      return [];
-    }
-  };
-
-  const getFullPublishUrl = (record) => {
-    if (!record) return '';
-    
-    // 使用提供的 publishURL 或默认值
-    const baseUrl = record.publishURL || '';
-    
-    // 如果没有基础 URL，返回空字符串
-    if (!baseUrl) return '';
-    
-    // 获取 slug
-    const slug = record.slug || '';
-    
-    // 组合 URL 和 slug
-    return slug ? `${baseUrl}/${slug}` : baseUrl;
-  };
-  
-
   const validateDomain = (input) => {
     if (!input || !input.trim()) return false;
     let domain = input.trim();
@@ -249,7 +158,6 @@ const ResearchTool = ({
     }
   };
   const [shouldConnectSSE, setShouldConnectSSE] = useState(false);
-  // 1. 新增状态
   const [showAbortModal, setShowAbortModal] = useState(false);
   const [aborting, setAborting] = useState(false);
 
@@ -453,9 +361,7 @@ const ResearchTool = ({
   const codeContainerRef = useRef(null);
   const filterLogContent = (content) => {
     if (!content) return '';
-    
     let filteredContent = String(content);
-    
     // 处理标签内容 - 将它们转换为格式化的显示内容
     // 1. 处理 details/summary 标签 - 转换为格式化的思考过程区块
     filteredContent = filteredContent.replace(
@@ -846,13 +752,11 @@ const ResearchTool = ({
   };
 
   const toggleBackground = () => {
-    // 使用新的主题名称
     setCurrentBackground(prev => prev === 'DAY_GHIBLI' ? 'NIGHT_GHIBLI' : 'DAY_GHIBLI');
   };
 
   const getBackgroundStyle = () => {
     const bg = BACKGROUNDS[currentBackground];
-    // 两种模式现在都是 image
     return { backgroundImage: bg.value };
   };
 
@@ -869,7 +773,6 @@ const ResearchTool = ({
   }, []);
 
   useEffect(() => {
-    // 添加CSS动画样式
     const style = document.createElement('style');
     style.innerHTML = `
       .fade-out-animation {
@@ -2271,6 +2174,31 @@ const ResearchTool = ({
   // 在组件的顶部，与其他 useState 声明一起添加这两个状态
   const [selectedHistoryItem, setSelectedHistoryItem] = useState(null);
   const [resultModalVisible, setResultModalVisible] = useState(false);
+
+  useEffect(() => {
+    // 判断是否进入竞品分析阶段
+    const shouldWarnOnRefresh = isProcessingTask;
+    // currentStep >= 3 假设为竞品分析阶段，请根据你的实际逻辑调整
+
+    const handleBeforeUnload = (e) => {
+      if (shouldWarnOnRefresh) {
+        e.preventDefault();
+        // 标准写法，部分浏览器需要 returnValue
+        e.returnValue = 'Task is running, refreshing may cause the task to be cleaned up, continue?';
+        return e.returnValue;
+      }
+    };
+
+    if (shouldWarnOnRefresh) {
+      window.addEventListener('beforeunload', handleBeforeUnload);
+    } else {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    }
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isProcessingTask, currentStep, canProcessCompetitors]);
 
   if (initialLoading) {
     return (
