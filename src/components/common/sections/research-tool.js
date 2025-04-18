@@ -372,19 +372,16 @@ const ResearchTool = ({
   const filterLogContent = (content) => {
     if (!content) return '';
     let filteredContent = String(content);
-    // 处理标签内容 - 将它们转换为格式化的显示内容
-    // 1. 处理 details/summary 标签 - 转换为格式化的思考过程区块
+  
+    // 先处理 details/summary 标签
     filteredContent = filteredContent.replace(
       /<details.*?>\s*<summary>\s*Thinking\.\.\.\s*<\/summary>(.*?)<\/details>/gs, 
       (match, thinkingContent) => {
-        // 添加空格到思考内容中
         const formattedThinking = thinkingContent
-          .replace(/([a-z])([A-Z])/g, '$1 $2')  // 在小写字母后跟大写字母之间添加空格
-          .replace(/([.,!?:;])([a-zA-Z])/g, '$1 $2')  // 在标点符号后添加空格
-          .replace(/([a-zA-Z])([.,!?:;])/g, '$1$2 ')  // 在标点符号前保持不变，后面添加空格
+          // ... 你的其它 replace ...
+          .replace(/\.([\s\u00A0]+)/g, '. <br />')
+          .replace(/\n/g, '<br />') // ★★★ 关键：换行符转为 <br />
           .trim();
-        
-        // 返回格式化的思考区块
         return `<div class="thinking-block p-2 my-2 bg-gray-100 rounded text-xs text-gray-600">
                   <div class="font-medium mb-1">Thinking Process:</div>
                   <div>${formattedThinking}</div>
@@ -488,6 +485,9 @@ const ResearchTool = ({
     
     // 第二步：将合并后的 Agent 消息添加到结果中
     agentMessageMap.forEach(mergedLog => {
+      mergedLog.content = filterLogContent(mergedLog.content)
+      .replace(/\.([\s\u00A0]+)/g, '. <br />')
+      .replace(/\n/g, '<br />');
       mergedLogs.push(mergedLog);
     });
     
@@ -590,7 +590,7 @@ const ResearchTool = ({
                 >
                   <div className="flex items-center mb-2">
                     <img src="/images/alternatively-logo.png" alt="AltPage.ai" className="w-4 h-4 mr-2" />
-                    <div className="text-[11px] text-gray-300 font-medium">Agent Message</div>
+                    <div className="text-[11px] text-gray-300 font-medium">Agent Thinking...</div>
                   </div>
                   <div 
                     className="text-[10px] text-gray-400 break-words leading-relaxed"
@@ -653,33 +653,28 @@ const ResearchTool = ({
                 {log.type === 'Dify' && difyContent && (
                   <div className="text-[10px] text-gray-400 break-words leading-relaxed space-y-1">
                     {/* Current Action - 高亮显示，标题和内容分行 */}
-                    {difyContent.data && typeof difyContent.data === 'object' ? (
-                      <div className="mb-2">
-                        {/* 标题：小字号、加粗、微色 */}
-                        <div className="font-semibold text-blue-400 text-xs mb-1">
-                          Current Action
-                        </div>
-                        {/* 内容：淡蓝背景，圆角，内边距，字号适中 */}
-                        <div className="bg-blue-50/80 text-blue-900 text-sm rounded px-3 py-1.5 flex items-center justify-between">
-                          <span className="font-medium">{difyContent.data.title || ''}</span>
-                          <span className="ml-2 flex items-center space-x-2">
-                            {difyContent.data && difyContent.data.status !== '' && (
-                              <span className={`font-medium text-xs ${getStatusColor(difyContent.data.status)}`}>
-                                {difyContent.data.status}
-                              </span>
-                            )}
-                            {difyContent.data.elapsed_time !== undefined && (
-                              <span className="text-gray-400 text-xs">
-                                {difyContent.data.elapsed_time.toFixed(2)}s
-                              </span>
-                            )}
-                          </span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="mb-2 text-gray-500 italic">Node data unavailable.</div>
-                    )}
-
+                    <div className="font-semibold text-blue-400 text-xs mb-1">
+                      Current Action
+                    </div>
+                    {/* 简约版：只保留文字，title 渐变色加粗，status 紧跟其后 */}
+                    <div className="flex items-center space-x-2 px-1 py-1">
+                      <span
+                        className="font-bold text-sm bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent"
+                        style={{ lineHeight: '1.2' }}
+                      >
+                        {difyContent.data.title || ''}
+                      </span>
+                      {difyContent.data && difyContent.data.status !== '' && (
+                        <span className={`ml-2 font-semibold text-xs ${getStatusColor(difyContent.data.status)}`}>
+                          {difyContent.data.status}
+                        </span>
+                      )}
+                      {difyContent.data.elapsed_time !== undefined && (
+                        <span className="ml-2 text-gray-400 text-xs">
+                          {difyContent.data.elapsed_time.toFixed(2)}s
+                        </span>
+                      )}
+                    </div>
                     {/* Execution Status（原Event） */}
                     <div>
                       <div className="font-semibold w-28 inline-block whitespace-nowrap">Execution Status:</div>
@@ -2565,6 +2560,8 @@ const ResearchTool = ({
               <div className="max-w-[600px] mx-auto">
                 <div className="relative">
                   <Input
+                    autoComplete="off"
+                    name="no-autofill"
                     ref={inputRef}
                     value={userInput}
                     onChange={(e) => setUserInput(e.target.value)}

@@ -24,6 +24,7 @@ const HistoryCardList = () => {
   const [slugEditing, setSlugEditing] = useState(false);
   const [slugInput, setSlugInput] = useState('');
   const [slugSaving, setSlugSaving] = useState(false);
+  const [processingModal, setProcessingModal] = useState(false);
 
   const currentItem = resultDetail?.data?.find(item => item.resultId === selectedPreviewId) || {};
 
@@ -129,6 +130,10 @@ const HistoryCardList = () => {
   const handleCardClick = async (item) => {
     if (item.generatorStatus === 'failed') {
       setFailedModal({ open: true, id: item.websiteId });
+      return;
+    }
+    if (item.generatorStatus === 'processing') {
+      setProcessingModal(true);
       return;
     }
     setSelectedItem(item);
@@ -412,6 +417,53 @@ const HistoryCardList = () => {
             <div className="mt-2 text-gray-300 text-center">
               No details are available for this task.<br />
               Would you like to delete it?
+            </div>
+          </div>
+        </Modal>
+        {/* processing 状态弹窗 */}
+        <Modal
+          open={processingModal}
+          onCancel={() => setProcessingModal(false)}
+          footer={[
+            <Button 
+              key="ok" 
+              type="primary" 
+              onClick={() => setProcessingModal(false)}
+              style={{
+                background: 'linear-gradient(90deg, #38bdf8 0%, #a78bfa 100%)',
+                border: 'none',
+                fontWeight: 600,
+                letterSpacing: 1,
+                boxShadow: '0 2px 8px #38bdf899',
+              }}
+            >
+              Got it
+            </Button>
+          ]}
+          centered
+          title={null}
+          styles={{
+            body: {
+              background: 'linear-gradient(135deg, #18181c 60%, #23233a 100%)',
+              borderRadius: 16,
+              minHeight: 320,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
+              boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.37)',
+            }
+          }}
+        >
+          <div className="flex flex-col items-center justify-center py-8">
+            <ExclamationCircleOutlined style={{ fontSize: 48, color: '#38bdf8', filter: 'drop-shadow(0 0 8px #38bdf8aa)' }} />
+            <div className="mt-6 text-xl font-bold text-cyan-200 text-center" style={{ textShadow: '0 2px 8px #0008' }}>
+              Your Alternative Page is Being Generated
+            </div>
+            <div className="mt-4 text-base text-gray-300 text-center max-w-md" style={{ lineHeight: 1.8 }}>
+              You cannot view the details at this moment.<br />
+              Once the generation is complete, you will receive an email notification.<br />
+              This usually takes <span className="text-cyan-300 font-semibold">5-10 minutes</span>. Please wait patiently!
             </div>
           </div>
         </Modal>
