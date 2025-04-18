@@ -5,7 +5,6 @@ import { SearchOutlined, ClearOutlined, ArrowRightOutlined, InfoCircleOutlined, 
 import apiClient from '../../../lib/api/index.js';
 import { EventSourcePolyfill } from 'event-source-polyfill';
 import MessageHandler from '../../../utils/MessageHandler';
-import { useUser } from '../../../contexts/UserContext';
 const TAG_FILTERS = {
   '\\[URL_GET\\]': '',  // 过滤 [URL_GET]
   '\\[COMPETITOR_SELECTED\\]': '',  // 过滤 [COMPETITOR_SELECTED]
@@ -36,7 +35,6 @@ const ResearchTool = ({
   setTargetShowcaseTab
 }) => {
   const [messageApi, contextHolder] = message.useMessage();
-  const [domain, setDomain] = useState('');
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [messages, setMessages] = useState([]);
@@ -46,7 +44,6 @@ const ResearchTool = ({
   const [customerId, setCustomerId] = useState(null);
   const [currentWebsiteId, setCurrentWebsiteId] = useState(null);
   const [detailsData, setDetailsData] = useState([]);
-  const [activeAgentId, setActiveAgentId] = useState(null);
   const inputRef = useRef(null);
   const chatEndRef = useRef(null);
   const [showDemo, setShowDemo] = useState(true);
@@ -57,15 +54,11 @@ const ResearchTool = ({
   const [browserTabs, setBrowserTabs] = useState([]);
   const [activeTab, setActiveTab] = useState(null);
   const [inputDisabledDueToUrlGet, setInputDisabledDueToUrlGet] = useState(false);
-  const lastProcessedLogIdRef = useRef(null);
   const [currentBackground, setCurrentBackground] = useState('DAY_GHIBLI'); // 默认使用 NIGHT_GHIBLI
-  const [exampleDisabled, setExampleDisabled] = useState(false); // 添加 exampleDisabled 状态
   const messageHandler = new MessageHandler(setMessages);
   const [sseConnected, setSseConnected] = useState(false);
   const retryCountRef = useRef(0);
   const retryTimeoutRef = useRef(null);
-  const MAX_RETRY_COUNT = 5;
-  const [htmlStream, setHtmlStream] = useState('');
   const htmlStreamRef = useRef('');  // 用于累积 HTML 流
   const isStreamingRef = useRef(false);
   const currentStreamIdRef = useRef(null);  // 添加一个 ref 来跟踪当前正在流式输出的日志 ID
@@ -93,41 +86,6 @@ const ResearchTool = ({
       setUserInput(lastInput);
     }
   }, []);
-
-  let verifiedDomains = [];
-  let productInfo = null;
-  let subfolders = [];
-
-  // 添加加载产品信息的函数
-  const loadProductInfo = async () => {
-    try {
-      const response = await apiClient.getProductsByCustomerId();
-      if (response?.code === 200) {
-        productInfo = response.data;
-        return productInfo;
-      }
-      return null;
-    } catch (error) {
-      console.error('Failed to load product info:', error);
-      return null;
-    }
-  };
-
-  const loadSubfolders = async () => {
-    try {
-      const response = await apiClient.getSubfolders();
-      if (response?.code === 200 && response?.data) {
-        subfolders = response.data;
-      } else {
-        subfolders = []; // 确保 subfolders 是一个数组
-      }
-      return subfolders;
-    } catch (error) {
-      console.error('Failed to load subfolders:', error);
-      subfolders = []; // 出错时也确保 subfolders 是一个数组
-      return subfolders;
-    }
-  };
 
   const validateDomain = (input) => {
     if (!input || !input.trim()) return false;
@@ -369,6 +327,12 @@ const ResearchTool = ({
 
   const detailsRef = useRef(null);
   const codeContainerRef = useRef(null);
+
+  // --- 新增 Color 类型流式处理的 Refs ---
+  const colorStreamRef = useRef('');
+  const currentColorStreamIdRef = useRef(null);
+  const isColorStreamingRef = useRef(false);
+
   const filterLogContent = (content) => {
     if (!content) return '';
     let filteredContent = String(content);
@@ -505,75 +469,10 @@ const ResearchTool = ({
       return 'text-gray-400'; // Fallback
     };
 
-    // 检查任务是否完成
-    const isTaskFinished = logs.some(log => 
-      (log.type === 'Info' && log.step === 'GENERATION_FINISHED') ||
-      (log.type === 'Info' && log.step === 'GENERATION_CHANGE_FINISHED')
-    );
-
     return (
       <div className="h-full flex flex-col" ref={detailsRef}>
         <div className="p-3 space-y-2 overflow-y-auto">
           {/* 添加加载动画 - 更酷炫的进度指示器 */}
-          {(
-          <div className="bg-gradient-to-r from-slate-900/90 to-slate-800/90 p-4 rounded-lg border border-slate-700/50 relative backdrop-blur-sm overflow-hidden shadow-lg">
-            {/* 背景装饰效果 */}
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,#6366f115,transparent_50%)]"></div>
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,#a855f715,transparent_50%)]"></div>
-            
-            <div className="flex items-center space-x-4 relative z-10">
-              {/* 更酷炫的加载指示器 */}
-              <div className="relative w-8 h-8 flex-shrink-0">
-                <div className="absolute inset-0 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin"></div>
-                <div className="absolute inset-1 rounded-full border-2 border-purple-500 border-b-transparent animate-spin" style={{animationDirection: 'reverse', animationDuration: '1.5s'}}></div>
-              </div>
-              
-              <div className="text-slate-200 text-sm font-medium flex flex-col z-10 w-full">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="font-semibold text-white text-lg">Generation Progress</span>
-                </div>
-                
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 w-full">
-                  <div className={`text-xs rounded-md px-2 py-2 flex items-center justify-center transition-all duration-500 ${currentStep >= 1 
-                    ? 'bg-gradient-to-r from-indigo-500/30 to-blue-500/30 text-white border border-indigo-500/50 shadow-md shadow-indigo-500/20' 
-                    : 'bg-slate-700/40 text-slate-400 border border-slate-600/30'}`}>
-                    <span className={currentStep === 1 ? 'animate-pulse font-medium' : ''}>1. Find Competitors</span>
-                  </div>
-                  <div className={`text-xs rounded-md px-2 py-2 flex items-center justify-center transition-all duration-500 ${currentStep >= 2 
-                    ? 'bg-gradient-to-r from-indigo-500/30 to-blue-500/30 text-white border border-indigo-500/50 shadow-md shadow-indigo-500/20' 
-                    : 'bg-slate-700/40 text-slate-400 border border-slate-600/30'}`}>
-                    <span className={currentStep === 2 ? 'animate-pulse font-medium' : ''}>2. Select Competitors</span>
-                  </div>
-                  <div className={`text-xs rounded-md px-2 py-2 flex items-center justify-center transition-all duration-500 ${currentStep >= 3 
-                    ? 'bg-gradient-to-r from-indigo-500/30 to-blue-500/30 text-white border border-indigo-500/50 shadow-md shadow-indigo-500/20' 
-                    : 'bg-slate-700/40 text-slate-400 border border-slate-600/30'}`}>
-                    <span className={currentStep === 3 ? 'animate-pulse font-medium' : ''}>3. Analyze Competitors</span>
-                  </div>
-                  <div className={`text-xs rounded-md px-2 py-2 flex items-center justify-center transition-all duration-500 ${currentStep >= 4 
-                    ? 'bg-gradient-to-r from-indigo-500/30 to-blue-500/30 text-white border border-indigo-500/50 shadow-md shadow-indigo-500/20' 
-                    : 'bg-slate-700/40 text-slate-400 border border-slate-600/30'}`}>
-                    <span className={currentStep === 4 ? 'animate-pulse font-medium' : ''}>4. Generate HTML</span>
-                  </div>
-                  <div className={`text-xs rounded-md px-2 py-2 flex items-center justify-center transition-all duration-500 ${
-                      currentStep >= 5
-                        ? 'bg-gradient-to-r from-green-500/30 to-emerald-500/30 text-white border border-green-500/50 shadow-md shadow-green-500/20'
-                        : 'bg-slate-700/40 text-slate-400 border border-slate-600/30'
-                    }`}>
-                    <span className={currentStep === 5 ? 'animate-pulse font-medium' : ''}>5. Adjust Page Style</span>
-                  </div>
-                </div>
-                {currentStep >= 5 && (
-                <div className="flex items-center mt-3 space-x-2">
-                  <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span className="text-green-400 font-semibold text-sm">Page generation completed!</span>
-                </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
           
           {mergedLogs.map((log, index) => {
             // 跳过 Info 和 Codes 类型的日志
@@ -620,9 +519,20 @@ const ResearchTool = ({
               ? htmlStreamRef.current 
               : log.content;
 
+            const latestHtmlLog = logs.filter(l => l.type === 'Html').slice(-1)[0];
+            const latestHtmlLogId = latestHtmlLog ? latestHtmlLog.id : null;
+
+            const currentColorContent = log.id === currentColorStreamIdRef.current
+              ? colorStreamRef.current
+              : log.content;
+
+            // --- 修改：为新的 Crawler 类型添加图标和标题 ---
+            const isCrawlerType = log.type === 'Crawler_Images' || log.type === 'Crawler_Headers' || log.type === 'Crawler_Footers';
+            const uniqueKey = `${log.id || 'log'}-${log.type}-${index}`; 
+
             return (
-              <div 
-                key={index} 
+              <div
+                key={uniqueKey} 
                 className="bg-gray-800/50 p-2.5 rounded border border-gray-700/50 hover:border-gray-600/50 transition-all duration-300 animate-fadeIn"
                 style={{
                   animationDelay: '0.5s'
@@ -642,10 +552,26 @@ const ResearchTool = ({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
                   )}
+                  {log.type === 'Color' && (
+                    <svg className="w-4 h-4 mr-2 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                    </svg>
+                  )}
+                  {/* --- 修改：为所有 Crawler 相关类型显示同一个图标 --- */}
+                  {isCrawlerType && (
+                     <svg className="w-4 h-4 mr-2 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.09M19.938 11a2 2 0 11-4 0 2 2 0 014 0zM14 21a4 4 0 100-8 4 4 0 000 8z" /> {/* 简化的爬虫/网络图标 */}
+                     </svg>
+                  )}
                   <div className="text-[11px] text-gray-300 font-medium">
                     {log.type === 'Dify' && 'Running Page Content Generation Workflow'}
                     {log.type === 'Error' && 'Error Message'}
                     {log.type === 'API' && 'Agent Action Result'}
+                    {log.type === 'Color' && 'Analyzing Page Style'}
+                    {/* --- 修改：根据具体 Crawler 类型显示不同标题 --- */}
+                    {log.type === 'Crawler_Images' && 'Crawled Images'}
+                    {log.type === 'Crawler_Headers' && 'Crawled Header Links'}
+                    {log.type === 'Crawler_Footers' && 'Crawled Footer Links'}
                   </div>
                 </div>
 
@@ -713,20 +639,98 @@ const ResearchTool = ({
 
                 {/* HTML 日志内容渲染 - 修改这部分 */}
                 {log.type === 'Html' && (
-                  <div className="text-[10px] text-gray-400 break-words leading-relaxed">
+                  <div 
+                    key={`${uniqueKey}-html-content`}
+                    className="text-[10px] text-gray-400 break-words leading-relaxed"
+                    style={{ minHeight: '420px' }}
+                  >
                     <div className="mb-1">
                       <span className="font-semibold">Writing Codes Of Your Page...</span>
                       <pre 
-                        ref={log.id === currentStreamIdRef.current ? codeContainerRef : null}
+                        ref={log.id === latestHtmlLogId ? codeContainerRef : null}
                         className="mt-1 p-2 bg-gray-700/50 rounded text-xs whitespace-pre-wrap break-words overflow-y-auto"
                         style={{ 
                           maxHeight: '400px', 
-                          color: '#a5d6ff' // 使用浅蓝色显示代码
+                          color: '#a5d6ff'
                         }}
                       >
-                        {currentHtmlContent}
+                       {log.id === currentStreamIdRef.current ? htmlStreamRef.current : log.content}
                       </pre>
                     </div>
+                  </div>
+                )}
+
+                {/* --- 新增：Color 日志内容渲染 --- */}
+                {log.type === 'Color' && (
+                  <div
+                    key={index} // 添加特定后缀确保 key 唯一性
+                    className="text-[10px] text-gray-400 break-words leading-relaxed"
+                  >
+                    <div className="mb-1">
+                      <span className="font-semibold text-purple-400">Extracting Color Palette...</span>
+                      <pre
+                        className="mt-1 p-2 bg-gray-700/50 rounded text-xs whitespace-pre-wrap break-words overflow-y-auto"
+                        style={{
+                          maxHeight: '200px', // 可以设置不同的最大高度
+                          color: '#e9d5ff' // 紫色调
+                        }}
+                      >
+                        {/* 使用 Color 的累积内容 */}
+                        {currentColorContent}
+                      </pre>
+                    </div>
+                  </div>
+                )}
+
+                {/* --- 新增：Crawler 日志内容渲染 --- */}
+                {isCrawlerType && Array.isArray(log.content) && (
+                  <div
+                    key={`${uniqueKey}-content`} 
+                    className="text-[10px] text-gray-400 break-words leading-relaxed mt-1"
+                  >
+                    {/* --- 图片渲染 --- */}
+                    {log.type === 'Crawler_Images' && (
+                      <div className="flex flex-wrap gap-2">
+                        {log.content.map((item, imgIndex) => (
+                          item.src ? ( // 检查 src 是否存在
+                            <div key={imgIndex} className="group relative">
+                              <img 
+                                src={item.src} 
+                                alt={item.alt || 'Crawled image'} 
+                                className="w-16 h-16 object-contain rounded border border-gray-600 bg-gray-700 hover:border-blue-400 transition-all"
+                                // 添加错误处理，如果图片加载失败显示占位符或隐藏
+                                onError={(e) => { e.target.style.display = 'none'; /* 或显示占位符 */ }} 
+                              />
+                              {/* 悬停显示 Alt 和 Src */}
+                              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 w-max max-w-xs p-1.5 bg-gray-900 text-white text-[9px] rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none break-all">
+                                Alt: {item.alt || 'N/A'}<br/>Src: {item.src}
+                              </div>
+                            </div>
+                          ) : null // 如果 src 不存在则不渲染
+                        ))}
+                      </div>
+                    )}
+
+                    {/* --- 链接渲染 (Headers & Footers) --- */}
+                    {(log.type === 'Crawler_Headers' || log.type === 'Crawler_Footers') && (
+                      <ul className="list-none space-y-1">
+                        {log.content.map((item, linkIndex) => (
+                          (item.url && item.text !== undefined) ? ( // 检查 url 和 text 是否存在
+                            <li key={linkIndex}>
+                              <a 
+                                href={item.url} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-blue-400 hover:text-blue-300 hover:underline underline-offset-2"
+                                title={item.url} // 鼠标悬停显示 URL
+                              >
+                                {item.text || item.url} {/* 如果 text 为空，显示 URL */}
+                              </a>
+                            </li>
+                          ) : null // 如果 url 或 text 不存在则不渲染
+                        ))}
+                      </ul>
+                    )}
                   </div>
                 )}
 
@@ -1005,7 +1009,6 @@ const ResearchTool = ({
       if (response?.code === 200 && response.data?.answer) {
         const rawAnswer = response.data.answer;
         if (rawAnswer.includes('[URL_GET]')) {
-          console.log('rawAnswer', rawAnswer);
           setInputDisabledDueToUrlGet(true);
           const answer = filterMessageTags(rawAnswer);
           messageHandler.updateAgentMessage(answer, thinkingMessageId);
@@ -1070,6 +1073,7 @@ const ResearchTool = ({
             if (styleResponse?.code === 200) {
               // 可以添加一个系统消息表示样式已更新
               messageHandler.addSystemMessage('I am updating the style, please wait a moment...');
+              setShouldConnectSSE(true);
             } else {
               messageHandler.addSystemMessage('⚠️ Failed to update style: Invalid server response');
             }
@@ -1096,7 +1100,6 @@ const ResearchTool = ({
       setIsProcessingTask(true);
       const isLoggedIn = localStorage.getItem('alternativelyIsLoggedIn') === 'true';
       const token = localStorage.getItem('alternativelyAccessToken');
-      console.log('[DEBUG] Login status check:', { isLoggedIn, hasToken: !!token });
       // 处理未登录情况
       if (!isLoggedIn || !token) {
         localStorage.setItem('urlInput', userInput);
@@ -1111,11 +1114,6 @@ const ResearchTool = ({
         if (packageResponse?.code === 200 && packageResponse.data) {
           const { pageGeneratorLimit, pageGeneratorUsage } = packageResponse.data;
           const availableCredits = pageGeneratorLimit - pageGeneratorUsage;
-          console.log('[DEBUG] Available credits from API:', {
-            limit: pageGeneratorLimit,
-            usage: pageGeneratorUsage,
-            available: availableCredits
-          });
           if (availableCredits <= 0) {
             showSubscriptionModal();
             setIsProcessingTask(false); 
@@ -1131,21 +1129,17 @@ const ResearchTool = ({
       // 获取历史任务列表
       try {
         const historyResponse = await apiClient.getAlternativeWebsiteList(1, 3);
-        console.log('[DEBUG] History task check:', historyResponse?.data);
         if (historyResponse?.code === 200 && historyResponse.data) {
           const processingTasks = historyResponse.data.filter(item => 
             item.generatorStatus === 'processing'
           );
-          console.log('[DEBUG] Processing tasks:', processingTasks);
           for (const task of processingTasks) {
             const statusResponse = await apiClient.getAlternativeStatus(task.websiteId);
-            console.log('[DEBUG] Task status check (websiteId=' + task.websiteId + '):', statusResponse?.data);
             if (statusResponse?.code === 200 && statusResponse.data) {
               const planningStatuses = statusResponse.data;
               const productComparisonStatus = planningStatuses.find(planning => 
                 planning.planningName === 'PRODUCT_COMPARISON'
               );
-              console.log('[DEBUG] Product comparison status:', productComparisonStatus);
               if (productComparisonStatus && productComparisonStatus.status !== 'init') {
                 const modalContainer = document.createElement('div');
                 modalContainer.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm';
@@ -1280,7 +1274,6 @@ const ResearchTool = ({
       if (greetingResponse?.code === 200 && greetingResponse.data?.answer) {
         const answer = filterMessageTags(greetingResponse.data.answer);
         if (greetingResponse.data.answer.includes('[URL_GET]')) {
-          console.log('greetingResponse.data.answer', greetingResponse.data.answer);
           setInputDisabledDueToUrlGet(true);
           messageHandler.updateAgentMessage(answer, thinkingMessageId);
           // 在chat接口成功接收URL后，发送URL给search接口进行任务初始化
@@ -1289,7 +1282,6 @@ const ResearchTool = ({
             false,
             websiteId
           );
-          console.log('searchResponse', searchResponse);
           if (searchResponse?.code === 1058) {
             messageHandler.updateAgentMessage("⚠️ Network error occurred. Please try again.", thinkingMessageId);
             return;
@@ -1704,6 +1696,82 @@ const ResearchTool = ({
 
     let eventSource = null;
 
+    const showErrorModal = (errorMessage = 'An irreversible error occurred during the task.') => {
+      // 确保只显示一个错误弹窗
+      if (document.querySelector('.error-modal-container')) {
+        return;
+      }
+
+      const modalContainer = document.createElement('div');
+      modalContainer.className = 'error-modal-container fixed inset-0 z-[1000] flex items-center justify-center bg-black bg-opacity-75 backdrop-blur-sm p-4'; // 提高 z-index
+
+      const modalContent = document.createElement('div');
+      modalContent.className = 'bg-gradient-to-b from-slate-900 to-slate-950 rounded-lg shadow-xl p-6 max-w-md w-full border border-red-500/50 relative animate-fadeIn'; // 使用渐变背景和红色边框
+
+      // 添加 SVG 图标
+      const iconContainer = document.createElement('div');
+      iconContainer.className = 'mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4';
+      iconContainer.innerHTML = `
+        <svg class="h-6 w-6 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+        </svg>
+      `;
+
+      const title = document.createElement('h3');
+      title.className = 'text-xl font-semibold text-white mb-3 text-center';
+      title.textContent = 'Task Error';
+
+      const description = document.createElement('p');
+      description.className = 'text-gray-300 mb-2 text-center text-sm';
+      description.textContent = errorMessage; // 显示具体的错误信息或通用信息
+
+      const creditInfo = document.createElement('p');
+      creditInfo.className = 'text-green-400 mb-4 text-center text-sm font-medium';
+      creditInfo.textContent = 'Your credits have not been deducted for this task.';
+
+      const instruction = document.createElement('p');
+      instruction.className = 'text-gray-400 mb-6 text-center text-sm';
+      instruction.textContent = 'Please return to the homepage and start a new task.';
+
+      const buttonContainer = document.createElement('div');
+      buttonContainer.className = 'flex justify-center'; // 居中按钮
+
+      const closeButton = document.createElement('button');
+      closeButton.className = 'px-5 py-2 bg-red-600 text-white rounded-md hover:bg-red-500 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-slate-900';
+      closeButton.textContent = 'Return to Homepage';
+
+      closeButton.onclick = () => {
+        document.body.removeChild(modalContainer);
+        // 可以选择跳转到首页
+        window.location.href = '/'; // 或者你的首页路由
+      };
+
+      modalContent.appendChild(iconContainer);
+      modalContent.appendChild(title);
+      modalContent.appendChild(description);
+      modalContent.appendChild(creditInfo);
+      modalContent.appendChild(instruction);
+      buttonContainer.appendChild(closeButton);
+      modalContent.appendChild(buttonContainer);
+      modalContainer.appendChild(modalContent);
+      document.body.appendChild(modalContainer);
+
+      // 停止 SSE 连接并重置状态
+      if (eventSource) {
+        eventSource.close();
+      }
+      setSseConnected(false);
+      setIsProcessingTask(false); // 标记任务处理结束
+      setInputDisabledDueToUrlGet(false); // 允许用户输入
+      setShouldConnectSSE(false); // 防止自动重连
+      // 清理重试逻辑
+      retryCountRef.current = 0;
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
+    };
+
     const connectSSE = () => {
       if (eventSource) {
         eventSource.close();
@@ -1717,7 +1785,6 @@ const ResearchTool = ({
 
       // --- 修改 SSE 连接 URL，加入 websiteId ---
       const sseUrl = `https://api.websitelm.com/events/${customerId}-${currentWebsiteId}-chat`;
-      console.log('[DEBUG] Connecting to SSE:', sseUrl); // 添加日志方便调试
 
       // 修复：增加错误处理和超时设置
       try {
@@ -1726,7 +1793,7 @@ const ResearchTool = ({
             'Authorization': `Bearer ${currentToken}`
           },
           // 增加超时时间，避免频繁断开重连
-          heartbeatTimeout: 20000, // 20秒
+          heartbeatTimeout: 60000, // 60秒
           // 增加连接超时
           connectionTimeout: 15000 // 15秒连接超时
         });
@@ -1735,10 +1802,8 @@ const ResearchTool = ({
         setSseConnected(false);
         return;
       }
-      // --- ---
 
       eventSource.onopen = () => {
-        console.log('[DEBUG] SSE connection opened successfully');
         setSseConnected(true);
         retryCountRef.current = 0;  // 这里在连接成功时重置了计数器
 
@@ -1748,15 +1813,18 @@ const ResearchTool = ({
         }
       };
 
-      // 在这里添加一个调试日志，查看重试计数
-      console.log('Current retry count before error handler:', retryCountRef.current);
-
       eventSource.onmessage = (event) => {
         try {
           const logData = JSON.parse(event.data);
-
-          // 打印每个数据包
           console.log('logData', logData);
+
+          // 处理 Error 类型日志
+          if (logData.type === 'Error') {
+            console.error('Received Error log from SSE:', logData.content);
+            const errorMessage = logData.content?.error || 'An irreversible error occurred during the task.';
+            showErrorModal(errorMessage); // 显示错误弹窗并停止 SSE
+            return; // 停止处理后续逻辑
+          }
 
           if (logData.type === 'Html') {
             // 如果是新的流式输出开始，重置累积的内容
@@ -1778,9 +1846,10 @@ const ResearchTool = ({
             // 累积 HTML 内容
             htmlStreamRef.current += logData.content;
 
-            // 更新对应的日志项
+            // 更新对应的日志项 - ★★★ 修改这里 ★★★
             setLogs(prevLogs => prevLogs.map(log =>
-              log.id === currentStreamIdRef.current
+              // 确保只更新 ID 匹配且类型为 Html 的日志
+              (log.id === currentStreamIdRef.current && log.type === 'Html') 
                 ? {...log, content: htmlStreamRef.current}
                 : log
             ));
@@ -1791,6 +1860,76 @@ const ResearchTool = ({
                 codeContainerRef.current.scrollTop = codeContainerRef.current.scrollHeight;
               }
             }, 0);
+          }
+          // --- 新增 Color 类型流式处理的逻辑 ---
+          else if (logData.type === 'Color') {
+            setCurrentStep(4); 
+            // 如果是新的流式输出开始，重置累积的内容
+            if (!isColorStreamingRef.current || currentColorStreamIdRef.current !== logData.id) {
+              colorStreamRef.current = '';
+              currentColorStreamIdRef.current = logData.id;
+              isColorStreamingRef.current = true;
+
+              // 添加新的日志项
+              setLogs(prevLogs => [...prevLogs, {
+                id: logData.id,
+                type: 'Color',
+                content: '', // 初始内容为空
+                step: logData.step,
+                timestamp: logData.timestamp || new Date().toISOString()
+              }]);
+            }
+
+            // 累积 Color 内容
+            colorStreamRef.current += logData.content;
+
+            // 更新对应的日志项 - ★★★ 修改这里 ★★★
+            setLogs(prevLogs => prevLogs.map(log =>
+              // 确保只更新 ID 匹配且类型为 Color 的日志
+              (log.id === currentColorStreamIdRef.current && log.type === 'Color')
+                ? {...log, content: colorStreamRef.current}
+                : log
+            ));
+          }
+          // --- 修改：移除旧的 'Crawler' 处理逻辑 ---
+          // --- 新增：处理 'Crawler_Images' 类型 ---
+          else if (logData.type === 'Crawler_Images') {
+            // ★★★ 修改：直接存储原始数组（或确保是数组）★★★
+            const standardizedLog = {
+              id: logData.id || `crawler-images-${Date.now()}-${Math.random()}`,
+              type: logData.type,
+              // 直接存储 content，确保它是一个数组
+              content: Array.isArray(logData.content) ? logData.content : [], 
+              step: logData.step,
+              timestamp: logData.timestamp || new Date().toISOString(),
+            };
+            setLogs(prevLogs => [...prevLogs, standardizedLog]);
+          }
+          // --- 修改：处理 'Crawler_Headers' 类型 ---
+          else if (logData.type === 'Crawler_Headers') {
+             // ★★★ 修改：直接存储原始数组（或确保是数组）★★★
+            const standardizedLog = {
+              id: logData.id || `crawler-headers-${Date.now()}-${Math.random()}`,
+              type: logData.type,
+              // 直接存储 content，确保它是一个数组
+              content: Array.isArray(logData.content) ? logData.content : [],
+              step: logData.step,
+              timestamp: logData.timestamp || new Date().toISOString(),
+            };
+            setLogs(prevLogs => [...prevLogs, standardizedLog]);
+          }
+          // --- 修改：处理 'Crawler_Footers' 类型 ---
+          else if (logData.type === 'Crawler_Footers') {
+             // ★★★ 修改：直接存储原始数组（或确保是数组）★★★
+            const standardizedLog = {
+              id: logData.id || `crawler-footers-${Date.now()}-${Math.random()}`,
+              type: logData.type,
+              // 直接存储 content，确保它是一个数组
+              content: Array.isArray(logData.content) ? logData.content : [],
+              step: logData.step,
+              timestamp: logData.timestamp || new Date().toISOString(),
+            };
+            setLogs(prevLogs => [...prevLogs, standardizedLog]);
           }
           else if (logData.type === 'Codes') {
             // 收到 Codes 类型，表示流式输出结束
@@ -1894,8 +2033,7 @@ const ResearchTool = ({
       log.step === 'GENERATION_CHANGE_FINISHED'
     );
 
-    if ((generationFinishedLog || colorChangeFinishedLog) && shouldConnectSSE) {
-      // 任务完成后，关闭 SSE 连接
+    if ((colorChangeFinishedLog) && shouldConnectSSE) {
       setShouldConnectSSE(false);
     }
   }, [logs, shouldConnectSSE]);
@@ -2049,27 +2187,6 @@ const ResearchTool = ({
     return BACKGROUNDS[currentBackground].cardStyle;
   };
 
-  const [exampleDropdownVisible, setExampleDropdownVisible] = useState({
-    hix: false,
-    pipiads: false,
-    jtracking: false
-  });
-
-  const exampleUrls = {
-    hix: [
-      'https://preview.websitelm.site/en/12345',
-      'https://preview.websitelm.site/en/67890'
-    ],
-    pipiads: [
-      'https://preview.websitelm.site/en/54321',
-      'https://preview.websitelm.site/en/09876'
-    ],
-    jtracking: [
-      'https://preview.websitelm.site/en/11223',
-      'https://preview.websitelm.site/en/34455'
-    ]
-  };
-
   const handleExampleClick = (exampleKey) => { // 参数名改为 exampleKey 以示清晰
     // 1. 调用从父组件传入的函数，设置目标 Tab Key
     if (setTargetShowcaseTab) { 
@@ -2085,34 +2202,6 @@ const ResearchTool = ({
       showcaseSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } else {
       console.warn("Element with ID 'showcase-section' not found for scrolling.");
-    }
-  };
-
-  // 格式化日期时间
-  const formatDateTime = (dateString) => {
-    if (!dateString) return '';
-    
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleString();
-    } catch (error) {
-      console.error('Error formatting date:', error);
-      return 'Invalid date';
-    }
-  };
-
-  // 获取网站域名
-  const getDomainFromUrl = (url) => {
-    if (!url) return 'Unnamed Site';
-    
-    try {
-      // 移除协议前缀
-      let domain = url.replace(/^https?:\/\//, '');
-      // 移除路径和查询参数
-      domain = domain.split('/')[0];
-      return domain;
-    } catch (error) {
-      return url;
     }
   };
 
@@ -2535,7 +2624,7 @@ const ResearchTool = ({
         <div className="relative z-10 w-full flex flex-row gap-6 h-[calc(100vh-140px)] px-4 text-sm">
           {/* 左侧聊天面板 */}
           <div className="w-[35%] relative flex flex-col">
-            {/* ... (聊天面板内容保持不变) ... */}
+            {/* ... (聊天面板顶部和消息区域保持不变) ... */}
             <div className="h-10 px-4 border-b border-gray-300/20 flex-shrink-0">
               <div className="flex items-center">
                 <img src="/images/alternatively-logo.png" alt="AltPage.ai" className="w-5 h-5 mr-1.5" />
@@ -2556,7 +2645,76 @@ const ResearchTool = ({
                   )}
             </div>
 
-            <div className="p-4 border-t border-gray-300/20 flex-shrink-0">
+            {/* --- 修改：将进度指示器移到这里 --- */}
+            {!showInitialScreen && ( // 只在非初始屏幕显示进度
+              <div className={`p-3 relative backdrop-blur-sm overflow-hidden shadow-md border-t border-gray-300/20 bg-slate-800/80 mx-2 mb-2 rounded-lg`}> {/* 调整 padding, margin, background, add border-t */}
+                {/* 背景装饰效果 (可选，如果觉得太拥挤可以移除) */}
+                {/* <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,#6366f115,transparent_50%)]"></div> */}
+                {/* <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,#a855f715,transparent_50%)]"></div> */}
+
+                <div className="flex items-center space-x-3 relative z-10"> {/* 缩小 space */}
+                  {/* 更小的加载指示器 */}
+                  <div className="relative w-5 h-5 flex-shrink-0"> {/* 缩小尺寸 */}
+                    <div className="absolute inset-0 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin"></div>
+                    <div className="absolute inset-1 rounded-full border-2 border-purple-500 border-b-transparent animate-spin" style={{animationDirection: 'reverse', animationDuration: '1.5s'}}></div>
+                  </div>
+
+                  <div className="text-slate-200 text-xs font-medium flex flex-col z-10 w-full"> {/* 缩小字体 */}
+                    <div className="flex items-center justify-between mb-1.5"> {/* 缩小 margin */}
+                      <span className={`font-semibold text-sm text-white`}>Progress</span> {/* 缩小字体, 简化标题 */}
+                    </div>
+
+                    {/* 保持5列，但内容更紧凑 */}
+                    <div className="grid grid-cols-5 gap-1 w-full"> {/* 缩小 gap */}
+                      {/* 调整样式使其更小 */}
+                      <div className={`text-[10px] rounded px-1.5 py-1 flex items-center justify-center transition-all duration-500 ${currentStep >= 1
+                        ? 'bg-gradient-to-r from-indigo-500/40 to-blue-500/40 text-white border border-indigo-500/60 shadow-sm shadow-indigo-500/20'
+                        : 'bg-slate-700/50 text-slate-400 border border-slate-600/40'}`}>
+                        {/* --- 修改：移除 animate-pulse --- */}
+                        <span className={currentStep === 1 ? 'font-medium' : ''}>1. Find Competitors</span> {/* 简化文本 */}
+                      </div>
+                      <div className={`text-[10px] rounded px-1.5 py-1 flex items-center justify-center transition-all duration-500 ${currentStep >= 2
+                        ? 'bg-gradient-to-r from-indigo-500/40 to-blue-500/40 text-white border border-indigo-500/60 shadow-sm shadow-indigo-500/20'
+                        : 'bg-slate-700/50 text-slate-400 border border-slate-600/40'}`}>
+                        {/* --- 修改：移除 animate-pulse --- */}
+                        <span className={currentStep === 2 ? 'font-medium' : ''}>2. Select Competitor</span> {/* 简化文本 */}
+                      </div>
+                      <div className={`text-[10px] rounded px-1.5 py-1 flex items-center justify-center transition-all duration-500 ${currentStep >= 3
+                        ? 'bg-gradient-to-r from-indigo-500/40 to-blue-500/40 text-white border border-indigo-500/60 shadow-sm shadow-indigo-500/20'
+                        : 'bg-slate-700/50 text-slate-400 border border-slate-600/40'}`}>
+                        {/* --- 修改：移除 animate-pulse --- */}
+                        <span className={currentStep === 3 ? 'font-medium' : ''}>3. Analyze Competitor</span> {/* 简化文本 */}
+                      </div>
+                      <div className={`text-[10px] rounded px-1.5 py-1 flex items-center justify-center transition-all duration-500 ${currentStep >= 4
+                        ? 'bg-gradient-to-r from-indigo-500/40 to-blue-500/40 text-white border border-indigo-500/60 shadow-sm shadow-indigo-500/20'
+                        : 'bg-slate-700/50 text-slate-400 border border-slate-600/40'}`}>
+                        {/* --- 修改：移除 animate-pulse --- */}
+                        <span className={currentStep === 4 ? 'font-medium' : ''}>4. Codes Generation</span> {/* 简化文本 */}
+                      </div>
+                      <div className={`text-[10px] rounded px-1.5 py-1 flex items-center justify-center transition-all duration-500 ${
+                          currentStep >= 5
+                            ? 'bg-gradient-to-r from-green-500/40 to-emerald-500/40 text-white border border-green-500/60 shadow-sm shadow-green-500/20'
+                            : 'bg-slate-700/50 text-slate-400 border border-slate-600/40'
+                        }`}>
+                        {/* --- 修改：移除 animate-pulse --- */}
+                        <span className={currentStep === 5 ? 'font-medium' : ''}>5. Style Change</span> {/* 简化文本 */}
+                      </div>
+                    </div>
+                    {currentStep >= 5 && (
+                    <div className="flex items-center mt-1.5 space-x-1"> {/* 缩小 margin 和 space */}
+                      <svg className="w-3 h-3 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"> {/* 缩小图标 */}
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span className={`font-semibold text-xs text-green-400`}>Your pages are ready! You can continue to update the styles</span> {/* 缩小字体, 简化文本 */}
+                    </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* 输入框区域 */}
+            <div className="p-4 border-t border-gray-300/20 flex-shrink-0"> {/* 保持这个区域不变 */}
               <div className="max-w-[600px] mx-auto">
                 <div className="relative">
                   <Input
@@ -2629,111 +2787,118 @@ const ResearchTool = ({
             currentBackground === 'DAY_GHIBLI'
               ? 'bg-amber-900/10 border-amber-700/30'
               : 'bg-slate-900/10 border-blue-700/30' // Night: slate bg, blue border
-          } backdrop-blur-lg rounded-2xl border shadow-xl flex flex-col h-full relative`}>
-            {/* ... (右侧面板内容保持不变) ... */}
-             <div className="border-b border-gray-300/20 p-3">
-              <div className="flex justify-between items-center">
-                <div className="flex space-x-4">
-                  <button
-                    onClick={() => setRightPanelTab('details')}
-                    className={`text-sm ${
-                      rightPanelTab === 'details'
-                        ? (currentBackground === 'DAY_GHIBLI' ? 'text-amber-400' : 'text-blue-400') + ' font-medium' // Theme-based active color
-                        : 'text-gray-400 hover:text-gray-200'
-                    }`}
-                  >
-                    Execution Log
+          } backdrop-blur-lg rounded-2xl border shadow-xl flex flex-col h-full relative overflow-hidden`}>
+            {/* --- 修改：移除这里的进度指示器 --- */}
+            {/* 独立出来的进度指示器区域 (已被移除) */}
+
+            {/* 包裹 Tab 和 内容区域的容器 */}
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {/* Tab 切换区域 */}
+              <div className="border-b border-gray-300/20 p-3 flex-shrink-0">
+                <div className="flex justify-between items-center">
+                  <div className="flex space-x-4">
+                    <button
+                      onClick={() => setRightPanelTab('details')}
+                      className={`text-sm ${
+                        rightPanelTab === 'details'
+                          ? (currentBackground === 'DAY_GHIBLI' ? 'text-amber-600' : 'text-blue-400') + ' font-medium'
+                          : (currentBackground === 'DAY_GHIBLI' ? 'text-amber-700/70 hover:text-amber-600' : 'text-gray-400 hover:text-gray-200')
+                      }`}
+                    >
+                      Execution Log
+                    </button>
+                    <button
+                      onClick={() => setRightPanelTab('browser')}
+                      className={`text-sm ${
+                        rightPanelTab === 'browser'
+                           ? (currentBackground === 'DAY_GHIBLI' ? 'text-amber-600' : 'text-blue-400') + ' font-medium'
+                          : (currentBackground === 'DAY_GHIBLI' ? 'text-amber-700/70 hover:text-amber-600' : 'text-gray-400 hover:text-gray-200')
+                      }`}
+                    >
+                      Browser
                   </button>
-                  <button
-                    onClick={() => setRightPanelTab('browser')}
-                    className={`text-sm ${
-                      rightPanelTab === 'browser'
-                         ? (currentBackground === 'DAY_GHIBLI' ? 'text-amber-400' : 'text-blue-400') + ' font-medium' // Theme-based active color
-                        : 'text-gray-400 hover:text-gray-200'
-                    }`}
-                  >
-                    Browser
-                </button>
-              </div>
-                <div className="flex items-center text-xs">
-                  <div className={`w-2 h-2 rounded-full mr-2 ${
-                    sseConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
-                  }`}></div>
-                  <span>Log Server {sseConnected ? 'Connected' : 'Disconnected'}</span>
+                </div>
+                  <div className="flex items-center text-xs">
+                    <div className={`w-2 h-2 rounded-full mr-2 ${
+                      sseConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
+                    }`}></div>
+                    <span className={currentBackground === 'DAY_GHIBLI' ? 'text-amber-800/80' : 'text-gray-400'}>Log Server {sseConnected ? 'Connected' : 'Disconnected'}</span>
+            </div>
           </div>
         </div>
-      </div>
 
-            <div className="flex-1 overflow-y-auto">
-              {rightPanelTab === 'details' && renderDetails(detailsData)}
-              {rightPanelTab === 'browser' && (
-                <div className="space-y-2">
-                  {browserTabs.length === 0 ? (
-                    <div className="text-gray-500 text-center py-4 text-xs">
-                      No browser tabs available yet
-                    </div>
-                  ) : (
-                    <div className="p-3">
-                      {/* 标签栏 */}
-                      <div className="flex items-center space-x-2 mb-3 overflow-x-auto">
-                        {browserTabs.map((tab) => (
-                          <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
-                            className={`px-3 py-1.5 text-xs rounded-full whitespace-nowrap ${
-                              activeTab === tab.id
-                                ? (currentBackground === 'DAY_GHIBLI' ? 'bg-amber-500/20 text-amber-300' : 'bg-blue-500/20 text-blue-300') // Theme-based active tab
-                                : 'bg-gray-500/20 text-gray-400 hover:text-gray-300'
-                            }`}
-                          >
-                            {tab.title}
-                          </button>
-                        ))}
+              {/* 内容区域 */}
+              <div className="flex-1 overflow-y-auto">
+                {rightPanelTab === 'details' && renderDetails(detailsData)}
+                {rightPanelTab === 'browser' && (
+                  <div className="space-y-2">
+                    {browserTabs.length === 0 ? (
+                      <div className="text-gray-500 text-center py-4 text-xs">
+                        No browser tabs available yet
                       </div>
-
-                      {/* 地址栏和预览区域 */}
-                      {activeTab && (
-                        <div>
-                          {/* 地址栏 */}
-                          <div className="flex items-center mb-2 bg-gray-800/50 rounded-lg p-2">
-                            <div className="flex-1 px-3 py-1.5 text-xs text-gray-300 bg-gray-700/50 rounded mr-2 overflow-hidden overflow-ellipsis whitespace-nowrap">
-                              {browserTabs.find(tab => tab.id === activeTab)?.url}
-                            </div>
+                    ) : (
+                      <div className="p-3">
+                        {/* 标签栏 */}
+                        <div className="flex items-center space-x-2 mb-3 overflow-x-auto">
+                          {browserTabs.map((tab) => (
                             <button
-                              onClick={() => window.open(browserTabs.find(tab => tab.id === activeTab)?.url, '_blank')}
-                              className="p-1.5 hover:bg-gray-700/50 rounded-md transition-colors duration-200 group"
-                              title="Open in new tab"
+                              key={tab.id}
+                              onClick={() => setActiveTab(tab.id)}
+                              className={`px-3 py-1.5 text-xs rounded-full whitespace-nowrap ${
+                                activeTab === tab.id
+                                  ? (currentBackground === 'DAY_GHIBLI' ? 'bg-amber-500/20 text-amber-700' : 'bg-blue-500/20 text-blue-300')
+                                  : (currentBackground === 'DAY_GHIBLI' ? 'bg-amber-200/30 text-amber-700/80 hover:text-amber-600' : 'bg-gray-500/20 text-gray-400 hover:text-gray-300')
+                              }`}
                             >
-                              <svg
-                                className={`w-4 h-4 text-gray-400 group-hover:${currentBackground === 'DAY_GHIBLI' ? 'text-amber-400' : 'text-blue-400'} transition-colors duration-200`} // Theme-based hover color
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth="2"
-                                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                                />
-                              </svg>
+                              {tab.title}
                             </button>
-      </div>
-      
-                          {/* iframe 预览区域 */}
-                          <div className="bg-white rounded-lg overflow-hidden">
-                            <iframe
-                              src={browserTabs.find(tab => tab.id === activeTab)?.url}
-                              className="w-full h-[calc(100vh-280px)]"
-                              title="Preview"
-                            />
-                          </div>
+                          ))}
                         </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
+  
+                        {/* 地址栏和预览区域 */}
+                        {activeTab && (
+                          <div>
+                            {/* 地址栏 */}
+                            <div className={`flex items-center mb-2 rounded-lg p-2 ${currentBackground === 'DAY_GHIBLI' ? 'bg-amber-100/50' : 'bg-gray-800/50'}`}>
+                              <div className={`flex-1 px-3 py-1.5 text-xs rounded mr-2 overflow-hidden overflow-ellipsis whitespace-nowrap ${currentBackground === 'DAY_GHIBLI' ? 'bg-amber-50/70 text-amber-900' : 'bg-gray-700/50 text-gray-300'}`}>
+                                {browserTabs.find(tab => tab.id === activeTab)?.url}
+                              </div>
+                              <button
+                                onClick={() => window.open(browserTabs.find(tab => tab.id === activeTab)?.url, '_blank')}
+                                className={`p-1.5 rounded-md transition-colors duration-200 group ${currentBackground === 'DAY_GHIBLI' ? 'hover:bg-amber-200/50' : 'hover:bg-gray-700/50'}`}
+                                title="Open in new tab"
+                              >
+                                <svg
+                                  className={`w-4 h-4 transition-colors duration-200 ${currentBackground === 'DAY_GHIBLI' ? 'text-amber-700 group-hover:text-amber-600' : 'text-gray-400 group-hover:text-blue-400'}`}
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth="2"
+                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                                  />
+                                </svg>
+                              </button>
+                            </div>
+        
+                            {/* iframe 预览区域 */}
+                            <div className="bg-white rounded-lg overflow-hidden">
+                              <iframe
+                                src={browserTabs.find(tab => tab.id === activeTab)?.url}
+                                className="w-full h-[calc(100vh-280px)]" // --- 修改：调整回 iframe 高度 ---
+                                title="Preview"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

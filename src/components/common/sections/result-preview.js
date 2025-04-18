@@ -25,6 +25,8 @@ const HistoryCardList = () => {
   const [slugInput, setSlugInput] = useState('');
   const [slugSaving, setSlugSaving] = useState(false);
   const [processingModal, setProcessingModal] = useState(false);
+  const [clearAllConfirmOpen, setClearAllConfirmOpen] = useState(false);
+  const [isClearingAll, setIsClearingAll] = useState(false);
 
   const currentItem = resultDetail?.data?.find(item => item.resultId === selectedPreviewId) || {};
 
@@ -46,22 +48,31 @@ const HistoryCardList = () => {
       } else if (res && Array.isArray(res.list)) {
         list = res.list;
       }
-      console.log('list', list)
-      const statusResults = await Promise.all(
-        list.map(async item => {
-          try {
-            const statusRes = await apiClient.getAlternativeStatus(item.websiteId);
-            // statusRes.data 是数组
-            const arr = statusRes.data;
-            // 只有最后一项是 init 才过滤
-            const keep = !(Array.isArray(arr) && arr.length > 0 && arr[arr.length - 1].status === 'init');
-            return { item, keep };
-          } catch {
-            // 查询失败，默认保留
-            return { item, keep: true };
-          }
-        })
-      );
+
+      // === 新增：分批查询 status ===
+      const batchSize = 5; // 每批查5个
+      const delayMs = 3000; // 每批间隔3秒
+      let statusResults = [];
+      for (let i = 0; i < list.length; i += batchSize) {
+        const batch = list.slice(i, i + batchSize);
+        const batchResults = await Promise.all(
+          batch.map(async item => {
+            try {
+              const statusRes = await apiClient.getAlternativeStatus(item.websiteId);
+              const arr = statusRes.data;
+              const keep = !(Array.isArray(arr) && arr.length > 0 && arr[arr.length - 1].status === 'init');
+              return { item, keep };
+            } catch {
+              return { item, keep: true };
+            }
+          })
+        );
+        statusResults = statusResults.concat(batchResults);
+        if (i + batchSize < list.length) {
+          // 不是最后一批才延时
+          await new Promise(resolve => setTimeout(resolve, delayMs));
+        }
+      }
       const filteredList = statusResults
         .filter(({ keep }) => keep)
         .map(({ item }) => item);
@@ -115,6 +126,62 @@ const HistoryCardList = () => {
       messageApi.error('Failed to delete');
     }
     setDeletingId(null);
+  };
+
+  // === 新增：执行全部清除 ===
+  const executeClearAll = async () => {
+    setIsClearingAll(true);
+    setClearAllConfirmOpen(false); // 关闭确认弹窗
+    const idsToDelete = historyList.map(item => item.websiteId);
+
+    if (idsToDelete.length === 0) {
+      messageApi.info('No history records to clear.');
+      setIsClearingAll(false);
+      return;
+    }
+
+    let successCount = 0;
+    let failCount = 0;
+    const totalCount = idsToDelete.length;
+
+    for (let i = 0; i < totalCount; i++) {
+      const id = idsToDelete[i];
+      try {
+        // 显示进度（可选）
+        messageApi.loading({
+          content: `Deleting ${i + 1} of ${totalCount}...`,
+          key: 'clearing',
+          duration: 0 // 持续显示直到手动关闭或替换
+        });
+        const res = await apiClient.deletePage?.(id);
+        if (res && res.code === 200) {
+          successCount++;
+        } else {
+          failCount++;
+          console.error(`Failed to delete item with ID: ${id}`, res);
+        }
+      } catch (e) {
+        failCount++;
+        console.error(`Error deleting item with ID: ${id}`, e);
+      }
+      // 控制删除速度：每删除一个后等待 500ms (1秒删除2个)
+      if (i < totalCount - 1) { // 最后一个不需要等待
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+
+    // 清除 loading 提示
+    messageApi.destroy('clearing');
+
+    // 显示最终结果
+    if (failCount === 0) {
+      messageApi.success(`Successfully cleared all ${successCount} records.`);
+    } else {
+      messageApi.warning(`Finished clearing. ${successCount} succeeded, ${failCount} failed.`);
+    }
+
+    await fetchHistory(); // 刷新列表
+    setIsClearingAll(false);
   };
 
   // 暗色+浅色+低透明度卡片背景
@@ -215,7 +282,7 @@ const HistoryCardList = () => {
       <div className="absolute bottom-1/4 right-1/4 w-72 h-72 bg-cyan-600/10 rounded-full filter blur-3xl opacity-40 animate-pulse pointer-events-none"></div>
       <div className="relative z-10 w-full flex flex-col items-center">
         {contextHolder}
-        <div className="w-full max-w-7xl px-4 mt-4 mb-2 flex justify-center">
+        <div className="w-full max-w-7xl px-4 mt-4 mb-2 flex justify-center items-center">
           <div
             className="text-base font-semibold tracking-wide text-transparent bg-clip-text"
             style={{
@@ -229,13 +296,27 @@ const HistoryCardList = () => {
             className="ml-3 flex items-center justify-center bg-slate-800/80 hover:bg-slate-700/80 rounded-full p-2 transition border border-slate-700"
             style={{ width: 32, height: 32 }}
             onClick={fetchHistory}
-            disabled={loading}
+            disabled={loading || isClearingAll}
             title="Refresh"
           >
             {loading ? (
               <Spin size="small" />
             ) : (
               <ReloadOutlined style={{ fontSize: 18, color: '#38bdf8' }} />
+            )}
+          </button>
+          {/* === 新增：全部清除按钮 === */}
+          <button
+            className="ml-2 flex items-center justify-center bg-red-800/70 hover:bg-red-700/80 rounded-full p-2 transition border border-red-700"
+            style={{ width: 32, height: 32 }}
+            onClick={() => setClearAllConfirmOpen(true)}
+            disabled={loading || isClearingAll || historyList.length === 0}
+            title="Clear All"
+          >
+            {isClearingAll ? (
+              <Spin size="small" />
+            ) : (
+              <DeleteOutlined style={{ fontSize: 18, color: '#fca5a5' }} />
             )}
           </button>
         </div>
@@ -337,7 +418,7 @@ const HistoryCardList = () => {
                         </div>
                       )}
                     </div>
-                    {/* Delete button - 深红色半透明纯圆icon，点击弹出确认 */}
+                    {/* Delete button */}
                     <button
                       className="absolute top-3 right-3 bg-red-700/70 hover:bg-red-800/80 text-white rounded-full p-2 shadow transition"
                       title="Delete"
@@ -346,7 +427,7 @@ const HistoryCardList = () => {
                         e.stopPropagation();
                         setDeleteConfirm({ open: true, id: item.websiteId });
                       }}
-                      disabled={deletingId === item.websiteId}
+                      disabled={deletingId === item.websiteId || isClearingAll}
                     >
                       <DeleteOutlined style={{ fontSize: 18 }} />
                     </button>
@@ -385,6 +466,37 @@ const HistoryCardList = () => {
             <div className="mt-4 text-lg font-semibold text-red-400">Are you sure you want to delete this record?</div>
             <div className="mt-2 text-gray-300 text-center">
               This action cannot be undone.
+            </div>
+          </div>
+        </Modal>
+        {/* === 新增：全部清除确认弹窗 === */}
+        <Modal
+          open={clearAllConfirmOpen}
+          onCancel={() => setClearAllConfirmOpen(false)}
+          footer={[
+            <Button
+              key="confirm"
+              type="primary"
+              danger
+              loading={isClearingAll}
+              onClick={executeClearAll}
+            >
+              Confirm Delete All
+            </Button>,
+            <Button key="cancel" onClick={() => setClearAllConfirmOpen(false)} disabled={isClearingAll}>
+              Cancel
+            </Button>
+          ]}
+          centered
+          title={null}
+          closable={!isClearingAll}
+          maskClosable={!isClearingAll}
+        >
+          <div className="flex flex-col items-center justify-center py-6">
+            <ExclamationCircleOutlined style={{ fontSize: 40, color: '#f87171' }} />
+            <div className="mt-4 text-lg font-semibold text-red-400">Are you sure you want to delete ALL records?</div>
+            <div className="mt-2 text-gray-300 text-center">
+              This action cannot be undone. All history items will be permanently removed.
             </div>
           </div>
         </Modal>
