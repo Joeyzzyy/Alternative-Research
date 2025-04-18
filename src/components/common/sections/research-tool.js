@@ -1294,6 +1294,7 @@ const ResearchTool = ({
             await new Promise(resolve => setTimeout(resolve, 100));
           }
           messageHandler.addSystemMessage('Searching for competitors. Please wait a moment...');
+          setIsMessageSending(true);
           while (messageHandler.isProcessing) {
             await new Promise(resolve => setTimeout(resolve, 100));
           }
@@ -2716,62 +2717,80 @@ const ResearchTool = ({
             {/* 输入框区域 */}
             <div className="p-4 border-t border-gray-300/20 flex-shrink-0"> {/* 保持这个区域不变 */}
               <div className="max-w-[600px] mx-auto">
-                <div className="relative">
-                  <Input
-                    autoComplete="off"
-                    name="no-autofill"
-                    ref={inputRef}
-                    value={userInput}
-                    onChange={(e) => setUserInput(e.target.value)}
-                    disabled={loading || isMessageSending || inputDisabledDueToUrlGet}
-                    // 强制使用 Day Ghibli 的边框/阴影样式，并保留 research-tool-input 类
-                    className={`research-tool-input bg-white/10 border rounded-xl text-sm ${BACKGROUNDS.DAY_GHIBLI.inputStyle}`}
-                    style={{
-                      // 强制使用 Day Ghibli 的文字和背景色
-                      color: '#433422',
-                      backgroundColor: 'rgba(253, 230, 190, 0.85)',
-                      height: '48px',
-                      transition: 'all 0.3s ease'
-                    }}
-                    onPressEnter={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      if (userInput.trim() && !inputDisabledDueToUrlGet) {
-                        handleUserInput(e);
+                <Tooltip
+                  title={(loading || isMessageSending || inputDisabledDueToUrlGet) ? "Agent is working, please wait a sec." : ""}
+                  placement="topLeft" // 可以根据需要调整位置
+                >
+                  <div className="relative">
+                    {/* --- 添加 JSX 样式块来定义占位符样式 --- */}
+                    <style jsx>{`
+                      .research-tool-input::placeholder {
+                        color: #a1887f; /* 调整为 Ghibli 主题下更可见的颜色 */
+                        opacity: 0.8; /* 确保可见性 */
                       }
-                    }}
-                  />
-                  {/* 仅在任务进行中时显示中止按钮 */}
-                  {isProcessingTask && (
-                    <button
-                      type="button"
-                      className="absolute right-2 top-1/2 -translate-y-1/2 z-10 p-0"
-                      title="Abort Task"
-                      onClick={() => setShowAbortModal(true)}
+                    `}</style>
+                    <Input
+                      autoComplete="off"
+                      name="no-autofill"
+                      ref={inputRef}
+                      value={userInput}
+                      onChange={(e) => setUserInput(e.target.value)}
+                      disabled={loading || isMessageSending || inputDisabledDueToUrlGet}
+                      // --- 修改：根据禁用状态设置 placeholder ---
+                      placeholder={
+                        !(loading || isMessageSending || inputDisabledDueToUrlGet)
+                          ? "Waiting for your answer..."
+                          : "" // 禁用时无 placeholder
+                      }
+                      // 强制使用 Day Ghibli 的边框/阴影样式，并保留 research-tool-input 类
+                      className={`research-tool-input bg-white/10 border rounded-xl text-sm ${BACKGROUNDS.DAY_GHIBLI.inputStyle}`}
                       style={{
-                        height: '32px',
-                        width: '32px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        background: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)',
-                        borderRadius: '8px',
-                        boxShadow: '0 2px 8px 0 rgba(255,65,108,0.15)',
-                        border: 'none',
-                        transition: 'box-shadow 0.2s',
+                        // 强制使用 Day Ghibli 的文字和背景色
+                        color: '#433422',
+                        backgroundColor: 'rgba(253, 230, 190, 0.85)',
+                        height: '48px',
+                        transition: 'all 0.3s ease'
                       }}
-                    >
-                      {/* 白色方块 */}
-                      <div style={{
-                        width: '16px',
-                        height: '16px',
-                        background: 'white',
-                        borderRadius: '3px',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
-                      }} />
-                    </button>
-                  )}
-                </div>
+                      onPressEnter={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (userInput.trim() && !loading && !isMessageSending && !inputDisabledDueToUrlGet) {
+                          handleUserInput(e);
+                        }
+                      }}
+                    />
+                    {/* 仅在任务进行中时显示中止按钮 */}
+                    {isProcessingTask && (
+                      <button
+                        type="button"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 z-10 p-0"
+                        title="Abort Task"
+                        onClick={() => setShowAbortModal(true)}
+                        style={{
+                          height: '32px',
+                          width: '32px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)',
+                          borderRadius: '8px',
+                          boxShadow: '0 2px 8px 0 rgba(255,65,108,0.15)',
+                          border: 'none',
+                          transition: 'box-shadow 0.2s',
+                        }}
+                      >
+                        {/* 白色方块 */}
+                        <div style={{
+                          width: '16px',
+                          height: '16px',
+                          background: 'white',
+                          borderRadius: '3px',
+                          boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
+                        }} />
+                      </button>
+                    )}
+                  </div>
+                </Tooltip>
                 <div className="flex justify-end mt-3 px-1">
                   <div className="text-xs text-gray-400">
                     Press Enter ↵ to submit
@@ -2999,6 +3018,7 @@ const ResearchTool = ({
           )}
         </div>
       </Modal>
+      
     </ConfigProvider>
   );
 };
