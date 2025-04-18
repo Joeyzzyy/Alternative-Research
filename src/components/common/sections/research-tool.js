@@ -204,6 +204,19 @@ const ResearchTool = ({
     }
   };
 
+  // 在 renderChatMessage 里，定义一个函数用于将域名变成可点击链接
+  const linkifyDomains = (text) => {
+    // 匹配类似 surferseo.com、frase.io 这样的域名
+    return text.replace(
+      /([a-zA-Z0-9-]+\.[a-zA-Z]{2,})(?![^<]*>)/g,
+      (match) => {
+        // 忽略已经在标签里的内容
+        // 这里默认 http 协议，你也可以用 https
+        return `<a href="https://${match}" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;text-decoration:underline;">${match}</a>`;
+      }
+    );
+  };
+
   const renderChatMessage = (message, index) => {
     if (message.source === 'user') {
       return (
@@ -244,7 +257,9 @@ const ResearchTool = ({
         </div>
       );
     } else {
-      const filteredContent = filterMessageTags(message.content);
+      const filteredContent = linkifyDomains(
+        filterMessageTags(message.content).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+      );
 
       return (
         <div key={index} className="flex justify-start mb-8" style={{animation: 'fadeIn 0.5s ease-out forwards'}}>
@@ -283,13 +298,8 @@ const ResearchTool = ({
                     </div>
                   ) : (
                     <div>
-                      {filteredContent.split('\n').map((line, i) => (
-                        <React.Fragment key={i}>
-                          {line}
-                          {i < filteredContent.split('\n').length - 1 && <br />}
-                        </React.Fragment>
-                      ))}
-                      
+                      {/* 用 dangerouslySetInnerHTML 渲染加粗后的内容 */}
+                      <span dangerouslySetInnerHTML={{ __html: filteredContent.split('\n').join('<br />') }} />
                       {/* 添加消息后的加载动画 - 当 message.showLoading 为 true 时显示 */}
                       {message.showLoading && (
                         <div className="inline-flex items-center ml-2 mt-1">
@@ -566,6 +576,10 @@ const ResearchTool = ({
         )}
           
           {mergedLogs.map((log, index) => {
+            // 跳过 Info 和 Codes 类型的日志
+            if (log.type === 'Info' || log.type === 'Codes') {
+              return null;
+            }
             // 渲染 Agent 类型的日志
             if (log.type === 'Agent') {
               return (
@@ -638,52 +652,61 @@ const ResearchTool = ({
                 {/* Dify 日志内容渲染 - 优化布局和重点 */}
                 {log.type === 'Dify' && difyContent && (
                   <div className="text-[10px] text-gray-400 break-words leading-relaxed space-y-1">
-                    
-                    {/* 核心节点信息 - 突出显示 */}
+                    {/* Current Action - 高亮显示，标题和内容分行 */}
                     {difyContent.data && typeof difyContent.data === 'object' ? (
                       <div className="mb-2">
-                        <span className="font-semibold text-gray-300 text-[11px]">
-                          Current Node: {difyContent.data.title || ''}
-                        </span>
-                        <span className={`ml-2 font-medium ${getStatusColor(difyContent.data.status)}`}>
-                          ({difyContent.data.status})
-                        </span>
-                        {difyContent.data.elapsed_time !== undefined && (
-                           <span className="ml-2 text-gray-500 text-[9px]">
-                             ({difyContent.data.elapsed_time.toFixed(2)}s)
-                           </span>
-                        )}
+                        {/* 标题：小字号、加粗、微色 */}
+                        <div className="font-semibold text-blue-400 text-xs mb-1">
+                          Current Action
+                        </div>
+                        {/* 内容：淡蓝背景，圆角，内边距，字号适中 */}
+                        <div className="bg-blue-50/80 text-blue-900 text-sm rounded px-3 py-1.5 flex items-center justify-between">
+                          <span className="font-medium">{difyContent.data.title || ''}</span>
+                          <span className="ml-2 flex items-center space-x-2">
+                            {difyContent.data && difyContent.data.status !== '' && (
+                              <span className={`font-medium text-xs ${getStatusColor(difyContent.data.status)}`}>
+                                {difyContent.data.status}
+                              </span>
+                            )}
+                            {difyContent.data.elapsed_time !== undefined && (
+                              <span className="text-gray-400 text-xs">
+                                {difyContent.data.elapsed_time.toFixed(2)}s
+                              </span>
+                            )}
+                          </span>
+                        </div>
                       </div>
                     ) : (
-                       <div className="mb-2 text-gray-500 italic">Node data unavailable.</div>
+                      <div className="mb-2 text-gray-500 italic">Node data unavailable.</div>
                     )}
 
-                    {/* 上下文信息 */}
+                    {/* Execution Status（原Event） */}
                     <div>
-                      <span className="font-semibold w-16 inline-block">Event:</span> 
-                      {difyContent.event || ''}
+                      <div className="font-semibold w-28 inline-block whitespace-nowrap">Execution Status:</div>
+                      <div className="inline-block">{difyContent.event || ''}</div>
                     </div>
+                    {/* Executor（原Step Name） */}
                     <div>
-                      <span className="font-semibold w-16 inline-block">Step Name:</span> 
-                      {log.step || difyContent.step || ''}
+                      <div className="font-semibold w-28 inline-block whitespace-nowrap">Executor:</div>
+                      <div className="inline-block">{log.step || difyContent.step || ''}</div>
                     </div>
-
-                    {/* 详细标识信息 */}
+                    {/* Node ID */}
                     {difyContent.data && typeof difyContent.data === 'object' && (
                       <div>
-                        <span className="font-semibold w-16 inline-block">Node ID:</span> 
-                        {difyContent.data.id || ''}
+                        <div className="font-semibold w-28 inline-block whitespace-nowrap">Node ID:</div>
+                        <div className="inline-block">{difyContent.data.id || ''}</div>
                       </div>
                     )}
+                    {/* Workflow ID */}
                     <div>
-                      <span className="font-semibold w-16 inline-block">Workflow ID:</span> 
-                      {difyContent.workflow_id || ''}
+                      <div className="font-semibold w-28 inline-block whitespace-nowrap">Workflow ID:</div>
+                      <div className="inline-block">{difyContent.workflow_id || ''}</div>
                     </div>
+                    {/* Task ID */}
                     <div>
-                      <span className="font-semibold w-16 inline-block">Task ID:</span> 
-                      {difyContent.task_id || ''}
+                      <div className="font-semibold w-28 inline-block whitespace-nowrap">Task ID:</div>
+                      <div className="inline-block">{difyContent.task_id || ''}</div>
                     </div>
-
                     {/* 错误信息 */}
                     {difyContent.data?.error && (
                       <div className="mt-1 pt-1 border-t border-gray-700/50 text-red-400">
@@ -697,7 +720,7 @@ const ResearchTool = ({
                 {log.type === 'Html' && (
                   <div className="text-[10px] text-gray-400 break-words leading-relaxed">
                     <div className="mb-1">
-                      <span className="font-semibold">HTML Code Generation:</span>
+                      <span className="font-semibold">Writing Codes Of Your Page...</span>
                       <pre 
                         ref={log.id === currentStreamIdRef.current ? codeContainerRef : null}
                         className="mt-1 p-2 bg-gray-700/50 rounded text-xs whitespace-pre-wrap break-words overflow-y-auto"
@@ -1161,6 +1184,7 @@ const ResearchTool = ({
                 modalContent.appendChild(buttonContainer);
                 modalContainer.appendChild(modalContent);
                 document.body.appendChild(modalContainer);
+                setIsProcessingTask(false);
                 return;
               }
             }
