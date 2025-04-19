@@ -1,7 +1,5 @@
 'use client';
 import React from 'react';
-// Import an icon library if you want to add icons, e.g., react-icons
-// import { FiArrowRightCircle, FiXCircle } from 'react-icons/fi';
 
 const AlternativePageFeature = () => {
   return (

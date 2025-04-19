@@ -1,6 +1,5 @@
 'use client';
 import React from 'react';
-import themeConfig from '../../../styles/themeConfig';
 import apiClient from '../../../lib/api/index.js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';

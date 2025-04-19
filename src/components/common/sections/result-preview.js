@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import apiClient from '../../../lib/api/index.js';
 import { Modal, Button, Spin, message } from 'antd';
 import { DeleteOutlined, ExclamationCircleOutlined, ReloadOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
+import HtmlPreview from './page-edit'; // 新增：引入HtmlPreview组件
 
 const HistoryCardList = () => {
   const [historyList, setHistoryList] = useState([]);
@@ -27,6 +28,7 @@ const HistoryCardList = () => {
   const [processingModal, setProcessingModal] = useState(false);
   const [clearAllConfirmOpen, setClearAllConfirmOpen] = useState(false);
   const [isClearingAll, setIsClearingAll] = useState(false);
+  const [editPageId, setEditPageId] = useState(null); // 新增：用于控制全屏编辑页面
 
   const currentItem = resultDetail?.data?.find(item => item.resultId === selectedPreviewId) || {};
 
@@ -919,23 +921,39 @@ const HistoryCardList = () => {
                           <div className="flex items-center gap-2 ml-4">
                             <Button
                               size="small"
-                              type="default"
+                              type="primary"
+                              style={{
+                                background: 'linear-gradient(90deg, #38bdf8 0%, #a78bfa 100%)',
+                                border: 'none',
+                                fontWeight: 700,
+                                color: '#fff',
+                                boxShadow: '0 2px 8px #38bdf899',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6,
+                              }}
                               onClick={() => {
-                                const resultId = previewItem.resultId;
-                                const websiteId = previewItem.websiteId;
-                                const accessToken = localStorage.getItem('alternativelyAccessToken') || '';
-                                const url = `https://app.websitelm.com/alternatively-edit/${resultId}?authKey=${accessToken}&&websiteId=${websiteId}`;;
-                                window.open(url, '_blank');
+                                setEditPageId(previewItem.resultId);
                               }}
                             >
-                              Edit
+                              <span style={{ fontWeight: 700 }}>Edit</span>
                             </Button>
                             <Button
                               size="small"
                               type="default"
+                              style={{
+                                background: 'linear-gradient(90deg, #22c55e 0%, #38bdf8 100%)',
+                                border: 'none',
+                                fontWeight: 700,
+                                color: '#fff',
+                                boxShadow: '0 2px 8px #22c55e99',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 6,
+                              }}
                               onClick={() => window.open(previewUrl, '_blank')}
                             >
-                            View in new window
+                              <span style={{ fontWeight: 700 }}>View in new window</span>
                             </Button>
                           </div>
                         </div>
@@ -958,6 +976,37 @@ const HistoryCardList = () => {
             )}
           </Modal>
         )}
+        {/* === 新增：全屏编辑页面弹窗 === */}
+        <Modal
+          open={!!editPageId}
+          onCancel={() => setEditPageId(null)}
+          footer={null}
+          width="90vw"
+          style={{ top: 24, padding: 0 }}
+          styles={{
+            body: {
+              height: '80vh',
+              padding: 0,
+              background: '#18181c',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
+              position: 'relative',
+              paddingRight: 48,
+            }
+          }}
+          closable={true}
+          maskClosable={true}
+          destroyOnClose
+          title={null}
+        >
+          {editPageId && (
+            <div style={{ width: '100%', height: '100%' }}>
+              <HtmlPreview pageId={editPageId} />
+            </div>
+          )}
+        </Modal>
       </div>
     </div>
   );

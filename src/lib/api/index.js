@@ -461,6 +461,82 @@ const createSubscription = async (subscriptionData) => {
   }
 };
 
+// 新增：根据 slug 获取页面内容
+const getPageBySlug = async (slug, lang, domain) => {
+  try {
+    const response = await apiClient.get(`/pages/view/${slug}`, {
+      params: { domain, lang }
+    });
+    return response.data;
+  } catch (error) {
+    if (error.response?.status === 404) {
+      return { notFound: true };
+    }
+    console.error('Failed to get article by slug:', error.response?.data || error.message);
+    throw error;
+  }
+};
+
+// 新增：编辑生成内容的 HTML
+const editAlternativeHtml = async (editData) => {
+  try {
+    const response = await apiClient.put('/alternatively/html', {
+      html: editData.html,
+      resultId: editData.resultId,
+      websiteId: editData.websiteId
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Failed to edit alternative HTML:', error);
+    return null;
+  }
+};
+
+// Add: Upload media file API
+const uploadMedia = async (formData) => {
+  try {
+    const response = await apiClient.post('/media', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+      timeout: 5 * 60 * 1000, // 5 minutes
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Failed to upload media:', error);
+    return null;
+  }
+};
+
+// Get: Fetch media file list API
+const getMedia = async (customerId, mediaType, categoryId, page, limit) => {
+  try {
+    const params = {
+      customerId,
+      page,
+      limit,
+      ...(mediaType && { mediaType }),
+      ...(categoryId && { categoryId })
+    };
+    const response = await apiClient.get('/media', { params });
+    return response.data;
+  } catch (error) {
+    console.error('Failed to get media list:', error);
+    return null;
+  }
+};
+
+// Delete: Delete media file API
+const deleteMedia = async (mediaId) => {
+  try {
+    const response = await apiClient.delete(`/media/${mediaId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to delete media:', error);
+    return null;
+  }
+};
+
 apiClient.getCompetitorResearch = getCompetitorResearch;
 apiClient.login = login;
 apiClient.register = register;
@@ -492,5 +568,10 @@ apiClient.updateAlternativePublishStatus = updateAlternativePublishStatus;
 apiClient.updateAlternativeSlug = updateAlternativeSlug;
 apiClient.getPackageFeatures = getPackageFeatures;
 apiClient.createSubscription = createSubscription;
+apiClient.getPageBySlug = getPageBySlug;
+apiClient.editAlternativeHtml = editAlternativeHtml;
+apiClient.uploadMedia = uploadMedia;
+apiClient.getMedia = getMedia;
+apiClient.deleteMedia = deleteMedia;
 
 export default apiClient;

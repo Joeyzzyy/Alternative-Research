@@ -1,7 +1,5 @@
 'use client';
 import React from 'react';
-// themeConfig is no longer used, can be removed
-// import themeConfig from '../../../styles/themeConfig';
 
 // Define the new FAQ data in English
 const faqData = [

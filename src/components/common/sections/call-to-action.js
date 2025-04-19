@@ -1,6 +1,5 @@
 'use client';
 import React from 'react';
-import themeConfig from '../../../styles/themeConfig';
 
 const CallToAction = ({ data, theme = 'normal' }) => {
   return (
@@ -34,7 +33,7 @@ const CallToAction = ({ data, theme = 'normal' }) => {
           {data.title}
         </h2>
         
-        <p className={`\${themeConfig[theme].typography.paragraph.fontSize} text-gray-300 mb-10 max-w-2xl mx-auto leading-relaxed`}>
+        <p className="text-gray-300 mb-10 max-w-2xl mx-auto leading-relaxed">
           {data.subTitle}
         </p>
         
