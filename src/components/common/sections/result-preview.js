@@ -113,7 +113,7 @@ const HistoryCardList = () => {
   }, []);
 
   // 删除历史记录
-  const handleDelete = async (id) => {
+  const handleDelete = async (id, closeModalOnSuccess = false) => {
     setDeletingId(id);
     try {
       // 假设有 deleteHistory API
@@ -121,6 +121,9 @@ const HistoryCardList = () => {
       if (res && res.code === 200) {
         messageApi.success('Deleted successfully');
         await fetchHistory(); // 删除成功后刷新列表
+        if (closeModalOnSuccess) {
+          handleModalClose();
+        }
       } else {
         messageApi.error('Failed to delete');
       }
@@ -283,6 +286,45 @@ const HistoryCardList = () => {
     }
     // 这个 effect 依赖于 verifiedDomains 状态
   }, [verifiedDomains]);
+
+  // === 新增：获取可导航的已完成任务列表 ===
+  const finishedTasks = historyList.filter(task => task.generatorStatus === 'finished');
+  const currentTaskIndex = finishedTasks.findIndex(task => task.websiteId === selectedItem?.websiteId);
+
+  // === 新增：导航到下一个/上一个已完成任务 ===
+  const navigateTask = (direction) => {
+    if (finishedTasks.length <= 1) return; // 如果只有一个或没有已完成任务，则不导航
+
+    let nextIndex;
+    if (direction === 'next') {
+      nextIndex = (currentTaskIndex + 1) % finishedTasks.length;
+    } else {
+      nextIndex = (currentTaskIndex - 1 + finishedTasks.length) % finishedTasks.length;
+    }
+
+    const nextTask = finishedTasks[nextIndex];
+    if (nextTask && nextTask.websiteId !== selectedItem?.websiteId) {
+      handleCardClick(nextTask); // 使用 handleCardClick 加载新任务的数据
+    }
+  };
+
+  // === 新增：函数用于渲染任务状态标签 ===
+  const renderStatusBadge = (status) => {
+    let statusColor = "text-blue-400 bg-blue-900/50 border-blue-700";
+    let statusText = "Processing";
+    if (status === "finished") {
+      statusColor = "text-green-400 bg-green-900/50 border-green-700";
+      statusText = "Finished";
+    } else if (status === "failed") {
+      statusColor = "text-red-400 bg-red-900/50 border-red-700";
+      statusText = "Failed";
+    }
+    return (
+      <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${statusColor}`}>
+        {statusText}
+      </span>
+    );
+  };
 
   if (!hasToken) {
     return null;
@@ -463,8 +505,10 @@ const HistoryCardList = () => {
               danger
               loading={deletingId === deleteConfirm.id}
               onClick={async () => {
-                await handleDelete(deleteConfirm.id);
-                setDeleteConfirm({ open: false, id: null });
+                // === 修改：调用 handleDelete 时，告知其成功后需要关闭详情弹窗（如果当前弹窗是打开的） ===
+                const shouldCloseModal = !!selectedItem && selectedItem.websiteId === deleteConfirm.id;
+                await handleDelete(deleteConfirm.id, shouldCloseModal);
+                setDeleteConfirm({ open: false, id: null }); // 关闭确认弹窗
               }}
             >
               Delete
@@ -601,398 +645,455 @@ const HistoryCardList = () => {
             onCancel={handleModalClose}
             footer={null}
             width={1600}
+            style={{ top: 0, padding: 0 }}
             styles={{
-              body: { 
-                padding: 0, 
-                background: '#18181c', // 深色背景
-                minHeight: '80vh', 
-                maxHeight: 'none',
-                paddingRight: 24,
-                // 保证内容撑满高度
+              body: {
+                padding: 0,
+                background: '#18181c',
+                minHeight: 'calc(100vh - 48px)',
+                maxHeight: 'calc(100vh - 48px)',
                 display: 'flex',
                 flexDirection: 'column',
-                justifyContent: 'center',
-              }
+                position: 'relative',
+                overflow: 'hidden',
+              },
+              close: {
+                color: '#cbd5e1',
+                top: '12px',
+                right: '16px',
+                transition: 'color 0.3s',
+                '&:hover': {
+                  color: '#f8fafc',
+                },
+              },
             }}
             className="custom-large-modal"
             title={null}
+            centered={false}
+            closable={true}
           >
+            {/* === 左右导航按钮 === */}
+            {finishedTasks.length > 1 && selectedItem.generatorStatus === 'finished' && (
+              <>
+                <button
+                  className="absolute left-4 top-1/2 -translate-y-1/2 z-30 bg-slate-800/80 hover:bg-slate-700/90 rounded-full p-2 shadow border border-slate-700 transition disabled:opacity-40 flex items-center justify-center"
+                  style={{ width: 40, height: 40 }}
+                  onClick={() => navigateTask('prev')}
+                  aria-label="Previous Task"
+                  title="Previous Task"
+                >
+                  <LeftOutlined style={{ fontSize: 22, color: '#38bdf8' }} />
+                </button>
+                <button
+                  className="absolute right-4 top-1/2 -translate-y-1/2 z-30 bg-slate-800/80 hover:bg-slate-700/90 rounded-full p-2 shadow border border-slate-700 transition disabled:opacity-40 flex items-center justify-center"
+                  style={{ width: 40, height: 40 }}
+                  onClick={() => navigateTask('next')}
+                  aria-label="Next Task"
+                  title="Next Task"
+                >
+                  <RightOutlined style={{ fontSize: 22, color: '#38bdf8' }} />
+                </button>
+              </>
+            )}
+            {/* === 弹窗内删除按钮 === */}
+            <button
+              className="absolute top-4 right-4 z-30 bg-red-700/70 hover:bg-red-800/80 text-white rounded-full p-2 shadow transition flex items-center justify-center"
+              title="Delete Current Task"
+              style={{ width: 36, height: 36 }}
+              onClick={e => {
+                e.stopPropagation();
+                setDeleteConfirm({ open: true, id: selectedItem.websiteId });
+              }}
+              disabled={deletingId === selectedItem.websiteId || isClearingAll}
+            >
+              <DeleteOutlined style={{ fontSize: 18 }} />
+            </button>
+
             {resultLoading ? (
-              <div
-                className="flex items-center justify-center"
-                style={{ minHeight: '60vh', height: '100%', width: '100%' }} // 保证居中
-              >
+              <div className="flex-1 flex items-center justify-center">
                 <Spin size="large" />
               </div>
             ) : Array.isArray(resultDetail?.data) && resultDetail.data.length > 0 ? (
-              <div className="flex flex-row min-h-[80vh] bg-gradient-to-br from-slate-900 via-slate-950 to-black rounded-2xl shadow-2xl overflow-hidden border border-slate-800">
-                {/* Left: List */}
-                <div className="w-[320px] p-4 flex flex-col gap-4 overflow-y-auto border-r border-slate-800 bg-slate-900/80">
-                  {/* Results List */}
-                  <div>
-                    <div className="mb-2 text-base font-bold text-cyan-300 tracking-wide pl-1">All Results</div>
-                    <div className="flex flex-col gap-2">
-                      {resultDetail.data.map((item, idx) => (
+              <div className="flex flex-col h-full overflow-hidden text-sm">
+                <div className="text-center text-lg font-bold text-cyan-300 pt-3 pb-1 tracking-wide flex-shrink-0">
+                  Task Preview
+                </div>
+                <div className="flex-shrink-0 px-4 pb-2 border-b border-slate-800">
+                  <div className="overflow-x-auto scrollbar-hide pb-1">
+                    <div className="inline-flex flex-row flex-nowrap gap-3">
+                      {historyList
+                        .filter(task => task.generatorStatus === 'finished')
+                        .map((item) => (
                         <div
-                          key={item.resultId || idx}
+                          key={item.websiteId}
                           className={`
-                            group rounded-lg px-3 py-2 cursor-pointer transition
-                            border
-                            ${selectedPreviewId === item.resultId
-                              ? 'bg-gradient-to-r from-cyan-900/60 to-slate-800/80 border-cyan-400 shadow-lg'
-                              : 'bg-slate-800/40 hover:bg-slate-800/60 border-slate-700'}
+                            group relative rounded-md bg-white/5 hover:bg-white/10 transition
+                            shadow-sm p-1.5 flex flex-col items-center justify-between
+                            min-h-[70px] w-[240px] max-w-[240px] flex-shrink-0
+                            border hover:border-primary-500
+                            cursor-pointer text-xxs
+                            ${selectedItem.websiteId === item.websiteId
+                              ? 'border-cyan-500 ring-1 ring-cyan-500/60 bg-white/10'
+                              : 'border-white/10'}
                           `}
-                          onClick={() => setSelectedPreviewId(item.resultId)}
+                          onClick={() => {
+                            if (selectedItem.websiteId !== item.websiteId) {
+                              handleCardClick(item);
+                            }
+                          }}
                         >
-                          <div className="flex items-center justify-between">
-                            <div className="font-semibold text-sm text-white truncate max-w-[160px]">{item.slug || item.websiteId}</div>
-                            {selectedPreviewId === item.resultId && (
-                              <span className="ml-2 text-cyan-400 text-xs font-bold">Selected</span>
+                          <div className="w-full flex flex-col items-center">
+                            <div className="font-semibold text-xs text-white mb-0 truncate w-full text-center">{item.website}</div>
+                            <div className="mt-0.5">
+                              {renderStatusBadge(item.generatorStatus)}
+                            </div>
+                            <div className="text-gray-400 mt-0.5">
+                              ID: <span className="text-gray-300 font-mono">{item.websiteId.substring(0, 8)}...</span>
+                            </div>
+                            {item.generatedStart && (
+                              <div className="text-gray-500">
+                                Start: {new Date(item.generatedStart).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}
+                              </div>
                             )}
-                          </div>
-                          <div className="text-xs text-gray-400 break-all mt-1">Result ID: {item.resultId}</div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            {item.created_at ? new Date(item.created_at).toLocaleString() : ''}
+                            {item.generatedEnd && (
+                              <div className="text-gray-500">
+                                End: {new Date(item.generatedEnd).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}
+                              </div>
+                            )}
                           </div>
                         </div>
                       ))}
                     </div>
                   </div>
-
-                  {/* 分隔线 */}
-                  <div className="border-t border-slate-700 my-2"></div>
-
-                  {/* Deploy Status */}
-                  <div>
-                    <div className="text-sm font-semibold text-cyan-300 mb-1">Deploy Status</div>
-                    {currentItem.deploymentStatus === 'publish' ? (
-                      <div className="flex flex-col gap-1">
-                        <span className="text-green-400 font-semibold">Published</span>
-                        {currentItem.siteUrl && currentItem.slug && (
-                          <div className="text-cyan-400 text-xs mt-1 break-all">
-                            View Published Site:&nbsp;
-                            <a
-                              href={`${currentItem.siteUrl.replace(/\/$/, '')}/${currentItem.slug}`}
-                              className="underline hover:text-cyan-300 transition"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              {`${currentItem.siteUrl.replace(/\/$/, '')}/${currentItem.slug}`}
-                            </a>
-                          </div>
-                        )}
-                        <button
-                          className="mt-2 px-3 py-1 rounded bg-red-500 hover:bg-red-400 text-white text-xs font-semibold transition w-fit"
-                          disabled={deployLoading}
-                          onClick={async () => {
-                            setDeployLoading(true);
-                            try {
-                              const resp = await apiClient.updateAlternativePublishStatus(selectedPreviewId, 'unpublish');
-                              if (resp?.code === 200) {
-                                messageApi.success('Unpublished successfully!');
-                                setResultDetail(prev => {
-                                  if (!prev || !Array.isArray(prev.data)) return prev;
-                                  return {
-                                    ...prev,
-                                    data: prev.data.map(item =>
-                                      item.resultId === selectedPreviewId
-                                        ? { ...item, deploymentStatus: 'unpublish' }
-                                        : item
-                                    )
-                                  };
-                                });
-                              } else {
-                                messageApi.error(resp?.message || 'Unpublish failed');
-                              }
-                            } catch (e) {
-                              messageApi.error(e.message || 'Unpublish failed');
-                            } finally {
-                              setDeployLoading(false);
-                            }
-                          }}
-                        >
-                          {deployLoading ? 'Unpublishing...' : 'Unpublish'}
-                        </button>
-                      </div>
-                    ) : (
-                      <span className="text-gray-300 font-bold">Not Published</span>
-                    )}
-                  </div>
-
-                  {/* 只在未发布状态下显示发布相关区域 */}
-                  {currentItem.deploymentStatus !== 'publish' && (
-                    <>
-                      {/* Publish URL */}
+                </div>
+                <div className="flex flex-row flex-1 min-h-0 overflow-hidden p-4">
+                  <div className="flex flex-row flex-1 min-h-0 bg-gradient-to-br from-slate-900 via-slate-950 to-black rounded-lg shadow-xl overflow-hidden border border-slate-800">
+                    <div className="w-[300px] p-3 flex flex-col gap-3 overflow-y-auto border-r border-slate-800 bg-slate-900/80 scrollbar-hide text-xs">
                       <div>
-                        <div className="text-sm font-semibold text-cyan-300 mb-1">The Publish URL You Can Choose From</div>
-                        {/* === 修改：根据 domainLoading 显示加载状态 === */}
-                        {domainLoading ? (
-                          <div className="flex items-center gap-2 py-2">
-                            <Spin size="small" />
-                            <span className="text-gray-400 text-xs">Loading available URLs...</span>
-                          </div>
-                        ) : verifiedDomains.length === 0 ? (
-                          // 当不处于加载状态且没有可用域名时，显示提示和按钮
-                          <div className="flex flex-col items-start gap-2">
-                            <div className="text-gray-400 mb-2 text-xs">No available publish URL</div>
+                        <div className="mb-1 text-sm font-bold text-cyan-300 tracking-wide pl-1">All Results</div>
+                        <div className="flex flex-col gap-1.5">
+                          {resultDetail.data.map((item, idx) => (
+                            <div
+                              key={item.resultId || idx}
+                              className={`
+                                group rounded px-2 py-1.5 cursor-pointer transition
+                                border
+                                ${selectedPreviewId === item.resultId
+                                  ? 'bg-gradient-to-r from-cyan-900/60 to-slate-800/80 border-cyan-500 shadow-md'
+                                  : 'bg-slate-800/40 hover:bg-slate-800/60 border-slate-700'}
+                              `}
+                              onClick={() => setSelectedPreviewId(item.resultId)}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="font-semibold text-xs text-white truncate max-w-[140px]">{item.slug || item.websiteId}</div>
+                                {selectedPreviewId === item.resultId && (
+                                  <span className="ml-2 text-cyan-400 text-xs font-bold">Selected</span>
+                                )}
+                              </div>
+                              <div className="text-xxs text-gray-400 break-all mt-0.5">Result ID: {item.resultId}</div>
+                              <div className="text-xxs text-gray-500 mt-0.5">
+                                {item.created_at ? new Date(item.created_at).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' }) : ''}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="border-t border-slate-700 my-1.5"></div>
+                      <div>
+                        <div className="text-xs font-semibold text-cyan-300 mb-0.5">Deploy Status</div>
+                        {currentItem.deploymentStatus === 'publish' ? (
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-green-400 font-semibold text-xs">Published</span>
+                            {currentItem.siteUrl && currentItem.slug && (
+                              <div className="text-cyan-400 text-xxs mt-0.5 break-all">
+                                View:&nbsp;
+                                <a
+                                  href={`${currentItem.siteUrl.replace(/\/$/, '')}/${currentItem.slug}`}
+                                  className="underline hover:text-cyan-300 transition"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  {`${currentItem.siteUrl.replace(/\/$/, '')}/${currentItem.slug}`}
+                                </a>
+                              </div>
+                            )}
                             <button
-                              className="px-3 py-1 rounded bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold transition"
-                              onClick={() => {
-                                const accessToken = localStorage.getItem('alternativelyAccessToken') || '';
-                                const customerEmail = localStorage.getItem('alternativelyCustomerEmail') || '';
-                                const customerId = localStorage.getItem('alternativelyCustomerId') || '';
-                                let url = 'https://app.websitelm.com/dashboard';
-                                const params = [];
-                                if (accessToken) params.push(`authKey=${encodeURIComponent(accessToken)}`);
-                                if (customerEmail) params.push(`currentCustomerEmail=${encodeURIComponent(customerEmail)}`);
-                                if (customerId) params.push(`currentCustomerId=${encodeURIComponent(customerId)}`);
-                                if (params.length > 0) {
-                                  url += '?' + params.join('&');
+                              className="mt-1 px-2 py-0.5 rounded bg-red-600 hover:bg-red-500 text-white text-xxs font-semibold transition w-fit"
+                              disabled={deployLoading}
+                              onClick={async () => {
+                                setDeployLoading(true);
+                                try {
+                                  const resp = await apiClient.updateAlternativePublishStatus(selectedPreviewId, 'unpublish');
+                                  if (resp?.code === 200) {
+                                    messageApi.success('Unpublished successfully!');
+                                    setResultDetail(prev => {
+                                      if (!prev || !Array.isArray(prev.data)) return prev;
+                                      return {
+                                        ...prev,
+                                        data: prev.data.map(item =>
+                                          item.resultId === selectedPreviewId
+                                            ? { ...item, deploymentStatus: 'unpublish' }
+                                            : item
+                                        )
+                                      };
+                                    });
+                                  } else {
+                                    messageApi.error(resp?.message || 'Unpublish failed');
+                                  }
+                                } catch (e) {
+                                  messageApi.error(e.message || 'Unpublish failed');
+                                } finally {
+                                  setDeployLoading(false);
                                 }
-                                window.open(url, '_blank');
                               }}
                             >
-                              Go to verify domain
+                              {deployLoading ? 'Unpublishing...' : 'Unpublish'}
                             </button>
                           </div>
                         ) : (
-                          // 当不处于加载状态且有可用域名时，显示下拉选择框
-                          <>
-                            <select
-                              value={selectedPublishUrl} // value 会被 useEffect 设置为第一个
-                              onChange={e => setSelectedPublishUrl(e.target.value)}
-                              className="w-full bg-slate-800/80 text-gray-100 border border-slate-700 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition text-sm"
-                            >
-                              {/* 不再需要 placeholder，因为 useEffect 会设置默认值 */}
-                              {verifiedDomains.map(domain => (
-                                <option key={domain} value={domain}>{domain}</option>
-                              ))}
-                            </select>
-                            {/* 加载状态由外部条件渲染处理，这里不再需要 Spin */}
-                          </>
+                          <span className="text-gray-300 font-bold text-xs">Not Published</span>
                         )}
                       </div>
-
-                      {/* Preview URL */}
-                      {deployPreviewUrl && (
-                        <div>
-                          <div className="text-sm font-semibold text-cyan-300 mb-1">Preview URL</div>
-                          <div className="text-cyan-400 underline break-all hover:text-cyan-300 transition cursor-default">
-                            {deployPreviewUrl}
+                      {currentItem.deploymentStatus !== 'publish' && (
+                        <>
+                          <div>
+                            <div className="text-xs font-semibold text-cyan-300 mb-0.5">Publish URL</div>
+                            {domainLoading ? (
+                              <div className="flex items-center gap-2 py-2">
+                                <Spin size="small" />
+                                <span className="text-gray-400 text-xxs">Loading available URLs...</span>
+                              </div>
+                            ) : verifiedDomains.length === 0 ? (
+                              <div className="flex flex-col items-start gap-1">
+                                <div className="text-gray-400 mb-1 text-xxs">No available URL</div>
+                                <button
+                                  className="px-2 py-0.5 rounded bg-cyan-700 hover:bg-cyan-600 text-white text-xxs font-semibold transition"
+                                  onClick={() => {
+                                    const accessToken = localStorage.getItem('alternativelyAccessToken') || '';
+                                    const customerEmail = localStorage.getItem('alternativelyCustomerEmail') || '';
+                                    const customerId = localStorage.getItem('alternativelyCustomerId') || '';
+                                    let url = 'https://app.websitelm.com/dashboard';
+                                    const params = [];
+                                    if (accessToken) params.push(`authKey=${encodeURIComponent(accessToken)}`);
+                                    if (customerEmail) params.push(`currentCustomerEmail=${encodeURIComponent(customerEmail)}`);
+                                    if (customerId) params.push(`currentCustomerId=${encodeURIComponent(customerId)}`);
+                                    if (params.length > 0) {
+                                      url += '?' + params.join('&');
+                                    }
+                                    window.open(url, '_blank');
+                                  }}
+                                >
+                                  Go to verify domain
+                                </button>
+                              </div>
+                            ) : (
+                              <>
+                                <select
+                                  value={selectedPublishUrl}
+                                  onChange={e => setSelectedPublishUrl(e.target.value)}
+                                  className="w-full bg-slate-800/80 text-gray-100 border border-slate-700 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-cyan-400 transition text-xs"
+                                >
+                                  {verifiedDomains.map(domain => (
+                                    <option key={domain} value={domain}>{domain}</option>
+                                  ))}
+                                </select>
+                              </>
+                            )}
                           </div>
-                        </div>
+                          {deployPreviewUrl && (
+                            <div>
+                              <div className="text-xs font-semibold text-cyan-300 mb-0.5">Preview URL</div>
+                              <div className="text-cyan-400 underline break-all hover:text-cyan-300 transition cursor-default text-xxs">
+                                {deployPreviewUrl}
+                              </div>
+                            </div>
+                          )}
+                          <div className="flex gap-2 mt-1.5">
+                            {verifiedDomains.length > 0 && (
+                              <button
+                                disabled={!selectedPublishUrl || deployLoading}
+                                onClick={async () => {
+                                  setDeployLoading(true);
+                                  try {
+                                    const resp = await apiClient.updateAlternativePublishStatus(
+                                      selectedPreviewId,
+                                      'publish',
+                                      selectedPublishUrl
+                                    );
+                                    if (resp?.code === 200) {
+                                      messageApi.success('Published successfully!');
+                                      setResultDetail(prev => {
+                                        if (!prev || !Array.isArray(prev.data)) return prev;
+                                        return {
+                                          ...prev,
+                                          data: prev.data.map(item =>
+                                            item.resultId === selectedPreviewId
+                                              ? { ...item, deploymentStatus: 'publish' }
+                                              : item
+                                          )
+                                        };
+                                      });
+                                      await handleCardClick(selectedItem);
+                                    } else {
+                                      messageApi.error(resp?.message || 'Publish failed');
+                                    }
+                                  } catch (e) {
+                                    messageApi.error(e.message || 'Publish failed');
+                                  } finally {
+                                    setDeployLoading(false);
+                                  }
+                                }}
+                                className={`
+                                  px-3 py-1 rounded font-semibold transition text-xxs
+                                  ${(!selectedPublishUrl || deployLoading)
+                                    ? 'bg-cyan-900 text-cyan-300 cursor-not-allowed'
+                                    : 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-sm'}
+                                `}
+                              >
+                                {deployLoading ? 'Publishing...' : 'Publish'}
+                              </button>
+                            )}
+                          </div>
+                        </>
                       )}
-
-                      {/* Publish/Unpublish Buttons */}
-                      <div className="flex gap-3 mt-2">
-                        {verifiedDomains.length > 0 && (
-                          <button
-                            disabled={!selectedPublishUrl || deployLoading}
-                            onClick={async () => {
-                              setDeployLoading(true);
-                              try {
-                                const resp = await apiClient.updateAlternativePublishStatus(
-                                  selectedPreviewId,
-                                  'publish',
-                                  selectedPublishUrl
-                                );
-                                if (resp?.code === 200) {
-                                  messageApi.success('Published successfully!');
-                                  setResultDetail(prev => {
-                                    if (!prev || !Array.isArray(prev.data)) return prev;
-                                    return {
-                                      ...prev,
-                                      data: prev.data.map(item =>
-                                        item.resultId === selectedPreviewId
-                                          ? { ...item, deploymentStatus: 'publish' }
-                                          : item
-                                      )
-                                    };
-                                  });
-                                  await handleCardClick(selectedItem);
-                                } else {
-                                  messageApi.error(resp?.message || 'Publish failed');
-                                }
-                              } catch (e) {
-                                messageApi.error(e.message || 'Publish failed');
-                              } finally {
-                                setDeployLoading(false);
-                              }
-                            }}
-                            className={`
-                              px-4 py-2 rounded font-semibold transition
-                              ${(!selectedPublishUrl || deployLoading)
-                                ? 'bg-cyan-900 text-cyan-300 cursor-not-allowed'
-                                : 'bg-cyan-500 hover:bg-cyan-400 text-white shadow'}
-                            `}
-                          >
-                            {deployLoading ? 'Publishing...' : 'Publish'}
-                          </button>
-                        )}
-                      </div>
-                    </>
-                  )}
-
-                  {/* 分隔线 */}
-                  <div className="border-t border-slate-700 my-2"></div>
-
-                  {/* Slug Editor */}
-                  <div>
-                    <div className="text-sm font-semibold text-cyan-300 mb-1">Slug</div>
-                    {slugEditing ? (
-                      <div className="flex flex-col gap-2 w-full max-w-xs">
-                        <textarea
-                          className="px-2 py-3 rounded bg-slate-800 text-white border border-slate-700 resize-none"
-                          style={{ fontSize: 16, minHeight: 60, lineHeight: '1.5' }}
-                          value={slugInput}
-                          onChange={e => setSlugInput(e.target.value)}
-                          disabled={slugSaving}
-                          rows={3}
-                        />
-                        <div className="flex gap-2">
-                          <button
-                            className="px-3 py-1 rounded bg-cyan-500 hover:bg-cyan-400 text-white text-xs font-semibold transition"
-                            disabled={slugSaving}
-                            onClick={async () => {
-                              setSlugSaving(true);
-                              try {
-                                const resp = await apiClient.updateAlternativeSlug(selectedPreviewId, slugInput);
-                                if (resp?.code === 1071) {
-                                  messageApi.error('Slug already exists. Please choose a different slug.');
-                                } else {
-                                  messageApi.success('Slug updated successfully');
-                                  setResultDetail(prev => {
-                                    if (!prev || !Array.isArray(prev.data)) return prev;
-                                    return {
-                                      ...prev,
-                                      data: prev.data.map(item =>
-                                        item.resultId === selectedPreviewId
-                                          ? { ...item, slug: slugInput }
-                                          : item
-                                      )
-                                    };
-                                  });
+                      <div className="border-t border-slate-700 my-1.5"></div>
+                      <div>
+                        <div className="text-xs font-semibold text-cyan-300 mb-0.5">Slug</div>
+                        {slugEditing ? (
+                          <div className="flex flex-col gap-1 w-full max-w-xs">
+                            <textarea
+                              className="px-1.5 py-1 rounded bg-slate-800 text-white border border-slate-700 resize-none text-xs"
+                              style={{ minHeight: 40, lineHeight: '1.4' }}
+                              value={slugInput}
+                              onChange={e => setSlugInput(e.target.value)}
+                              disabled={slugSaving}
+                              rows={2}
+                            />
+                            <div className="flex gap-1.5">
+                              <button
+                                className="px-2 py-0.5 rounded bg-cyan-600 hover:bg-cyan-500 text-white text-xxs font-semibold transition"
+                                disabled={slugSaving}
+                                onClick={async () => {
+                                  setSlugSaving(true);
+                                  try {
+                                    const resp = await apiClient.updateAlternativeSlug(selectedPreviewId, slugInput);
+                                    if (resp?.code === 1071) {
+                                      messageApi.error('Slug already exists. Please choose a different slug.');
+                                    } else {
+                                      messageApi.success('Slug updated successfully');
+                                      setResultDetail(prev => {
+                                        if (!prev || !Array.isArray(prev.data)) return prev;
+                                        return {
+                                          ...prev,
+                                          data: prev.data.map(item =>
+                                            item.resultId === selectedPreviewId
+                                              ? { ...item, slug: slugInput }
+                                              : item
+                                          )
+                                        };
+                                      });
+                                      setSlugEditing(false);
+                                    }
+                                  } catch (e) {
+                                    messageApi.error('Failed to update slug');
+                                  }
+                                  setSlugSaving(false);
+                                }}
+                              >
+                                Save
+                              </button>
+                              <button
+                                className="px-2 py-0.5 rounded bg-slate-700 text-white text-xxs font-semibold transition"
+                                onClick={() => {
+                                  const current = resultDetail?.data?.find(i => i.resultId === selectedPreviewId);
+                                  setSlugInput(current?.slug || '');
                                   setSlugEditing(false);
-                                }
-                              } catch (e) {
-                                messageApi.error('Failed to update slug');
-                              }
-                              setSlugSaving(false);
-                            }}
-                          >
-                            Save
-                          </button>
-                          <button
-                            className="px-3 py-1 rounded bg-slate-700 text-white text-xs font-semibold transition"
-                            onClick={() => {
-                              const current = resultDetail?.data?.find(i => i.resultId === selectedPreviewId);
-                              setSlugInput(current?.slug || '');
-                              setSlugEditing(false);
-                            }}
-                            disabled={slugSaving}
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <span className="text-gray-200">{slugInput}</span>
-                        <button
-                          className="px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 text-white text-xs font-semibold transition"
-                          onClick={() => setSlugEditing(true)}
-                        >
-                          Edit
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                {/* Right: Preview */}
-                <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-black via-slate-950 to-slate-900 p-4">
-                  {(() => {
-                    const previewItem = resultDetail.data.find(i => i.resultId === selectedPreviewId);
-                    if (!previewItem) {
-                      return (
-                        <div className="flex items-center justify-center h-full text-gray-400">
-                          No preview available
-                        </div>
-                      );
-                    }
-                    // 新增：判断是否已发布，决定使用哪个URL
-                    const isPublished = previewItem.deploymentStatus === 'publish' && previewItem.siteUrl && previewItem.slug;
-                    const previewUrl = isPublished
-                      ? `${previewItem.siteUrl.replace(/\/$/, '')}/${previewItem.slug}`
-                      : `https://preview.websitelm.site/en/${previewItem.resultId}`;
-                    return (
-                      <div className="w-full max-w-6xl h-[70vh] bg-black/90 rounded-2xl shadow-2xl flex flex-col border border-slate-800 overflow-hidden">
-                        {/* 操作区 */}
-                        <div className="flex items-center justify-between px-4 py-2 bg-gray-900 border-b border-gray-800">
-                          {/* Browser-like address bar */}
-                          <div className="flex items-center flex-1 min-w-0">
-                            <div className="w-2 h-2 rounded-full bg-red-400 mr-2"></div>
-                            <div className="w-2 h-2 rounded-full bg-yellow-400 mr-2"></div>
-                            <div className="w-2 h-2 rounded-full bg-green-400 mr-4"></div>
-                            <div className="flex-1 bg-gray-900 text-gray-200 text-xs px-2 py-1 rounded border border-gray-700 truncate">
-                              {previewUrl}
+                                }}
+                                disabled={slugSaving}
+                              >
+                                Cancel
+                              </button>
                             </div>
                           </div>
-                          {/* 操作按钮区 */}
-                          <div className="flex items-center gap-2 ml-4">
-                            <Button
-                              size="small"
-                              type="primary"
-                              style={{
-                                background: 'linear-gradient(90deg, #38bdf8 0%, #a78bfa 100%)',
-                                border: 'none',
-                                fontWeight: 700,
-                                color: '#fff',
-                                boxShadow: '0 2px 8px #38bdf899',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 6,
-                              }}
-                              onClick={() => {
-                                setEditPageId(previewItem.resultId);
-                              }}
+                        ) : (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-gray-200 text-xs">{slugInput}</span>
+                            <button
+                              className="px-1.5 py-0.5 rounded bg-slate-700 hover:bg-slate-600 text-white text-xxs font-semibold transition"
+                              onClick={() => setSlugEditing(true)}
                             >
-                              <span style={{ fontWeight: 700 }}>Edit</span>
-                            </Button>
-                            <Button
-                              size="small"
-                              type="default"
-                              style={{
-                                background: 'linear-gradient(90deg, #22c55e 0%, #38bdf8 100%)',
-                                border: 'none',
-                                fontWeight: 700,
-                                color: '#fff',
-                                boxShadow: '0 2px 8px #22c55e99',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 6,
-                              }}
-                              onClick={() => window.open(previewUrl, '_blank')}
-                            >
-                              <span style={{ fontWeight: 700 }}>View in new window</span>
-                            </Button>
+                              Edit
+                            </button>
                           </div>
-                        </div>
-                        {/* iframe preview */}
-                        <div className="flex-1 overflow-hidden rounded-b-2xl">
-                          <iframe
-                            src={previewUrl}
-                            title="Preview"
-                            className="w-full h-full"
-                            frameBorder="0"
-                          />
-                        </div>
+                        )}
                       </div>
-                    );
-                  })()}
+                    </div>
+                    {/* Right: Preview */}
+                    <div className="flex-1 flex justify-center bg-gradient-to-br from-black via-slate-950 to-slate-900 p-3 min-h-[800px]">
+                      {(() => {
+                        const previewItem = resultDetail.data.find(i => i.resultId === selectedPreviewId);
+                        if (!previewItem) {
+                          return (
+                            <div className="flex items-center justify-center h-full text-gray-400">
+                              No preview available
+                            </div>
+                          );
+                        }
+                        const isPublished = previewItem.deploymentStatus === 'publish' && previewItem.siteUrl && previewItem.slug;
+                        const previewUrl = isPublished
+                          ? `${previewItem.siteUrl.replace(/\/$/, '')}/${previewItem.slug}`
+                          : `https://preview.websitelm.site/en/${previewItem.resultId}`;
+                        return (
+                          <div className="w-full h-full bg-black/90 rounded-lg shadow-xl flex flex-col border border-slate-800 overflow-hidden">
+                            <div className="flex items-center justify-between px-3 py-1 bg-gray-900 border-b border-gray-800">
+                              <div className="flex items-center flex-1 min-w-0">
+                                <div className="w-2 h-2 rounded-full bg-red-400 mr-2"></div>
+                                <div className="w-2 h-2 rounded-full bg-yellow-400 mr-2"></div>
+                                <div className="w-2 h-2 rounded-full bg-green-400 mr-4"></div>
+                                <div className="flex-1 bg-gray-900 text-gray-200 text-xxs px-1.5 py-0.5 rounded border border-gray-700 truncate">
+                                  {previewUrl}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1.5 ml-3">
+                                <Button
+                                  size="small"
+                                  type="primary"
+                                  style={{ fontSize: '10px', padding: '0 8px' }}
+                                  onClick={() => {
+                                    setEditPageId(previewItem.resultId);
+                                  }}
+                                >
+                                  <span style={{ fontWeight: 600 }}>Edit</span>
+                                </Button>
+                                <Button
+                                  size="small"
+                                  type="default"
+                                  style={{ fontSize: '10px', padding: '0 8px' }}
+                                  onClick={() => window.open(previewUrl, '_blank')}
+                                >
+                                  <span style={{ fontWeight: 600 }}>View</span>
+                                </Button>
+                              </div>
+                            </div>
+                            <div className="flex-1 overflow-hidden rounded-b-lg">
+                              <iframe
+                                src={previewUrl}
+                                title="Preview"
+                                className="w-full h-full"
+                                frameBorder="0"
+                              />
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
                 </div>
               </div>
             ) : (
-              <div className="text-gray-400 text-center py-10">No data available</div>
+              <div className="flex-1 flex items-center justify-center text-gray-400">
+                No data available
+              </div>
             )}
           </Modal>
         )}
@@ -1130,6 +1231,10 @@ const loadVerifiedDomains = async (setVerifiedDomains, setDomainLoading) => {
   .scrollbar-hide::-webkit-scrollbar:horizontal {
     height: 0 !important;
     display: none !important;
+  }
+  .text-xxs {
+    font-size: 0.65rem; /* 约 10.4px */
+    line-height: 0.9rem;
   }
 `}</style>
 
