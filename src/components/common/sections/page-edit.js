@@ -406,10 +406,11 @@ export default function HtmlPreview({ pageId }) {
         </div>
       )}
 
-      {/* Top Bar */}
+      {/* Top Bar - Updated Style */}
       <div style={{
         height: 56,
-        background: 'linear-gradient(90deg, #232c5b 0%, #3a225a 100%)',
+        // background: 'linear-gradient(90deg, #232c5b 0%, #3a225a 100%)', // Old background
+        background: '#1f2937', // Updated background (slate-800)
         color: '#fff',
         display: 'flex',
         alignItems: 'center',
@@ -430,7 +431,8 @@ export default function HtmlPreview({ pageId }) {
         <button
           onClick={() => window.open(`https://preview.websitelm.site/en/${pageId}`, '_blank')}
           style={{
-            background: '#10b981', // Emerald green color
+            // background: '#10b981', // Old background (Emerald green)
+            background: 'linear-gradient(90deg, #22c55e 0%, #38bdf8 100%)', // Updated background (green to cyan gradient)
             color: 'white',
             border: 'none',
             borderRadius: '6px',
@@ -438,17 +440,19 @@ export default function HtmlPreview({ pageId }) {
             fontWeight: 600,
             fontSize: '14px',
             cursor: 'pointer',
-            transition: 'background-color 0.2s ease',
+            transition: 'opacity 0.2s ease', // Changed transition property
+            boxShadow: '0 2px 8px #22c55e99', // Added shadow like result-preview
           }}
-          onMouseOver={e => e.currentTarget.style.background = '#059669'}
-          onMouseOut={e => e.currentTarget.style.background = '#10b981'}
+          onMouseOver={e => e.currentTarget.style.opacity = '0.9'} // Use opacity for hover effect
+          onMouseOut={e => e.currentTarget.style.opacity = '1'}
         >
           Preview
         </button>
       </div>
-      {/* Edit Mode Hint (Always visible) */}
+      {/* Edit Mode Hint (Always visible) - Updated Style */}
       <div style={{
-        background: '#1e40af', // Blue background
+        // background: '#1e40af', // Old background (Blue)
+        background: '#374151', // Updated background (slate-700)
         color: '#e0f2fe', // Light blue text
         padding: '8px 32px',
         textAlign: 'center',
@@ -480,7 +484,7 @@ export default function HtmlPreview({ pageId }) {
             title="Page Preview"
           />
         )}
-        {/* Edit Sidebar */}
+        {/* Edit Sidebar - Updated Style */}
         {showSidebar && (
           <div style={{
             position: 'fixed',
@@ -496,8 +500,9 @@ export default function HtmlPreview({ pageId }) {
           }}>
             <div style={{
               width: 600,
-              background: '#23233a',
-              color: '#fff',
+              // background: '#23233a', // Old background
+              background: '#1f2937', // Updated background (slate-800)
+              color: '#e5e7eb', // Lighter text color for dark background
               borderRadius: 12,
               boxShadow: '0 8px 32px #0008',
               padding: 24,
@@ -505,10 +510,10 @@ export default function HtmlPreview({ pageId }) {
               flexDirection: 'column',
               maxHeight: '90vh'
             }}>
-              <div style={{ fontWeight: 600, fontSize: 20, marginBottom: 16 }}>
+              <div style={{ fontWeight: 600, fontSize: 20, marginBottom: 16, color: '#fff' }}> {/* Ensure title is white */}
                 {currentEdit.element?.tagName === 'IMG' ? 'Edit Image Source' : 'Edit Content'}
               </div>
-              <div style={{ marginBottom: 16 }}>
+              <div style={{ marginBottom: 16, flexGrow: 1, overflowY: 'auto' }}> {/* Allow content to scroll if needed */}
                 {currentEdit.element?.tagName === 'IMG' ? (
                   <>
                     <textarea
@@ -518,11 +523,11 @@ export default function HtmlPreview({ pageId }) {
                       style={{
                         width: '100%',
                         borderRadius: 8,
-                        border: '1px solid #334155',
+                        border: '1px solid #4b5563', // Updated border (slate-600)
                         padding: 12,
                         fontSize: 16,
-                        background: '#18181c',
-                        color: '#fff',
+                        background: '#111827', // Updated background (slate-900)
+                        color: '#e5e7eb', // Updated text color
                         fontFamily: 'monospace'
                       }}
                       placeholder="Enter image URL or select an image"
@@ -530,41 +535,64 @@ export default function HtmlPreview({ pageId }) {
                     <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
                       <button
                         style={{
-                          background: '#38bdf8',
+                          // background: '#38bdf8', // Old background
+                          background: 'linear-gradient(90deg, #38bdf8 0%, #a78bfa 100%)', // Updated background (cyan to purple gradient)
                           color: '#fff',
                           border: 'none',
                           borderRadius: 8,
-                          padding: '6px 16px',
-                          fontWeight: 500,
+                          padding: '8px 18px', // Adjusted padding
+                          fontWeight: 600, // Increased font weight
                           fontSize: 15,
-                          cursor: 'pointer'
+                          cursor: 'pointer',
+                          transition: 'opacity 0.2s ease',
+                          boxShadow: '0 2px 8px #38bdf899', // Added shadow
                         }}
+                        onMouseOver={e => e.currentTarget.style.opacity = '0.9'}
+                        onMouseOut={e => e.currentTarget.style.opacity = '1'}
                         onClick={() => setShowImageLibrary(true)}
                       >Select/Upload Image</button>
                     </div>
                     {/* Image Preview */}
                     {currentEdit.content && (
-                      <div style={{ marginTop: 12, textAlign: 'center' }}>
-                        <img src={currentEdit.content} alt="Preview" style={{ maxWidth: 320, maxHeight: 180, borderRadius: 8, background: '#fff' }} />
+                      <div style={{ marginTop: 16, textAlign: 'center', background: '#374151', padding: 8, borderRadius: 8 }}> {/* Added background for better contrast */}
+                        <img src={currentEdit.content} alt="Preview" style={{ maxWidth: 320, maxHeight: 180, borderRadius: 4, display: 'block', margin: 'auto' }} />
                       </div>
                     )}
-                    {/* Image Library Modal */}
+                    {/* Image Library Modal - Updated Style */}
                     <Modal
                       open={showImageLibrary}
-                      title="Image Library"
+                      title={<span style={{ color: '#e5e7eb' }}>Image Library</span>} // Title color
                       onCancel={() => setShowImageLibrary(false)}
                       footer={null}
                       width={800}
-                      styles={{ body: { background: '#f9fafb' } }}
+                      styles={{
+                        body: { background: '#1f2937', minHeight: 400, color: '#e5e7eb' }, // Dark body, light text
+                        header: {
+                          background: '#1f2937', // Match body background
+                          borderBottom: '1px solid #374151', // Keep border for separation
+                          color: '#e5e7eb'
+                        },
+                        content: { background: '#1f2937', color: '#e5e7eb' }, // Dark content area
+                      }}
+                      className="dark-modal" // Add class for potential global styling
                     >
                       <div style={{ marginBottom: 16, textAlign: 'right' }}>
-                        <Button type="primary" icon={<UploadOutlined />} onClick={() => setUploadModalVisible(true)}>
+                        <Button
+                          type="primary"
+                          icon={<UploadOutlined />}
+                          onClick={() => setUploadModalVisible(true)}
+                          style={{
+                            background: 'linear-gradient(90deg, #38bdf8 0%, #a78bfa 100%)', // Gradient background
+                            border: 'none',
+                            boxShadow: '0 2px 8px #38bdf899',
+                          }}
+                        >
                           Upload Image
                         </Button>
                       </div>
-                      <Spin spinning={imageLoading}>
+                      <Spin spinning={imageLoading} tip={<span style={{ color: '#9ca3af' }}>Loading Images...</span>}> {/* Tip color */}
                         {imageAssets.length === 0 ? (
-                          <div style={{ textAlign: 'center', padding: 40, color: '#6b7280' }}>
+                          <div style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}> {/* Text color */}
                             <h3>No Images Yet</h3>
                             <p>Please upload images first</p>
                           </div>
@@ -575,45 +603,59 @@ export default function HtmlPreview({ pageId }) {
                                 <Col xs={24} sm={12} md={8} lg={6} key={asset.id}>
                                   <div
                                     style={{
-                                      background: '#fff',
-                                      border: '1px solid #E5E7EB',
-                                      borderRadius: 12,
+                                      background: '#374151', // Card background (slate-700)
+                                      border: '1px solid #4b5563', // Card border (slate-600)
+                                      borderRadius: 12, // Rounded corners
                                       overflow: 'hidden',
                                       cursor: 'pointer',
                                       position: 'relative',
-                                      transition: 'all 0.3s'
+                                      transition: 'all 0.3s',
+                                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)', // Subtle shadow
                                     }}
                                     onClick={() => {
                                       setCurrentEdit({ ...currentEdit, content: asset.url });
                                       setShowImageLibrary(false);
                                     }}
+                                    onMouseEnter={e => e.currentTarget.style.borderColor = '#38bdf8'} // Highlight on hover
+                                    onMouseLeave={e => e.currentTarget.style.borderColor = '#4b5563'} // Restore border on leave
                                   >
                                     <div style={{
-                                      height: 120,
+                                      height: 120, // Fixed height for image container
                                       display: 'flex',
                                       alignItems: 'center',
                                       justifyContent: 'center',
-                                      background: '#F3F4F6',
-                                      position: 'relative'
+                                      background: '#1f2937', // Image area background (slate-800)
+                                      position: 'relative' // For positioning delete button
                                     }}>
                                       <img src={asset.url} alt={asset.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                       <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 2 }}>
                                         <Popconfirm
-                                          title="Are you sure you want to delete this image?"
+                                          title={<span style={{ color: '#e5e7eb' }}>Are you sure you want to delete this image?</span>} // Text color
                                           onConfirm={e => { e.stopPropagation(); handleDeleteImage(asset); }}
-                                          onClick={e => e.stopPropagation()}
+                                          onClick={e => e.stopPropagation()} // Prevent card click when clicking popconfirm area
+                                          okButtonProps={{ danger: true, style: { background: '#dc2626' } }} // Style OK button (red)
+                                          cancelButtonProps={{ style: { background: '#4b5563', color: '#fff', border: 'none' } }} // Style Cancel button (slate)
                                         >
-                                          <Button type="text" danger icon={<DeleteOutlined />} />
+                                          {/* Styled delete button */}
+                                          <Button
+                                            type="primary"
+                                            danger
+                                            icon={<DeleteOutlined />}
+                                            size="small"
+                                            style={{ background: 'rgba(220, 38, 38, 0.8)', border: 'none' }} // Semi-transparent red
+                                            onClick={e => e.stopPropagation()} // Prevent card click when clicking button
+                                          />
                                         </Popconfirm>
                                       </div>
                                     </div>
-                                    <div style={{ padding: 8 }}>
+                                    <div style={{ padding: '8px 12px' }}> {/* Padding for text below image */}
                                       <div style={{
                                         fontSize: 13,
-                                        color: '#1a1a1a',
-                                        whiteSpace: 'nowrap',
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis'
+                                        color: '#e5e7eb', // Text color (light gray)
+                                        whiteSpace: 'nowrap', // Prevent wrapping
+                                        overflow: 'hidden', // Hide overflow
+                                        textOverflow: 'ellipsis', // Add ellipsis for long names
+                                        fontWeight: 500, // Slightly bolder text
                                       }}>{asset.name}</div>
                                     </div>
                                   </div>
@@ -630,36 +672,75 @@ export default function HtmlPreview({ pageId }) {
                                   setImagePage(page);
                                   setImagePageSize(size);
                                 }}
+                                // Custom renderer for dark theme pagination
+                                itemRender={(current, type, originalElement) => {
+                                  const baseStyle = { border: 'none', margin: '0 4px' }; // Add margin between buttons
+                                  if (type === 'prev' || type === 'next') {
+                                    // Style for Prev/Next buttons
+                                    return <Button style={{ ...baseStyle, background: '#374151', color: '#9ca3af' }}>{originalElement}</Button>;
+                                  }
+                                  if (type === 'page') {
+                                    // Style for page number buttons
+                                    const isActive = current === imagePage;
+                                    return <Button style={{
+                                      ...baseStyle,
+                                      background: isActive ? '#38bdf8' : '#374151', // Active: cyan, Inactive: slate
+                                      color: isActive ? '#fff' : '#9ca3af', // Active: white, Inactive: gray
+                                      fontWeight: isActive ? 'bold' : 'normal' // Bold for active page
+                                    }}>{current}</Button>;
+                                  }
+                                  // For 'jump-prev', 'jump-next' (ellipsis)
+                                  return <span style={{ color: '#9ca3af', margin: '0 4px' }}>{originalElement}</span>;
+                                }}
                               />
                             </div>
                           </>
                         )}
                       </Spin>
-                      {/* Upload Image Modal */}
+                      {/* Upload Image Modal - Styles already updated */}
                       <Modal
                         open={uploadModalVisible}
-                        title="Upload Image"
+                        title={<span style={{ color: '#e5e7eb' }}>Upload Image</span>} // Title color
                         onCancel={() => setUploadModalVisible(false)}
                         onOk={handleUpload}
+                        okText={uploading ? 'Uploading...' : 'Upload'} // Dynamic OK text
                         okButtonProps={{
-                          disabled: !uploadFile || !mediaName,
-                          loading: uploading
+                          disabled: !uploadFile || !mediaName || uploading,
+                          loading: uploading,
+                          style: {
+                            background: (!uploadFile || !mediaName) ? '#4b5563' : 'linear-gradient(90deg, #38bdf8 0%, #a78bfa 100%)', // Conditional background
+                            border: 'none',
+                            boxShadow: (!uploadFile || !mediaName) ? 'none' : '0 2px 8px #38bdf899',
+                          }
+                        }}
+                        cancelButtonProps={{
+                          style: { background: '#4b5563', color: '#fff', border: 'none' } // Style Cancel button
                         }}
                         destroyOnClose
+                        styles={{ // Apply dark theme to upload modal too
+                          body: { background: '#1f2937', color: '#e5e7eb' },
+                          header: { background: '#111827', borderBottom: '1px solid #374151', color: '#e5e7eb' },
+                          content: { background: '#1f2937', color: '#e5e7eb' },
+                        }}
+                        className="dark-modal"
                       >
                         {!uploadFile ? (
                           <div
                             style={{
-                              border: '2px dashed #d9d9d9',
+                              border: '2px dashed #4b5563', // Updated border color
                               borderRadius: 8,
                               padding: 32,
                               textAlign: 'center',
-                              cursor: 'pointer'
+                              cursor: 'pointer',
+                              background: '#111827', // Darker background for drop zone
+                              color: '#9ca3af' // Text color
                             }}
                             onClick={() => document.getElementById('image-upload-input').click()}
-                            onDragOver={e => e.preventDefault()}
+                            onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = '#38bdf8'; }} // Highlight on drag over
+                            onDragLeave={e => e.currentTarget.style.borderColor = '#4b5563'}
                             onDrop={e => {
                               e.preventDefault();
+                              e.currentTarget.style.borderColor = '#4b5563'; // Reset border color
                               const file = e.dataTransfer.files[0];
                               if (file) {
                                 if (file.size > 1024 * 1024) {
@@ -672,7 +753,7 @@ export default function HtmlPreview({ pageId }) {
                               }
                             }}
                           >
-                            <UploadOutlined style={{ fontSize: 32, color: '#3B82F6', marginBottom: 8 }} />
+                            <UploadOutlined style={{ fontSize: 32, color: '#38bdf8', marginBottom: 8 }} />
                             <p>Click or drag file to upload</p>
                             <p style={{ color: '#6b7280', fontSize: 12, marginTop: 8 }}>Supports JPG, PNG, WebP formats (Max 1MB)</p>
                             <input
@@ -696,15 +777,16 @@ export default function HtmlPreview({ pageId }) {
                           </div>
                         ) : (
                           <>
-                            <div style={{ textAlign: 'center', marginBottom: 16 }}>
-                              <img src={previewUrl} alt="Preview" style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 8 }} />
+                            <div style={{ textAlign: 'center', marginBottom: 16, background: '#374151', padding: 8, borderRadius: 8 }}> {/* Added background */}
+                              <img src={previewUrl} alt="Preview" style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 4 }} />
                             </div>
                             <Input
                               value={mediaName}
                               onChange={e => setMediaName(e.target.value)}
                               placeholder="Enter file name"
                               maxLength={50}
-                              style={{ marginBottom: 12 }}
+                              style={{ marginBottom: 12, background: '#111827', color: '#e5e7eb', border: '1px solid #4b5563' }} // Dark input
+                              placeholderTextColor="#6b7280" // Placeholder color
                             />
                             <Input.TextArea
                               value={mediaDesc}
@@ -712,6 +794,8 @@ export default function HtmlPreview({ pageId }) {
                               placeholder="Enter description (optional)"
                               maxLength={200}
                               rows={3}
+                              style={{ background: '#111827', color: '#e5e7eb', border: '1px solid #4b5563' }} // Dark textarea
+                              placeholderTextColor="#6b7280" // Placeholder color
                             />
                             <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 16 }}>
                               <Button type="primary" danger onClick={() => {
@@ -719,7 +803,7 @@ export default function HtmlPreview({ pageId }) {
                                 setPreviewUrl('');
                                 setMediaName('');
                                 setMediaDesc('');
-                              }} icon={<DeleteOutlined />}>
+                              }} icon={<DeleteOutlined />} style={{ background: '#dc2626' }}> {/* Red background */}
                                 Remove
                               </Button>
                             </div>
@@ -736,44 +820,52 @@ export default function HtmlPreview({ pageId }) {
                     style={{
                       width: '100%',
                       borderRadius: 8,
-                      border: '1px solid #334155',
+                      border: '1px solid #4b5563', // Updated border (slate-600)
                       padding: 12,
                       fontSize: 16,
-                      background: '#18181c',
-                      color: '#fff',
+                      background: '#111827', // Updated background (slate-900)
+                      color: '#e5e7eb', // Updated text color
                       fontFamily: 'monospace'
                     }}
                     placeholder="Enter content"
                   />
                 )}
               </div>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+              {/* Sidebar Buttons - Updated Style */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 16, paddingTop: 16, borderTop: '1px solid #374151' }}> {/* Added top border */}
                 <button
                   onClick={closeSidebar}
                   style={{
-                    background: '#64748b',
-                    color: '#fff',
+                    // background: '#64748b', // Old background (slate)
+                    background: '#4b5563', // Updated background (slate-600)
+                    color: '#e5e7eb', // Updated text color
                     border: 'none',
                     borderRadius: 8,
                     padding: '8px 24px',
                     fontWeight: 500,
                     fontSize: 16,
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s ease',
                   }}
+                  onMouseOver={e => e.currentTarget.style.background = '#6b7280'} // Hover effect
+                  onMouseOut={e => e.currentTarget.style.background = '#4b5563'}
                 >Cancel</button>
                 <button
                   onClick={saveContent}
                   disabled={saving}
                   style={{
-                    background: '#38bdf8',
+                    // background: '#38bdf8', // Old background
+                    background: saving ? '#374151' : 'linear-gradient(90deg, #38bdf8 0%, #a78bfa 100%)', // Updated background (cyan to purple gradient)
                     color: '#fff',
                     border: 'none',
                     borderRadius: 8,
                     padding: '8px 24px',
                     fontWeight: 600,
                     fontSize: 16,
-                    cursor: 'pointer',
-                    opacity: saving ? 0.6 : 1
+                    cursor: saving ? 'not-allowed' : 'pointer', // Cursor change when disabled
+                    opacity: saving ? 0.6 : 1,
+                    transition: 'background-color 0.2s ease, opacity 0.2s ease',
+                    boxShadow: saving ? 'none' : '0 2px 8px #38bdf899', // Added shadow
                   }}
                 >{saving ? 'Saving...' : 'Save'}</button>
               </div>

@@ -271,6 +271,19 @@ const HistoryCardList = () => {
     }
   };
 
+  // === 新增：useEffect 监听 verifiedDomains 变化并设置默认选中项 ===
+  useEffect(() => {
+    // 仅当 verifiedDomains 数组更新且包含元素时执行
+    if (Array.isArray(verifiedDomains) && verifiedDomains.length > 0) {
+      // 默认选中列表中的第一个 URL
+      setSelectedPublishUrl(verifiedDomains[0]);
+    } else {
+      // 如果 verifiedDomains 为空（例如加载失败或确实没有），确保 selectedPublishUrl 也为空
+      setSelectedPublishUrl('');
+    }
+    // 这个 effect 依赖于 verifiedDomains 状态
+  }, [verifiedDomains]);
+
   if (!hasToken) {
     return null;
   }
@@ -712,11 +725,18 @@ const HistoryCardList = () => {
                       {/* Publish URL */}
                       <div>
                         <div className="text-sm font-semibold text-cyan-300 mb-1">The Publish URL You Can Choose From</div>
-                        {verifiedDomains.length === 0 ? (
+                        {/* === 修改：根据 domainLoading 显示加载状态 === */}
+                        {domainLoading ? (
+                          <div className="flex items-center gap-2 py-2">
+                            <Spin size="small" />
+                            <span className="text-gray-400 text-xs">Loading available URLs...</span>
+                          </div>
+                        ) : verifiedDomains.length === 0 ? (
+                          // 当不处于加载状态且没有可用域名时，显示提示和按钮
                           <div className="flex flex-col items-start gap-2">
-                            <div className="text-gray-400 mb-2">No available publish URL</div>
+                            <div className="text-gray-400 mb-2 text-xs">No available publish URL</div>
                             <button
-                              className="px-4 py-2 rounded bg-cyan-500 hover:bg-cyan-400 text-white font-semibold transition"
+                              className="px-3 py-1 rounded bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold transition"
                               onClick={() => {
                                 const accessToken = localStorage.getItem('alternativelyAccessToken') || '';
                                 const customerEmail = localStorage.getItem('alternativelyCustomerEmail') || '';
@@ -724,8 +744,8 @@ const HistoryCardList = () => {
                                 let url = 'https://app.websitelm.com/dashboard';
                                 const params = [];
                                 if (accessToken) params.push(`authKey=${encodeURIComponent(accessToken)}`);
-                                if (customerEmail) params.push(`customerEmail=${encodeURIComponent(customerEmail)}`);
-                                if (customerId) params.push(`customerId=${encodeURIComponent(customerId)}`);
+                                if (customerEmail) params.push(`currentCustomerEmail=${encodeURIComponent(customerEmail)}`);
+                                if (customerId) params.push(`currentCustomerId=${encodeURIComponent(customerId)}`);
                                 if (params.length > 0) {
                                   url += '?' + params.join('&');
                                 }
@@ -736,19 +756,19 @@ const HistoryCardList = () => {
                             </button>
                           </div>
                         ) : (
+                          // 当不处于加载状态且有可用域名时，显示下拉选择框
                           <>
                             <select
-                              value={selectedPublishUrl}
+                              value={selectedPublishUrl} // value 会被 useEffect 设置为第一个
                               onChange={e => setSelectedPublishUrl(e.target.value)}
-                              disabled={domainLoading}
-                              className="w-full bg-slate-800/80 text-gray-100 border border-slate-700 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition"
+                              className="w-full bg-slate-800/80 text-gray-100 border border-slate-700 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition text-sm"
                             >
-                              <option value="" className="text-gray-400">Select domain or subfolder</option>
+                              {/* 不再需要 placeholder，因为 useEffect 会设置默认值 */}
                               {verifiedDomains.map(domain => (
                                 <option key={domain} value={domain}>{domain}</option>
                               ))}
                             </select>
-                            {domainLoading && <Spin size="small" className="ml-2" />}
+                            {/* 加载状态由外部条件渲染处理，这里不再需要 Spin */}
                           </>
                         )}
                       </div>
@@ -1022,8 +1042,16 @@ const loadVerifiedDomains = async (setVerifiedDomains, setDomainLoading) => {
     const response = await apiClient.getProductsByCustomerId();
     if (response?.code === 200) {
       productInfo = response.data;
-      domainConfigured = !!(productInfo?.projectWebsite && productInfo?.domainStatus);
     }
+
+    // === 新增：检查 domainStatus ===
+    // 如果 domainStatus 明确为 false，则直接认为没有可用域名
+    if (productInfo?.domainStatus === false) {
+      setVerifiedDomains([]);
+      setDomainLoading?.(false); // 确保 loading 状态被关闭
+      return; // 提前退出函数
+    }
+    // === 结束新增检查 ===
 
     // 2. 获取域名列表
     const domainResp = await apiClient.getVercelDomainInfo(projectId);
@@ -1033,7 +1061,8 @@ const loadVerifiedDomains = async (setVerifiedDomains, setDomainLoading) => {
     const rootDomain = productInfo?.projectWebsite;
     if (!rootDomain) {
       setVerifiedDomains([]);
-      return;
+      setDomainLoading?.(false); // 在 finally 中统一处理
+      return; // 提前退出
     }
 
     // 4. 过滤并检查域名 - 只保留以根域名结尾的域名
@@ -1079,7 +1108,7 @@ const loadVerifiedDomains = async (setVerifiedDomains, setDomainLoading) => {
     // 发生异常，清空可用域名
     setVerifiedDomains([]);
   } finally {
-    setDomainLoading?.(false);
+    setDomainLoading?.(false); // 统一在 finally 中关闭 loading
   }
 };
 
