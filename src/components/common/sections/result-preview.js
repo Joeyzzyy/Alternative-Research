@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import apiClient from '../../../lib/api/index.js';
 import { Modal, Button, Spin, message } from 'antd';
-import { DeleteOutlined, ExclamationCircleOutlined, ReloadOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
+import { DeleteOutlined, ExclamationCircleOutlined, ReloadOutlined, LeftOutlined, RightOutlined, CloseOutlined } from '@ant-design/icons';
 import HtmlPreview from './page-edit'; // 新增：引入HtmlPreview组件
 
 const HistoryCardList = () => {
@@ -657,20 +657,12 @@ const HistoryCardList = () => {
                 position: 'relative',
                 overflow: 'hidden',
               },
-              close: {
-                color: '#cbd5e1',
-                top: '12px',
-                right: '16px',
-                transition: 'color 0.3s',
-                '&:hover': {
-                  color: '#f8fafc',
-                },
-              },
             }}
             className="custom-large-modal"
             title={null}
             centered={false}
-            closable={true}
+            closable={false}
+            maskClosable={true}
           >
             {/* === 左右导航按钮 === */}
             {finishedTasks.length > 1 && selectedItem.generatorStatus === 'finished' && (
@@ -695,19 +687,27 @@ const HistoryCardList = () => {
                 </button>
               </>
             )}
-            {/* === 弹窗内删除按钮 === */}
-            <button
-              className="absolute top-4 right-4 z-30 bg-red-700/70 hover:bg-red-800/80 text-white rounded-full p-2 shadow transition flex items-center justify-center"
-              title="Delete Current Task"
-              style={{ width: 36, height: 36 }}
-              onClick={e => {
-                e.stopPropagation();
-                setDeleteConfirm({ open: true, id: selectedItem.websiteId });
-              }}
-              disabled={deletingId === selectedItem.websiteId || isClearingAll}
-            >
-              <DeleteOutlined style={{ fontSize: 18 }} />
-            </button>
+            {/* === 修改：将删除按钮和新的关闭按钮放在一个容器中 === */}
+            <div className="absolute top-3 right-4 z-30 flex items-center gap-2">
+              {/* 弹窗内删除按钮 */}
+              <button
+                onClick={() => setDeleteConfirm(selectedItem.websiteId)}
+                className="p-1.5 rounded-full text-red-400 bg-slate-800/60 hover:bg-slate-700/80 transition duration-200"
+                title="Delete Task"
+                disabled={deletingId === selectedItem.websiteId || isClearingAll}
+              >
+                <DeleteOutlined style={{ fontSize: 16, display: 'block' }} />
+              </button>
+
+              {/* === 新增：自定义关闭按钮 === */}
+              <button
+                onClick={handleModalClose}
+                className="p-1.5 rounded-full text-white bg-slate-800/60 hover:bg-slate-700/80 transition duration-200"
+                title="Close"
+              >
+                <CloseOutlined style={{ fontSize: 16, display: 'block' }} />
+              </button>
+            </div>
 
             {resultLoading ? (
               <div className="flex-1 flex items-center justify-center">
