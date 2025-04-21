@@ -151,6 +151,7 @@ const ResearchTool = ({
         setCurrentStep(2);
         const answer = filterMessageTags(response.data.answer);
         messageHandler.updateAgentMessage(answer, thinkingMessageId);
+        messageHandler.addSystemMessage('If you are not satisfied with the competitors, you can put in the competitors you want to analyze!');
       } else {
         messageHandler.updateAgentMessage('⚠️ Failed to generate alternatives: Invalid response from server', thinkingMessageId);
       }
@@ -176,6 +177,37 @@ const ResearchTool = ({
   };
 
   const renderChatMessage = (message, index) => {
+    // 更低调的 system 消息样式
+    if (message.source === 'system') {
+      return (
+        <div
+          key={index}
+          className="flex justify-center mb-6"
+          style={{ animation: 'fadeIn 0.5s ease-out forwards' }}
+        >
+          <div className="max-w-[80%] w-full flex flex-col items-center">
+            <div
+              className="px-4 py-2 rounded-lg bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm font-medium flex items-center gap-2"
+              style={{
+                margin: '0 auto',
+                minWidth: '180px',
+                maxWidth: '400px',
+              }}
+            >
+              <InfoCircleOutlined className="text-base text-yellow-500 mr-2" />
+              <span>
+                {message.content.split('\n').map((line, i) => (
+                  <React.Fragment key={i}>
+                    {line}
+                    {i < message.content.split('\n').length - 1 && <br />}
+                  </React.Fragment>
+                ))}
+              </span>
+            </div>
+          </div>
+        </div>
+      );
+    }
     if (message.source === 'user') {
       return (
         <div 
@@ -1010,9 +1042,30 @@ const ResearchTool = ({
         const rawAnswer = response.data.answer;
         if (rawAnswer.includes('[URL_GET]')) {
           setInputDisabledDueToUrlGet(true);
-          const answer = filterMessageTags(rawAnswer);
-          messageHandler.updateAgentMessage(answer, thinkingMessageId);
+          messageHandler.updateAgentMessage(rawAnswer, thinkingMessageId);
+          // 在chat接口成功接收URL后，发送URL给search接口进行任务初始化
+          const searchResponse = await apiClient.searchCompetitor(
+            formattedInput,
+            false,
+            currentWebsiteId
+          );
+          if (searchResponse?.code === 1058) {
+            messageHandler.updateAgentMessage("⚠️ Network error occurred. Please try again.", thinkingMessageId);
+            return;
+          }
+          if (searchResponse?.code === 200 && searchResponse?.data?.websiteId) {
+            setShouldConnectSSE(true);
+          }
+
+          while (messageHandler.isProcessing) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
           messageHandler.addSystemMessage('Searching for competitors. Please wait a moment...');
+          setIsMessageSending(true);
+          while (messageHandler.isProcessing) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+          setCanProcessCompetitors(true);
         } else if (rawAnswer.includes('[COMPETITOR_SELECTED]')) {
           const messageBody = rawAnswer.replace(/\[COMPETITOR_SELECTED\].*$/s, '').trim();
           messageHandler.updateAgentMessage(messageBody, thinkingMessageId);
@@ -1126,7 +1179,6 @@ const ResearchTool = ({
         console.error('Error checking user credit:', creditError);
       }
 
-      // 获取历史任务列表
       try {
         const historyResponse = await apiClient.getAlternativeWebsiteList(1, 3);
         if (historyResponse?.code === 200 && historyResponse.data) {
