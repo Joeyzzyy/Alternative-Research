@@ -14,6 +14,7 @@ import Recommendations from '../common/sections/recommendations';
 import ShowCase from '../common/sections/show-case';
 import ResultPreview from '../common/sections/result-preview';
 import { useToolContext } from '../../contexts/ToolContext';
+import BottomBanner from '../common/sections/bottom-banner';
 
 const COMPONENT_MAP = {
   Faqs: FAQ,
@@ -69,6 +70,11 @@ const CommonLayout = ({ article, keywords }) => {
 
   const sections = article?.sections || [];
   const author = article?.author || 'default';
+
+  // 新增：处理底部banner点击，弹出登录框
+  const handleBottomBannerClick = () => {
+    window.dispatchEvent(new Event('showAlternativelyLoginModal'));
+  };
 
   return (
     <div suppressHydrationWarning className="min-h-screen flex flex-col">
@@ -153,6 +159,8 @@ const CommonLayout = ({ article, keywords }) => {
           data={footerData}
         />
       )}
+      {/* 新增底部横幅 */}
+      <BottomBanner onClick={handleBottomBannerClick} />
     </div>
   );
 };

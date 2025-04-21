@@ -644,21 +644,21 @@ const HistoryCardList = () => {
             open={true}
             onCancel={handleModalClose}
             footer={null}
-            width={1600}
-            style={{ top: 0, padding: 0 }}
+            width={'100vw'}
+            style={{ top: 0, padding: 0, margin: 0, maxWidth: '100vw' }}
             styles={{
               body: {
                 padding: 0,
                 background: '#18181c',
-                minHeight: 'calc(100vh - 48px)',
-                maxHeight: 'calc(100vh - 48px)',
+                minHeight: '100vh',
+                maxHeight: '100vh',
                 display: 'flex',
                 flexDirection: 'column',
                 position: 'relative',
                 overflow: 'hidden',
               },
             }}
-            className="custom-large-modal"
+            wrapClassName="fullscreen-modal"
             title={null}
             centered={false}
             closable={false}
@@ -687,11 +687,30 @@ const HistoryCardList = () => {
                 </button>
               </>
             )}
-            {/* === 修改：将删除按钮和新的关闭按钮放在一个容器中 === */}
+            {/* === 修改：将删除按钮、编辑按钮和新的关闭按钮放在一个容器中 === */}
             <div className="absolute top-3 right-4 z-30 flex items-center gap-2">
+              {/* === 新增：编辑按钮 === */}
+              <button
+                onClick={() => {
+                  // 使用 selectedPreviewId，因为它在当前作用域可用
+                  if (selectedPreviewId) {
+                    setEditPageId(selectedPreviewId);
+                  }
+                }}
+                className="p-1.5 rounded-full text-cyan-300 bg-slate-800/60 hover:bg-slate-700/80 transition duration-200"
+                title="Edit Page"
+                // 禁用条件可以根据需要调整，例如当没有选中预览项时
+                disabled={!selectedPreviewId || resultLoading}
+              >
+                {/* 可以使用 antd 的 EditOutlined 图标，如果已引入 */}
+                {/* <EditOutlined style={{ fontSize: 16, display: 'block' }} /> */}
+                {/* 或者使用文字 */}
+                <span style={{ fontSize: 14, display: 'block', lineHeight: '1' }}>Edit</span>
+              </button>
+
               {/* 弹窗内删除按钮 */}
               <button
-                onClick={() => setDeleteConfirm(selectedItem.websiteId)}
+                onClick={() => setDeleteConfirm({ open: true, id: selectedItem.websiteId })} // 确认使用 selectedItem.websiteId
                 className="p-1.5 rounded-full text-red-400 bg-slate-800/60 hover:bg-slate-700/80 transition duration-200"
                 title="Delete Task"
                 disabled={deletingId === selectedItem.websiteId || isClearingAll}
@@ -699,7 +718,7 @@ const HistoryCardList = () => {
                 <DeleteOutlined style={{ fontSize: 16, display: 'block' }} />
               </button>
 
-              {/* === 新增：自定义关闭按钮 === */}
+              {/* 自定义关闭按钮 */}
               <button
                 onClick={handleModalClose}
                 className="p-1.5 rounded-full text-white bg-slate-800/60 hover:bg-slate-700/80 transition duration-200"
@@ -714,7 +733,7 @@ const HistoryCardList = () => {
                 <Spin size="large" />
               </div>
             ) : Array.isArray(resultDetail?.data) && resultDetail.data.length > 0 ? (
-              <div className="flex flex-col h-full overflow-hidden text-sm">
+              <div className="flex flex-col flex-1 min-h-0 text-sm">
                 <div className="text-center text-lg font-bold text-cyan-300 pt-3 pb-1 tracking-wide flex-shrink-0">
                   Task Preview
                 </div>
@@ -768,7 +787,7 @@ const HistoryCardList = () => {
                 </div>
                 <div className="flex flex-row flex-1 min-h-0 overflow-hidden p-4">
                   <div className="flex flex-row flex-1 min-h-0 bg-gradient-to-br from-slate-900 via-slate-950 to-black rounded-lg shadow-xl overflow-hidden border border-slate-800">
-                    <div className="w-[300px] p-3 flex flex-col gap-3 overflow-y-auto border-r border-slate-800 bg-slate-900/80 scrollbar-hide text-xs">
+                    <div className="w-[300px] p-3 flex flex-col gap-3 overflow-y-auto border-r border-slate-800 bg-slate-900/80 scrollbar-hide text-xs flex-shrink-0">
                       <div>
                         <div className="mb-1 text-sm font-bold text-cyan-300 tracking-wide pl-1">All Results</div>
                         <div className="flex flex-col gap-1.5">
@@ -1029,7 +1048,7 @@ const HistoryCardList = () => {
                       </div>
                     </div>
                     {/* Right: Preview */}
-                    <div className="flex-1 flex justify-center bg-gradient-to-br from-black via-slate-950 to-slate-900 p-3 min-h-[800px]">
+                    <div className="flex-1 flex justify-center bg-gradient-to-br from-black via-slate-950 to-slate-900 p-3 min-h-0">
                       {(() => {
                         const previewItem = resultDetail.data.find(i => i.resultId === selectedPreviewId);
                         if (!previewItem) {
@@ -1045,7 +1064,7 @@ const HistoryCardList = () => {
                           : `https://preview.websitelm.site/en/${previewItem.resultId}`;
                         return (
                           <div className="w-full h-full bg-black/90 rounded-lg shadow-xl flex flex-col border border-slate-800 overflow-hidden">
-                            <div className="flex items-center justify-between px-3 py-1 bg-gray-900 border-b border-gray-800">
+                            <div className="flex items-center justify-between px-3 py-1 bg-gray-900 border-b border-gray-800 flex-shrink-0">
                               <div className="flex items-center flex-1 min-w-0">
                                 <div className="w-2 h-2 rounded-full bg-red-400 mr-2"></div>
                                 <div className="w-2 h-2 rounded-full bg-yellow-400 mr-2"></div>
@@ -1054,24 +1073,16 @@ const HistoryCardList = () => {
                                   {previewUrl}
                                 </div>
                               </div>
+                              {/* 修改：移除此处的 Edit 按钮，只保留 Preview 按钮 */}
                               <div className="flex items-center gap-1.5 ml-3">
-                                <Button
-                                  size="small"
-                                  type="primary"
-                                  style={{ fontSize: '10px', padding: '0 8px' }}
-                                  onClick={() => {
-                                    setEditPageId(previewItem.resultId);
-                                  }}
-                                >
-                                  <span style={{ fontWeight: 600 }}>Edit</span>
-                                </Button>
+                                {/* Edit 按钮已被移到弹窗右上角 */}
                                 <Button
                                   size="small"
                                   type="default"
                                   style={{ fontSize: '10px', padding: '0 8px' }}
                                   onClick={() => window.open(previewUrl, '_blank')}
                                 >
-                                  <span style={{ fontWeight: 600 }}>View</span>
+                                  <span style={{ fontWeight: 600 }}>Preview</span>
                                 </Button>
                               </div>
                             </div>
@@ -1102,28 +1113,40 @@ const HistoryCardList = () => {
           open={!!editPageId}
           onCancel={() => setEditPageId(null)}
           footer={null}
-          width="90vw"
-          style={{ top: 24, padding: 0 }}
+          width="100vw"
+          style={{ top: 0, padding: 0, margin: 0, maxWidth: '100vw' }}
           styles={{
             body: {
-              height: '80vh',
+              height: '100vh',
               padding: 0,
+              margin: 0,
               background: '#18181c',
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'center',
               alignItems: 'center',
               position: 'relative',
-              paddingRight: 48,
             }
           }}
-          closable={true}
+          closable={false}
           maskClosable={true}
           destroyOnClose
           title={null}
+          wrapClassName="fullscreen-modal"
         >
+          {/* === 还原第一个弹窗的关闭按钮样式和位置 === */}
+          <div className="absolute top-3 right-4 z-30 flex items-center gap-2">
+            <button
+              onClick={() => setEditPageId(null)}
+              className="p-1.5 rounded-full text-white bg-slate-800/60 hover:bg-slate-700/80 transition duration-200"
+              title="Close"
+            >
+              <CloseOutlined style={{ fontSize: 16, display: 'block' }} />
+            </button>
+          </div>
+          {/* === 结束 === */}
           {editPageId && (
-            <div style={{ width: '100%', height: '100%' }}>
+            <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
               <HtmlPreview pageId={editPageId} />
             </div>
           )}
@@ -1235,6 +1258,26 @@ const loadVerifiedDomains = async (setVerifiedDomains, setDomainLoading) => {
   .text-xxs {
     font-size: 0.65rem; /* 约 10.4px */
     line-height: 0.9rem;
+  }
+  /* === 新增：覆盖 antd Modal 的默认样式以实现全屏 === */
+  .fullscreen-modal .ant-modal {
+    top: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100vw !important;
+    height: 100vh !important; /* 确保 Modal 容器本身也撑满 */
+  }
+  .fullscreen-modal .ant-modal-content {
+    height: 100vh !important; /* 确保内容区域撑满 */
+    margin: 0 !important;
+    padding: 0 !important;
+    border-radius: 0 !important; /* 移除圆角 */
+    display: flex; /* 使用 flex 布局 */
+    flex-direction: column; /* 垂直排列 */
+  }
+  .fullscreen-modal .ant-modal-body {
+    flex-grow: 1; /* 让 body 区域填充剩余空间 */
+    overflow: hidden; /* 防止 body 内部滚动 */
   }
 `}</style>
 

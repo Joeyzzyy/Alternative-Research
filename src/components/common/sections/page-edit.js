@@ -69,149 +69,39 @@ export default function HtmlPreview({ pageId }) {
     fetchHtml();
   }, [pageId]);
 
-  // Clean up styles and edit icons for all editable elements
-  function clearEditableElements(doc) {
-    if (!doc) return;
-    const editableElements = [
-      ...doc.querySelectorAll('[canedit]'),
-      ...doc.querySelectorAll('img'),
-      ...doc.querySelectorAll('a')
-    ];
-    editableElements.forEach(el => {
-      // el.style.boxShadow = ''; // <-- 移除旧的边框/阴影样式 (如果还存在)
-      el.style.cursor = ''; // 清除鼠标指针
-      el.style.position = ''; // 清除相对定位（如果原始元素没有position）
-
-      // --- 新增：移除编辑图标 ---
-      const icon = el.querySelector('[data-edit-icon="true"]');
-      if (icon) {
-        el.removeChild(icon);
-      }
-      // --- 结束：移除编辑图标 ---
-
-      // 移除 onClick 处理器
-      el.onclick = null;
-    });
-  }
-
-  // Setup editable elements
-  function setupEditableElements(doc) {
-    const editableElements = [
-      ...doc.querySelectorAll('[canedit]'),
-      ...doc.querySelectorAll('img'),
-      ...doc.querySelectorAll('a')
-    ];
-    editableElements.forEach(el => {
-      // el.style.boxShadow = '0 0 0 2px #3b82f6'; // <-- 移除旧的边框/阴影样式
-      el.style.cursor = 'pointer'; // 保持鼠标指针样式
-      el.style.position = 'relative'; // 保持相对定位，以便定位图标
-
-      // --- 新增：添加编辑图标 ---
-      const editIconContainer = doc.createElement('div');
-      editIconContainer.setAttribute('data-edit-icon', 'true'); // 添加标记，方便清除
-      editIconContainer.style.position = 'absolute';
-      editIconContainer.style.top = '2px'; // 轻微调整位置
-      editIconContainer.style.right = '2px'; // 轻微调整位置
-      editIconContainer.style.zIndex = '100';
-      editIconContainer.style.background = '#3b82f6'; // 蓝色背景
-      editIconContainer.style.color = 'white';
-      editIconContainer.style.borderRadius = '50%'; // 圆形图标
-      editIconContainer.style.width = '20px'; // 图标大小
-      editIconContainer.style.height = '20px';
-      editIconContainer.style.display = 'flex';
-      editIconContainer.style.alignItems = 'center';
-      editIconContainer.style.justifyContent = 'center';
-      editIconContainer.style.boxShadow = '0 1px 3px rgba(0,0,0,0.2)';
-      editIconContainer.style.fontSize = '12px'; // 图标内文字/符号大小
-      editIconContainer.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-pencil-fill" viewBox="0 0 16 16">
-          <path d="M12.854.146a.5.5 0 0 0-.707 0L10.5 1.793 14.207 5.5l1.647-1.646a.5.5 0 0 0 0-.708zm.172 2.457-1.588 1.588-1.23-1.23 1.588-1.588zM13.207 6.207l-1.23-1.23-7.293 7.293a.5.5 0 0 0-.146.274l-1 3.5a.5.5 0 0 0 .65.65l3.5-1a.5.5 0 0 0 .274-.146z"/>
-        </svg>
-      `; // 使用 SVG 铅笔图标
-      // 或者使用简单的文本： editIconContainer.textContent = '✎';
-
-      el.appendChild(editIconContainer);
-      // --- 结束：添加编辑图标 ---
-
-
-      // --- 保持现有的 onClick 逻辑 ---
-      el.onclick = (e) => {
-        // 阻止默认行为和事件冒泡，特别是对于链接和图标本身
-        e.preventDefault();
-        e.stopPropagation();
-
-        // 检查点击的是否是图标本身，如果是，则目标应该是其父元素
-        const clickedElement = e.target.closest('[data-edit-icon="true"]') ? el : el;
-
-        setCurrentEdit({
-          element: clickedElement, // 确保是可编辑元素本身
-          content: clickedElement.tagName.toLowerCase() === 'img'
-            ? clickedElement.getAttribute('src') || ''
-            : clickedElement.textContent.trim(), // 注意：textContent 可能仍需调整以适应复杂元素
-          selector: clickedElement.getAttribute('canedit') || '',
-          originalContent: clickedElement.tagName.toLowerCase() === 'img'
-            ? clickedElement.getAttribute('src') || ''
-            : clickedElement.textContent.trim()
-        });
-        setShowSidebar(true);
-      };
-      // --- 结束：保持现有的 onClick 逻辑 ---
-    });
-  }
-
   // Save edited content
   async function saveContent() {
     if (!currentEdit.element) {
-      // Use custom notification to display error
       showNotification('No editable element selected', 'error');
       return;
     }
     setSaving(true);
-    const doc = iframeRef.current?.contentDocument; // Get doc
+    const doc = iframeRef.current?.contentDocument;
     if (!doc) {
-      // Use custom notification to display error
       showNotification('Iframe document not found', 'error');
       setSaving(false);
       return;
     }
 
     try {
-      // Update content in the iframe
       if (currentEdit.element.tagName.toLowerCase() === 'img') {
         currentEdit.element.setAttribute('src', currentEdit.content);
       } else {
-        // Note: Directly setting textContent will remove all child elements, if the element has complex structure (like <span>), it might be lost
-        // If internal structure needs to be preserved, more complex update logic might be required
         currentEdit.element.textContent = currentEdit.content;
       }
 
-      // Before extracting HTML, clean up all editing-related styles and buttons
-      clearEditableElements(doc);
-
-      // Extract the cleaned HTML
       const updatedHtml = doc.documentElement.outerHTML;
-
-      // Reset editing state
-      setupEditableElements(doc);
 
       await apiClient.editAlternativeHtml({
         html: updatedHtml,
         resultId: pageId,
       });
 
-      // Update local state to reflect the saved HTML (theoretically should be consistent with updatedHtml)
-      // But to ensure the iframe displays the latest saved version, you can reset the html state
-      // setHtml(updatedHtml); // Or consider re-fetching data after successful save
-
       setShowSidebar(false);
-      // Use custom notification to display success message
       showNotification('Saved successfully', 'success');
     } catch (e) {
-      console.error('Save failed:', e); // Add log for easier debugging
-      // Use custom notification to display error
+      console.error('Save failed:', e);
       showNotification('Save failed', 'error');
-      // If save fails, editing state should also be reapplied
-      setupEditableElements(doc);
     }
     setSaving(false);
   }
@@ -229,145 +119,18 @@ export default function HtmlPreview({ pageId }) {
 
   // Render HTML to iframe
   useEffect(() => {
-    const iframe = iframeRef.current; // Get iframe element
+    const iframe = iframeRef.current;
     if (iframe && html) {
       const doc = iframe.contentDocument;
       if (!doc) return;
-
-      // --- Start: Define setup function ---
-      // Encapsulate the setup logic to be called on load
-      const setupIframeContent = () => {
-        const currentDoc = iframe.contentDocument; // Re-get doc inside handler
-        if (!currentDoc) return;
-
-        // Function to handle clicks within the iframe (keep existing logic)
-        const handleIframeClick = (e) => {
-          // Find the nearest ancestor anchor tag or the element itself if it's an anchor
-          let targetElement = e.target;
-          while (targetElement && targetElement.tagName !== 'A') {
-            targetElement = targetElement.parentElement;
-          }
-
-          // If an anchor tag was clicked or is an ancestor of the clicked element
-          if (targetElement && targetElement.tagName === 'A') {
-            console.log('Anchor click intercepted:', targetElement.href); // For debugging
-            e.preventDefault(); // Prevent navigation
-            e.stopPropagation(); // Stop the event from propagating further
-
-            // Optional: Still trigger the edit sidebar for the anchor
-            // Find the original element that has the onclick handler attached by setupEditableElements
-            // Note: findEditableElement might not be strictly necessary now if we base logic on e.target
-            const editableAnchor = targetElement; // We already found the anchor
-
-            // --- Start Edit ---
-            // Determine content based on the actual clicked element (e.target)
-            let contentToEdit = '';
-            let originalContentToEdit = '';
-            let elementToEdit = editableAnchor; // Default to anchor
-
-            if (e.target.tagName === 'IMG') {
-              // If the direct click target was an image within the anchor
-              contentToEdit = e.target.getAttribute('src') || '';
-              originalContentToEdit = e.target.getAttribute('src') || '';
-              elementToEdit = e.target; // Set element to the image itself for context
-               console.log('Editing image src via anchor intercept:', contentToEdit);
-            } else {
-              // Otherwise, edit the anchor's text content
-              contentToEdit = editableAnchor.textContent.trim();
-              originalContentToEdit = editableAnchor.textContent.trim();
-               console.log('Editing anchor text via anchor intercept:', contentToEdit);
-            }
-
-            // Manually trigger the logic to open the sidebar
-            setCurrentEdit({
-              element: elementToEdit, // Use the determined element (IMG or A)
-              content: contentToEdit,
-              selector: elementToEdit.getAttribute('canedit') || (editableAnchor ? editableAnchor.getAttribute('canedit') : '') || '', // Get selector from image or anchor
-              originalContent: originalContentToEdit
-            });
-            // --- End Edit ---
-            setShowSidebar(true);
-
-            return false; // Explicitly indicate the event is handled
-          }
-        };
-
-        // Helper function (keep existing logic)
-        const findEditableElement = (startElement, document) => {
-           let current = startElement;
-           while (current && current !== document.body) {
-              if (current.hasAttribute('canedit') || current.tagName === 'IMG' || current.tagName === 'A') {
-                 if (current.tagName === 'A') return current;
-                 // If the start element itself is the image, return it
-                 if (startElement.tagName === 'IMG' && current === startElement) return startElement;
-              }
-              current = current.parentElement;
-           }
-           return null;
-        }
-
-        // Add the click listener to the iframe document in the capture phase
-        // Ensure previous listener is removed before adding a new one to prevent duplicates
-        currentDoc.removeEventListener('click', handleIframeClick, true);
-        currentDoc.addEventListener('click', handleIframeClick, true); // true for capture phase
-
-        // Setup editable elements (highlighting, edit buttons, sidebar trigger)
-        clearEditableElements(currentDoc); // Clear first
-        setupEditableElements(currentDoc); // Then setup
-      };
-      // --- End: Define setup function ---
-
-
-      // --- Start: Handle iframe load ---
-      // Define the function to run when the iframe finishes loading
-      const handleLoad = () => {
-        console.log("Iframe loaded, setting up editable elements."); // Debug log
-        setupIframeContent();
-      };
-
-      // Add load event listener to the iframe element itself
-      iframe.addEventListener('load', handleLoad);
-      // --- End: Handle iframe load ---
-
 
       // Write HTML content to the iframe document
       // This triggers the loading process
       doc.open();
       doc.write(html);
       doc.close();
-
-      // --- Start: Initial setup attempt (Consider removal or keep as fallback) ---
-      // The 'load' event handler is the primary mechanism now.
-      // An immediate call might still catch some elements early, but could be redundant.
-      // Let's comment it out for now to rely solely on the 'load' event.
-      // setupIframeContent();
-      // --- End: Initial setup attempt ---
-
-
-      // Cleanup function for the useEffect hook
-      return () => {
-        // Remove the load listener when the component unmounts or html changes
-        iframe.removeEventListener('load', handleLoad);
-
-        // Remove the click listener from the iframe document (if it still exists)
-        // Need to define handleIframeClick outside the setup function scope or pass it
-        // For simplicity, let's re-fetch the doc and assume the listener might exist
-        const cleanupDoc = iframe.contentDocument;
-        if (cleanupDoc) {
-           // We need a reference to the *exact* handleIframeClick function used
-           // Let's redefine it here for cleanup, or better, define it outside setupIframeContent
-           // For now, this cleanup might not effectively remove the click listener
-           // A better approach would be to define handleIframeClick outside setupIframeContent
-           // cleanupDoc.removeEventListener('click', handleIframeClick, true); // This might not work correctly due to scope
-           // Let's skip removing the click listener here to avoid complexity,
-           // as it gets re-added correctly in setupIframeContent anyway.
-        }
-      };
     }
-    // Add iframeRef.current to dependencies if ESLint complains, but be cautious
-    // as it might cause unnecessary re-renders if the ref object itself changes.
-    // Usually, depending only on 'html' is correct here.
-  }, [html]); // Keep dependency only on html
+  }, [html]);
 
   // Fetch image list
   async function fetchImageAssets(page = 1, pageSize = 8) {
@@ -480,31 +243,11 @@ export default function HtmlPreview({ pageId }) {
         justifyContent: 'space-between'
       }}>
         <div>
-          Page Editor Preview
+          Page Editor
           <span style={{ fontWeight: 400, fontSize: 16, marginLeft: 24, color: '#e0e7ef' }}>
             (PageId: {pageId})
           </span>
         </div>
-        <button
-          onClick={() => window.open(`https://preview.websitelm.site/en/${pageId}`, '_blank')}
-          style={{
-            // background: '#10b981', // Old background (Emerald green)
-            background: 'linear-gradient(90deg, #22c55e 0%, #38bdf8 100%)', // Updated background (green to cyan gradient)
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            padding: '6px 16px',
-            fontWeight: 600,
-            fontSize: '14px',
-            cursor: 'pointer',
-            transition: 'opacity 0.2s ease', // Changed transition property
-            boxShadow: '0 2px 8px #22c55e99', // Added shadow like result-preview
-          }}
-          onMouseOver={e => e.currentTarget.style.opacity = '0.9'} // Use opacity for hover effect
-          onMouseOut={e => e.currentTarget.style.opacity = '1'}
-        >
-          Preview
-        </button>
       </div>
       {/* Edit Mode Hint (Always visible) - Updated Style */}
       <div style={{

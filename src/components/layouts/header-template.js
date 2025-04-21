@@ -113,6 +113,8 @@ export default function Header() {
   const [googleOneTapInitialized, setGoogleOneTapInitialized] = useState(false);
   const tokenExpiredHandledRef = useRef(false);
   const [showConstructionModal, setShowConstructionModal] = useState(false);
+  // 新增：顶部banner高度
+  const TOP_BANNER_HEIGHT = 60;
 
   useEffect(() => {
     // 检查本地存储中的登录信息
@@ -409,7 +411,7 @@ export default function Header() {
         setShowLoginModal(true);
         setIsLoginForm(true); // 确保显示登录表单而不是注册表单
         // 使用 messageApi 显示提示信息
-        messageApi.info({ content: 'Please login to continue', duration: 2 });
+        // messageApi.info({ content: 'Please login to continue', duration: 2 });
       }
     };
     
@@ -439,9 +441,64 @@ export default function Header() {
 
   return (
     <>
+      {/* 新增顶部横幅，仅未登录时显示 */}
+      {!isLoggedIn && (
+        <div
+          className="fixed bottom-auto top-0 left-0 right-0 z-[60] flex justify-center items-center"
+          style={{
+            background: 'linear-gradient(90deg, #38bdf8 0%, #818cf8 60%, #a21caf 100%)',
+            boxShadow: '0 2px 8px 0 rgba(129,140,248,0.10)',
+            height: '60px', // 高度与底部banner一致
+            fontSize: '0.90rem', // 字体大小与底部一致
+            fontWeight: 500,
+            letterSpacing: '0.01em',
+            borderBottom: '1px solid rgba(255,255,255,0.10)',
+            backdropFilter: 'blur(1.5px)',
+            padding: '0 1.5rem',
+          }}
+        >
+          <span
+            style={{
+              color: '#fff',
+              fontWeight: 500,
+              fontSize: '0.92em',
+              marginRight: '1.2rem',
+              letterSpacing: '0.01em',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            We use cookies to optimize your experience. <span style={{background: 'linear-gradient(90deg,#fff,#f0abfc 80%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: 700}}>Sign up to generate 5 pages for free</span>. No credit card required, try it now!
+          </span>
+          <button
+            className="ml-2 px-4 py-1.5 rounded-md font-bold shadow transition-all duration-150"
+            style={{
+              background: 'linear-gradient(90deg, #f0abfc 0%, #fff 100%)',
+              color: '#7c3aed',
+              fontSize: '0.92em',
+              border: 'none',
+              outline: 'none',
+              cursor: 'pointer',
+              boxShadow: '0 1px 6px 0 #a21caf22',
+            }}
+            onClick={() => {
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+              setShowLoginModal(true);
+              setIsLoginForm(true);
+              setIsForgotPassword(false);
+            }}
+          >
+            Quick Start
+          </button>
+        </div>
+      )}
       {/* 在根元素渲染 contextHolder */}
       {contextHolder}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-slate-950 to-black border-b border-slate-800/50">
+      <nav
+        className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-slate-950 to-black border-b border-slate-800/50"
+        style={{
+          top: !isLoggedIn ? `${TOP_BANNER_HEIGHT}px` : '0', // 这里动态偏移
+        }}
+      >
         {/* 科技感背景装饰 */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_#22d3ee10_0%,_transparent_60%)]"></div>
         
