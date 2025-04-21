@@ -124,12 +124,121 @@ export default function HtmlPreview({ pageId }) {
       const doc = iframe.contentDocument;
       if (!doc) return;
 
-      // Write HTML content to the iframe document
-      // This triggers the loading process
+      // 写入 HTML 内容
       doc.open();
       doc.write(html);
       doc.close();
+
+      // 设置可编辑区域鼠标样式
+      // 先移除旧的 style
+      const oldStyle = doc.getElementById('page-edit-cursor-style');
+      if (oldStyle) oldStyle.remove();
+
+      // 注入样式：有canEdit属性、img、独立文字区域显示pointer
+      const style = doc.createElement('style');
+      style.id = 'page-edit-cursor-style';
+      style.innerHTML = `
+        [canEdit], img {
+          cursor: pointer !important;
+        }
+        /* 独立文字区域：只有一个文本节点且有内容 */
+        *:not([canEdit]):not(img) {
+          cursor: inherit;
+        }
+      `;
+      doc.head.appendChild(style);
+
+      // 额外处理独立文字区域
+      Array.from(doc.body.querySelectorAll('*')).forEach(node => {
+        if (
+          !node.hasAttribute?.('canEdit') &&
+          node.tagName.toLowerCase() !== 'img' &&
+          node.childNodes.length === 1 &&
+          node.childNodes[0].nodeType === 3 &&
+          node.textContent.trim().length > 0
+        ) {
+          node.style.cursor = 'pointer';
+        }
+      });
     }
+  }, [html]);
+
+  // 新增：iframe内容加载后，绑定点击事件
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe || !html) return;
+    const doc = iframe.contentDocument;
+    if (!doc) return;
+
+    // 先移除旧的事件监听，避免重复绑定
+    doc.removeEventListener('click', handleIframeClick, true);
+
+    // 处理iframe内的点击事件
+    function handleIframeClick(e) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      // 优先查找canEdit属性的元素
+      let el = e.target;
+      let canEditEl = null;
+      while (el && el !== doc.body) {
+        if (el.hasAttribute && el.hasAttribute('canEdit')) {
+          canEditEl = el;
+          break;
+        }
+        el = el.parentNode;
+      }
+
+      if (canEditEl) {
+        // 可编辑元素
+        setCurrentEdit({
+          element: canEditEl,
+          content: canEditEl.tagName.toLowerCase() === 'img' ? canEditEl.getAttribute('src') : canEditEl.textContent,
+          selector: '', // 可选：可生成唯一选择器
+          originalContent: canEditEl.tagName.toLowerCase() === 'img' ? canEditEl.getAttribute('src') : canEditEl.textContent
+        });
+        setShowSidebar(true);
+        return;
+      }
+
+      // 没有canEdit属性，判断是否是独立的文字或图片区域
+      const tag = e.target.tagName.toLowerCase();
+      if (tag === 'img') {
+        setCurrentEdit({
+          element: e.target,
+          content: e.target.getAttribute('src'),
+          selector: '',
+          originalContent: e.target.getAttribute('src')
+        });
+        setShowSidebar(true);
+        return;
+      }
+      // 判断是否是独立的文字节点（无子元素，且有文本内容）
+      if (
+        e.target.childNodes.length === 1 &&
+        e.target.childNodes[0].nodeType === 3 && // TEXT_NODE
+        e.target.textContent.trim().length > 0
+      ) {
+        setCurrentEdit({
+          element: e.target,
+          content: e.target.textContent,
+          selector: '',
+          originalContent: e.target.textContent
+        });
+        setShowSidebar(true);
+        return;
+      }
+
+      // 其他情况，弹出提示
+      message.info('All text and image areas on the page can be edited by clicking them.');
+    }
+
+    doc.addEventListener('click', handleIframeClick, true);
+
+    // 清理事件
+    return () => {
+      doc.removeEventListener('click', handleIframeClick, true);
+    };
   }, [html]);
 
   // Fetch image list
@@ -249,19 +358,29 @@ export default function HtmlPreview({ pageId }) {
           </span>
         </div>
       </div>
-      {/* Edit Mode Hint (Always visible) - Updated Style */}
+      {/* Edit Mode Hint (Always visible) - 更明显的提示 */}
       <div style={{
-        // background: '#1e40af', // Old background (Blue)
-        background: '#374151', // Updated background (slate-700)
-        color: '#e0f2fe', // Light blue text
-        padding: '8px 32px',
+        background: '#f59e42', // 更亮的橙色背景
+        color: '#18181c',      // 深色字体
+        padding: '10px 32px',
         textAlign: 'center',
-        fontSize: 14,
-        fontWeight: 500,
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.2)',
-        zIndex: 9
+        fontSize: 15,
+        fontWeight: 700,       // 加粗
+        letterSpacing: 1,
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.12)',
+        zIndex: 9,
+        borderBottom: '2px solid #fbbf24', // 底部加一条亮色线
+        textShadow: '0 1px 0 #fff8',       // 字体加一点点阴影提升可读性
+        userSelect: 'none'
       }}>
-        Editing mode is active. Link clicks are disabled. All elements highlighted with a blue border are editable and replaceable.
+        <span style={{ fontSize: 17, fontWeight: 900, marginRight: 8, verticalAlign: 'middle' }}>🖱️</span>
+        <span>
+          Click any <span style={{ textDecoration: 'underline', fontWeight: 900 }}>text</span> or <span style={{ textDecoration: 'underline', fontWeight: 900 }}>image</span> area to edit.<br />
+          All clickable areas will show a <span style={{ color: '#d97706', fontWeight: 900 }}>pointer cursor</span>.<br />
+          <span style={{ fontSize: 13, fontWeight: 600, color: '#92400e', marginTop: 4, display: 'inline-block' }}>
+            After editing, your changes will be <span style={{ textDecoration: 'underline', fontWeight: 900 }}>saved automatically</span>! No need to save manually.
+          </span>
+        </span>
       </div>
       {/* Page Rendering Area */}
       <div style={{ flex: 1, background: '#18181c', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
