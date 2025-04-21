@@ -5,6 +5,7 @@ import React, { useEffect, useState } from 'react';
 export default function BottomBanner({ onClick }) {
   const [isLoggedIn, setIsLoggedIn] = useState(true);
   const [show, setShow] = useState(false);
+  const [userEmail, setUserEmail] = useState('');
 
   useEffect(() => {
     // 检查本地登录状态
@@ -18,6 +19,22 @@ export default function BottomBanner({ onClick }) {
       setTimeout(() => setShow(true), 2000);
     }
   }, [isLoggedIn]);
+
+  useEffect(() => {
+    const handleLoginSuccess = () => {
+      // 重新获取登录信息
+      const storedIsLoggedIn = localStorage.getItem('alternativelyIsLoggedIn');
+      const storedEmail = localStorage.getItem('alternativelyCustomerEmail');
+      if (storedIsLoggedIn === 'true' && storedEmail) {
+        setIsLoggedIn(true);
+        setUserEmail(storedEmail);
+      }
+    };
+    window.addEventListener('alternativelyLoginSuccess', handleLoginSuccess);
+    return () => {
+      window.removeEventListener('alternativelyLoginSuccess', handleLoginSuccess);
+    };
+  }, []);
 
   if (isLoggedIn) return null;
 
