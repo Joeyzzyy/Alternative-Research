@@ -2825,18 +2825,19 @@ const ResearchTool = ({
                           alignItems: 'center',
                           justifyContent: 'center',
                           background: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)',
-                          borderRadius: '8px',
-                          boxShadow: '0 2px 8px 0 rgba(255,65,108,0.15)',
+                          borderRadius: '50%', // 保持按钮本身为圆形
+                          // 修改 box-shadow 以添加发光效果
+                          boxShadow: '0 0 12px 2px rgba(255, 75, 43, 0.6), 0 2px 4px 0 rgba(255,65,108,0.15)', // 添加红色/橙色发光
                           border: 'none',
-                          transition: 'box-shadow 0.2s',
+                          transition: 'box-shadow 0.3s ease-in-out', // 平滑过渡
                         }}
                       >
-                        {/* 白色方块 */}
+                        {/* 更小的白色方块 */}
                         <div style={{
-                          width: '16px',
-                          height: '16px',
+                          width: '12px', // 调小尺寸
+                          height: '12px', // 调小尺寸
                           background: 'white',
-                          borderRadius: '3px',
+                          borderRadius: '3px', // 保持方形（或轻微圆角）
                           boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
                         }} />
                       </button>
