@@ -532,8 +532,8 @@ export default function Header() {
                   <Image
                     src="/images/alternatively-logo-tem.png"
                     alt="Logo"
-                    width={160}
-                    height={40}
+                    width={120}
+                    height={30}
                     className="object-contain transition-transform duration-300 group-hover:scale-105 mix-blend-lighten"
                     style={{ width: 'auto', height: 'auto' }}
                     quality={100}
