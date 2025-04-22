@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import apiClient from '../../../lib/api/index.js';
 import { Button, Modal, Spin, Row, Col, Pagination, Popconfirm, Input, Form, message } from 'antd';
-import { UploadOutlined, DeleteOutlined, CheckOutlined, EditOutlined, CloseOutlined } from '@ant-design/icons';
+import { UploadOutlined, DeleteOutlined, CheckOutlined, EditOutlined, CloseOutlined, CheckCircleFilled } from '@ant-design/icons';
 
 export default function HtmlPreview({ pageId }) {
   const [html, setHtml] = useState('');
@@ -47,6 +47,7 @@ export default function HtmlPreview({ pageId }) {
   const [isPreviewingEdit, setIsPreviewingEdit] = useState(false);
   const [originalSectionHtmlForPreview, setOriginalSectionHtmlForPreview] = useState(''); // 存储预览前的原始HTML
   const [isPreviewingOriginal, setIsPreviewingOriginal] = useState(false); // 新增：是否正在预览原始版本
+  const [selectedStructureInstruction, setSelectedStructureInstruction] = useState(''); // 新增：选中的结构指令
   // --- AI 编辑状态结束 ---
 
   // Show notification and set auto-hide
@@ -365,97 +366,201 @@ export default function HtmlPreview({ pageId }) {
   }
 
   // --- 新增：滚动到指定 Section ---
-  function scrollToSection(sectionId) {
+  function scrollToSection(sectionId, highlight = false) {
     const iframe = iframeRef.current;
-    if (!iframe || !iframe.contentDocument) return;
-    const doc = iframe.contentDocument;
-    const element = doc.getElementById(sectionId);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-      // 可选：添加短暂高亮效果
-      element.style.transition = 'outline 0.1s ease-in-out';
-      element.style.outline = '3px solid #38bdf8'; // 使用主题色高亮
-      setTimeout(() => {
-        if (element) element.style.outline = 'none';
-      }, 1500); // 1.5秒后移除高亮
-    } else {
-      console.warn(`Section with id "${sectionId}" not found in iframe.`);
-    }
-  }
-
-  // --- 新增：处理点击 AI 编辑按钮 (提前获取原始 HTML) ---
-  function handleInitiateEdit(sectionId) {
-    if (isPreviewingEdit || isGeneratingEdit) return;
-
-    // 3. 提前获取原始 HTML 以便在 Modal 中显示
-    const iframe = iframeRef.current;
-    let currentOriginalHtml = '';
-    if (iframe && iframe.contentDocument) {
+    if (iframe && iframe.contentDocument && sectionId) {
       const doc = iframe.contentDocument;
       const element = doc.getElementById(sectionId);
       if (element) {
-        currentOriginalHtml = element.outerHTML;
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+        // 可选：临时高亮
+        if (highlight) {
+          const originalOutline = element.style.outline; // 保存原始轮廓以备恢复
+          // 确保不覆盖预览或错误状态的轮廓
+          if (!originalOutline || originalOutline === 'none' || originalOutline === '') {
+             element.style.outline = '3px dashed #fde047'; // 例如：黄色虚线轮廓
+             element.style.transition = 'outline 0.3s ease-in-out'; // 添加过渡效果
+             setTimeout(() => {
+               // 仅当元素仍然存在且轮廓未被其他操作（如预览）改变时才移除
+               const currentElement = iframe?.contentDocument?.getElementById(sectionId);
+               if (currentElement && currentElement.style.outline === '3px dashed #fde047') {
+                 currentElement.style.outline = ''; // 移除高亮
+               }
+             }, 2000); // 2秒后移除高亮
+          }
+        }
       } else {
-        message.error(`Section with id "${sectionId}" not found in iframe.`);
-        return; // 获取失败则不打开 Modal
+        console.warn(`Element with id "${sectionId}" not found in iframe for scrolling.`);
       }
     } else {
-      message.error('Iframe content is not accessible.');
-      return; // 获取失败则不打开 Modal
+      console.warn("Iframe content not accessible or sectionId missing for scrolling.");
     }
-
-    setEditingSectionId(sectionId);
-    setEditPrompt('');
-    setOriginalSectionHtml(currentOriginalHtml); // 设置原始 HTML 状态
-    setProposedSectionHtml('');
-    setShowEditPromptModal(true); // 打开 Modal
   }
 
-  // --- 新增：处理取消编辑提示 Modal ---
-  function handleCancelEditPrompt() {
-    setShowEditPromptModal(false);
-    setEditingSectionId(null); // 重置编辑中的 section
-    setEditPrompt('');
-    // 不需要重置 originalSectionHtml 或 proposedSectionHtml，因为它们在 initiate 时已清空
-  }
-
-  // --- 更新：处理生成编辑请求 (使用已缓存的原始 HTML) ---
-  async function handleGenerateEdit() {
-    if (!editPrompt.trim() || !editingSectionId) {
-      message.warn('Please enter your edit requirements.');
+  // --- 新增：处理点击 AI 编辑按钮 (增加延迟) ---
+  function handleInitiateEdit(sectionId) {
+    console.log(`Initiating AI edit for section: ${sectionId}`);
+    const iframe = iframeRef.current;
+    if (!iframe || !iframe.contentDocument) {
+      message.error('Iframe content not ready.');
       return;
     }
-    if (!originalSectionHtml) {
-        message.error('Original section HTML is missing. Cannot proceed.');
-        handleCancelEditPrompt();
+    const doc = iframe.contentDocument;
+    const element = doc.getElementById(sectionId);
+
+    if (element) {
+      // 1. 先滚动到区域并临时高亮
+      scrollToSection(sectionId, true);
+
+      // 2. 延迟 500ms 后再设置状态和打开 Modal
+      setTimeout(() => {
+        // 确保元素仍然存在 (以防万一在延迟期间发生变化)
+        const currentElement = iframe?.contentDocument?.getElementById(sectionId);
+        if (currentElement) {
+          setEditingSectionId(sectionId);
+          setOriginalSectionHtml(currentElement.outerHTML); // 获取当前HTML作为原始版本
+          setProposedSectionHtml(''); // 清空之前的建议
+          setEditPrompt(''); // 清空之前的提示
+          setSelectedStructureInstruction(''); // 清空结构选择
+          setShowEditPromptModal(true); // 打开编辑 Modal
+        } else {
+           console.warn(`Section ${sectionId} disappeared before modal could open.`);
+           message.error(`Could not find section "${sectionId}" to edit after delay.`);
+           setEditingSectionId(null); // 重置状态以防万一
+        }
+      }, 500); // 延迟 500 毫秒
+
+    } else {
+      message.error(`Could not find section "${sectionId}" in the preview to edit.`);
+      setEditingSectionId(null); // 重置状态
+    }
+  }
+
+  // --- 新增：预设结构选项 ---
+  const structureOptions = [
+    {
+      id: 'two-columns',
+      label: 'Two Columns',
+      instruction: 'Change the layout to two balanced columns.',
+      wireframe: (
+        <div style={{ display: 'flex', gap: '4px', height: '40px', border: '1px dashed #ccc', padding: '2px' }}>
+          <div style={{ flex: 1, background: '#f0f0f0', borderRadius: '2px' }}></div>
+          <div style={{ flex: 1, background: '#f0f0f0', borderRadius: '2px' }}></div>
+        </div>
+      )
+    },
+    {
+      id: 'image-left',
+      label: 'Image Left, Text Right',
+      instruction: 'Rearrange to have an image prominently on the left and text content on the right.',
+      wireframe: (
+        <div style={{ display: 'flex', gap: '4px', height: '40px', border: '1px dashed #ccc', padding: '2px' }}>
+          <div style={{ flex: 0.4, background: '#e0e0e0', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#999' }}>IMG</div>
+          <div style={{ flex: 0.6, background: '#f0f0f0', borderRadius: '2px', display: 'flex', flexDirection: 'column', justifyContent: 'space-around', padding: '4px 0' }}>
+             <div style={{height: '4px', background: '#ddd', margin: '0 4px'}}></div>
+             <div style={{height: '4px', background: '#ddd', margin: '0 4px'}}></div>
+             <div style={{height: '4px', background: '#ddd', margin: '0 4px'}}></div>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'text-center',
+      label: 'Centered Text Focus',
+      instruction: 'Center the main text content and potentially increase its prominence.',
+      wireframe: (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', height: '40px', border: '1px dashed #ccc', padding: '4px 8px' }}>
+          <div style={{ width: '80%', height: '6px', background: '#e0e0e0', borderRadius: '2px' }}></div>
+          <div style={{ width: '60%', height: '6px', background: '#e0e0e0', borderRadius: '2px' }}></div>
+          <div style={{ width: '70%', height: '6px', background: '#e0e7eb', borderRadius: '2px' }}></div>
+        </div>
+      )
+    },
+    {
+      id: 'add-button',
+      label: 'Add Button Below',
+      instruction: 'Add a call-to-action button below the existing content.',
+       wireframe: (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', height: '40px', border: '1px dashed #ccc', padding: '4px' }}>
+          <div style={{ width: '90%', height: '15px', background: '#f0f0f0', borderRadius: '2px' }}></div>
+          <div style={{ width: '40%', height: '10px', background: '#a0c4ff', borderRadius: '4px', marginTop: '2px', fontSize: '8px', color: '#1e40af', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>BTN</div>
+        </div>
+      )
+    }
+  ];
+  // --- 预设结构选项结束 ---
+
+  // --- 新增：处理结构选择 ---
+  function handleStructureSelect(instruction) {
+    // 如果再次点击同一个，则取消选择
+    if (selectedStructureInstruction === instruction) {
+      setSelectedStructureInstruction('');
+    } else {
+      setSelectedStructureInstruction(instruction);
+    }
+  }
+
+  // --- 更新：处理取消编辑提示 Modal ---
+  function handleCancelEditPrompt() {
+    setShowEditPromptModal(false);
+    setEditingSectionId(null);
+    setEditPrompt('');
+    setProposedSectionHtml(''); // 清空建议
+    setOriginalSectionHtml(''); // 清空原始HTML
+    setSelectedStructureInstruction(''); // 清空结构选择
+  }
+
+  // --- 更新：处理生成编辑请求 ---
+  async function handleGenerateEdit() {
+    const userPrompt = editPrompt.trim();
+    if (!selectedStructureInstruction && !userPrompt) {
+      message.warn('Please select a structure change or describe your edit requirements.');
+      return;
+    }
+    if (!editingSectionId || !originalSectionHtml) {
+        message.error('Cannot generate edit: Missing section ID or original HTML.');
+        handleCancelEditPrompt(); // 关闭并重置
         return;
     }
 
     setIsGeneratingEdit(true);
-    setProposedSectionHtml('');
+    setProposedSectionHtml(''); // 清空旧建议
     setOriginalSectionHtmlForPreview(''); // 清空旧的预览原始HTML
 
-    try {
-      console.log('Sending to API:');
-      console.log('Prompt:', editPrompt);
-      console.log('Original HTML:', originalSectionHtml.substring(0, 100) + '...');
+    // 组合指令 (逻辑不变)
+    let combinedInstructions = '';
+    if (selectedStructureInstruction) {
+      combinedInstructions += `Structural requirement: "${selectedStructureInstruction}"\n`;
+    }
+    if (userPrompt) {
+      combinedInstructions += `Additional details: "${userPrompt}"`;
+    }
+    if (selectedStructureInstruction && !userPrompt) {
+        combinedInstructions = `Apply this structure change: "${selectedStructureInstruction}"`;
+    }
+    if (!selectedStructureInstruction && userPrompt) {
+        combinedInstructions = userPrompt;
+    }
 
+    try {
+      console.log('Sending combined instructions to API:', combinedInstructions);
       const response = await apiClient.regenerateSection({
-        instructions: editPrompt,
+        instructions: combinedInstructions.trim(),
         sectionHtml: originalSectionHtml,
       });
 
-      // --- 更新：根据实际 API 返回结构处理 ---
       if (response && response.code === 200 && response.data) {
-        const newHtml = response.data; // 从 data 字段获取 HTML
-        setProposedSectionHtml(newHtml); // 存储建议的 HTML
+        const newHtml = response.data;
+        // 1. 存储建议 (仍然需要传递给预览函数)
+        setProposedSectionHtml(newHtml);
+        // 2. 关闭 Modal
         setShowEditPromptModal(false);
-        message.success('AI suggestion generated! Review the changes below.');
-        // 调用预览函数，传入新的 HTML
+        // --- 调用预览函数，预览函数内部会处理滚动 ---
         startPreviewingEdit(editingSectionId, newHtml);
+        // 预览函数内部会显示通知，这里不再重复显示 message.success
+
       } else {
-        // 处理 API 成功但 code 不是 200 或 data 为空的情况
         throw new Error(response?.message || 'API did not return the expected HTML content.');
       }
 
@@ -463,9 +568,13 @@ export default function HtmlPreview({ pageId }) {
       console.error('Error generating AI edit:', error);
       const errorMessage = error.response?.data?.message || error.message || 'Failed to generate AI edit.';
       message.error(`Error: ${errorMessage}`);
-      // 出错时不关闭 Modal
+      // 失败时保持 Modal 打开，不清空 proposedSectionHtml
     } finally {
+      // 无论成功失败，生成过程结束
       setIsGeneratingEdit(false);
+      // 注意：成功时 proposedSectionHtml 已被设置，不清空
+      // 成功时 editingSectionId 等状态在 startPreviewingEdit 后由 cancel/accept 清理
+      // 失败时不清空，以便用户重试或修改
     }
   }
 
@@ -482,54 +591,53 @@ export default function HtmlPreview({ pageId }) {
   // --- 新增：从 Modal 丢弃建议 ---
   function handleDiscardFromModal() {
     setProposedSectionHtml(''); // 清空建议
-    // 可选：清空输入框，让用户重新输入
-    // setEditPrompt('');
-    message.info("Suggestion discarded. You can modify your request and generate again.");
+    setSelectedStructureInstruction(''); // 清空结构选择
+    setEditPrompt(''); // 清空用户输入
+    message.info("Suggestion discarded. You can make a new request.");
   }
 
-  // --- 更新：开始预览编辑 ---
+  // --- 新增：开始预览编辑 ---
   function startPreviewingEdit(sectionId, newHtml) {
     console.log(`Starting preview for section ${sectionId}`);
     const iframe = iframeRef.current;
     if (!iframe || !iframe.contentDocument) {
       message.error('Iframe content not accessible for preview.');
+      // 如果无法预览，需要重置状态，否则用户可能卡住
+      handleCancelEditPrompt(); // 使用取消逻辑来重置状态
       return;
     }
     const doc = iframe.contentDocument;
     const element = doc.getElementById(sectionId);
 
     if (element) {
-      // 1. 保存原始 outerHTML 以便取消和切换
       setOriginalSectionHtmlForPreview(element.outerHTML);
-
-      // 2. 尝试解析并替换为新的 HTML (AI 建议的)
       const newElement = parseHtmlString(newHtml, doc, sectionId);
 
       if (newElement && element.parentNode) {
         element.parentNode.replaceChild(newElement, element);
-
-        // 3. 滚动到预览区域中间
-        const previewElement = doc.getElementById(sectionId); // 重新获取替换后的元素
-        if (previewElement) {
-          previewElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        } else {
-           console.warn("Could not find the replaced element after initial preview setup.");
-        }
-
-        // 4. 设置状态并显示控件
-        setIsPreviewingOriginal(false); // 初始显示的是 AI 建议版本
+        // --- 替换后滚动到新元素 ---
+        scrollToSection(sectionId); // 调用滚动函数
+        setIsPreviewingOriginal(false);
         setIsPreviewingEdit(true); // 激活预览模式
-        showNotification('Preview mode: Review the AI suggestion. Use toggle to compare.', 'info', 6000); // 更新提示
+        // 显示预览通知
+        showNotification('Previewing AI suggestion. Use toggle to compare or accept/discard.', 'info', 6000);
 
       } else {
         console.error("Error replacing element for preview:", newHtml);
         message.error("Failed to apply preview. Please check the generated HTML structure.");
-        setOriginalSectionHtmlForPreview(''); // 清空，因为没有成功进入预览
+        setOriginalSectionHtmlForPreview('');
+        // 预览失败，重置相关状态
+        setIsPreviewingEdit(false);
+        setEditingSectionId(null); // 重置当前编辑的 section
+        setProposedSectionHtml(''); // 清空失败的建议
       }
-
     } else {
       console.warn(`Element with id "${sectionId}" not found in iframe for preview.`);
       message.warn(`Could not find section ${sectionId} to preview.`);
+       // 找不到元素，重置相关状态
+       setIsPreviewingEdit(false);
+       setEditingSectionId(null);
+       setProposedSectionHtml('');
     }
   }
 
@@ -558,6 +666,8 @@ export default function HtmlPreview({ pageId }) {
          const restoredElement = doc.getElementById(editingSectionId);
          if (restoredElement) {
            restoredElement.style.outline = 'none';
+           // --- 恢复后滚动到元素 ---
+           scrollToSection(editingSectionId);
          }
          showNotification('AI edit discarded.', 'info');
       } else {
@@ -618,6 +728,8 @@ export default function HtmlPreview({ pageId }) {
     // 移除预览高亮
     if (element) {
       element.style.outline = 'none';
+      // --- 移除高亮后，保存前，滚动到元素 ---
+      scrollToSection(editingSectionId);
     } else {
       console.warn(`Element with id "${editingSectionId}" not found for removing highlight before saving.`);
       // 即使找不到元素也要尝试保存，因为 HTML 可能已经更新
@@ -647,6 +759,11 @@ export default function HtmlPreview({ pageId }) {
       showNotification('Failed to save accepted changes', 'error');
       // 注意：此时 iframe 中的内容是修改后的，但保存失败了。
       // 可能需要提示用户手动保存或提供重试机制。
+      if (element) {
+          element.style.outline = '3px dashed #ef4444';
+          // --- 出错时也滚动到问题区域 ---
+          scrollToSection(editingSectionId);
+      }
     } finally {
       setSaving(false);
       // 重置预览状态
@@ -736,11 +853,8 @@ export default function HtmlPreview({ pageId }) {
       currentElement.parentNode.replaceChild(newElement, currentElement);
       setIsPreviewingOriginal(!isPreviewingOriginal); // 更新状态
 
-      // 可选：切换后滚动到视图，确保用户看到变化
-      const replacedElement = doc.getElementById(editingSectionId);
-      if (replacedElement) {
-        replacedElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
+      // --- 切换后滚动到视图 ---
+      scrollToSection(editingSectionId); // 调用滚动函数
 
     } else {
       message.error("Failed to switch preview version due to HTML parsing error.");
@@ -1322,191 +1436,181 @@ export default function HtmlPreview({ pageId }) {
         )}
       </div>
 
-      {/* --- 更新：AI 编辑需求输入 Modal (浅色主题，更大尺寸) --- */}
+      {/* --- 更新：AI 编辑需求输入 Modal --- */}
       <Modal
-        title={
-          <span style={{ color: '#1f2937', fontWeight: 600 }}>
-            AI Edit Section: {sections.find(s => s.id === editingSectionId)?.label || ''}
-          </span>
-        }
+        title={`AI Edit Section: ${sections.find(s => s.id === editingSectionId)?.label || ''}`}
         open={showEditPromptModal}
         onCancel={handleCancelEditPrompt}
+        width={800} // 保持较大宽度
+        maskClosable={false} // 避免意外关闭
+        // --- 更新：简化 Footer ---
         footer={
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-            {/* 取消按钮始终显示，但在生成时禁用 */}
-            <Button
-              key="cancel"
-              onClick={handleCancelEditPrompt}
-              disabled={isGeneratingEdit}
-              style={{ background: '#f3f4f6', color: '#374151', border: '1px solid #d1d5db' }}
-            >
+            <Button key="cancel" onClick={handleCancelEditPrompt} disabled={isGeneratingEdit}>
               Cancel
             </Button>
-
-            {/* 根据状态显示不同的确认按钮 */}
-            {!proposedSectionHtml ? (
-              // 状态一：还未生成建议
-              <Button
-                key="generate"
-                type="primary"
-                onClick={handleGenerateEdit}
-                loading={isGeneratingEdit}
-                disabled={!editPrompt.trim() || isGeneratingEdit}
-                style={{
-                  background: (!editPrompt.trim() || isGeneratingEdit) ? '#e5e7eb' : 'linear-gradient(90deg, #38bdf8 0%, #a78bfa 100%)',
-                  borderColor: (!editPrompt.trim() || isGeneratingEdit) ? '#d1d5db' : '#38bdf8',
-                  color: (!editPrompt.trim() || isGeneratingEdit) ? '#6b7280' : '#ffffff',
-                }}
-              >
-                {isGeneratingEdit ? 'Generating...' : 'Generate Edit'}
-              </Button>
-            ) : (
-              // 状态二：已生成建议
-              <>
-                <Button
-                  key="discard"
-                  onClick={handleDiscardFromModal}
-                  style={{ background: '#fee2e2' /* 浅红色背景 (red-100) */, color: '#dc2626' /* 深红色文字 (red-600) */, border: '1px solid #fecaca' /* 红色边框 (red-200) */ }}
-                >
-                  Discard Suggestion
-                </Button>
-                <Button
-                  key="preview"
-                  type="primary"
-                  onClick={handlePreviewFromModal}
-                  style={{
-                    background: 'linear-gradient(90deg, #22c55e 0%, #10b981 100%)', // 绿色渐变
-                    borderColor: '#16a34a', // 深绿色边框
-                    color: '#ffffff',
-                  }}
-                >
-                  Preview Changes
-                </Button>
-              </>
-            )}
+            <Button
+              key="generate"
+              type="primary"
+              onClick={handleGenerateEdit}
+              loading={isGeneratingEdit}
+              disabled={(!selectedStructureInstruction && !editPrompt.trim()) || isGeneratingEdit}
+              style={{ /* 样式逻辑不变 */
+                background: (!selectedStructureInstruction && !editPrompt.trim() || isGeneratingEdit) ? '#e5e7eb' : 'linear-gradient(90deg, #38bdf8 0%, #a78bfa 100%)',
+                borderColor: (!selectedStructureInstruction && !editPrompt.trim() || isGeneratingEdit) ? '#d1d5db' : '#38bdf8',
+                color: (!selectedStructureInstruction && !editPrompt.trim() || isGeneratingEdit) ? '#6b7280' : '#ffffff',
+              }}
+            >
+              {isGeneratingEdit ? 'Generating...' : 'Generate & Preview'} {/* 更新按钮文本 */}
+            </Button>
           </div>
         }
-        destroyOnClose
-        width={800}
-        zIndex={1050}
-        closeIcon={<CloseOutlined style={{ color: '#6b7280', fontSize: 16 }} />}
-        styles={{
-          mask: { backdropFilter: 'blur(1px)' },
-          header: { background: '#f9fafb', borderBottom: '1px solid #e5e7eb', padding: '16px 24px' },
-          body: { background: '#ffffff', color: '#1f2937', padding: '24px', minHeight: '50vh', maxHeight: '75vh', overflowY: 'auto' },
-          content: {},
-          footer: { background: '#f9fafb', borderTop: '1px solid #e5e7eb', padding: '12px 24px', textAlign: 'right' }
+        styles={{ /* styles 不变 */
+          header: { background: '#f9fafb', color: '#1f2937', borderBottom: '1px solid #e5e7eb', padding: '16px 24px' },
+          body: { background: '#ffffff', color: '#1f2937', padding: '24px', minHeight: '30vh', maxHeight: '65vh', overflowY: 'auto' }, // 调整最小高度
+          footer: { borderTop: '1px solid #e5e7eb', padding: '12px 24px', background: '#f9fafb' },
         }}
       >
         <Spin spinning={isGeneratingEdit} tip="Generating suggestion...">
-          <p style={{ marginBottom: 16, color: '#374151', fontSize: '14px' }}>
-            Describe the changes you want AI to make to this section:
+
+          {/* 结构选择区域 (逻辑不变) */}
+          {!isGeneratingEdit && ( // 仅在未生成中时显示
+            <div style={{ marginBottom: '24px' }}>
+              <p style={{ color: '#374151', fontSize: '14px', marginBottom: '12px', fontWeight: 500 }}>
+                Optional: Choose a structural change (click to select/deselect)
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                {structureOptions.map(option => {
+                  const isSelected = selectedStructureInstruction === option.instruction;
+                  return (
+                    <div
+                      key={option.id}
+                      onClick={() => handleStructureSelect(option.instruction)}
+                      style={{
+                        border: `2px solid ${isSelected ? '#38bdf8' : '#d1d5db'}`,
+                        borderRadius: '8px',
+                        padding: '8px',
+                        cursor: 'pointer',
+                        textAlign: 'center',
+                        width: 'calc(25% - 9px)', // 4 columns with gap
+                        minWidth: '120px',
+                        background: isSelected ? '#e0f2fe' : '#f9fafb',
+                        position: 'relative', // For checkmark positioning
+                        transition: 'border-color 0.2s, background-color 0.2s',
+                      }}
+                      title={option.instruction} // Show full instruction on hover
+                    >
+                      {/* 线框图 */}
+                      <div style={{ marginBottom: '8px', userSelect: 'none' }}>
+                        {option.wireframe}
+                      </div>
+                      {/* 标签 */}
+                      <span style={{ fontSize: '12px', color: '#4b5563', fontWeight: 500 }}>
+                        {option.label}
+                      </span>
+                      {/* 选中标记 */}
+                      {isSelected && (
+                        <CheckCircleFilled style={{
+                          position: 'absolute',
+                          top: '4px',
+                          right: '4px',
+                          color: '#0ea5e9', // Lighter blue for checkmark
+                          fontSize: '16px',
+                          background: 'white', // Make background visible
+                          borderRadius: '50%',
+                        }} />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 文本输入区域 (逻辑不变) */}
+          <p style={{ marginBottom: 8, color: '#374151', fontSize: '14px', fontWeight: 500 }}>
+            {selectedStructureInstruction
+              ? 'Then, describe any additional changes or details:'
+              : 'Describe the changes you want AI to make to this section:'}
           </p>
           <Input.TextArea
-            rows={6} // 可以稍微减少行数，为对比留空间
-            placeholder="e.g., Change the background to dark blue, add a 'Learn More' button linking to #, and increase the main title font size."
+            rows={6} // 固定行数，因为不再有对比区域占用空间
+            placeholder="e.g., Use a warmer color palette, make the title bold, and link the button to '/contact'."
             value={editPrompt}
             onChange={(e) => setEditPrompt(e.target.value)}
-            style={{ background: '#f9fafb', color: '#111827', border: '1px solid #d1d5db', fontSize: '14px', marginBottom: '24px' }}
-            disabled={isGeneratingEdit || !!proposedSectionHtml} // 生成后也禁用输入框，鼓励先处理建议
+            style={{ background: '#f9fafb', color: '#111827', border: '1px solid #d1d5db', fontSize: '14px', marginBottom: '16px' }} // 减少底部边距
+            disabled={isGeneratingEdit}
           />
 
-          {/* 对比区域 */}
-          <div style={{ display: 'flex', gap: '16px', maxHeight: '45vh' /* 限制对比区域高度 */ }}>
-            {/* 原始 HTML */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-              <h4 style={{ color: '#4b5563' /* 中灰色 (slate-600) */, marginBottom: '8px', borderBottom: '1px solid #e5e7eb', paddingBottom: '4px' }}>Original HTML</h4>
-              <pre style={{
-                background: '#f3f4f6', padding: '12px', borderRadius: 6,
-                overflow: 'auto', fontSize: '12px', /* 稍小字体 */
-                color: '#6b7280', /* 默认灰色 */
-                border: '1px solid #e5e7eb', whiteSpace: 'pre-wrap', wordBreak: 'break-all',
-                flexGrow: 1 /* 占据剩余空间 */
-              }}>
-                {originalSectionHtml || 'Loading original HTML...'}
-              </pre>
-            </div>
-
-            {/* AI 生成的建议 HTML - 仅在生成后显示 */}
-            {proposedSectionHtml && (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                <h4 style={{ color: '#1d4ed8' /* 蓝色 (blue-700) */, marginBottom: '8px', borderBottom: '1px solid #e5e7eb', paddingBottom: '4px' }}>AI Generated Suggestion</h4>
-                <pre style={{
-                  background: '#eff6ff', /* 非常浅的蓝色 (blue-50) */
-                  padding: '12px', borderRadius: 6,
-                  overflow: 'auto', fontSize: '12px',
-                  color: '#1e40af', /* 深蓝色 (blue-800) */
-                  border: '1px solid #bfdbfe', /* 浅蓝色边框 (blue-200) */
-                  whiteSpace: 'pre-wrap', wordBreak: 'break-all',
-                  flexGrow: 1
-                }}>
-                  {proposedSectionHtml}
-                </pre>
-              </div>
-            )}
+          {/* --- 移除：代码对比区域 --- */}
+          {/*
+          <div style={{ display: 'flex', gap: '16px', maxHeight: '45vh', marginTop: '16px' }}>
+             ... Original HTML pre block ...
+             ... AI Generated Suggestion pre block ...
           </div>
+          */}
+
         </Spin>
       </Modal>
       {/* --- AI 编辑需求输入 Modal 结束 --- */}
 
-      {/* --- 更新：AI 编辑预览控件 --- */}
+      {/* AI 编辑预览控件 (逻辑不变) */}
       {isPreviewingEdit && editingSectionId && (
-        <div style={{
-          position: 'absolute',
-          bottom: '40px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          background: 'rgba(31, 41, 55, 0.9)',
-          padding: '12px 20px',
-          borderRadius: '8px',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
-          zIndex: 1000,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '16px',
-          backdropFilter: 'blur(3px)', // 添加模糊背景效果
-        }}>
-          <span style={{ color: '#e5e7eb', fontSize: '14px', fontWeight: 500, marginRight: '8px' /* 增加右边距 */ }}>
-             Previewing AI Edit for "{sections.find(s => s.id === editingSectionId)?.label || 'Section'}"
-          </span>
-          {/* 新增：切换预览按钮 */}
-          <Button
-            // icon={isPreviewingOriginal ? <EyeOutlined /> : <UndoOutlined />} // 可选：使用图标
-            onClick={togglePreviewVersion}
-            size="small"
-            style={{
-              background: '#4b5563', // slate-600
-              color: 'white',
-              border: '1px solid #6b7280', // slate-500 border
-             }}
-             disabled={saving} // 保存时禁用切换
-          >
-            {isPreviewingOriginal ? 'Show New Generation' : 'Show Original'}
-          </Button>
-          {/* Discard 按钮 */}
-          <Button
-            icon={<CloseOutlined />}
-            onClick={cancelPreviewEdit}
-            size="small"
-            style={{ background: '#ef4444', color: 'white', border: 'none' }} // red-500
-            disabled={saving}
-          >
-            Discard
-          </Button>
-          {/* Accept 按钮 */}
-          <Button
-            icon={<CheckOutlined />}
-            onClick={acceptPreviewEdit}
-            size="small"
-            style={{ background: '#22c55e', color: 'white', border: 'none' }} // green-500
-            loading={saving}
-            disabled={saving}
-          >
-            Accept
-          </Button>
-        </div>
+         // ... JSX for preview controls ...
+         <div style={{ /* 样式不变 */
+           position: 'absolute',
+           bottom: '40px',
+           left: '50%',
+           transform: 'translateX(-50%)',
+           background: 'rgba(31, 41, 55, 0.9)', // slate-800 with opacity
+           padding: '12px 20px',
+           borderRadius: '8px',
+           boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+           zIndex: 1000,
+           display: 'flex',
+           alignItems: 'center',
+           gap: '16px', // 增加按钮间距
+           backdropFilter: 'blur(3px)', // 添加模糊背景效果
+         }}>
+           <span style={{ color: '#e5e7eb', fontSize: '14px', fontWeight: 500, marginRight: '8px' /* 增加右边距 */ }}>
+              Previewing AI Edit for "{sections.find(s => s.id === editingSectionId)?.label || 'Section'}"
+           </span>
+           {/* 切换预览按钮 */}
+           <Button
+             onClick={togglePreviewVersion}
+             size="small"
+             style={{ /* 样式不变 */
+               background: '#4b5563', // slate-600
+               color: 'white',
+               border: '1px solid #6b7280', // slate-500 border
+              }}
+              disabled={saving} // 保存时禁用切换
+           >
+             {isPreviewingOriginal ? 'Show Suggestion' : 'Show Original'}
+           </Button>
+           {/* Discard 按钮 */}
+           <Button
+             icon={<CloseOutlined />}
+             onClick={cancelPreviewEdit}
+             size="small"
+             style={{ background: '#ef4444', color: 'white', border: 'none' }} // red-500
+             disabled={saving}
+           >
+             Discard
+           </Button>
+           {/* Accept 按钮 */}
+           <Button
+             icon={<CheckOutlined />}
+             onClick={acceptPreviewEdit}
+             size="small"
+             style={{ background: '#22c55e', color: 'white', border: 'none' }} // green-500
+             loading={saving}
+             disabled={saving}
+           >
+             Accept
+           </Button>
+         </div>
       )}
-      {/* --- AI 编辑预览控件结束 --- */}
 
     </div>
   );
