@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import apiClient from '../../../lib/api/index.js';
 import { Button, Modal, Spin, Row, Col, Pagination, Popconfirm, Input, Form, message } from 'antd';
-import { UploadOutlined, DeleteOutlined, CheckOutlined } from '@ant-design/icons';
+import { UploadOutlined, DeleteOutlined, CheckOutlined, EditOutlined, CloseOutlined } from '@ant-design/icons';
 
 export default function HtmlPreview({ pageId }) {
   const [html, setHtml] = useState('');
@@ -20,7 +20,7 @@ export default function HtmlPreview({ pageId }) {
   const [notification, setNotification] = useState({
     visible: false,
     message: '',
-    type: 'success' // 'success' or 'error'
+    type: 'success' // 'success', 'error', or 'info'
   });
   // Image library related state
   const [imageAssets, setImageAssets] = useState([]);
@@ -35,9 +35,21 @@ export default function HtmlPreview({ pageId }) {
   const [uploading, setUploading] = useState(false);
   const [mediaName, setMediaName] = useState('');
   const [mediaDesc, setMediaDesc] = useState('');
+  // 新增：用于存储页面内 section 的状态
+  const [sections, setSections] = useState([]);
+  // --- 新增：AI 编辑相关状态 ---
+  const [editingSectionId, setEditingSectionId] = useState(null); // 当前编辑的 Section ID
+  const [showEditPromptModal, setShowEditPromptModal] = useState(false); // 是否显示编辑提示 Modal
+  const [editPrompt, setEditPrompt] = useState(''); // 用户输入的编辑需求
+  const [originalSectionHtml, setOriginalSectionHtml] = useState(''); // 原始 Section HTML 缓存
+  const [proposedSectionHtml, setProposedSectionHtml] = useState(''); // AI 建议的 Section HTML
+  const [isGeneratingEdit, setIsGeneratingEdit] = useState(false); // 是否正在生成编辑建议
+  const [isPreviewingEdit, setIsPreviewingEdit] = useState(false); // 是否正在预览编辑建议
+  // --- AI 编辑状态结束 ---
 
   // Show notification and set auto-hide
   const showNotification = (message, type = 'success', duration = 3000) => {
+    // The type parameter now accepts 'success', 'error', or 'info'
     setNotification({ visible: true, message, type });
     setTimeout(() => {
       setNotification({ visible: false, message: '', type: 'success' });
@@ -129,39 +141,73 @@ export default function HtmlPreview({ pageId }) {
       doc.write(html);
       doc.close();
 
-      // 设置可编辑区域鼠标样式
-      // 先移除旧的 style
-      const oldStyle = doc.getElementById('page-edit-cursor-style');
-      if (oldStyle) oldStyle.remove();
+      // 等待 iframe 内容完全加载和渲染 (使用 setTimeout 是一种简单方式，更健壮的方式可能需要监听 load 事件)
+      const timeoutId = setTimeout(() => {
+        if (!iframe.contentDocument) return; // 检查 doc 是否仍然有效
+        const doc = iframe.contentDocument;
 
-      // 注入样式：有canEdit属性、img、独立文字区域显示pointer
-      const style = doc.createElement('style');
-      style.id = 'page-edit-cursor-style';
-      style.innerHTML = `
-        [canEdit], img {
-          cursor: pointer !important;
-        }
-        /* 独立文字区域：只有一个文本节点且有内容 */
-        *:not([canEdit]):not(img) {
-          cursor: inherit;
-        }
-      `;
-      doc.head.appendChild(style);
+        // 设置可编辑区域鼠标样式
+        // 先移除旧的 style
+        const oldStyle = doc.getElementById('page-edit-cursor-style');
+        if (oldStyle) oldStyle.remove();
 
-      // 额外处理独立文字区域
-      Array.from(doc.body.querySelectorAll('*')).forEach(node => {
-        if (
-          !node.hasAttribute?.('canEdit') &&
-          node.tagName.toLowerCase() !== 'img' &&
-          node.childNodes.length === 1 &&
-          node.childNodes[0].nodeType === 3 &&
-          node.textContent.trim().length > 0
-        ) {
-          node.style.cursor = 'pointer';
-        }
-      });
+        // 注入样式：有canEdit属性、img、独立文字区域显示pointer
+        const style = doc.createElement('style');
+        style.id = 'page-edit-cursor-style';
+        style.innerHTML = `
+          [canEdit], img {
+            cursor: pointer !important;
+          }
+          /* 独立文字区域：只有一个文本节点且有内容 */
+          *:not([canEdit]):not(img) {
+            cursor: inherit;
+          }
+          /* 平滑滚动 */
+          html {
+            scroll-behavior: smooth;
+          }
+        `;
+        doc.head.appendChild(style);
+
+        // 额外处理独立文字区域
+        Array.from(doc.body.querySelectorAll('*')).forEach(node => {
+          if (
+            !node.hasAttribute?.('canEdit') &&
+            node.tagName.toLowerCase() !== 'img' &&
+            node.childNodes.length === 1 &&
+            node.childNodes[0].nodeType === 3 && // TEXT_NODE
+            node.textContent.trim().length > 0
+          ) {
+            node.style.cursor = 'pointer';
+          }
+        });
+
+        // --- 新增：提取 Sections ---
+        const sectionElements = doc.querySelectorAll('section');
+        const extractedSections = Array.from(sectionElements).map((section, index) => {
+          // 确保每个 section 都有一个 ID，用于后续滚动定位
+          if (!section.id) {
+            section.id = `page-section-${index}`;
+          }
+          // 尝试获取一个有意义的标签
+          const label = section.getAttribute('aria-label') ||
+                        section.getAttribute('data-label') ||
+                        section.querySelector('h1, h2, h3, h4, h5, h6')?.textContent ||
+                        `Section ${index + 1}`;
+          return {
+            id: section.id,
+            label: label.trim(),
+          };
+        });
+        setSections(extractedSections);
+        // --- 提取 Sections 结束 ---
+
+      }, 100); // 延迟 100ms 确保 DOM 准备好
+
+      // 清理 timeout
+      return () => clearTimeout(timeoutId);
     }
-  }, [html]);
+  }, [html]); // 依赖 html
 
   // 新增：iframe内容加载后，绑定点击事件
   useEffect(() => {
@@ -230,7 +276,10 @@ export default function HtmlPreview({ pageId }) {
       }
 
       // 其他情况，弹出提示
-      message.info('All text and image areas on the page can be edited by clicking them.');
+      showNotification({
+        message: 'All text and image areas on the page can be edited by clicking them.',
+        duration: 2
+      });
     }
 
     doc.addEventListener('click', handleIframeClick, true);
@@ -312,6 +361,127 @@ export default function HtmlPreview({ pageId }) {
     }
   }
 
+  // --- 新增：滚动到指定 Section ---
+  function scrollToSection(sectionId) {
+    const iframe = iframeRef.current;
+    if (!iframe || !iframe.contentDocument) return;
+    const doc = iframe.contentDocument;
+    const element = doc.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      // 可选：添加短暂高亮效果
+      element.style.transition = 'outline 0.1s ease-in-out';
+      element.style.outline = '3px solid #38bdf8'; // 使用主题色高亮
+      setTimeout(() => {
+        if (element) element.style.outline = 'none';
+      }, 1500); // 1.5秒后移除高亮
+    } else {
+      console.warn(`Section with id "${sectionId}" not found in iframe.`);
+    }
+  }
+
+  // --- 新增：处理点击 AI 编辑按钮 (提前获取原始 HTML) ---
+  function handleInitiateEdit(sectionId) {
+    if (isPreviewingEdit || isGeneratingEdit) return;
+
+    // 3. 提前获取原始 HTML 以便在 Modal 中显示
+    const iframe = iframeRef.current;
+    let currentOriginalHtml = '';
+    if (iframe && iframe.contentDocument) {
+      const doc = iframe.contentDocument;
+      const element = doc.getElementById(sectionId);
+      if (element) {
+        currentOriginalHtml = element.outerHTML;
+      } else {
+        message.error(`Section with id "${sectionId}" not found in iframe.`);
+        return; // 获取失败则不打开 Modal
+      }
+    } else {
+      message.error('Iframe content is not accessible.');
+      return; // 获取失败则不打开 Modal
+    }
+
+    setEditingSectionId(sectionId);
+    setEditPrompt('');
+    setOriginalSectionHtml(currentOriginalHtml); // 设置原始 HTML 状态
+    setProposedSectionHtml('');
+    setShowEditPromptModal(true); // 打开 Modal
+  }
+
+  // --- 新增：处理取消编辑提示 Modal ---
+  function handleCancelEditPrompt() {
+    setShowEditPromptModal(false);
+    setEditingSectionId(null); // 重置编辑中的 section
+    setEditPrompt('');
+    // 不需要重置 originalSectionHtml 或 proposedSectionHtml，因为它们在 initiate 时已清空
+  }
+
+  // --- 新增：处理生成编辑请求 (使用已缓存的原始 HTML) ---
+  async function handleGenerateEdit() {
+    // 使用新的 info 类型显示提示信息
+    showNotification('AI Edit feature coming soon!', 'info', 2000); // Changed type to 'info' and duration
+    return; // Keep the return here for now
+
+    if (!editPrompt.trim() || !editingSectionId) {
+      message.warn('Please enter your edit requirements.');
+      return;
+    }
+
+    // 检查 originalSectionHtml 是否已成功获取
+    if (!originalSectionHtml) {
+        message.error('Original section HTML is missing. Cannot proceed.');
+        handleCancelEditPrompt(); // 关闭 Modal 并重置
+        return;
+    }
+
+    setIsGeneratingEdit(true);
+
+    // 2. 调用 API (Mockup)
+    try {
+      console.log('Sending to API:');
+      console.log('Prompt:', editPrompt);
+      // 使用 state 中的 originalSectionHtml
+      console.log('Original HTML:', originalSectionHtml.substring(0, 100) + '...');
+
+      // --- MOCK API CALL ---
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      const mockApiResponse = {
+        success: true,
+        newHtml: `<!-- AI Edit Start -->\n<div style="border: 2px dashed limegreen; padding: 10px; margin: 5px 0; background: rgba(144, 238, 144, 0.1);">\n<p style="color: limegreen; font-weight: bold; margin-bottom: 8px;">AI Generated Content based on: "${editPrompt}"</p>\n${originalSectionHtml}\n</div>\n<!-- AI Edit End -->`, // 稍微美化 mock 输出
+      };
+      // --- END MOCK API CALL ---
+
+      if (mockApiResponse.success && mockApiResponse.newHtml) {
+        setProposedSectionHtml(mockApiResponse.newHtml);
+        setShowEditPromptModal(false);
+        message.success('AI suggestion generated! Entering preview mode.');
+        startPreviewingEdit(editingSectionId, mockApiResponse.newHtml);
+      } else {
+        throw new Error(mockApiResponse.error || 'Failed to generate edit from API.');
+      }
+
+    } catch (error) {
+      console.error('Error generating AI edit:', error);
+      message.error(`Error: ${error.message}`);
+      // 出错时不关闭 Modal，允许用户修改提示或重试
+      // handleCancelEditPrompt();
+    } finally {
+      setIsGeneratingEdit(false);
+    }
+  }
+
+  // --- 新增：开始预览编辑 --- (后续实现具体逻辑)
+  function startPreviewingEdit(sectionId, newHtml) {
+    console.log(`Starting preview for section ${sectionId}`);
+    // 1. 在 iframe 中找到对应元素
+    // 2. 临时替换 innerHTML 或 outerHTML
+    // 3. 添加高亮样式
+    // 4. 显示 Accept/Discard 按钮
+    setIsPreviewingEdit(true); // 设置预览状态
+    // 实际的 DOM 操作将在下一个
+  }
+
   return (
     <div style={{ width: '100%', height: '100%', background: '#18181c', display: 'flex', flexDirection: 'column', position: 'relative' /* Add relative positioning for absolutely positioned notification */ }}>
       {/* Custom Notification */}
@@ -322,11 +492,16 @@ export default function HtmlPreview({ pageId }) {
           left: '50%',
           transform: 'translateX(-50%)',
           padding: '10px 20px',
-          background: notification.type === 'success' ? '#4caf50' : '#f44336', // Success green, error red
-          color: 'white',
+          // 更新背景颜色逻辑以包含 'info' 类型
+          background: notification.type === 'success'
+            ? '#4caf50' // Success green
+            : notification.type === 'error'
+              ? '#f44336' // Error red
+              : '#ffc107', // Info yellow (e.g., Amber 500)
+          color: notification.type === 'info' ? '#1f2937' : 'white', // Info 类型使用深色文字以提高对比度
           borderRadius: '4px',
           boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-          zIndex: 1050, // Ensure it's on the top layer
+          zIndex: 9999, // Increase zIndex significantly
           fontSize: '14px',
           fontWeight: 500,
           textAlign: 'center'
@@ -382,27 +557,112 @@ export default function HtmlPreview({ pageId }) {
           </span>
         </span>
       </div>
-      {/* Page Rendering Area */}
-      <div style={{ flex: 1, background: '#18181c', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-        {loading ? (
-          <div style={{ color: '#a5b4fc', fontSize: 22, fontWeight: 500 }}>Loading...</div>
-        ) : error ? (
-          <div style={{ color: '#f87171', fontSize: 20, fontWeight: 500 }}>{error}</div>
-        ) : (
-          <iframe
-            ref={iframeRef}
-            style={{
-              width: '95%',
-              height: '90%',
-              border: '1px solid #334155',
-              background: '#fff',
-              borderRadius: 12,
-              boxShadow: '0 4px 32px #0006'
-            }}
-            sandbox="allow-same-origin allow-scripts"
-            title="Page Preview"
-          />
+      {/* Page Rendering Area - 修改为 Flex 布局 */}
+      <div style={{ flex: 1, background: '#18181c', display: 'flex', overflow: 'hidden' /* 防止内部滚动影响外部 */ }}>
+
+        {/* --- 新增：左侧 Section 导航栏 --- */}
+        {sections.length > 0 && (
+          <div style={{
+            width: 200, // 侧边栏宽度
+            background: '#111827', // 深色背景 (slate-900)
+            padding: '16px 8px',
+            overflowY: 'auto', // 如果内容过多则允许滚动
+            borderRight: '1px solid #374151', // 右边框 (slate-700)
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px', // 导航项之间的间距
+          }}>
+            <div style={{
+              color: '#9ca3af', // 标题颜色 (slate-400)
+              fontSize: 14,
+              fontWeight: 600,
+              padding: '0 8px 8px 8px', // 内边距
+              borderBottom: '1px solid #374151', // 分隔线
+              marginBottom: 8,
+              textTransform: 'uppercase', // 大写
+              letterSpacing: '0.5px', // 字间距
+            }}>
+              Sections
+            </div>
+            {sections.map(section => (
+              <div key={section.id} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}> {/* 包裹按钮和编辑图标 */}
+                <button
+                  // key={section.id} // key 移到父元素
+                  onClick={() => scrollToSection(section.id)}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#d1d5db', // 默认文字颜色 (slate-300)
+                    padding: '8px 12px',
+                    textAlign: 'left',
+                    borderRadius: 6,
+                    cursor: 'pointer',
+                    fontSize: 14,
+                    // width: '100%', // 不再是 100% 宽度，让编辑按钮有空间
+                    flexGrow: 1, // 占据剩余空间
+                    transition: 'background-color 0.2s ease, color 0.2s ease',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                  onMouseOver={e => { e.currentTarget.style.background = '#374151'; e.currentTarget.style.color = '#fff'; }} // 悬停效果 (slate-700)
+                  onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#d1d5db'; }}
+                  title={section.label} // 添加 title 以显示完整标签
+                  disabled={isPreviewingEdit} // 预览时禁用导航点击
+                >
+                  {section.label}
+                </button>
+                {/* --- 更新：AI 编辑按钮 --- */}
+                <Button
+                  type="text" // 或者 type="default" 如果想要更明显的按钮
+                  // icon={<span role="img" aria-label="AI Edit">✨</span>} // 旧图标
+                  icon={<EditOutlined />} // 使用 Ant Design 图标
+                  size="small"
+                  onClick={() => handleInitiateEdit(section.id)}
+                  style={{
+                    color: '#9ca3af',
+                    padding: '0 6px', // 稍微调整内边距
+                    // 如果使用 type="default"，可以添加背景色和边框
+                    // background: '#374151',
+                    // border: '1px solid #4b5563',
+                  }}
+                  title={`AI Edit Section: ${section.label}`}
+                  disabled={isPreviewingEdit || isGeneratingEdit} // 预览或生成时禁用
+                >
+                  {/* 可以选择性地添加文字 */}
+                  {/* AI Edit */}
+                </Button>
+                {/* --- AI 编辑按钮结束 --- */}
+              </div>
+            ))}
+          </div>
         )}
+        {/* --- Section 导航栏结束 --- */}
+
+        {/* Iframe 容器 - 占据剩余空间 */}
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px', overflow: 'hidden', position: 'relative' /* 为预览控件定位 */ }}>
+          {loading ? (
+            <div style={{ color: '#a5b4fc', fontSize: 22, fontWeight: 500 }}>Loading...</div>
+          ) : error ? (
+            <div style={{ color: '#f87171', fontSize: 20, fontWeight: 500 }}>{error}</div>
+          ) : (
+            <iframe
+              ref={iframeRef}
+              style={{
+                width: '100%', // 宽度占满容器
+                height: '100%', // 高度占满容器
+                border: '1px solid #334155',
+                background: '#fff',
+                borderRadius: 12,
+                boxShadow: '0 4px 32px #0006'
+              }}
+              sandbox="allow-same-origin allow-scripts"
+              title="Page Preview"
+              // onLoad 事件可能更适合执行 DOM 操作，但这里我们继续使用 useEffect + setTimeout
+              // onLoad={() => { /* 可以在这里执行 section 提取 */ }}
+            />
+          )}
+        </div>
         {/* Edit Sidebar - Updated Style */}
         {showSidebar && (
           <div style={{
@@ -792,6 +1052,107 @@ export default function HtmlPreview({ pageId }) {
           </div>
         )}
       </div>
+
+      {/* --- 更新：AI 编辑需求输入 Modal (浅色主题，更大尺寸) --- */}
+      <Modal
+        title={
+          <span style={{ color: '#1f2937' /* 深灰色文字 (slate-800) */, fontWeight: 600 }}>
+            AI Edit Section: {sections.find(s => s.id === editingSectionId)?.label || ''}
+          </span>
+        }
+        open={showEditPromptModal}
+        onCancel={handleCancelEditPrompt}
+        onOk={handleGenerateEdit}
+        okText="Feature Coming Soon"
+        cancelText="Cancel"
+        confirmLoading={isGeneratingEdit}
+        okButtonProps={{
+          disabled: !editPrompt.trim() || isGeneratingEdit,
+          style: {
+             // 保持渐变色，但禁用状态用浅灰色
+             background: (!editPrompt.trim() || isGeneratingEdit) ? '#e5e7eb' : 'linear-gradient(90deg, #38bdf8 0%, #a78bfa 100%)',
+             borderColor: (!editPrompt.trim() || isGeneratingEdit) ? '#d1d5db' : '#38bdf8',
+             color: (!editPrompt.trim() || isGeneratingEdit) ? '#6b7280' : '#ffffff', // 禁用时文字灰色
+             opacity: 1, // 不再需要透明度
+          }
+        }}
+        cancelButtonProps={{
+             // 浅色主题的取消按钮
+             style: { background: '#f3f4f6' /* 更浅的灰色 (gray-100) */, color: '#374151' /* 深灰文字 (slate-700) */, border: '1px solid #d1d5db' /* 边框 (gray-300) */ }
+        }}
+        destroyOnClose
+        width={800} // 1. 再次加大 Modal 宽度
+        zIndex={1050} // Explicitly set zIndex lower than notification
+        closeIcon={
+          <CloseOutlined style={{ color: '#6b7280' /* 中灰色图标 (gray-500) */, fontSize: 16 }} />
+        }
+        styles={{
+          mask: { backdropFilter: 'blur(1px)' }, // 稍微降低模糊
+          header: {
+            background: '#f9fafb', // 页头背景 (非常浅的灰色 gray-50)
+            borderBottom: '1px solid #e5e7eb', // 分割线 (gray-200)
+            padding: '16px 24px',
+          },
+          body: {
+            background: '#ffffff', // 主体背景 (白色)
+            color: '#1f2937', // 默认文字颜色 (深灰色 slate-800)
+            padding: '24px',
+            minHeight: '50vh', // 1. 增加最小高度，使其更高
+            maxHeight: '75vh', // 允许的最大高度
+            overflowY: 'auto',
+          },
+          content: {}, // 继承 body
+          footer: {
+            background: '#f9fafb', // 页脚背景 (非常浅的灰色 gray-50)
+            borderTop: '1px solid #e5e7eb', // 分割线 (gray-200)
+            padding: '12px 24px',
+            textAlign: 'right',
+          }
+        }}
+        // className="dark-modal" // 移除或替换为 light-modal 类
+      >
+        <p style={{ marginBottom: 16, color: '#374151' /* 深灰文字 (slate-700) */, fontSize: '14px' }}>
+          Describe the changes you want AI to make to this section:
+        </p>
+        <Input.TextArea
+          rows={8} // 增加行数
+          placeholder="e.g., Change the background to dark blue, add a 'Learn More' button linking to #, and increase the main title font size."
+          value={editPrompt}
+          onChange={(e) => setEditPrompt(e.target.value)}
+          style={{
+            background: '#f9fafb', // 输入框背景 (非常浅的灰色 gray-50)
+            color: '#111827', // 输入文字颜色 (接近黑色 slate-900)
+            border: '1px solid #d1d5db', // 边框颜色 (gray-300)
+            fontSize: '14px',
+          }}
+          // 对于浅色背景，placeholder 通常会自动是灰色，如果需要特定颜色:
+          // className="light-textarea-placeholder"
+          // CSS: .light-textarea-placeholder::placeholder { color: #9ca3af; }
+          disabled={isGeneratingEdit}
+        />
+        {/* 3. 默认展开原始 HTML 片段预览 */}
+        <details style={{ marginTop: 24 }} open> {/* 添加 open 属性 */}
+          <summary style={{ cursor: 'pointer', color: '#6b7280' /* 中灰色 (gray-500) */, fontSize: '13px', userSelect: 'none', marginBottom: '8px' /* 增加与代码块间距 */ }}>
+            Original HTML {/* 移除 Show */}
+          </summary>
+          <pre style={{
+            background: '#f3f4f6', // 代码区背景 (更浅灰 gray-100)
+            padding: '12px',
+            borderRadius: 6,
+            maxHeight: '250px', // 增加最大高度
+            overflow: 'auto',
+            fontSize: '13px', // 稍微增大字体
+            color: '#3b82f6', // 4. 代码默认文字颜色 (浅蓝色 blue-500)
+            border: '1px solid #e5e7eb', // 边框 (gray-200)
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-all',
+          }}>
+            {originalSectionHtml || 'Loading original HTML...'}
+          </pre>
+        </details>
+      </Modal>
+      {/* --- AI 编辑需求输入 Modal 结束 --- */}
+
     </div>
   );
 }

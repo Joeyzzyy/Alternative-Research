@@ -563,6 +563,9 @@ const ResearchTool = ({
             const isCrawlerType = log.type === 'Crawler_Images' || log.type === 'Crawler_Headers' || log.type === 'Crawler_Footers';
             const uniqueKey = `${log.id || 'log'}-${log.type}-${index}`; 
 
+            // --- 修改：检查 Crawler 内容是否为空字符串 ---
+            const isContentNull = log.content === null;
+
             return (
               <div
                 key={uniqueKey} 
@@ -716,53 +719,62 @@ const ResearchTool = ({
                 )}
 
                 {/* --- 新增：Crawler 日志内容渲染 --- */}
-                {isCrawlerType && Array.isArray(log.content) && (
+                {isCrawlerType && (
                   <div
-                    key={`${uniqueKey}-content`} 
+                    key={`${uniqueKey}-content`}
                     className="text-[10px] text-gray-400 break-words leading-relaxed mt-1"
                   >
-                    {/* --- 图片渲染 --- */}
-                    {log.type === 'Crawler_Images' && (
-                      <div className="flex flex-wrap gap-2">
-                        {log.content.map((item, imgIndex) => (
-                          item.src ? ( // 检查 src 是否存在
-                            <div key={imgIndex} className="group relative">
-                              <img 
-                                src={item.src} 
-                                alt={item.alt || 'Crawled image'} 
-                                className="w-16 h-16 object-contain rounded border border-gray-600 bg-gray-700 hover:border-blue-400 transition-all"
-                                // 添加错误处理，如果图片加载失败显示占位符或隐藏
-                                onError={(e) => { e.target.style.display = 'none'; /* 或显示占位符 */ }} 
-                              />
-                              {/* 悬停显示 Alt 和 Src */}
-                              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 w-max max-w-xs p-1.5 bg-gray-900 text-white text-[9px] rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none break-all">
-                                Alt: {item.alt || 'N/A'}<br/>Src: {item.src}
-                              </div>
-                            </div>
-                          ) : null // 如果 src 不存在则不渲染
-                        ))}
-                      </div>
-                    )}
+                    {/* --- 如果内容是空字符串，显示提示信息 --- */}
+                    {isContentNull ? (
+                      <p className="text-gray-500 italic">No relevant information retrieved.</p>
+                    ) : (
+                      <>
+                        {/* --- 图片渲染 (仅当 content 是数组时) --- */}
+                        {log.type === 'Crawler_Images' && Array.isArray(log.content) && (
+                          <div className="flex flex-wrap gap-2">
+                            {log.content.map((item, imgIndex) => (
+                              item.src ? ( // 检查 src 是否存在
+                                <div key={imgIndex} className="group relative">
+                                  <img
+                                    src={item.src}
+                                    alt={item.alt || 'Crawled image'}
+                                    className="w-16 h-16 object-contain rounded border border-gray-600 bg-gray-700 hover:border-blue-400 transition-all"
+                                    // 添加错误处理，如果图片加载失败显示占位符或隐藏
+                                    onError={(e) => { e.target.style.display = 'none'; /* 或显示占位符 */ }}
+                                  />
+                                  {/* 悬停显示 Alt 和 Src */}
+                                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 w-max max-w-xs p-1.5 bg-gray-900 text-white text-[9px] rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none break-all">
+                                    Alt: {item.alt || 'N/A'}<br/>Src: {item.src}
+                                  </div>
+                                </div>
+                              ) : null // 如果 src 不存在则不渲染
+                            ))}
+                          </div>
+                        )}
 
-                    {/* --- 链接渲染 (Headers & Footers) --- */}
-                    {(log.type === 'Crawler_Headers' || log.type === 'Crawler_Footers') && (
-                      <ul className="list-none space-y-1">
-                        {log.content.map((item, linkIndex) => (
-                          (item.url && item.text !== undefined) ? ( // 检查 url 和 text 是否存在
-                            <li key={linkIndex}>
-                              <a 
-                                href={item.url} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="text-blue-400 hover:text-blue-300 hover:underline underline-offset-2"
-                                title={item.url} // 鼠标悬停显示 URL
-                              >
-                                {item.text || item.url} {/* 如果 text 为空，显示 URL */}
-                              </a>
-                            </li>
-                          ) : null // 如果 url 或 text 不存在则不渲染
-                        ))}
-                      </ul>
+                        {/* --- 链接渲染 (Headers & Footers) (仅当 content 是数组时) --- */}
+                        {(log.type === 'Crawler_Headers' || log.type === 'Crawler_Footers') && Array.isArray(log.content) && (
+                          <ul className="list-none space-y-1">
+                            {log.content.map((item, linkIndex) => (
+                              (item.url && item.text !== undefined) ? ( // 检查 url 和 text 是否存在
+                                <li key={linkIndex}>
+                                  <a
+                                    href={item.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-400 hover:text-blue-300 hover:underline underline-offset-2"
+                                    title={item.url} // 鼠标悬停显示 URL
+                                  >
+                                    {item.text || item.url} {/* 如果 text 为空，显示 URL */}
+                                  </a>
+                                </li>
+                              ) : null // 如果 url 或 text 不存在则不渲染
+                            ))}
+                          </ul>
+                        )}
+                        {/* 如果 content 不是空字符串也不是数组，这里不会渲染任何东西，
+                            可以根据需要添加对其他类型 content 的处理 */}
+                      </>
                     )}
                   </div>
                 )}
@@ -1826,7 +1838,7 @@ const ResearchTool = ({
 
       const description = document.createElement('p');
       description.className = 'text-gray-300 mb-2 text-center text-sm';
-      description.textContent = errorMessage; // 显示具体的错误信息或通用信息
+      description.textContent = 'Error Description: ' + errorMessage; // 显示具体的错误信息或通用信息
 
       const creditInfo = document.createElement('p');
       creditInfo.className = 'text-green-400 mb-4 text-center text-sm font-medium';
@@ -1924,7 +1936,7 @@ const ResearchTool = ({
           // 处理 Error 类型日志
           if (logData.type === 'Error') {
             console.error('Received Error log from SSE:', logData.content);
-            const errorMessage = logData.content?.error || 'An irreversible error occurred during the task.';
+            const errorMessage = logData.content.description;
             showErrorModal(errorMessage); // 显示错误弹窗并停止 SSE
             return; // 停止处理后续逻辑
           }
