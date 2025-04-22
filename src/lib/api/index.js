@@ -537,6 +537,17 @@ const deleteMedia = async (mediaId) => {
   }
 };
 
+// 新增：重新生成网页的特定区块
+const regenerateSection = async (regenerateData) => {
+  try {
+    const response = await apiClient.post('/alternatively/section/regenerate', regenerateData);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to regenerate section:', error);
+    throw error;
+  }
+};
+
 apiClient.getCompetitorResearch = getCompetitorResearch;
 apiClient.login = login;
 apiClient.register = register;
@@ -573,5 +584,6 @@ apiClient.editAlternativeHtml = editAlternativeHtml;
 apiClient.uploadMedia = uploadMedia;
 apiClient.getMedia = getMedia;
 apiClient.deleteMedia = deleteMedia;
+apiClient.regenerateSection = regenerateSection;
 
 export default apiClient;
