@@ -523,8 +523,9 @@ const ResearchTool = ({
                     <img src="/images/alternatively-logo.png" alt="AltPage.ai" className="w-4 h-4 mr-2" />
                     <div className="text-[11px] text-gray-300 font-medium">Agent Thinking...</div>
                   </div>
+                  {/* --- 修改：添加 'agent-log-content-wrapper' 类 --- */}
                   <div 
-                    className="text-[10px] text-gray-400 break-words leading-relaxed"
+                    className="text-[10px] text-gray-400 break-words leading-relaxed agent-log-content-wrapper" // 添加新类名
                     dangerouslySetInnerHTML={{ __html: filterLogContent(log.content) }}
                   />
                   <div className="text-[9px] text-gray-500 mt-1.5">
@@ -565,7 +566,7 @@ const ResearchTool = ({
             return (
               <div
                 key={uniqueKey} 
-                className="bg-gray-800/50 p-2.5 rounded border border-gray-700/50 hover:border-gray-600/50 transition-all duration-300 animate-fadeIn"
+                className="bg-gray-800/50 p-2.5 rounded border border-gray-700/50 hover:border-gray-600/50 transition-all duration-300 animate-fadeIn" // <-- 添加 max-h 和 overflow-y
                 style={{
                   animationDelay: '0.5s'
                 }}
@@ -829,6 +830,54 @@ const ResearchTool = ({
   useEffect(() => {
     const style = document.createElement('style');
     style.innerHTML = `
+      .agent-log-content-wrapper * {
+        /* 基础样式覆盖 */
+        font-size: 11px !important;       /* 强制字号 */
+        line-height: 1.6 !important;     /* 强制行间距 */
+        color: #bdc3c7 !important;       /* 强制文字颜色 */
+        background-color: transparent !important; /* 强制透明背景 */
+        margin: 0 !important;            /* 重置外边距 */
+        padding: 0 !important;           /* 重置内边距 */
+        border: none !important;         /* 重置边框 */
+        font-weight: normal !important;  /* 强制普通字重 */
+        font-family: inherit !important; /* 继承父级字体 */
+        /* 可以添加更多需要强制统一的样式 */
+      }
+
+      /* 特定标签的微调 (可选) */
+      .agent-log-content-wrapper p {
+        margin-bottom: 0.5em !important; /* 给段落一点下边距 */
+      }
+
+      .agent-log-content-wrapper strong,
+      .agent-log-content-wrapper b {
+        font-weight: bold !important;
+        color: #ecf0f1 !important; /* 粗体用更亮的颜色 */
+      }
+
+      .agent-log-content-wrapper a {
+        color: #60a5fa !important;
+        text-decoration: underline !important;
+      }
+      .agent-log-content-wrapper a:hover {
+        color: #93c5fd !important;
+      }
+
+      /* 覆盖特定传入类的样式 */
+      .agent-log-content-wrapper .thinking-block,
+      .agent-log-content-wrapper .action-block,
+      .agent-log-content-wrapper .json-action-block,
+      .agent-log-content-wrapper .text-gray-600,
+      .agent-log-content-wrapper .text-xs /* 覆盖其他可能的字号类 */ {
+          background-color: transparent !important;
+          border: none !important;
+          padding: 0 !important;
+          margin: 0 !important;
+          border-radius: 0 !important;
+          color: inherit !important; /* 继承父级颜色 */
+          font-size: inherit !important; /* 继承父级字体大小 */
+      }
+
       .fade-out-animation {
         animation: fadeOut 0.6s ease-out forwards;
       }
@@ -1069,6 +1118,7 @@ const ResearchTool = ({
         } else if (rawAnswer.includes('[COMPETITOR_SELECTED]')) {
           const messageBody = rawAnswer.replace(/\[COMPETITOR_SELECTED\].*$/s, '').trim();
           messageHandler.updateAgentMessage(messageBody, thinkingMessageId);
+          messageHandler.addSystemMessage('System starts analyzing competitors and generating alternative pages, please wait...');
           const competitorArrayMatch = rawAnswer.match(/\[COMPETITOR_SELECTED\][^\[]*\[(.*?)\]/s);
           if (competitorArrayMatch && competitorArrayMatch[1]) {
             try {
@@ -1158,7 +1208,7 @@ const ResearchTool = ({
         localStorage.setItem('urlInput', userInput);
         const showLoginEvent = new CustomEvent('showAlternativelyLoginModal');
         window.dispatchEvent(showLoginEvent);
-        setIsProcessingTask(false); 
+        setIsProcessingTask(false);
         return;
       }
       // 获取用户套餐信息
@@ -1169,7 +1219,7 @@ const ResearchTool = ({
           const availableCredits = pageGeneratorLimit - pageGeneratorUsage;
           if (availableCredits <= 0) {
             showSubscriptionModal();
-            setIsProcessingTask(false); 
+            setIsProcessingTask(false);
             return;
           }
         } else {
@@ -1182,14 +1232,14 @@ const ResearchTool = ({
       try {
         const historyResponse = await apiClient.getAlternativeWebsiteList(1, 3);
         if (historyResponse?.code === 200 && historyResponse.data) {
-          const processingTasks = historyResponse.data.filter(item => 
+          const processingTasks = historyResponse.data.filter(item =>
             item.generatorStatus === 'processing'
           );
           for (const task of processingTasks) {
             const statusResponse = await apiClient.getAlternativeStatus(task.websiteId);
             if (statusResponse?.code === 200 && statusResponse.data) {
               const planningStatuses = statusResponse.data;
-              const productComparisonStatus = planningStatuses.find(planning => 
+              const productComparisonStatus = planningStatuses.find(planning =>
                 planning.planningName === 'PRODUCT_COMPARISON'
               );
               if (productComparisonStatus && productComparisonStatus.status !== 'init') {
@@ -1265,9 +1315,9 @@ const ResearchTool = ({
         }
       }, 300);
       setLoading(true);
-      const formattedInput = userInput.trim();
+      const formattedInput = userInput.trim(); // 用户在界面看到的消息内容
       // 抽取url中的host
-      let inputForAPI = formattedInput;
+      let inputForAPI = '';
       try {
         // 检查是否是URL格式
         if (formattedInput.includes('://') || formattedInput.includes('.')) {
@@ -1281,7 +1331,7 @@ const ResearchTool = ({
               url = new URL(formattedInput);
             }
             // 只提取主机名部分
-            inputForAPI = url.hostname;
+            inputForAPI = 'https://' + url.hostname;
           } catch (e) {
             // 如果URL解析失败，尝试使用正则表达式提取域名
             const domainMatch = formattedInput.match(/(?:https?:\/\/)?(?:www\.)?([^\/\s]+)/i);
@@ -1293,10 +1343,11 @@ const ResearchTool = ({
       } catch (error) {
         console.error('Error extracting domain:', error);
       }
-      
+
       setUserInput('');
       localStorage.removeItem('urlInput');
 
+      // 使用原始的 formattedInput 添加用户消息到界面
       messageHandler.addUserMessage(formattedInput);
       while (messageHandler.isProcessing) {
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -1305,32 +1356,31 @@ const ResearchTool = ({
       while (messageHandler.isProcessing) {
         await new Promise(resolve => setTimeout(resolve, 100));
       }
-      // 生成websiteId
+
       const generateIdResponse = await apiClient.generateWebsiteId();
       if (generateIdResponse?.code !== 200 || !generateIdResponse?.data?.websiteId) {
         console.error("Failed to generate websiteId:", generateIdResponse);
         return;
       }
       const websiteId = generateIdResponse.data.websiteId;
-      setCurrentWebsiteId(websiteId); 
-      // 把用户在初始界面输入的url作为第一句话给chat接口
+      setCurrentWebsiteId(websiteId);
+
       const greetingResponse = await apiClient.chatWithAI(
-        formattedInput,
+        inputForAPI, 
         websiteId,
       );
       if (greetingResponse?.code === 1058) {
         messageHandler.updateAgentMessage("⚠️ Network error occurred. Please try again.", thinkingMessageId);
         return;
       }
-      
+
       if (greetingResponse?.code === 200 && greetingResponse.data?.answer) {
         const answer = filterMessageTags(greetingResponse.data.answer);
         if (greetingResponse.data.answer.includes('[URL_GET]')) {
           setInputDisabledDueToUrlGet(true);
           messageHandler.updateAgentMessage(answer, thinkingMessageId);
-          // 在chat接口成功接收URL后，发送URL给search接口进行任务初始化
           const searchResponse = await apiClient.searchCompetitor(
-            inputForAPI,
+            inputForAPI, // 使用提取的 hostname
             false,
             websiteId
           );
@@ -2698,74 +2748,6 @@ const ResearchTool = ({
                   )}
             </div>
 
-            {/* --- 修改：将进度指示器移到这里 --- */}
-            {!showInitialScreen && ( // 只在非初始屏幕显示进度
-              <div className={`p-3 relative backdrop-blur-sm overflow-hidden shadow-md border-t border-gray-300/20 bg-slate-800/80 mx-2 mb-2 rounded-lg`}> {/* 调整 padding, margin, background, add border-t */}
-                {/* 背景装饰效果 (可选，如果觉得太拥挤可以移除) */}
-                {/* <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,#6366f115,transparent_50%)]"></div> */}
-                {/* <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,#a855f715,transparent_50%)]"></div> */}
-
-                <div className="flex items-center space-x-3 relative z-10"> {/* 缩小 space */}
-                  {/* 更小的加载指示器 */}
-                  <div className="relative w-5 h-5 flex-shrink-0"> {/* 缩小尺寸 */}
-                    <div className="absolute inset-0 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin"></div>
-                    <div className="absolute inset-1 rounded-full border-2 border-purple-500 border-b-transparent animate-spin" style={{animationDirection: 'reverse', animationDuration: '1.5s'}}></div>
-                  </div>
-
-                  <div className="text-slate-200 text-xs font-medium flex flex-col z-10 w-full"> {/* 缩小字体 */}
-                    <div className="flex items-center justify-between mb-1.5"> {/* 缩小 margin */}
-                      <span className={`font-semibold text-sm text-white`}>Progress</span> {/* 缩小字体, 简化标题 */}
-                    </div>
-
-                    {/* 保持5列，但内容更紧凑 */}
-                    <div className="grid grid-cols-5 gap-1 w-full"> {/* 缩小 gap */}
-                      {/* 调整样式使其更小 */}
-                      <div className={`text-[10px] rounded px-1.5 py-1 flex items-center justify-center transition-all duration-500 ${currentStep >= 1
-                        ? 'bg-gradient-to-r from-indigo-500/40 to-blue-500/40 text-white border border-indigo-500/60 shadow-sm shadow-indigo-500/20'
-                        : 'bg-slate-700/50 text-slate-400 border border-slate-600/40'}`}>
-                        {/* --- 修改：移除 animate-pulse --- */}
-                        <span className={currentStep === 1 ? 'font-medium' : ''}>1. Find Competitors</span> {/* 简化文本 */}
-                      </div>
-                      <div className={`text-[10px] rounded px-1.5 py-1 flex items-center justify-center transition-all duration-500 ${currentStep >= 2
-                        ? 'bg-gradient-to-r from-indigo-500/40 to-blue-500/40 text-white border border-indigo-500/60 shadow-sm shadow-indigo-500/20'
-                        : 'bg-slate-700/50 text-slate-400 border border-slate-600/40'}`}>
-                        {/* --- 修改：移除 animate-pulse --- */}
-                        <span className={currentStep === 2 ? 'font-medium' : ''}>2. Select Competitor</span> {/* 简化文本 */}
-                      </div>
-                      <div className={`text-[10px] rounded px-1.5 py-1 flex items-center justify-center transition-all duration-500 ${currentStep >= 3
-                        ? 'bg-gradient-to-r from-indigo-500/40 to-blue-500/40 text-white border border-indigo-500/60 shadow-sm shadow-indigo-500/20'
-                        : 'bg-slate-700/50 text-slate-400 border border-slate-600/40'}`}>
-                        {/* --- 修改：移除 animate-pulse --- */}
-                        <span className={currentStep === 3 ? 'font-medium' : ''}>3. Analyze Competitor</span> {/* 简化文本 */}
-                      </div>
-                      <div className={`text-[10px] rounded px-1.5 py-1 flex items-center justify-center transition-all duration-500 ${currentStep >= 4
-                        ? 'bg-gradient-to-r from-indigo-500/40 to-blue-500/40 text-white border border-indigo-500/60 shadow-sm shadow-indigo-500/20'
-                        : 'bg-slate-700/50 text-slate-400 border border-slate-600/40'}`}>
-                        {/* --- 修改：移除 animate-pulse --- */}
-                        <span className={currentStep === 4 ? 'font-medium' : ''}>4. Codes Generation</span> {/* 简化文本 */}
-                      </div>
-                      <div className={`text-[10px] rounded px-1.5 py-1 flex items-center justify-center transition-all duration-500 ${
-                          currentStep >= 5
-                            ? 'bg-gradient-to-r from-green-500/40 to-emerald-500/40 text-white border border-green-500/60 shadow-sm shadow-green-500/20'
-                            : 'bg-slate-700/50 text-slate-400 border border-slate-600/40'
-                        }`}>
-                        {/* --- 修改：移除 animate-pulse --- */}
-                        <span className={currentStep === 5 ? 'font-medium' : ''}>5. Style Change</span> {/* 简化文本 */}
-                      </div>
-                    </div>
-                    {currentStep >= 5 && (
-                    <div className="flex items-center mt-1.5 space-x-1"> {/* 缩小 margin 和 space */}
-                      <svg className="w-3 h-3 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"> {/* 缩小图标 */}
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span className={`font-semibold text-xs text-green-400`}>Your pages are ready! You can continue to update the styles</span> {/* 缩小字体, 简化文本 */}
-                    </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* 输入框区域 */}
             <div className="p-4 border-t border-gray-300/20 flex-shrink-0"> {/* 保持这个区域不变 */}
               <div className="max-w-[600px] mx-auto">
@@ -2901,7 +2883,77 @@ const ResearchTool = ({
 
               {/* 内容区域 */}
               <div className="flex-1 overflow-y-auto">
-                {rightPanelTab === 'details' && renderDetails(detailsData)}
+                {rightPanelTab === 'details' && (
+                  // --- 新增：外层 Flex 容器 ---
+                  <div className="flex h-full">
+                    {/* --- 新增：左侧垂直进度条区域 --- */}
+                    <div className={`w-48 flex-shrink-0 border-r border-gray-300/20 p-3 overflow-y-auto bg-slate-800/30 ${
+                      currentBackground === 'DAY_GHIBLI' ? 'border-amber-700/20 bg-amber-950/5' : 'border-gray-300/20 bg-slate-800/30'
+                    }`}>
+                      {/* --- 移动并修改进度指示器 --- */}
+                      {!showInitialScreen && (
+                        <div className="relative">
+                          <div className="flex items-center space-x-2 mb-3"> {/* 调整标题和图标布局 */}
+                            <div className="relative w-5 h-5 flex-shrink-0">
+                              <div className="absolute inset-0 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin"></div>
+                              <div className="absolute inset-1 rounded-full border-2 border-purple-500 border-b-transparent animate-spin" style={{animationDirection: 'reverse', animationDuration: '1.5s'}}></div>
+                            </div>
+                            <span className={`font-semibold text-sm ${currentBackground === 'DAY_GHIBLI' ? 'text-amber-200' : 'text-white'}`}>Progress</span>
+                          </div>
+
+                          {/* --- 修改为垂直布局 --- */}
+                          <div className="flex flex-col space-y-2 w-full">
+                            {/* Step 1 */}
+                            <div className={`text-xs rounded px-2 py-1.5 flex items-center transition-all duration-500 ${currentStep >= 1
+                              ? (currentBackground === 'DAY_GHIBLI' ? 'bg-gradient-to-r from-amber-600/40 to-orange-600/40 text-amber-100 border border-amber-500/60 shadow-sm shadow-amber-500/20' : 'bg-gradient-to-r from-indigo-500/40 to-blue-500/40 text-white border border-indigo-500/60 shadow-sm shadow-indigo-500/20')
+                              : (currentBackground === 'DAY_GHIBLI' ? 'bg-amber-800/30 text-amber-300/70 border border-amber-700/40' : 'bg-slate-700/50 text-slate-400 border border-slate-600/40')}`}>
+                              <span className={currentStep === 1 ? 'font-medium' : ''}>1. Find Competitors</span>
+                            </div>
+                            {/* Step 2 */}
+                            <div className={`text-xs rounded px-2 py-1.5 flex items-center transition-all duration-500 ${currentStep >= 2
+                              ? (currentBackground === 'DAY_GHIBLI' ? 'bg-gradient-to-r from-amber-600/40 to-orange-600/40 text-amber-100 border border-amber-500/60 shadow-sm shadow-amber-500/20' : 'bg-gradient-to-r from-indigo-500/40 to-blue-500/40 text-white border border-indigo-500/60 shadow-sm shadow-indigo-500/20')
+                              : (currentBackground === 'DAY_GHIBLI' ? 'bg-amber-800/30 text-amber-300/70 border border-amber-700/40' : 'bg-slate-700/50 text-slate-400 border border-slate-600/40')}`}>
+                              <span className={currentStep === 2 ? 'font-medium' : ''}>2. Select Competitor</span>
+                            </div>
+                            {/* Step 3 */}
+                            <div className={`text-xs rounded px-2 py-1.5 flex items-center transition-all duration-500 ${currentStep >= 3
+                              ? (currentBackground === 'DAY_GHIBLI' ? 'bg-gradient-to-r from-amber-600/40 to-orange-600/40 text-amber-100 border border-amber-500/60 shadow-sm shadow-amber-500/20' : 'bg-gradient-to-r from-indigo-500/40 to-blue-500/40 text-white border border-indigo-500/60 shadow-sm shadow-indigo-500/20')
+                              : (currentBackground === 'DAY_GHIBLI' ? 'bg-amber-800/30 text-amber-300/70 border border-amber-700/40' : 'bg-slate-700/50 text-slate-400 border border-slate-600/40')}`}>
+                              <span className={currentStep === 3 ? 'font-medium' : ''}>3. Analyze Competitor</span>
+                            </div>
+                            {/* Step 4 */}
+                            <div className={`text-xs rounded px-2 py-1.5 flex items-center transition-all duration-500 ${currentStep >= 4
+                              ? (currentBackground === 'DAY_GHIBLI' ? 'bg-gradient-to-r from-amber-600/40 to-orange-600/40 text-amber-100 border border-amber-500/60 shadow-sm shadow-amber-500/20' : 'bg-gradient-to-r from-indigo-500/40 to-blue-500/40 text-white border border-indigo-500/60 shadow-sm shadow-indigo-500/20')
+                              : (currentBackground === 'DAY_GHIBLI' ? 'bg-amber-800/30 text-amber-300/70 border border-amber-700/40' : 'bg-slate-700/50 text-slate-400 border border-slate-600/40')}`}>
+                              <span className={currentStep === 4 ? 'font-medium' : ''}>4. Codes Generation</span>
+                            </div>
+                            {/* Step 5 */}
+                            <div className={`text-xs rounded px-2 py-1.5 flex items-center transition-all duration-500 ${currentStep >= 5
+                              ? (currentBackground === 'DAY_GHIBLI' ? 'bg-gradient-to-r from-green-600/40 to-emerald-600/40 text-green-100 border border-green-500/60 shadow-sm shadow-green-500/20' : 'bg-gradient-to-r from-green-500/40 to-emerald-500/40 text-white border border-green-500/60 shadow-sm shadow-green-500/20')
+                              : (currentBackground === 'DAY_GHIBLI' ? 'bg-amber-800/30 text-amber-300/70 border border-amber-700/40' : 'bg-slate-700/50 text-slate-400 border border-slate-600/40')}`}>
+                              <span className={currentStep === 5 ? 'font-medium' : ''}>5. Style Change</span>
+                            </div>
+                          </div>
+
+                          {/* --- 完成提示信息 --- */}
+                          {currentStep >= 5 && (
+                            <div className="flex items-center mt-3 space-x-1.5">
+                              <svg className={`w-3.5 h-3.5 ${currentBackground === 'DAY_GHIBLI' ? 'text-green-400' : 'text-green-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                              <span className={`font-semibold text-xs ${currentBackground === 'DAY_GHIBLI' ? 'text-green-300' : 'text-green-400'}`}>Pages ready!</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* --- 新增：右侧日志内容区域 --- */}
+                    <div className="flex-1 overflow-y-auto">
+                      {renderDetails(detailsData)}
+                    </div>
+                  </div>
+                )}
                 {rightPanelTab === 'browser' && (
                   <div className="space-y-2">
                     {browserTabs.length === 0 ? (
