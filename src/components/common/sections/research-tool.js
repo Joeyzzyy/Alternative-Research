@@ -359,11 +359,20 @@ const ResearchTool = ({
 
   const detailsRef = useRef(null);
   const codeContainerRef = useRef(null);
+  const latestAgentContentRef = useRef(null); // <-- 新增 Ref
 
   // --- 新增 Color 类型流式处理的 Refs ---
   const colorStreamRef = useRef('');
   const currentColorStreamIdRef = useRef(null);
   const isColorStreamingRef = useRef(false);
+
+  // --- 新增：useEffect 用于滚动最新的 Agent 日志块到底部 ---
+  useEffect(() => {
+    if (latestAgentContentRef.current) {
+      // 始终滚动最新的 Agent 消息块到底部
+      latestAgentContentRef.current.scrollTop = latestAgentContentRef.current.scrollHeight;
+    }
+  }, [logs]); // 当日志更新时触发
 
   const filterLogContent = (content) => {
     if (!content) return '';
@@ -487,9 +496,14 @@ const ResearchTool = ({
       mergedLogs.push(mergedLog);
     });
     
-    // 按时间戳排序
-    mergedLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-    
+    // 按时间戳排序 (确保先合并再排序)
+    mergedLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); // <--- 修改为倒序排序
+
+    // --- 修改：找到最新的 Agent Log ID (现在是数组中的第一个 Agent log) ---
+    // 因为数组已经按时间倒序，第一个 Agent 类型的日志就是最新的
+    const latestAgentLog = mergedLogs.find(l => l.type === 'Agent'); // 直接在倒序数组中查找第一个
+    const latestAgentLogId = latestAgentLog ? latestAgentLog.id : null;
+
     // Helper function for status color
     const getStatusColor = (status) => {
       if (!status) return 'text-gray-400'; // Default
@@ -523,9 +537,11 @@ const ResearchTool = ({
                     <img src="/images/alternatively-logo.png" alt="AltPage.ai" className="w-4 h-4 mr-2" />
                     <div className="text-[11px] text-gray-300 font-medium">Agent Thinking...</div>
                   </div>
-                  {/* --- 修改：添加 'agent-log-content-wrapper' 类 --- */}
+                  {/* --- 修改：添加 ref={log.id === latestAgentLogId ? latestAgentContentRef : null} --- */}
                   <div 
-                    className="text-[10px] text-gray-400 break-words leading-relaxed agent-log-content-wrapper" // 添加新类名
+                    ref={log.id === latestAgentLogId ? latestAgentContentRef : null} // <-- 附加 Ref
+                    className="text-[10px] text-gray-400 break-words leading-relaxed agent-log-content-wrapper overflow-y-auto" // 保留 overflow
+                    style={{ maxHeight: '300px' }} // 保留 maxHeight
                     dangerouslySetInnerHTML={{ __html: filterLogContent(log.content) }}
                   />
                   <div className="text-[9px] text-gray-500 mt-1.5">

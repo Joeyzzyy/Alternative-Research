@@ -186,20 +186,35 @@ export default function HtmlPreview({ pageId }) {
         });
 
         // --- 新增：提取 Sections ---
-        const sectionElements = doc.querySelectorAll('section');
-        const extractedSections = Array.from(sectionElements).map((section, index) => {
-          // 确保每个 section 都有一个 ID，用于后续滚动定位
-          if (!section.id) {
-            section.id = `page-section-${index}`;
+        const structuralElements = doc.querySelectorAll('header, section, footer');
+        const extractedSections = Array.from(structuralElements).map((element, index) => {
+          // 确保每个元素都有一个 ID，用于后续滚动定位
+          const elementType = element.tagName.toLowerCase();
+          if (!element.id) {
+            // 为 header, section, footer 提供不同的默认 ID 前缀
+            element.id = `page-${elementType}-${index}`;
           }
-          // 尝试获取一个有意义的标签
-          const label = section.getAttribute('aria-label') ||
-                        section.getAttribute('data-label') ||
-                        section.querySelector('h1, h2, h3, h4, h5, h6')?.textContent ||
-                        `Section ${index + 1}`;
+          // --- 修改：根据元素类型确定标签 ---
+          let label = '';
+          if (elementType === 'header') {
+            label = 'Header'; // 直接使用 "Header"
+          } else if (elementType === 'footer') {
+            label = 'Footer'; // 直接使用 "Footer"
+          } else {
+            // 对于 section，仍然尝试获取具体标签，最后回退到默认值
+            label = element.getAttribute('aria-label') ||
+                    element.getAttribute('data-label') ||
+                    element.querySelector('h1, h2, h3, h4, h5, h6')?.textContent ||
+                    `Section ${index + 1}`; // 回退到 "Section X"
+            // 注意：这里的 index 仍然是所有结构元素的索引，如果希望 Section 序号独立计算，需要额外逻辑
+          }
+          // --- 标签确定逻辑结束 ---
+
           return {
-            id: section.id,
-            label: label.trim(),
+            id: element.id,
+            label: label.trim(), // 移除可能的前后空格
+            // 可以选择性地存储元素类型，以便将来进行区分
+            // type: elementType
           };
         });
         setSections(extractedSections);
@@ -218,6 +233,45 @@ export default function HtmlPreview({ pageId }) {
     if (!iframe || !html) return;
     const doc = iframe.contentDocument;
     if (!doc) return;
+
+    // --- 修改：提取 Header, Sections, Footer ---
+    // 使用更广泛的选择器来同时获取 header, section, 和 footer
+    const structuralElements = doc.querySelectorAll('header, section, footer');
+    const extractedSections = Array.from(structuralElements).map((element, index) => {
+      // 确保每个元素都有一个 ID，用于后续滚动定位
+      const elementType = element.tagName.toLowerCase();
+      if (!element.id) {
+        // 为 header, section, footer 提供不同的默认 ID 前缀
+        element.id = `page-${elementType}-${index}`;
+      }
+      // 尝试获取一个有意义的标签
+      // 增加对 header/footer 的默认标签处理
+      let label = element.getAttribute('aria-label') ||
+                  element.getAttribute('data-label') ||
+                  element.querySelector('h1, h2, h3, h4, h5, h6')?.textContent;
+
+      if (!label) {
+        if (elementType === 'header') {
+          label = 'Header';
+        } else if (elementType === 'footer') {
+          label = 'Footer';
+        } else {
+          // section 的默认标签保持不变
+          label = `Section ${index + 1}`; // 注意：这里的 index 包含了 header 和 footer
+          // 或者可以过滤掉 header/footer 再计算 section 的序号，会更复杂一些
+        }
+      }
+
+      return {
+        id: element.id,
+        label: label.trim(),
+        // 可以选择性地存储元素类型，以便将来进行区分
+        // type: elementType
+      };
+    });
+    setSections(extractedSections);
+    // --- 提取结构元素结束 ---
+
 
     // 先移除旧的事件监听，避免重复绑定
     doc.removeEventListener('click', handleIframeClick, true);
@@ -372,9 +426,22 @@ export default function HtmlPreview({ pageId }) {
       const doc = iframe.contentDocument;
       const element = doc.getElementById(sectionId);
       if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // --- 新增：检查元素的定位方式 ---
+        const computedStyle = doc.defaultView.getComputedStyle(element);
+        const isFixedOrSticky = computedStyle.position === 'fixed' || computedStyle.position === 'sticky';
 
-        // 可选：临时高亮
+        if (isFixedOrSticky) {
+          // 对于 fixed 或 sticky 定位的元素，滚动到页面顶部
+          iframe.contentWindow.scrollTo({ top: 0, behavior: 'smooth' });
+          console.log(`Element ${sectionId} is fixed/sticky, scrolling window to top.`);
+        } else {
+          // 对于其他元素，正常滚动到元素位置
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          console.log(`Scrolling element ${sectionId} into view.`);
+        }
+        // --- 定位检查结束 ---
+
+        // 可选：临时高亮 (无论是否滚动，都尝试高亮)
         if (highlight) {
           const originalOutline = element.style.outline; // 保存原始轮廓以备恢复
           // 确保不覆盖预览或错误状态的轮廓
