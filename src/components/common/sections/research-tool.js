@@ -515,6 +515,40 @@ const ResearchTool = ({
       return 'text-gray-400'; // Fallback
     };
 
+    const handleImageLoad = (e) => {
+      // 使图片可见
+      e.target.classList.remove('opacity-0');
+      e.target.classList.add('opacity-100');
+      
+      // 可选：移除父链接的背景图，避免重叠
+      const parentLink = e.target.closest('a');
+      if (parentLink) {
+        parentLink.style.backgroundImage = 'none'; 
+        // 可以设置一个透明或其他的背景色
+        parentLink.style.backgroundColor = 'transparent'; 
+      }
+    };
+    
+    // 处理图片加载错误
+    const handleImageError = (e) => {
+      e.target.onerror = null; // 防止无限循环
+      // 隐藏失败的 img 元素，让背景占位符显示出来
+      e.target.style.display = 'none'; 
+    
+      // 禁用父链接
+      const parentLink = e.target.closest('a');
+      if (parentLink) {
+        parentLink.onclick = (event) => event.preventDefault();
+        parentLink.style.cursor = 'default';
+        // 确保占位符背景仍然可见 (以防万一被 onLoad 移除了)
+        // 注意: 确保这里的路径和颜色与 className 中的一致
+        parentLink.style.backgroundImage = `url('/images/image-cannot-be-displayed.png')`; 
+        parentLink.style.backgroundColor = '#4A5568'; // Tailwind bg-gray-700 的颜色值
+      }
+      // 可以在控制台记录错误，方便调试
+      // console.error("Image failed to load:", e.target.src); 
+    };
+
     return (
       <div className="h-full flex flex-col" ref={detailsRef}>
         <div className="p-3 space-y-2 overflow-y-auto">
@@ -578,9 +612,7 @@ const ResearchTool = ({
             // --- 修改：为新的 Crawler 类型添加图标和标题 ---
             const isCrawlerType = log.type === 'Crawler_Images' || log.type === 'Crawler_Headers' || log.type === 'Crawler_Footers';
             const uniqueKey = `${log.id || 'log'}-${log.type}-${index}`; 
-
-            // --- 修改：检查 Crawler 内容是否为空字符串 ---
-            const isContentNull = log.content === null;
+            const isEmptyCrawlerContent = log.content === null || (isCrawlerType && Array.isArray(log.content) && log.content.length === 0);
 
             return (
               <div
@@ -741,31 +773,43 @@ const ResearchTool = ({
                     className="text-[10px] text-gray-400 break-words leading-relaxed mt-1"
                   >
                     {/* --- 如果内容是空字符串，显示提示信息 --- */}
-                    {isContentNull ? (
+                    {isEmptyCrawlerContent ? (
                       <p className="text-gray-500 italic">No relevant information retrieved.</p>
                     ) : (
                       <>
-                        {/* --- 图片渲染 (仅当 content 是数组时) --- */}
+                        {/* --- 图片渲染 (仅当 content 是非空数组时) --- */}
                         {log.type === 'Crawler_Images' && Array.isArray(log.content) && (
                           <div className="flex flex-wrap gap-2">
-                            {log.content.map((item, imgIndex) => (
-                              item.src ? ( // 检查 src 是否存在
-                                <div key={imgIndex} className="group relative">
-                                  <img
-                                    src={item.src}
-                                    alt={item.alt || 'Crawled image'}
-                                    className="w-16 h-16 object-contain rounded border border-gray-600 bg-gray-700 hover:border-blue-400 transition-all"
-                                    // 添加错误处理，如果图片加载失败显示占位符或隐藏
-                                    onError={(e) => { e.target.style.display = 'none'; /* 或显示占位符 */ }}
-                                  />
-                                  {/* 悬停显示 Alt 和 Src */}
-                                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 w-max max-w-xs p-1.5 bg-gray-900 text-white text-[9px] rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none break-all">
-                                    Alt: {item.alt || 'N/A'}<br/>Src: {item.src}
-                                  </div>
+                          {log.content.map((item, imgIndex) => (
+                            item.src ? ( 
+                              <a 
+                                key={imgIndex} 
+                                href={item.src} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                // --- 修改 className ---
+                                className="group relative block cursor-pointer w-16 h-16 rounded border border-gray-600 bg-gray-700 bg-center bg-no-repeat bg-contain overflow-hidden" // 添加尺寸、背景占位符样式、overflow
+                                // --- 添加 style 设置背景图 ---
+                                style={{ backgroundImage: `url('/images/image-placeholder.svg')` }} // 默认显示占位符背景
+                              >
+                                <img
+                                  src={item.src}
+                                  alt={item.alt || 'Crawled image'}
+                                  // --- 修改 className ---
+                                  className="absolute inset-0 w-full h-full object-contain opacity-0 transition-opacity duration-300" // 绝对定位、初始透明、过渡效果
+                                  // --- 添加 onLoad 事件处理器 ---
+                                  onLoad={handleImageLoad} 
+                                  // --- 修改 onError 事件处理器 ---
+                                  onError={handleImageError} 
+                                />
+                                {/* 悬停显示 Alt 和 Src (保持不变) */}
+                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 w-max max-w-xs p-1.5 bg-gray-900 text-white text-[9px] rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none break-all">
+                                  Alt: {item.alt || 'N/A'}<br/>Src: {item.src}
                                 </div>
-                              ) : null // 如果 src 不存在则不渲染
-                            ))}
-                          </div>
+                              </a> 
+                            ) : null 
+                          ))}
+                        </div>
                         )}
 
                         {/* --- 链接渲染 (Headers & Footers) (仅当 content 是数组时) --- */}
