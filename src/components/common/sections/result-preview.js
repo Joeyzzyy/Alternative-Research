@@ -522,7 +522,7 @@ const HistoryCardList = () => {
         >
           <div className="flex flex-col items-center justify-center py-6">
             <ExclamationCircleOutlined style={{ fontSize: 40, color: '#f87171' }} />
-            <div className="mt-4 text-lg font-semibold text-red-400">Are you sure you want to delete this record?</div>
+            <div className="mt-4 text-lg font-semibold text-red-400">Are you sure you want to delete this page?</div>
             <div className="mt-2 text-gray-300 text-center">
               This action cannot be undone.
             </div>
@@ -689,39 +689,7 @@ const HistoryCardList = () => {
             )}
             {/* === 修改：将预览、编辑、删除、关闭按钮放在一个容器中 === */}
             <div className="absolute top-3 right-4 z-30 flex items-center gap-2">
-              {/* === 新增：预览按钮 === */}
-              <button
-                onClick={() => {
-                  // 计算预览 URL
-                  let url = '';
-                  const previewItem = resultDetail?.data?.find(i => i.resultId === selectedPreviewId);
-                  if (previewItem) {
-                    const isPublished = previewItem.deploymentStatus === 'publish' && previewItem.siteUrl && previewItem.slug;
-                    url = isPublished ? `${previewItem.siteUrl.replace(/\/$/, '')}/${previewItem.slug}` : `https://preview.websitelm.site/en/${previewItem.resultId}`;
-                  }
-                  // 在新标签页打开 URL
-                  if (url) window.open(url, '_blank');
-                }}
-                className="p-1.5 rounded-full text-cyan-300 bg-slate-800/60 hover:bg-slate-700/80 transition duration-200" // 使用与其他按钮一致的样式
-                title="Preview Page"
-                disabled={!selectedPreviewId || resultLoading} // 如果没有选中预览项或正在加载，则禁用
-              >
-                <span style={{ fontSize: 14, display: 'block', lineHeight: '1' }}>Preview</span>
-              </button>
-
-              {/* 编辑按钮 */}
-              <button
-                onClick={() => {
-                  if (selectedPreviewId) {
-                    setEditPageId(selectedPreviewId);
-                  }
-                }}
-                className="p-1.5 rounded-full text-cyan-300 bg-slate-800/60 hover:bg-slate-700/80 transition duration-200"
-                title="Edit Page"
-                disabled={!selectedPreviewId || resultLoading} // 保持禁用逻辑
-              >
-                <span style={{ fontSize: 14, display: 'block', lineHeight: '1' }}>Edit</span>
-              </button>
+              {/* === 预览按钮和编辑按钮已移至下方 iframe 地址栏 === */}
 
               {/* 弹窗内删除按钮 */}
               <button
@@ -1088,6 +1056,38 @@ const HistoryCardList = () => {
                                 <div className="flex-1 bg-gray-900 text-gray-200 text-xxs px-1.5 py-0.5 rounded border border-gray-700 truncate">
                                   {previewUrl}
                                 </div>
+                                {/* === 新增：将预览和编辑按钮移到此处并高亮 === */}
+                                <button
+                                  onClick={() => {
+                                    if (previewUrl) window.open(previewUrl, '_blank');
+                                  }}
+                                  className={`
+                                    ml-2 px-2 py-0.5 rounded text-xs font-semibold text-white shadow-sm transition duration-200
+                                    bg-gradient-to-r from-green-500 to-cyan-500 hover:from-green-400 hover:to-cyan-400
+                                    disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-600 disabled:to-gray-700
+                                  `}
+                                  title="Preview Page in New Tab"
+                                  disabled={!selectedPreviewId || resultLoading || !previewUrl}
+                                >
+                                  Preview
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    if (selectedPreviewId) {
+                                      setEditPageId(selectedPreviewId);
+                                    }
+                                  }}
+                                  className={`
+                                    ml-1 px-2 py-0.5 rounded text-xs font-semibold text-white shadow-sm transition duration-200
+                                    bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400
+                                    disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-600 disabled:to-gray-700
+                                  `}
+                                  title="Edit Page"
+                                  disabled={!selectedPreviewId || resultLoading}
+                                >
+                                  Edit
+                                </button>
+                                {/* === 结束新增按钮 === */}
                               </div>
                             </div>
                             <div className="flex-1 overflow-hidden rounded-b-lg">
