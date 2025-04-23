@@ -687,33 +687,48 @@ const HistoryCardList = () => {
                 </button>
               </>
             )}
-            {/* === 修改：将删除按钮、编辑按钮和新的关闭按钮放在一个容器中 === */}
+            {/* === 修改：将预览、编辑、删除、关闭按钮放在一个容器中 === */}
             <div className="absolute top-3 right-4 z-30 flex items-center gap-2">
-              {/* === 新增：编辑按钮 === */}
+              {/* === 新增：预览按钮 === */}
               <button
                 onClick={() => {
-                  // 使用 selectedPreviewId，因为它在当前作用域可用
+                  // 计算预览 URL
+                  let url = '';
+                  const previewItem = resultDetail?.data?.find(i => i.resultId === selectedPreviewId);
+                  if (previewItem) {
+                    const isPublished = previewItem.deploymentStatus === 'publish' && previewItem.siteUrl && previewItem.slug;
+                    url = isPublished ? `${previewItem.siteUrl.replace(/\/$/, '')}/${previewItem.slug}` : `https://preview.websitelm.site/en/${previewItem.resultId}`;
+                  }
+                  // 在新标签页打开 URL
+                  if (url) window.open(url, '_blank');
+                }}
+                className="p-1.5 rounded-full text-cyan-300 bg-slate-800/60 hover:bg-slate-700/80 transition duration-200" // 使用与其他按钮一致的样式
+                title="Preview Page"
+                disabled={!selectedPreviewId || resultLoading} // 如果没有选中预览项或正在加载，则禁用
+              >
+                <span style={{ fontSize: 14, display: 'block', lineHeight: '1' }}>Preview</span>
+              </button>
+
+              {/* 编辑按钮 */}
+              <button
+                onClick={() => {
                   if (selectedPreviewId) {
                     setEditPageId(selectedPreviewId);
                   }
                 }}
                 className="p-1.5 rounded-full text-cyan-300 bg-slate-800/60 hover:bg-slate-700/80 transition duration-200"
                 title="Edit Page"
-                // 禁用条件可以根据需要调整，例如当没有选中预览项时
-                disabled={!selectedPreviewId || resultLoading}
+                disabled={!selectedPreviewId || resultLoading} // 保持禁用逻辑
               >
-                {/* 可以使用 antd 的 EditOutlined 图标，如果已引入 */}
-                {/* <EditOutlined style={{ fontSize: 16, display: 'block' }} /> */}
-                {/* 或者使用文字 */}
                 <span style={{ fontSize: 14, display: 'block', lineHeight: '1' }}>Edit</span>
               </button>
 
               {/* 弹窗内删除按钮 */}
               <button
-                onClick={() => setDeleteConfirm({ open: true, id: selectedItem.websiteId })} // 确认使用 selectedItem.websiteId
+                onClick={() => setDeleteConfirm({ open: true, id: selectedItem.websiteId })}
                 className="p-1.5 rounded-full text-red-400 bg-slate-800/60 hover:bg-slate-700/80 transition duration-200"
                 title="Delete Task"
-                disabled={deletingId === selectedItem.websiteId || isClearingAll}
+                disabled={deletingId === selectedItem.websiteId || isClearingAll || resultLoading} // 如果正在加载详情也禁用
               >
                 <DeleteOutlined style={{ fontSize: 16, display: 'block' }} />
               </button>
@@ -723,6 +738,7 @@ const HistoryCardList = () => {
                 onClick={handleModalClose}
                 className="p-1.5 rounded-full text-white bg-slate-800/60 hover:bg-slate-700/80 transition duration-200"
                 title="Close"
+                disabled={resultLoading} // 如果正在加载详情也禁用
               >
                 <CloseOutlined style={{ fontSize: 16, display: 'block' }} />
               </button>
@@ -1072,18 +1088,6 @@ const HistoryCardList = () => {
                                 <div className="flex-1 bg-gray-900 text-gray-200 text-xxs px-1.5 py-0.5 rounded border border-gray-700 truncate">
                                   {previewUrl}
                                 </div>
-                              </div>
-                              {/* 修改：移除此处的 Edit 按钮，只保留 Preview 按钮 */}
-                              <div className="flex items-center gap-1.5 ml-3">
-                                {/* Edit 按钮已被移到弹窗右上角 */}
-                                <Button
-                                  size="small"
-                                  type="default"
-                                  style={{ fontSize: '10px', padding: '0 8px' }}
-                                  onClick={() => window.open(previewUrl, '_blank')}
-                                >
-                                  <span style={{ fontWeight: 600 }}>Preview</span>
-                                </Button>
                               </div>
                             </div>
                             <div className="flex-1 overflow-hidden rounded-b-lg">

@@ -1,7 +1,20 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, useCallback } from 'react'
 import apiClient from '../../../lib/api/index.js';
-import { Button, Modal, Spin, Row, Col, Pagination, Popconfirm, Input, Form, message } from 'antd';
-import { UploadOutlined, DeleteOutlined, CheckOutlined, EditOutlined, CloseOutlined, CheckCircleFilled } from '@ant-design/icons';
+import { Button, Modal, Spin, Row, Col, Pagination, Popconfirm, Input, Form, message, Drawer, Tag } from 'antd';
+import { UploadOutlined, DeleteOutlined, CheckOutlined, EditOutlined, CloseOutlined, CheckCircleFilled, LoadingOutlined } from '@ant-design/icons';
+
+// --- 新增：定义常用提示 ---
+const commonPrompts = [
+  "Make the heading larger",
+  "Make all text larger",
+  "Make all text smaller",
+  "Make the image larger",
+  "Make the image smaller",
+  "Rewrite this to be more concise",
+  "Improve the call to action",
+  "Change the tone to be more professional",
+  "Change the tone to be more casual",
+];
 
 export default function HtmlPreview({ pageId }) {
   const [html, setHtml] = useState('');
@@ -26,7 +39,7 @@ export default function HtmlPreview({ pageId }) {
   const [imageAssets, setImageAssets] = useState([]);
   const [imageLoading, setImageLoading] = useState(false);
   const [imagePage, setImagePage] = useState(1);
-  const [imagePageSize, setImagePageSize] = useState(8);
+  const [imagePageSize, setImagePageSize] = useState(20);
   const [imageTotal, setImageTotal] = useState(0);
   const [showImageLibrary, setShowImageLibrary] = useState(false);
   const [uploadModalVisible, setUploadModalVisible] = useState(false);
@@ -113,12 +126,13 @@ export default function HtmlPreview({ pageId }) {
       });
 
       setShowSidebar(false);
-      showNotification('Saved successfully', 'success');
+      showNotification('Changes saved successfully!', 'success');
     } catch (e) {
       console.error('Save failed:', e);
-      showNotification('Save failed', 'error');
+      showNotification('Failed to save changes', 'error');
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   }
 
   // Sidebar close
@@ -348,34 +362,65 @@ export default function HtmlPreview({ pageId }) {
     };
   }, [html]);
 
-  // Fetch image list
-  async function fetchImageAssets(page = 1, pageSize = 8) {
+  // --- 修改：使用 useCallback 包裹 fetchImageAssets ---
+  const fetchImageAssets = useCallback(async (page = 1, pageSize = 20) => {
+    console.log('Fetching images - page:', page, 'pageSize:', pageSize);
     setImageLoading(true);
     try {
-      const customerId = localStorage.getItem('currentCustomerId');
-      const response = await apiClient.getMedia(customerId, 'image', null, page, pageSize);
-      if (response.data) {
-        setImageAssets(response.data.map(item => ({
-          id: item.mediaId,
-          name: item.mediaName,
-          url: item.mediaUrl
-        })));
-        setImageTotal(response.TotalCount);
+      // --- 修改：调用正确的 API 函数并传递独立参数 ---
+      const customerId = localStorage.getItem('alternativeCustomerId');
+      const mediaType = 'image';
+      const categoryId = null; // API 需要 categoryId，暂时传递 null，因为我们只有 categoryName='media'
+      const limit = pageSize; // API 需要 limit 参数
+
+      // 调用 apiClient.getMedia 而不是 getMediaList
+      const response = await apiClient.getMedia(
+        customerId,
+        mediaType,
+        categoryId, // 传递 categoryId (null)
+        page,       // 传递 page
+        limit       // 传递 limit (pageSize 的值)
+      );
+      // --- API 调用修改结束 ---
+
+      console.log('API Response:', response);
+
+      // --- 修改：根据实际 API 响应结构设置状态 (这里假设 getMedia 返回的结构与之前 getMediaList 预期的一致) ---
+      // 注意：如果 getMedia 返回的结构不同 (例如直接是 { data: [...] } 而不是 { code: 200, data: [...], TotalCount: ... })，则需要调整下面的逻辑
+      if (response && response.data && Array.isArray(response.data)) { // 假设 response.data 是列表
+        setImageAssets(response.data);
+        // 注意：原始 getMedia 定义没有返回 TotalCount，这里可能需要调整分页逻辑
+        // 暂时假设 response 结构中包含 TotalCount 或类似字段，如果实际没有，Pagination 会有问题
+        setImageTotal(response.TotalCount || response.total || response.data.length); // 尝试获取总数
+      } else if (response && response.code && response.code !== 200) { // 处理可能的错误码
+         message.error(response.message || 'Failed to load images');
+         setImageAssets([]);
+         setImageTotal(0);
+      }
+       else {
+        // 如果 response 为 null 或结构不符合预期
+        // message.error('Failed to load images or invalid response structure'); // 可以取消注释以获得更明确的错误
+        setImageAssets([]);
+        setImageTotal(0);
       }
     } catch (e) {
+      console.error('Failed to fetch images:', e);
       message.error('Failed to load images');
+      setImageAssets([]);
+      setImageTotal(0);
     } finally {
       setImageLoading(false);
     }
-  }
+  }, []); // 依赖项为空
 
   // Load when opening the image library
   useEffect(() => {
+    console.log('Image Library Effect Triggered. showImageLibrary:', showImageLibrary); // 添加日志
     if (showImageLibrary) {
       fetchImageAssets(imagePage, imagePageSize);
     }
-    // eslint-disable-next-line
-  }, [showImageLibrary, imagePage, imagePageSize]);
+    // --- 修改：将 fetchImageAssets 添加到依赖数组，并移除 eslint-disable 注释 ---
+  }, [showImageLibrary, imagePage, imagePageSize, fetchImageAssets]);
 
   // Upload image
   async function handleUpload() {
@@ -400,7 +445,7 @@ export default function HtmlPreview({ pageId }) {
       setPreviewUrl('');
       setMediaName('');
       setMediaDesc('');
-      fetchImageAssets(imagePage, imagePageSize);
+      fetchImageAssets(imagePage, imagePageSize); // Refresh list
     } catch (e) {
       message.error('Upload failed');
     } finally {
@@ -408,12 +453,16 @@ export default function HtmlPreview({ pageId }) {
     }
   }
 
-  // Delete image
+  // --- 修改：Delete image 函数以使用正确的 ID 字段 ---
   async function handleDeleteImage(asset) {
     try {
-      await apiClient.deleteMedia(asset.id);
-      setImageAssets(imageAssets.filter(item => item.id !== asset.id));
+      // 使用 asset.mediaId 调用删除 API
+      await apiClient.deleteMedia(asset.mediaId);
+      // 使用 mediaId 过滤列表
+      setImageAssets(imageAssets.filter(item => item.mediaId !== asset.mediaId));
       message.success('Image deleted successfully');
+      // Optionally refetch to ensure pagination is correct if an item is deleted
+      // fetchImageAssets(imagePage, imagePageSize);
     } catch (e) {
       message.error('Failed to delete image');
     }
@@ -433,43 +482,30 @@ export default function HtmlPreview({ pageId }) {
         if (isFixedOrSticky) {
           // 对于 fixed 或 sticky 定位的元素，滚动到页面顶部
           iframe.contentWindow.scrollTo({ top: 0, behavior: 'smooth' });
+          // --- 修改：日志信息改为英文 ---
           console.log(`Element ${sectionId} is fixed/sticky, scrolling window to top.`);
         } else {
           // 对于其他元素，正常滚动到元素位置
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // --- 修改：日志信息改为英文 ---
           console.log(`Scrolling element ${sectionId} into view.`);
         }
-        // --- 定位检查结束 ---
-
-        // 可选：临时高亮 (无论是否滚动，都尝试高亮)
-        if (highlight) {
-          const originalOutline = element.style.outline; // 保存原始轮廓以备恢复
-          // 确保不覆盖预览或错误状态的轮廓
-          if (!originalOutline || originalOutline === 'none' || originalOutline === '') {
-             element.style.outline = '3px dashed #fde047'; // 例如：黄色虚线轮廓
-             element.style.transition = 'outline 0.3s ease-in-out'; // 添加过渡效果
-             setTimeout(() => {
-               // 仅当元素仍然存在且轮廓未被其他操作（如预览）改变时才移除
-               const currentElement = iframe?.contentDocument?.getElementById(sectionId);
-               if (currentElement && currentElement.style.outline === '3px dashed #fde047') {
-                 currentElement.style.outline = ''; // 移除高亮
-               }
-             }, 2000); // 2秒后移除高亮
-          }
-        }
       } else {
+        // --- 修改：日志信息改为英文 ---
         console.warn(`Element with id "${sectionId}" not found in iframe for scrolling.`);
       }
     } else {
+      // --- 修改：日志信息改为英文 ---
       console.warn("Iframe content not accessible or sectionId missing for scrolling.");
     }
   }
 
-  // --- 新增：处理点击 AI 编辑按钮 (增加延迟) ---
   function handleInitiateEdit(sectionId) {
+    // --- 修改：日志信息改为英文 ---
     console.log(`Initiating AI edit for section: ${sectionId}`);
     const iframe = iframeRef.current;
     if (!iframe || !iframe.contentDocument) {
+      // --- 修改：提示信息改为英文 ---
       message.error('Iframe content not ready.');
       return;
     }
@@ -492,6 +528,7 @@ export default function HtmlPreview({ pageId }) {
           setSelectedStructureInstruction(''); // 清空结构选择
           setShowEditPromptModal(true); // 打开编辑 Modal
         } else {
+           // --- 修改：日志和提示信息改为英文 ---
            console.warn(`Section ${sectionId} disappeared before modal could open.`);
            message.error(`Could not find section "${sectionId}" to edit after delay.`);
            setEditingSectionId(null); // 重置状态以防万一
@@ -499,64 +536,11 @@ export default function HtmlPreview({ pageId }) {
       }, 500); // 延迟 500 毫秒
 
     } else {
+      // --- 修改：提示信息改为英文 ---
       message.error(`Could not find section "${sectionId}" in the preview to edit.`);
       setEditingSectionId(null); // 重置状态
     }
   }
-
-  // --- 新增：预设结构选项 ---
-  const structureOptions = [
-    {
-      id: 'two-columns',
-      label: 'Two Columns',
-      instruction: 'Change the layout to two balanced columns.',
-      wireframe: (
-        <div style={{ display: 'flex', gap: '4px', height: '40px', border: '1px dashed #ccc', padding: '2px' }}>
-          <div style={{ flex: 1, background: '#f0f0f0', borderRadius: '2px' }}></div>
-          <div style={{ flex: 1, background: '#f0f0f0', borderRadius: '2px' }}></div>
-        </div>
-      )
-    },
-    {
-      id: 'image-left',
-      label: 'Image Left, Text Right',
-      instruction: 'Rearrange to have an image prominently on the left and text content on the right.',
-      wireframe: (
-        <div style={{ display: 'flex', gap: '4px', height: '40px', border: '1px dashed #ccc', padding: '2px' }}>
-          <div style={{ flex: 0.4, background: '#e0e0e0', borderRadius: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#999' }}>IMG</div>
-          <div style={{ flex: 0.6, background: '#f0f0f0', borderRadius: '2px', display: 'flex', flexDirection: 'column', justifyContent: 'space-around', padding: '4px 0' }}>
-             <div style={{height: '4px', background: '#ddd', margin: '0 4px'}}></div>
-             <div style={{height: '4px', background: '#ddd', margin: '0 4px'}}></div>
-             <div style={{height: '4px', background: '#ddd', margin: '0 4px'}}></div>
-          </div>
-        </div>
-      )
-    },
-    {
-      id: 'text-center',
-      label: 'Centered Text Focus',
-      instruction: 'Center the main text content and potentially increase its prominence.',
-      wireframe: (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', height: '40px', border: '1px dashed #ccc', padding: '4px 8px' }}>
-          <div style={{ width: '80%', height: '6px', background: '#e0e0e0', borderRadius: '2px' }}></div>
-          <div style={{ width: '60%', height: '6px', background: '#e0e0e0', borderRadius: '2px' }}></div>
-          <div style={{ width: '70%', height: '6px', background: '#e0e7eb', borderRadius: '2px' }}></div>
-        </div>
-      )
-    },
-    {
-      id: 'add-button',
-      label: 'Add Button Below',
-      instruction: 'Add a call-to-action button below the existing content.',
-       wireframe: (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', height: '40px', border: '1px dashed #ccc', padding: '4px' }}>
-          <div style={{ width: '90%', height: '15px', background: '#f0f0f0', borderRadius: '2px' }}></div>
-          <div style={{ width: '40%', height: '10px', background: '#a0c4ff', borderRadius: '4px', marginTop: '2px', fontSize: '8px', color: '#1e40af', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>BTN</div>
-        </div>
-      )
-    }
-  ];
-  // --- 预设结构选项结束 ---
 
   // --- 新增：处理结构选择 ---
   function handleStructureSelect(instruction) {
@@ -567,6 +551,170 @@ export default function HtmlPreview({ pageId }) {
       setSelectedStructureInstruction(instruction);
     }
   }
+
+  // --- 更新：预设结构选项 (分类并增加更多选项) ---
+  const structureOptions = [
+    // --- Hero Sections ---
+    {
+      id: 'hero-image-left',
+      category: 'Hero',
+      label: 'Hero: Image Left',
+      instruction: 'Create a hero section with a prominent image on the left, and headline, subtext, and a CTA button on the right.',
+      wireframe: (
+        <div style={{ display: 'flex', gap: '8px', height: '60px', border: '1px dashed #ccc', padding: '4px', alignItems: 'center' }}>
+          <div style={{ flex: 0.4, background: '#e0e0e0', borderRadius: '2px', height: '80%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#999' }}>IMG</div>
+          <div style={{ flex: 0.6, background: '#f0f0f0', borderRadius: '2px', height: '90%', display: 'flex', flexDirection: 'column', justifyContent: 'space-around', padding: '4px' }}>
+             <div style={{height: '8px', background: '#d1d5db', margin: '2px 4px', borderRadius: '2px'}}></div> {/* Headline */}
+             <div style={{height: '4px', background: '#e5e7eb', margin: '2px 4px'}}></div> {/* Subtext */}
+             <div style={{height: '4px', background: '#e5e7eb', margin: '2px 4px', width: '80%'}}></div> {/* Subtext */}
+             <div style={{height: '10px', width: '40%', background: '#a0c4ff', borderRadius: '4px', marginTop: '4px', fontSize: '8px', color: '#1e40af', display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: '4px' }}>BTN</div> {/* Button */}
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'hero-text-center',
+      category: 'Hero',
+      label: 'Hero: Centered Text',
+      instruction: 'Create a hero section with a large centered headline, supporting subtext below it, and a prominent CTA button.',
+      wireframe: (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', height: '60px', border: '1px dashed #ccc', padding: '4px 8px', background: '#f9fafb' }}>
+          <div style={{ width: '80%', height: '10px', background: '#d1d5db', borderRadius: '2px' }}></div> {/* Headline */}
+          <div style={{ width: '60%', height: '6px', background: '#e5e7eb', borderRadius: '2px' }}></div> {/* Subtext */}
+          <div style={{ width: '70%', height: '6px', background: '#e5e7eb', borderRadius: '2px' }}></div> {/* Subtext */}
+          <div style={{ width: '30%', height: '12px', background: '#a0c4ff', borderRadius: '4px', marginTop: '4px', fontSize: '8px', color: '#1e40af', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>BTN</div> {/* Button */}
+        </div>
+      )
+    },
+    {
+      id: 'hero-background-image',
+      category: 'Hero',
+      label: 'Hero: Background Image',
+      instruction: 'Create a hero section using a full-width background image with centered text (headline, subtext, button) overlaid on top.',
+      wireframe: (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', height: '60px', border: '1px dashed #ccc', padding: '4px 8px', background: '#d1d5db', position: 'relative' }}>
+           <div style={{position: 'absolute', top: 2, left: 2, fontSize: '8px', color: '#6b7280'}}>BG IMG</div>
+           <div style={{ width: '70%', height: '10px', background: 'rgba(240, 240, 240, 0.8)', borderRadius: '2px', zIndex: 1 }}></div> {/* Headline */}
+           <div style={{ width: '50%', height: '6px', background: 'rgba(240, 240, 240, 0.8)', borderRadius: '2px', zIndex: 1 }}></div> {/* Subtext */}
+           <div style={{ width: '30%', height: '12px', background: '#a0c4ff', borderRadius: '4px', marginTop: '4px', fontSize: '8px', color: '#1e40af', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1 }}>BTN</div> {/* Button */}
+        </div>
+      )
+    },
+    // --- Feature/Benefit Sections ---
+    {
+      id: 'feature-icon-grid-3',
+      category: 'Features',
+      label: 'Features: Icon Grid (3 Col)',
+      instruction: 'Display key features or benefits in a three-column grid layout. Each item should have an icon, a title, and a short description.',
+      wireframe: (
+        <div style={{ display: 'flex', gap: '4px', height: '60px', border: '1px dashed #ccc', padding: '4px', justifyContent: 'space-between' }}>
+          {[1, 2, 3].map(i => (
+            <div key={i} style={{ flex: 1, background: '#f0f0f0', borderRadius: '2px', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '4px', gap: '4px' }}>
+              <div style={{ width: '15px', height: '15px', background: '#c0c0c0', borderRadius: '50%' }}></div> {/* Icon */}
+              <div style={{ width: '80%', height: '6px', background: '#d1d5db' }}></div> {/* Title */}
+              <div style={{ width: '90%', height: '4px', background: '#e5e7eb' }}></div> {/* Desc line 1 */}
+              <div style={{ width: '70%', height: '4px', background: '#e5e7eb' }}></div> {/* Desc line 2 */}
+            </div>
+          ))}
+        </div>
+      )
+    },
+     {
+      id: 'feature-image-list-alt',
+      category: 'Features',
+      label: 'Features: Image List (Alt.)',
+      instruction: 'Present features as a list, alternating the position of an image (left/right) with the corresponding text description (title, details).',
+      wireframe: (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', height: '60px', border: '1px dashed #ccc', padding: '4px', overflow: 'hidden' }}>
+          {/* Item 1: Image Left */}
+          <div style={{ display: 'flex', gap: '4px', height: '45%', alignItems: 'center' }}>
+            <div style={{ flex: 0.3, background: '#e0e0e0', height: '90%', borderRadius: '2px' }}></div> {/* Img */}
+            <div style={{ flex: 0.7, background: '#f0f0f0', height: '90%', borderRadius: '2px', padding: '2px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+               <div style={{height: '5px', background: '#d1d5db', width: '60%'}}></div> {/* Title */}
+               <div style={{height: '3px', background: '#e5e7eb'}}></div> {/* Text */}
+            </div>
+          </div>
+           {/* Item 2: Image Right */}
+          <div style={{ display: 'flex', gap: '4px', height: '45%', alignItems: 'center' }}>
+             <div style={{ flex: 0.7, background: '#f0f0f0', height: '90%', borderRadius: '2px', padding: '2px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+               <div style={{height: '5px', background: '#d1d5db', width: '60%'}}></div> {/* Title */}
+               <div style={{height: '3px', background: '#e5e7eb'}}></div> {/* Text */}
+            </div>
+            <div style={{ flex: 0.3, background: '#e0e0e0', height: '90%', borderRadius: '2px' }}></div> {/* Img */}
+          </div>
+        </div>
+      )
+    },
+     {
+      id: 'feature-numbered-list',
+      category: 'Features',
+      label: 'Features: Numbered List',
+      instruction: 'Outline steps or sequential benefits using a numbered list format, each with a title and description.',
+      wireframe: (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', height: '60px', border: '1px dashed #ccc', padding: '4px' }}>
+          {[1, 2].map(i => (
+             <div key={i} style={{ display: 'flex', gap: '4px', alignItems: 'flex-start' }}>
+               <div style={{ fontSize: '12px', color: '#6b7280', fontWeight: 'bold', width: '15px' }}>{i}.</div>
+               <div style={{ flex: 1, background: '#f0f0f0', borderRadius: '2px', padding: '2px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                 <div style={{height: '5px', background: '#d1d5db', width: '50%'}}></div> {/* Title */}
+                 <div style={{height: '3px', background: '#e5e7eb'}}></div> {/* Text */}
+                 <div style={{height: '3px', background: '#e5e7eb', width: '80%'}}></div> {/* Text */}
+               </div>
+             </div>
+          ))}
+        </div>
+      )
+    },
+    // --- CTA Sections ---
+    {
+      id: 'cta-simple-center',
+      category: 'CTA',
+      label: 'CTA: Simple Centered',
+      instruction: 'Create a straightforward call-to-action section with a centered headline, brief text, and a single button below.',
+      wireframe: (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', height: '60px', border: '1px dashed #ccc', padding: '4px 8px', background: '#f9fafb' }}>
+          <div style={{ width: '70%', height: '8px', background: '#d1d5db', borderRadius: '2px' }}></div> {/* Headline */}
+          <div style={{ width: '50%', height: '5px', background: '#e5e7eb', borderRadius: '2px' }}></div> {/* Text */}
+          <div style={{ width: '30%', height: '12px', background: '#a0c4ff', borderRadius: '4px', marginTop: '4px', fontSize: '8px', color: '#1e40af', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>BTN</div> {/* Button */}
+        </div>
+      )
+    },
+    {
+      id: 'cta-split',
+      category: 'CTA',
+      label: 'CTA: Split Text/Button',
+      instruction: 'Design a call-to-action section with text (headline and/or description) on the left side and a button aligned to the right.',
+      wireframe: (
+        <div style={{ display: 'flex', gap: '8px', height: '60px', border: '1px dashed #ccc', padding: '4px', alignItems: 'center', background: '#f9fafb' }}>
+          <div style={{ flex: 0.7, background: '#f0f0f0', borderRadius: '2px', height: '80%', padding: '4px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '4px' }}>
+             <div style={{height: '8px', background: '#d1d5db', width: '70%'}}></div> {/* Headline/Text */}
+             <div style={{height: '5px', background: '#e5e7eb', width: '90%'}}></div> {/* Text */}
+          </div>
+           <div style={{ flex: 0.3, display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80%' }}>
+             <div style={{height: '15px', width: '80%', background: '#a0c4ff', borderRadius: '4px', fontSize: '8px', color: '#1e40af', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>BTN</div> {/* Button */}
+          </div>
+        </div>
+      )
+    },
+     {
+      id: 'cta-banner',
+      category: 'CTA',
+      label: 'CTA: Banner Style',
+      instruction: 'Create a banner-like call-to-action, typically with a background color or image, placing text and a button inline horizontally.',
+      wireframe: (
+        <div style={{ display: 'flex', gap: '16px', height: '60px', border: '1px dashed #ccc', padding: '4px 16px', alignItems: 'center', background: '#e0e7ff' }}> {/* Light blue background */}
+          <div style={{ flex: 1, background: 'transparent', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+             <div style={{height: '8px', background: '#a5b4fc', width: '70%'}}></div> {/* Headline/Text */}
+             <div style={{height: '5px', background: '#c7d2fe', width: '90%'}}></div> {/* Text */}
+          </div>
+           <div style={{ width: '80px' /* Fixed width for button area */ }}>
+             <div style={{height: '15px', width: '100%', background: '#6366f1', borderRadius: '4px', fontSize: '8px', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>BTN</div> {/* Button */}
+          </div>
+        </div>
+      )
+    },
+  ];
+  // --- 预设结构选项结束 ---
 
   // --- 更新：处理取消编辑提示 Modal ---
   function handleCancelEditPrompt() {
@@ -582,10 +730,12 @@ export default function HtmlPreview({ pageId }) {
   async function handleGenerateEdit() {
     const userPrompt = editPrompt.trim();
     if (!selectedStructureInstruction && !userPrompt) {
+      // --- 修改：提示信息改为英文 ---
       message.warn('Please select a structure change or describe your edit requirements.');
       return;
     }
     if (!editingSectionId || !originalSectionHtml) {
+        // --- 修改：提示信息改为英文 ---
         message.error('Cannot generate edit: Missing section ID or original HTML.');
         handleCancelEditPrompt(); // 关闭并重置
         return;
@@ -611,6 +761,7 @@ export default function HtmlPreview({ pageId }) {
     }
 
     try {
+      // --- 修改：日志信息改为英文 ---
       console.log('Sending combined instructions to API:', combinedInstructions);
       const response = await apiClient.regenerateSection({
         instructions: combinedInstructions.trim(),
@@ -628,10 +779,12 @@ export default function HtmlPreview({ pageId }) {
         // 预览函数内部会显示通知，这里不再重复显示 message.success
 
       } else {
+        // --- 修改：错误信息改为英文 ---
         throw new Error(response?.message || 'API did not return the expected HTML content.');
       }
 
     } catch (error) {
+      // --- 修改：日志和提示信息改为英文 ---
       console.error('Error generating AI edit:', error);
       const errorMessage = error.response?.data?.message || error.message || 'Failed to generate AI edit.';
       message.error(`Error: ${errorMessage}`);
@@ -645,29 +798,13 @@ export default function HtmlPreview({ pageId }) {
     }
   }
 
-  // --- 新增：从 Modal 触发预览 ---
-  function handlePreviewFromModal() {
-    if (!editingSectionId || !proposedSectionHtml) {
-      message.warn("Cannot start preview: Missing data.");
-      return;
-    }
-    setShowEditPromptModal(false); // 关闭 Modal
-    startPreviewingEdit(editingSectionId, proposedSectionHtml); // 开始 iframe 预览
-  }
-
-  // --- 新增：从 Modal 丢弃建议 ---
-  function handleDiscardFromModal() {
-    setProposedSectionHtml(''); // 清空建议
-    setSelectedStructureInstruction(''); // 清空结构选择
-    setEditPrompt(''); // 清空用户输入
-    message.info("Suggestion discarded. You can make a new request.");
-  }
-
   // --- 新增：开始预览编辑 ---
   function startPreviewingEdit(sectionId, newHtml) {
+    // --- 修改：日志信息改为英文 ---
     console.log(`Starting preview for section ${sectionId}`);
     const iframe = iframeRef.current;
     if (!iframe || !iframe.contentDocument) {
+      // --- 修改：提示信息改为英文 ---
       message.error('Iframe content not accessible for preview.');
       // 如果无法预览，需要重置状态，否则用户可能卡住
       handleCancelEditPrompt(); // 使用取消逻辑来重置状态
@@ -687,9 +824,11 @@ export default function HtmlPreview({ pageId }) {
         setIsPreviewingOriginal(false);
         setIsPreviewingEdit(true); // 激活预览模式
         // 显示预览通知
+        // --- 修改：通知信息改为英文 ---
         showNotification('Previewing AI suggestion. Use toggle to compare or accept/discard.', 'info', 6000);
 
       } else {
+        // --- 修改：日志和提示信息改为英文 ---
         console.error("Error replacing element for preview:", newHtml);
         message.error("Failed to apply preview. Please check the generated HTML structure.");
         setOriginalSectionHtmlForPreview('');
@@ -699,6 +838,7 @@ export default function HtmlPreview({ pageId }) {
         setProposedSectionHtml(''); // 清空失败的建议
       }
     } else {
+      // --- 修改：日志和提示信息改为英文 ---
       console.warn(`Element with id "${sectionId}" not found in iframe for preview.`);
       message.warn(`Could not find section ${sectionId} to preview.`);
        // 找不到元素，重置相关状态
@@ -710,9 +850,11 @@ export default function HtmlPreview({ pageId }) {
 
   // --- 更新：取消预览编辑 ---
   function cancelPreviewEdit() {
+    // --- 修改：日志信息改为英文 ---
     console.log('Discarding edit...');
     const iframe = iframeRef.current;
     if (!iframe || !iframe.contentDocument || !editingSectionId || !originalSectionHtmlForPreview) {
+      // --- 修改：日志信息改为英文 ---
       console.warn("Cannot discard: Missing iframe, sectionId, or original HTML for preview.");
       // 即使无法恢复，也要退出预览状态
       setIsPreviewingEdit(false);
@@ -736,16 +878,20 @@ export default function HtmlPreview({ pageId }) {
            // --- 恢复后滚动到元素 ---
            scrollToSection(editingSectionId);
          }
+         // --- 修改：通知信息改为英文 ---
          showNotification('AI edit discarded.', 'info');
       } else {
+         // --- 修改：日志和提示信息改为英文 ---
          console.error("Error restoring element during discard:", originalSectionHtmlForPreview);
          message.error("Failed to fully restore original content. You might need to refresh.");
       }
     } else if (!originalSectionHtmlForPreview && element) {
        // 如果没有缓存的原始 HTML，至少移除预览样式
        element.style.outline = 'none';
+       // --- 修改：日志信息改为英文 ---
        console.warn("Original HTML for preview was missing, only removed highlight.");
     } else {
+      // --- 修改：日志信息改为英文 ---
       console.warn(`Element with id "${editingSectionId}" not found in iframe for discarding preview.`);
     }
 
@@ -759,6 +905,7 @@ export default function HtmlPreview({ pageId }) {
 
   // --- 新增：接受预览编辑 ---
   async function acceptPreviewEdit() {
+    // --- 修改：日志和提示信息改为英文 ---
     console.log('Accepting edit...');
     if (!editingSectionId || !proposedSectionHtml) {
       message.error("Cannot accept: Missing sectionId or proposed HTML.");
@@ -767,6 +914,7 @@ export default function HtmlPreview({ pageId }) {
 
     const iframe = iframeRef.current;
     if (!iframe || !iframe.contentDocument) {
+      // --- 修改：提示信息改为英文 ---
       message.error('Iframe content not accessible to save changes.');
       setIsPreviewingEdit(false); // 退出预览状态
       setEditingSectionId(null);
@@ -779,6 +927,7 @@ export default function HtmlPreview({ pageId }) {
 
     // **关键：确保当前显示的是 AI 建议的版本**
     if (isPreviewingOriginal) {
+      // --- 修改：日志信息改为英文 ---
       console.log("Switching back to proposed version before accepting...");
       const proposedElement = parseHtmlString(proposedSectionHtml, doc, editingSectionId);
       if (element && element.parentNode && proposedElement) {
@@ -786,6 +935,7 @@ export default function HtmlPreview({ pageId }) {
         element = proposedElement; // 更新 element 引用到当前正确的节点
         setIsPreviewingOriginal(false); // 更新状态
       } else {
+        // --- 修改：提示信息改为英文 ---
         message.error("Failed to switch to proposed version before saving. Aborting.");
         // 不重置状态，让用户可以手动取消或重试
         return;
@@ -798,6 +948,7 @@ export default function HtmlPreview({ pageId }) {
       // --- 移除高亮后，保存前，滚动到元素 ---
       scrollToSection(editingSectionId);
     } else {
+      // --- 修改：日志信息改为英文 ---
       console.warn(`Element with id "${editingSectionId}" not found for removing highlight before saving.`);
       // 即使找不到元素也要尝试保存，因为 HTML 可能已经更新
     }
@@ -807,6 +958,7 @@ export default function HtmlPreview({ pageId }) {
 
     // 设置保存状态，类似 saveContent
     setSaving(true); // 可以复用现有的 saving 状态或创建一个新的
+    // --- 修改：通知信息改为英文 ---
     showNotification('Applying changes...', 'info', 1500); // 短暂提示
 
     try {
@@ -820,8 +972,10 @@ export default function HtmlPreview({ pageId }) {
       // 或者依赖于页面的自动刷新机制
       // setHtml(updatedFullHtml); // 可选：如果希望立即反映在内部状态
 
+      // --- 修改：通知信息改为英文 ---
       showNotification('AI edit accepted and applied!', 'success');
     } catch (e) {
+      // --- 修改：日志和通知信息改为英文 ---
       console.error('Save failed after accepting AI edit:', e);
       showNotification('Failed to save accepted changes', 'error');
       // 注意：此时 iframe 中的内容是修改后的，但保存失败了。
@@ -866,6 +1020,7 @@ export default function HtmlPreview({ pageId }) {
            newElement = tempDiv.firstChild;
         } else {
            // 如果有多个子节点，或者不是元素节点，创建一个新的 section 包裹它们
+           // --- 修改：日志信息改为英文 ---
            console.log("Wrapping parsed content in a new section tag.");
            const wrapperSection = doc.createElement('section');
            // 移动所有子节点到新的 section
@@ -898,6 +1053,7 @@ export default function HtmlPreview({ pageId }) {
   function togglePreviewVersion() {
     const iframe = iframeRef.current;
     if (!iframe || !iframe.contentDocument || !editingSectionId) {
+      // --- 修改：提示信息改为英文 ---
       message.warn("Cannot toggle: Preview context is missing.");
       return;
     }
@@ -905,6 +1061,7 @@ export default function HtmlPreview({ pageId }) {
     const currentElement = doc.getElementById(editingSectionId);
 
     if (!currentElement || !currentElement.parentNode) {
+      // --- 修改：提示信息改为英文 ---
       message.error(`Cannot toggle: Section element with ID "${editingSectionId}" not found in iframe.`);
       // 尝试退出预览状态？
       cancelPreviewEdit(); // 调用取消可能更安全
@@ -916,6 +1073,7 @@ export default function HtmlPreview({ pageId }) {
     const newElement = parseHtmlString(targetHtml, doc, editingSectionId);
 
     if (newElement) {
+      // --- 修改：日志信息改为英文 ---
       console.log(`Toggling preview to: ${isPreviewingOriginal ? 'Proposed' : 'Original'}`);
       currentElement.parentNode.replaceChild(newElement, currentElement);
       setIsPreviewingOriginal(!isPreviewingOriginal); // 更新状态
@@ -924,14 +1082,46 @@ export default function HtmlPreview({ pageId }) {
       scrollToSection(editingSectionId); // 调用滚动函数
 
     } else {
+      // --- 修改：提示信息改为英文 ---
       message.error("Failed to switch preview version due to HTML parsing error.");
       // 如果切换失败，可能需要考虑恢复到某个已知状态或提示用户
     }
   }
   // --- 切换预览版本结束 ---
 
+  // --- 新增：处理常用提示点击事件 ---
+  const handleCommonPromptClick = (prompt) => {
+    setEditPrompt(prev => {
+      // 如果当前输入框为空，直接设置；否则，在前面加一个空格再追加
+      return prev.trim() === '' ? prompt : `${prev.trim()} ${prompt}`;
+    });
+  };
+
   return (
-    <div style={{ width: '100%', height: '100%', background: '#18181c', display: 'flex', flexDirection: 'column', position: 'relative' /* Add relative positioning for absolutely positioned notification */ }}>
+    <div style={{ width: '100%', height: '100%', background: '#18181c', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+      {/* --- 新增：自定义滚动条样式 --- */}
+      <style>{`
+        .section-nav-scrollbar::-webkit-scrollbar {
+          width: 8px; /* 滚动条宽度 */
+        }
+        .section-nav-scrollbar::-webkit-scrollbar-track {
+          background: #1e293b; /* 轨道颜色 (slate-800) */
+          border-radius: 4px; /* 轨道圆角 */
+        }
+        .section-nav-scrollbar::-webkit-scrollbar-thumb {
+          background-color: #475569; /* 滑块颜色 (slate-600) */
+          border-radius: 4px; /* 滑块圆角 */
+          border: 2px solid #1e293b; /* 创建类似 padding 的效果 */
+        }
+        .section-nav-scrollbar::-webkit-scrollbar-thumb:hover {
+          background-color: #64748b; /* 悬停时滑块颜色 (slate-500) */
+        }
+        /* Firefox 滚动条样式 */
+        .section-nav-scrollbar {
+          scrollbar-width: thin; /* 使用细滚动条 */
+          scrollbar-color: #475569 #1e293b; /* 滑块颜色 轨道颜色 */
+        }
+      `}</style>
       {/* Custom Notification */}
       {notification.visible && (
         <div style={{
@@ -981,108 +1171,156 @@ export default function HtmlPreview({ pageId }) {
           </span>
         </div>
       </div>
-      {/* Edit Mode Hint (Always visible) - 更明显的提示 */}
+      {/* --- 更新：编辑模式提示条 (更简洁，新配色) --- */}
       <div style={{
-        // background: '#f59e42', // 旧的橙色背景
-        background: '#14b8a6', // 新的青色背景 (Tailwind Teal 500)
-        color: '#f0fdfa',      // 浅青色字体 (Teal 50) 以提高对比度
-        padding: '10px 32px',
+        background: '#334155', // 新背景色 (slate-700)
+        color: '#e2e8f0',      // 新文字颜色 (slate-200)
+        padding: '8px 32px',   // 调整内边距
         textAlign: 'center',
-        fontSize: 15,
-        fontWeight: 700,       // 加粗
-        letterSpacing: 1,
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.12)',
+        fontSize: 14,          // 调整字体大小
+        fontWeight: 600,       // 设置字重
+        // letterSpacing: 1, // 可以移除或调整字间距
+        // boxShadow: '0 1px 3px rgba(0, 0, 0, 0.12)', // 可以移除阴影
         zIndex: 9,
-        // borderBottom: '2px solid #fbbf24', // 旧的亮黄色边框
-        borderBottom: '2px solid #0f766e', // 匹配背景的深青色边框 (Teal 700)
-        // textShadow: '0 1px 0 #fff8',       // 旧的白色阴影，在新背景下可能不需要
+        // borderBottom: '2px solid #0f766e', // 移除下边框
         userSelect: 'none'
       }}>
-        <span style={{ fontSize: 17, fontWeight: 900, marginRight: 8, verticalAlign: 'middle' }}>🖱️</span>
         <span>
-          Click any <span style={{ textDecoration: 'underline', fontWeight: 900 }}>text</span> or <span style={{ textDecoration: 'underline', fontWeight: 900 }}>image</span> area to edit.<br />
-          All clickable areas will show a <span style={{ /* color: '#d97706', */ color: '#115e59', fontWeight: 900 }}>pointer cursor</span>.<br /> {/* 更新指针颜色 (Teal 800) */}
-          <span style={{ fontSize: 13, fontWeight: 600, /* color: '#92400e', */ color: '#134e4a', marginTop: 4, display: 'inline-block' }}> {/* 更新提示文字颜色 (Teal 900) */}
-            After editing, your changes will be <span style={{ textDecoration: 'underline', fontWeight: 900 }}>saved automatically</span>! No need to save manually.
-          </span>
+          🖱️ Click <span style={{ fontWeight: 700 }}>text</span> or <span style={{ fontWeight: 700 }}>images</span> to edit. Changes save automatically.
         </span>
       </div>
-      {/* Page Rendering Area - 修改为 Flex 布局 */}
-      <div style={{ flex: 1, background: '#18181c', display: 'flex', overflow: 'hidden' /* 防止内部滚动影响外部 */ }}>
+      {/* Page Rendering Area - Flex Layout */}
+      <div style={{ flex: 1, background: '#18181c', display: 'flex', overflow: 'hidden' /* Prevent inner scroll affecting outer */ }}>
 
-        {/* --- 新增：左侧 Section 导航栏 --- */}
+        {/* --- 更新：左侧 Section 导航栏 --- */}
         {sections.length > 0 && (
-          <div style={{
-            width: 200, // 侧边栏宽度
-            background: '#111827', // 深色背景 (slate-900)
-            padding: '16px 8px',
-            overflowY: 'auto', // 如果内容过多则允许滚动
-            borderRight: '1px solid #374151', // 右边框 (slate-700)
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '8px', // 导航项之间的间距
-          }}>
-            <div style={{
-              color: '#9ca3af', // 标题颜色 (slate-400)
-              fontSize: 14,
-              fontWeight: 600,
-              padding: '0 8px 8px 8px', // 内边距
-              borderBottom: '1px solid #374151', // 分隔线
-              marginBottom: 8,
-              textTransform: 'uppercase', // 大写
-              letterSpacing: '0.5px', // 字间距
+          <div
+            // --- 新增：添加 CSS 类名以应用滚动条样式 ---
+            className="section-nav-scrollbar"
+            style={{
+              width: 320, // 保持宽度
+              background: '#0f172a', // 深色背景 (slate-950)
+              padding: '24px 8px 24px 16px', // 调整内边距 (减少右侧，为滚动条留空间)
+              overflowY: 'auto',
+              borderRight: '2px solid #1e293b', // 边框 (slate-800)
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0', // 移除 gap，通过 border 控制间距感
             }}>
-              Sections
+            {/* --- 更新：导航栏标题 --- */}
+            <div style={{
+              color: '#94a3b8', // 标题颜色 (slate-400)
+              fontSize: 14, // 稍小的字体
+              fontWeight: 600, // 稍细的字重
+              padding: '0 8px 16px 8px', // 调整内边距
+              borderBottom: '1px solid #1e293b', // 分隔线 (slate-800)
+              marginBottom: 12, // --- 修改：减少底部外边距 ---
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px', // 调整字间距
+            }}>
+              Page Sections {/* <--- 修改标题 */}
             </div>
-            {sections.map(section => (
-              <div key={section.id} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}> {/* 包裹按钮和编辑图标 */}
+            {sections.map((section, index) => (
+              // --- 更新：导航项容器样式 - 增加分隔线和悬停效果 ---
+              <div
+                key={section.id}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'flex-start',
+                  padding: '14px 12px', // --- 修改：调整垂直内边距 ---
+                  borderRadius: '6px', // 轻微圆角
+                  transition: 'background-color 0.2s ease',
+                  // 添加底部分隔线，最后一个元素除外
+                  borderBottom: index < sections.length - 1 ? '1px solid #1e293b' : 'none', // slate-800 分隔线
+                  cursor: 'pointer', // 整个区域可点击（虽然实际点击在按钮上）
+                  // --- 新增：为滚动条腾出右侧空间 ---
+                  marginRight: '8px',
+                }}
+                // 容器的悬停效果
+                onMouseOver={e => { e.currentTarget.style.background = '#1e293b'; }} // slate-800 hover 背景
+                onMouseOut={e => { e.currentTarget.style.background = 'transparent'; }}
+                // 点击容器也尝试滚动，增强体验
+                onClick={() => !isPreviewingEdit && scrollToSection(section.id)}
+              >
+                {/* --- 更新：Section 标签按钮 (保持悬停指示) --- */}
                 <button
-                  // key={section.id} // key 移到父元素
-                  onClick={() => scrollToSection(section.id)}
+                  onClick={(e) => {
+                    e.stopPropagation(); // 阻止事件冒泡到父 div 的 onClick
+                    if (!isPreviewingEdit) scrollToSection(section.id);
+                  }}
                   style={{
                     background: 'transparent',
                     border: 'none',
-                    color: '#d1d5db', // 默认文字颜色 (slate-300)
-                    padding: '8px 12px',
+                    color: '#cbd5e1', // slate-300
+                    padding: '0', // 移除内边距
                     textAlign: 'left',
-                    borderRadius: 6,
-                    cursor: 'pointer',
-                    fontSize: 14,
-                    // width: '100%', // 不再是 100% 宽度，让编辑按钮有空间
-                    flexGrow: 1, // 占据剩余空间
-                    transition: 'background-color 0.2s ease, color 0.2s ease',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
+                    borderRadius: 4,
+                    cursor: isPreviewingEdit ? 'not-allowed' : 'pointer', // 根据状态改变指针
+                    fontSize: 15,
+                    fontWeight: 500,
+                    width: '100%',
+                    transition: 'color 0.2s ease, border-left-color 0.2s ease',
+                    whiteSpace: 'normal',
+                    wordBreak: 'break-word',
+                    lineHeight: '1.4',
+                    marginBottom: '10px', // 与 AI 按钮的间距
+                    // 保持悬停时出现的左侧边框
+                    borderLeft: '3px solid transparent', // 默认透明
+                    paddingLeft: '8px', // 为边框留出空间并增加文本缩进
                   }}
-                  onMouseOver={e => { e.currentTarget.style.background = '#374151'; e.currentTarget.style.color = '#fff'; }} // 悬停效果 (slate-700)
-                  onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#d1d5db'; }}
-                  title={section.label} // 添加 title 以显示完整标签
-                  disabled={isPreviewingEdit} // 预览时禁用导航点击
+                  onMouseOver={e => {
+                     if (!isPreviewingEdit) {
+                       e.currentTarget.style.color = '#f1f5f9'; // slate-100 hover 文字颜色
+                       e.currentTarget.style.borderLeftColor = '#38bdf8'; // 悬停时显示亮蓝色边框 (cyan-500)
+                     }
+                    }}
+                  onMouseOut={e => {
+                     e.currentTarget.style.color = '#cbd5e1'; // slate-300 默认文字颜色
+                     e.currentTarget.style.borderLeftColor = 'transparent'; // 鼠标移开时隐藏边框
+                    }}
+                  title={`Scroll to: ${section.label}`} // 更新 title
+                  disabled={isPreviewingEdit}
                 >
                   {section.label}
                 </button>
-                {/* --- 更新：AI 编辑按钮 --- */}
+                {/* --- "AI Regenerate" 按钮 (保持样式，确保对齐) --- */}
                 <Button
-                  type="text" // 或者 type="default" 如果想要更明显的按钮
-                  // icon={<span role="img" aria-label="AI Edit">✨</span>} // 旧图标
-                  icon={<EditOutlined />} // 使用 Ant Design 图标
+                  type="primary"
                   size="small"
-                  onClick={() => handleInitiateEdit(section.id)}
-                  style={{
-                    color: '#9ca3af',
-                    padding: '0 6px', // 稍微调整内边距
-                    // 如果使用 type="default"，可以添加背景色和边框
-                    // background: '#374151',
-                    // border: '1px solid #4b5563',
+                  onClick={(e) => {
+                     e.stopPropagation(); // 阻止事件冒泡
+                     handleInitiateEdit(section.id);
                   }}
-                  title={`AI Edit Section: ${section.label}`}
-                  disabled={isPreviewingEdit || isGeneratingEdit} // 预览或生成时禁用
+                  disabled={isPreviewingEdit || isGeneratingEdit}
+                  style={{
+                    background: 'linear-gradient(90deg, #38bdf8 0%, #818cf8 100%)',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    padding: '4px 12px',
+                    color: '#ffffff',
+                    boxShadow: '0 2px 5px rgba(56, 189, 248, 0.3)',
+                    transition: 'all 0.3s ease',
+                    whiteSpace: 'nowrap',
+                    // 保持左边距与带缩进的标题对齐
+                    marginLeft: '11px', // 等于标题按钮的 paddingLeft (8px) + borderLeftWidth (3px)
+                  }}
+                  onMouseOver={e => {
+                    if (!isPreviewingEdit && !isGeneratingEdit) {
+                      e.currentTarget.style.boxShadow = '0 4px 10px rgba(56, 189, 248, 0.5)';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                    }
+                  }}
+                  onMouseOut={e => {
+                    e.currentTarget.style.boxShadow = '0 2px 5px rgba(56, 189, 248, 0.3)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
+                  title={`AI Regenerate Section: ${section.label}`}
                 >
-                  {/* 可以选择性地添加文字 */}
-                  {/* AI Edit */}
+                  AI Regenerate
                 </Button>
-                {/* --- AI 编辑按钮结束 --- */}
               </div>
             ))}
           </div>
@@ -1113,409 +1351,317 @@ export default function HtmlPreview({ pageId }) {
             />
           )}
         </div>
-        {/* Edit Sidebar - Updated Style */}
+        {/* Edit Sidebar - Updated Style for Right Sidebar */}
         {showSidebar && (
-          <div style={{
-            position: 'fixed',
-            left: 0,
-            top: 0,
-            width: '100vw',
-            height: '100vh',
-            background: 'rgba(0,0,0,0.45)',
-            zIndex: 1001,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <div style={{
-              width: 600,
-              // background: '#23233a', // Old background
-              background: '#1f2937', // Updated background (slate-800)
-              color: '#e5e7eb', // Lighter text color for dark background
-              borderRadius: 12,
-              boxShadow: '0 8px 32px #0008',
-              padding: 24,
-              display: 'flex',
-              flexDirection: 'column',
-              maxHeight: '90vh'
-            }}>
-              <div style={{ fontWeight: 600, fontSize: 20, marginBottom: 16, color: '#fff' }}> {/* Ensure title is white */}
-                {currentEdit.element?.tagName === 'IMG' ? 'Edit Image Source' : 'Edit Content'}
+          <Drawer
+            title={currentEdit.element?.tagName === 'IMG' ? 'Edit Image Source' : 'Edit Content'}
+            placement="right"
+            closable={true} // 显示关闭按钮
+            onClose={closeSidebar}
+            open={showSidebar}
+            width={350} // 保持宽度
+            maskClosable={true}
+            footer={
+              <div style={{ textAlign: 'right' }}>
+                <Button onClick={closeSidebar} style={{ marginRight: 8 }} size="large">
+                  Cancel
+                </Button>
+                <Button onClick={saveContent} type="primary" loading={saving} size="large">
+                  Save Changes
+                </Button>
               </div>
-              <div style={{ marginBottom: 16, flexGrow: 1, overflowY: 'auto' }}> {/* Allow content to scroll if needed */}
-                {currentEdit.element?.tagName === 'IMG' ? (
-                  <>
-                    <textarea
-                      value={currentEdit.content}
-                      onChange={e => setCurrentEdit({ ...currentEdit, content: e.target.value })}
-                      rows={3}
-                      style={{
-                        width: '100%',
-                        borderRadius: 8,
-                        border: '1px solid #4b5563', // Updated border (slate-600)
-                        padding: 12,
-                        fontSize: 16,
-                        background: '#111827', // Updated background (slate-900)
-                        color: '#e5e7eb', // Updated text color
-                        fontFamily: 'monospace'
-                      }}
-                      placeholder="Enter image URL or select an image"
-                    />
-                    <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
-                      <button
-                        style={{
-                          // background: '#38bdf8', // Old background
-                          background: 'linear-gradient(90deg, #38bdf8 0%, #a78bfa 100%)', // Updated background (cyan to purple gradient)
-                          color: '#fff',
-                          border: 'none',
-                          borderRadius: 8,
-                          padding: '8px 18px', // Adjusted padding
-                          fontWeight: 600, // Increased font weight
-                          fontSize: 15,
-                          cursor: 'pointer',
-                          transition: 'opacity 0.2s ease',
-                          boxShadow: '0 2px 8px #38bdf899', // Added shadow
-                        }}
-                        onMouseOver={e => e.currentTarget.style.opacity = '0.9'}
-                        onMouseOut={e => e.currentTarget.style.opacity = '1'}
-                        onClick={() => setShowImageLibrary(true)}
-                      >Select/Upload Image</button>
-                    </div>
-                    {/* Image Preview */}
-                    {currentEdit.content && (
-                      <div style={{ marginTop: 16, textAlign: 'center', background: '#374151', padding: 8, borderRadius: 8 }}> {/* Added background for better contrast */}
-                        <img src={currentEdit.content} alt="Preview" style={{ maxWidth: 320, maxHeight: 180, borderRadius: 4, display: 'block', margin: 'auto' }} />
-                      </div>
-                    )}
-                    {/* Image Library Modal - Updated Style */}
-                    <Modal
-                      open={showImageLibrary}
-                      title={<span style={{ color: '#e5e7eb' }}>Image Library</span>} // Title color
-                      onCancel={() => setShowImageLibrary(false)}
-                      footer={null}
-                      width={800}
-                      styles={{
-                        body: { background: '#1f2937', minHeight: 400, color: '#e5e7eb' }, // Dark body, light text
-                        header: {
-                          background: '#1f2937', // Match body background
-                          borderBottom: '1px solid #374151', // Keep border for separation
-                          color: '#e5e7eb'
-                        },
-                        content: { background: '#1f2937', color: '#e5e7eb' }, // Dark content area
-                      }}
-                      className="dark-modal" // Add class for potential global styling
+            }
+          >
+            {currentEdit.element?.tagName === 'IMG' ? (
+              <>
+                {/* 图片编辑相关 UI */}
+                <Input.TextArea // --- 使用 Input.TextArea 替代原生 textarea 以获得一致样式 ---
+                  value={currentEdit.content}
+                  onChange={e => setCurrentEdit({ ...currentEdit, content: e.target.value })}
+                  style={{
+                    width: '100%',
+                    marginBottom: 12, // 添加一些间距
+                    fontFamily: 'monospace', // 保留等宽字体以便编辑 URL
+                    height: '300px', // --- 设置固定高度 ---
+                    resize: 'none', // 禁止调整大小
+                  }}
+                  placeholder="Enter image URL or select an image"
+                />
+                <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                  <Button // --- 使用标准 Button ---
+                    type="primary" // --- 使用 primary 类型获得浅色主题下的标准样式 ---
+                    onClick={() => setShowImageLibrary(true)}
+                  >
+                    Select/Upload Image
+                  </Button>
+                </div>
+                {/* Image Preview */}
+                {currentEdit.content && (
+                  <div style={{ textAlign: 'center', background: '#f0f0f0', padding: 8, borderRadius: 8, marginBottom: 16 }}> {/* --- 使用浅灰色背景 --- */}
+                    <img src={currentEdit.content} alt="Preview" style={{ maxWidth: '100%', maxHeight: 180, borderRadius: 4, display: 'block', margin: 'auto' }} />
+                  </div>
+                )}
+                {/* Image Library Modal (移除深色样式) */}
+                <Modal
+                  open={showImageLibrary}
+                  title="Image Library"
+                  onCancel={() => setShowImageLibrary(false)}
+                  footer={null}
+                  width={1800} // 保持宽度 1200px (如果需要更宽请告知)
+                  destroyOnClose={true}
+                  // --- 修改：使用 styles.body 替代 bodyStyle ---
+                  styles={{
+                    body: {
+                      maxHeight: '65vh', // 保持最大高度
+                      overflowY: 'auto', // 保持垂直滚动
+                    }
+                  }}
+                >
+                  <div style={{ marginBottom: 16, textAlign: 'right' }}>
+                    <Button
+                      type="primary"
+                      icon={<UploadOutlined />}
+                      onClick={() => setUploadModalVisible(true)}
                     >
-                      <div style={{ marginBottom: 16, textAlign: 'right' }}>
-                        <Button
-                          type="primary"
-                          icon={<UploadOutlined />}
-                          onClick={() => setUploadModalVisible(true)}
-                          style={{
-                            background: 'linear-gradient(90deg, #38bdf8 0%, #a78bfa 100%)', // Gradient background
-                            border: 'none',
-                            boxShadow: '0 2px 8px #38bdf899',
-                          }}
-                        >
-                          Upload Image
-                        </Button>
+                      Upload Image
+                    </Button>
+                  </div>
+                  <Spin spinning={imageLoading} tip="Loading images...">
+                    {imageAssets.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: 40 }}>
+                        <h3>No Images Yet</h3>
+                        <p>Please upload some images first.</p>
                       </div>
-                      <Spin spinning={imageLoading} tip={<span style={{ color: '#9ca3af' }}>Loading Images...</span>}> {/* Tip color */}
-                        {imageAssets.length === 0 ? (
-                          <div style={{ textAlign: 'center', padding: 40, color: '#9ca3af' }}> {/* Text color */}
-                            <h3>No Images Yet</h3>
-                            <p>Please upload images first</p>
-                          </div>
-                        ) : (
-                          <>
-                            <Row gutter={[16, 16]}>
-                              {imageAssets.map(asset => (
-                                <Col xs={24} sm={12} md={8} lg={6} key={asset.id}>
-                                  <div
+                    ) : (
+                      <>
+                        <Row gutter={[16, 16]}>
+                          {imageAssets.map(asset => (
+                            <Col xs={24} sm={12} md={8} lg={6} key={asset.mediaId}>
+                              <div
+                                style={{
+                                  border: '1px solid #d9d9d9',
+                                  borderRadius: 8,
+                                  overflow: 'hidden',
+                                  cursor: 'pointer',
+                                  transition: 'border-color 0.3s',
+                                  background: '#fff', // 确保有背景色
+                                }}
+                                onClick={() => {
+                                  setCurrentEdit({ ...currentEdit, content: asset.mediaUrl });
+                                  setShowImageLibrary(false);
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.borderColor = '#1890ff'}
+                                onMouseLeave={e => e.currentTarget.style.borderColor = '#d9d9d9'}
+                              >
+                                <div style={{
+                                  position: 'relative',
+                                  width: '100%',
+                                  // Maintain aspect ratio (e.g., 16:9)
+                                  paddingTop: '56.25%', // 16:9 aspect ratio (9 / 16 * 100)
+                                  background: '#f0f0f0', // Placeholder background
+                                }}>
+                                  {/* 使用 mediaUrl 作为 src, mediaName 作为 alt */}
+                                  <img
+                                    src={asset.mediaUrl}
+                                    alt={asset.mediaName}
                                     style={{
-                                      background: '#374151', // Card background (slate-700)
-                                      border: '1px solid #4b5563', // Card border (slate-600)
-                                      borderRadius: 12, // Rounded corners
-                                      overflow: 'hidden',
-                                      cursor: 'pointer',
-                                      position: 'relative',
-                                      transition: 'all 0.3s',
-                                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)', // Subtle shadow
+                                      position: 'absolute',
+                                      top: 0,
+                                      left: 0,
+                                      width: '100%',
+                                      height: '100%',
+                                      objectFit: 'cover' // Ensure image covers the area
                                     }}
-                                    onClick={() => {
-                                      setCurrentEdit({ ...currentEdit, content: asset.url });
-                                      setShowImageLibrary(false);
-                                    }}
-                                    onMouseEnter={e => e.currentTarget.style.borderColor = '#38bdf8'} // Highlight on hover
-                                    onMouseLeave={e => e.currentTarget.style.borderColor = '#4b5563'} // Restore border on leave
-                                  >
-                                    <div style={{
-                                      height: 120, // Fixed height for image container
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      background: '#1f2937', // Image area background (slate-800)
-                                      position: 'relative' // For positioning delete button
-                                    }}>
-                                      <img src={asset.url} alt={asset.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                      <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 2 }}>
-                                        <Popconfirm
-                                          title={<span style={{ color: '#e5e7eb' }}>Are you sure you want to delete this image?</span>} // Text color
-                                          onConfirm={e => { e.stopPropagation(); handleDeleteImage(asset); }}
-                                          onClick={e => e.stopPropagation()} // Prevent card click when clicking popconfirm area
-                                          okButtonProps={{ danger: true, style: { background: '#dc2626' } }} // Style OK button (red)
-                                          cancelButtonProps={{ style: { background: '#4b5563', color: '#fff', border: 'none' } }} // Style Cancel button (slate)
-                                        >
-                                          {/* Styled delete button */}
-                                          <Button
-                                            type="primary"
-                                            danger
-                                            icon={<DeleteOutlined />}
-                                            size="small"
-                                            style={{ background: 'rgba(220, 38, 38, 0.8)', border: 'none' }} // Semi-transparent red
-                                            onClick={e => e.stopPropagation()} // Prevent card click when clicking button
-                                          />
-                                        </Popconfirm>
-                                      </div>
-                                    </div>
-                                    <div style={{ padding: '8px 12px' }}> {/* Padding for text below image */}
-                                      <div style={{
-                                        fontSize: 13,
-                                        color: '#e5e7eb', // Text color (light gray)
-                                        whiteSpace: 'nowrap', // Prevent wrapping
-                                        overflow: 'hidden', // Hide overflow
-                                        textOverflow: 'ellipsis', // Add ellipsis for long names
-                                        fontWeight: 500, // Slightly bolder text
-                                      }}>{asset.name}</div>
-                                    </div>
+                                    // Optional: Add error handling for broken images
+                                    onError={(e) => { e.target.style.display = 'none'; /* Hide broken image icon */ }}
+                                  />
+                                  <div style={{ position: 'absolute', top: 8, right: 8, zIndex: 2 }}>
+                                    <Popconfirm
+                                      title="Are you sure you want to delete this image?"
+                                      onConfirm={e => { e.stopPropagation(); handleDeleteImage(asset); }}
+                                      onClick={e => e.stopPropagation()}
+                                      okButtonProps={{ danger: true }}
+                                    >
+                                      <Button
+                                        type="primary"
+                                        danger
+                                        icon={<DeleteOutlined />}
+                                        size="small"
+                                        onClick={e => e.stopPropagation()}
+                                      />
+                                    </Popconfirm>
                                   </div>
-                                </Col>
-                              ))}
-                            </Row>
-                            <div style={{ marginTop: 24, display: 'flex', justifyContent: 'center' }}>
-                              <Pagination
-                                current={imagePage}
-                                total={imageTotal}
-                                pageSize={imagePageSize}
-                                showSizeChanger
-                                onChange={(page, size) => {
-                                  setImagePage(page);
-                                  setImagePageSize(size);
-                                }}
-                                // Custom renderer for dark theme pagination
-                                itemRender={(current, type, originalElement) => {
-                                  const baseStyle = { border: 'none', margin: '0 4px' }; // Add margin between buttons
-                                  if (type === 'prev' || type === 'next') {
-                                    // Style for Prev/Next buttons
-                                    return <Button style={{ ...baseStyle, background: '#374151', color: '#9ca3af' }}>{originalElement}</Button>;
-                                  }
-                                  if (type === 'page') {
-                                    // Style for page number buttons
-                                    const isActive = current === imagePage;
-                                    return <Button style={{
-                                      ...baseStyle,
-                                      background: isActive ? '#38bdf8' : '#374151', // Active: cyan, Inactive: slate
-                                      color: isActive ? '#fff' : '#9ca3af', // Active: white, Inactive: gray
-                                      fontWeight: isActive ? 'bold' : 'normal' // Bold for active page
-                                    }}>{current}</Button>;
-                                  }
-                                  // For 'jump-prev', 'jump-next' (ellipsis)
-                                  return <span style={{ color: '#9ca3af', margin: '0 4px' }}>{originalElement}</span>;
-                                }}
-                              />
-                            </div>
-                          </>
-                        )}
-                      </Spin>
-                      {/* Upload Image Modal - Styles already updated */}
-                      <Modal
-                        open={uploadModalVisible}
-                        title={<span style={{ color: '#e5e7eb' }}>Upload Image</span>} // Title color
-                        onCancel={() => setUploadModalVisible(false)}
-                        onOk={handleUpload}
-                        okText={uploading ? 'Uploading...' : 'Upload'} // Dynamic OK text
-                        okButtonProps={{
-                          disabled: !uploadFile || !mediaName || uploading,
-                          loading: uploading,
-                          style: {
-                            background: (!uploadFile || !mediaName) ? '#4b5563' : 'linear-gradient(90deg, #38bdf8 0%, #a78bfa 100%)', // Conditional background
-                            border: 'none',
-                            boxShadow: (!uploadFile || !mediaName) ? 'none' : '0 2px 8px #38bdf899',
+                                </div>
+                                <div style={{ padding: '8px 12px' }}>
+                                  <div style={{
+                                    whiteSpace: 'nowrap',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    fontSize: 13,
+                                    color: '#333'
+                                  }}>{asset.mediaName}</div>
+                                </div>
+                              </div>
+                            </Col>
+                          ))}
+                        </Row>
+                        {/* Pagination */}
+                        <div style={{ marginTop: 24, display: 'flex', justifyContent: 'center' }}>
+                          <Pagination
+                            current={imagePage}
+                            total={imageTotal}
+                            pageSize={imagePageSize}
+                            showSizeChanger
+                            onChange={(page, size) => {
+                              setImagePage(page);
+                              setImagePageSize(size);
+                            }}
+                            style={{ display: imageTotal > 0 ? 'flex' : 'none' }}
+                          />
+                        </div>
+                      </>
+                    )}
+                  </Spin>
+                  {/* Upload Image Modal (移除深色样式) */}
+                  <Modal
+                    open={uploadModalVisible}
+                    title="Upload New Image"
+                    onCancel={() => setUploadModalVisible(false)}
+                    footer={[
+                      <Button key="back" onClick={() => setUploadModalVisible(false)}>
+                        Cancel
+                      </Button>,
+                      <Button key="submit" type="primary" loading={uploading} onClick={handleUpload} disabled={!uploadFile || !mediaName}>
+                        Upload
+                      </Button>,
+                    ]}
+                    // --- 新增：确保上传弹窗关闭时清空状态 ---
+                    destroyOnClose
+                  >
+                    {!uploadFile ? (
+                      <div
+                        style={{
+                          border: '2px dashed #d9d9d9', // --- 默认虚线边框色 ---
+                          borderRadius: 8,
+                          padding: 32,
+                          textAlign: 'center',
+                          cursor: 'pointer',
+                          background: '#fafafa', // --- 浅灰背景 ---
+                          // color: '#9ca3af' // --- 移除颜色 ---
+                        }}
+                        onClick={() => document.getElementById('image-upload-input').click()}
+                        onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = '#1890ff'; }} // 拖拽悬停高亮
+                        onDragLeave={e => e.currentTarget.style.borderColor = '#d9d9d9'}
+                        onDrop={e => {
+                          e.preventDefault();
+                          e.currentTarget.style.borderColor = '#d9d9d9';
+                          const file = e.dataTransfer.files[0];
+                          if (file) {
+                            if (file.size > 1024 * 1024) {
+                              // --- 修改：提示信息改为英文 ---
+                              message.error('File size cannot exceed 1MB');
+                              return;
+                            }
+                            setUploadFile(file);
+                            setPreviewUrl(URL.createObjectURL(file));
+                            setMediaName(file.name.replace(/\.[^/.]+$/, "").replace(/\s+/g, '_'));
                           }
                         }}
-                        cancelButtonProps={{
-                          style: { background: '#4b5563', color: '#fff', border: 'none' } // Style Cancel button
-                        }}
-                        destroyOnClose
-                        styles={{ // Apply dark theme to upload modal too
-                          body: { background: '#1f2937', color: '#e5e7eb' },
-                          header: { background: '#111827', borderBottom: '1px solid #374151', color: '#e5e7eb' },
-                          content: { background: '#1f2937', color: '#e5e7eb' },
-                        }}
-                        className="dark-modal"
                       >
-                        {!uploadFile ? (
-                          <div
-                            style={{
-                              border: '2px dashed #4b5563', // Updated border color
-                              borderRadius: 8,
-                              padding: 32,
-                              textAlign: 'center',
-                              cursor: 'pointer',
-                              background: '#111827', // Darker background for drop zone
-                              color: '#9ca3af' // Text color
-                            }}
-                            onClick={() => document.getElementById('image-upload-input').click()}
-                            onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = '#38bdf8'; }} // Highlight on drag over
-                            onDragLeave={e => e.currentTarget.style.borderColor = '#4b5563'}
-                            onDrop={e => {
-                              e.preventDefault();
-                              e.currentTarget.style.borderColor = '#4b5563'; // Reset border color
-                              const file = e.dataTransfer.files[0];
-                              if (file) {
-                                if (file.size > 1024 * 1024) {
-                                  message.error('File size cannot exceed 1MB');
-                                  return;
-                                }
-                                setUploadFile(file);
-                                setPreviewUrl(URL.createObjectURL(file));
-                                setMediaName(file.name.replace(/\.[^/.]+$/, "").replace(/\s+/g, '_'));
+                        <UploadOutlined style={{ fontSize: 32, color: '#1890ff', marginBottom: 8 }} /> {/* Ant Design 主色 */}
+                        <p>Click or drag file to this area to upload</p>
+                        <p style={{ color: 'rgba(0, 0, 0, 0.45)', fontSize: 12, marginTop: 8 }}> {/* 默认提示文字颜色 */}
+                          Support for JPG, PNG, WebP format (Max 1MB)
+                        </p>
+                        <input
+                          type="file"
+                          id="image-upload-input"
+                          accept="image/*"
+                          style={{ display: 'none' }}
+                          onChange={e => {
+                            const file = e.target.files[0];
+                            if (file) {
+                              if (file.size > 1024 * 1024) {
+                                // --- 修改：提示信息改为英文 ---
+                                message.error('File size cannot exceed 1MB');
+                                return;
                               }
-                            }}
-                          >
-                            <UploadOutlined style={{ fontSize: 32, color: '#38bdf8', marginBottom: 8 }} />
-                            <p>Click or drag file to upload</p>
-                            <p style={{ color: '#6b7280', fontSize: 12, marginTop: 8 }}>Supports JPG, PNG, WebP formats (Max 1MB)</p>
-                            <input
-                              type="file"
-                              id="image-upload-input"
-                              accept="image/*"
-                              style={{ display: 'none' }}
-                              onChange={e => {
-                                const file = e.target.files[0];
-                                if (file) {
-                                  if (file.size > 1024 * 1024) {
-                                    message.error('File size cannot exceed 1MB');
-                                    return;
-                                  }
-                                  setUploadFile(file);
-                                  setPreviewUrl(URL.createObjectURL(file));
-                                  setMediaName(file.name.replace(/\.[^/.]+$/, "").replace(/\s+/g, '_'));
-                                }
-                              }}
-                            />
-                          </div>
-                        ) : (
-                          <>
-                            <div style={{ textAlign: 'center', marginBottom: 16, background: '#374151', padding: 8, borderRadius: 8 }}> {/* Added background */}
-                              <img src={previewUrl} alt="Preview" style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 4 }} />
-                            </div>
-                            <Input
-                              value={mediaName}
-                              onChange={e => setMediaName(e.target.value)}
-                              placeholder="Enter file name"
-                              maxLength={50}
-                              style={{ marginBottom: 12, background: '#111827', color: '#e5e7eb', border: '1px solid #4b5563' }} // Dark input
-                              placeholderTextColor="#6b7280" // Placeholder color
-                            />
-                            <Input.TextArea
-                              value={mediaDesc}
-                              onChange={e => setMediaDesc(e.target.value)}
-                              placeholder="Enter description (optional)"
-                              maxLength={200}
-                              rows={3}
-                              style={{ background: '#111827', color: '#e5e7eb', border: '1px solid #4b5563' }} // Dark textarea
-                              placeholderTextColor="#6b7280" // Placeholder color
-                            />
-                            <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 16 }}>
-                              <Button type="primary" danger onClick={() => {
-                                setUploadFile(null);
-                                setPreviewUrl('');
-                                setMediaName('');
-                                setMediaDesc('');
-                              }} icon={<DeleteOutlined />} style={{ background: '#dc2626' }}> {/* Red background */}
-                                Remove
-                              </Button>
-                            </div>
-                          </>
-                        )}
-                      </Modal>
-                    </Modal>
-                  </>
-                ) : (
-                  <textarea
-                    value={currentEdit.content}
-                    onChange={e => setCurrentEdit({ ...currentEdit, content: e.target.value })}
-                    rows={6}
-                    style={{
-                      width: '100%',
-                      borderRadius: 8,
-                      border: '1px solid #4b5563', // Updated border (slate-600)
-                      padding: 12,
-                      fontSize: 16,
-                      background: '#111827', // Updated background (slate-900)
-                      color: '#e5e7eb', // Updated text color
-                      fontFamily: 'monospace'
-                    }}
-                    placeholder="Enter content"
-                  />
-                )}
-              </div>
-              {/* Sidebar Buttons - Updated Style */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 16, paddingTop: 16, borderTop: '1px solid #374151' }}> {/* Added top border */}
-                <button
-                  onClick={closeSidebar}
-                  style={{
-                    // background: '#64748b', // Old background (slate)
-                    background: '#4b5563', // Updated background (slate-600)
-                    color: '#e5e7eb', // Updated text color
-                    border: 'none',
-                    borderRadius: 8,
-                    padding: '8px 24px',
-                    fontWeight: 500,
-                    fontSize: 16,
-                    cursor: 'pointer',
-                    transition: 'background-color 0.2s ease',
-                  }}
-                  onMouseOver={e => e.currentTarget.style.background = '#6b7280'} // Hover effect
-                  onMouseOut={e => e.currentTarget.style.background = '#4b5563'}
-                >Cancel</button>
-                <button
-                  onClick={saveContent}
-                  disabled={saving}
-                  style={{
-                    // background: '#38bdf8', // Old background
-                    background: saving ? '#374151' : 'linear-gradient(90deg, #38bdf8 0%, #a78bfa 100%)', // Updated background (cyan to purple gradient)
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: 8,
-                    padding: '8px 24px',
-                    fontWeight: 600,
-                    fontSize: 16,
-                    cursor: saving ? 'not-allowed' : 'pointer', // Cursor change when disabled
-                    opacity: saving ? 0.6 : 1,
-                    transition: 'background-color 0.2s ease, opacity 0.2s ease',
-                    boxShadow: saving ? 'none' : '0 2px 8px #38bdf899', // Added shadow
-                  }}
-                >{saving ? 'Saving...' : 'Save'}</button>
-              </div>
-            </div>
-          </div>
+                              setUploadFile(file);
+                              setPreviewUrl(URL.createObjectURL(file));
+                              setMediaName(file.name.replace(/\.[^/.]+$/, "").replace(/\s+/g, '_'));
+                            }
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <div style={{ textAlign: 'center', marginBottom: 16, background: '#f0f0f0', padding: 8, borderRadius: 8 }}> {/* 浅灰背景 */}
+                          <img src={previewUrl} alt="Preview" style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 4 }} />
+                        </div>
+                        <Input
+                          value={mediaName}
+                          onChange={e => setMediaName(e.target.value)}
+                          placeholder="Enter file name"
+                          maxLength={50}
+                          style={{ marginBottom: 12 }} // --- 移除深色样式 ---
+                          // placeholderTextColor="#6b7280"
+                        />
+                        <Input.TextArea
+                          value={mediaDesc}
+                          onChange={e => setMediaDesc(e.target.value)}
+                          placeholder="Enter description (optional)"
+                          maxLength={200}
+                          rows={3}
+                          // --- 移除深色样式 ---
+                          // style={{ background: '#111827', color: '#e5e7eb', border: '1px solid #4b5563' }}
+                          // placeholderTextColor="#6b7280"
+                        />
+                        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 16 }}>
+                          <Button type="primary" danger onClick={() => {
+                            setUploadFile(null);
+                            setPreviewUrl('');
+                            setMediaName('');
+                            setMediaDesc('');
+                          }} icon={<DeleteOutlined />}> {/* --- 移除背景色 --- */}
+                            Remove
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </Modal>
+                </Modal>
+              </>
+            ) : (
+              // 文本编辑区域
+              <Input.TextArea // --- 使用 Input.TextArea ---
+                value={currentEdit.content}
+                onChange={e => setCurrentEdit({ ...currentEdit, content: e.target.value })}
+                style={{
+                  width: '100%',
+                  // --- 修改：设置固定高度 ---
+                  height: '300px',
+                  resize: 'none', // 禁止调整大小
+                }}
+              />
+            )}
+          </Drawer>
         )}
-      </div>
 
-      {/* --- 更新：AI 编辑需求输入 Modal --- */}
-      <Modal
+      <Drawer
         title={`AI Edit Section: ${sections.find(s => s.id === editingSectionId)?.label || ''}`}
-        open={showEditPromptModal}
-        onCancel={handleCancelEditPrompt}
-        width={800} // 保持较大宽度
-        maskClosable={false} // 避免意外关闭
-        // --- 更新：简化 Footer ---
-        footer={
+        placement="right"
+        closable={true} // 显示关闭按钮
+        onClose={handleCancelEditPrompt} // 关闭时调用取消函数
+        open={showEditPromptModal} // 使用相同的 state 控制显示
+        width={750} // --- 修改：增加 Drawer 宽度 ---
+        maskClosable={true} 
+        footer={ // 将原 Modal 的 footer 内容移到这里
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-            <Button key="cancel" onClick={handleCancelEditPrompt} disabled={isGeneratingEdit}>
+            {/* --- 修改：增大按钮尺寸 --- */}
+            <Button key="cancel" onClick={handleCancelEditPrompt} disabled={isGeneratingEdit} size="large">
               Cancel
             </Button>
+            {/* --- 修改：增大按钮尺寸 --- */}
             <Button
               key="generate"
               type="primary"
@@ -1527,99 +1673,166 @@ export default function HtmlPreview({ pageId }) {
                 borderColor: (!selectedStructureInstruction && !editPrompt.trim() || isGeneratingEdit) ? '#d1d5db' : '#38bdf8',
                 color: (!selectedStructureInstruction && !editPrompt.trim() || isGeneratingEdit) ? '#6b7280' : '#ffffff',
               }}
+              size="large" // --- 新增：增大按钮尺寸 ---
             >
-              {isGeneratingEdit ? 'Generating...' : 'Generate & Preview'} {/* 更新按钮文本 */}
+              {isGeneratingEdit ? 'Generating...' : 'Generate & Preview'}
             </Button>
           </div>
         }
-        styles={{ /* styles 不变 */
-          header: { background: '#f9fafb', color: '#1f2937', borderBottom: '1px solid #e5e7eb', padding: '16px 24px' },
-          body: { background: '#ffffff', color: '#1f2937', padding: '24px', minHeight: '30vh', maxHeight: '65vh', overflowY: 'auto' }, // 调整最小高度
-          footer: { borderTop: '1px solid #e5e7eb', padding: '12px 24px', background: '#f9fafb' },
-        }}
+        // --- 新增：为 Drawer Body 添加内边距 ---
+        styles={{ body: { padding: '24px' } }}
       >
-        <Spin spinning={isGeneratingEdit} tip="Generating suggestion...">
+        {/* 将原 Modal 的内容移到 Drawer 内部 */}
+        <Spin spinning={isGeneratingEdit} tip="Regenerating...">
 
-          {/* 结构选择区域 (逻辑不变) */}
+          {/* --- 更新：结构选择区域 --- */}
           {!isGeneratingEdit && ( // 仅在未生成中时显示
             <div style={{ marginBottom: '24px' }}>
-              <p style={{ color: '#374151', fontSize: '14px', marginBottom: '12px', fontWeight: 500 }}>
-                Optional: Choose a structural change (click to select/deselect)
+              {/* --- 修改：使用彩色高亮提示文本 --- */}
+              <p style={{ color: '#2563eb', fontSize: '14px', marginBottom: '16px', fontWeight: 600 }}>
+                Maybe you want to change the layout? (click to select/deselect)
               </p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-                {structureOptions.map(option => {
-                  const isSelected = selectedStructureInstruction === option.instruction;
-                  return (
-                    <div
-                      key={option.id}
-                      onClick={() => handleStructureSelect(option.instruction)}
-                      style={{
-                        border: `2px solid ${isSelected ? '#38bdf8' : '#d1d5db'}`,
-                        borderRadius: '8px',
-                        padding: '8px',
-                        cursor: 'pointer',
-                        textAlign: 'center',
-                        width: 'calc(25% - 9px)', // 4 columns with gap
-                        minWidth: '120px',
-                        background: isSelected ? '#e0f2fe' : '#f9fafb',
-                        position: 'relative', // For checkmark positioning
-                        transition: 'border-color 0.2s, background-color 0.2s',
-                      }}
-                      title={option.instruction} // Show full instruction on hover
-                    >
-                      {/* 线框图 */}
-                      <div style={{ marginBottom: '8px', userSelect: 'none' }}>
-                        {option.wireframe}
-                      </div>
-                      {/* 标签 */}
-                      <span style={{ fontSize: '12px', color: '#4b5563', fontWeight: 500 }}>
-                        {option.label}
-                      </span>
-                      {/* 选中标记 */}
-                      {isSelected && (
-                        <CheckCircleFilled style={{
-                          position: 'absolute',
-                          top: '4px',
-                          right: '4px',
-                          color: '#0ea5e9', // Lighter blue for checkmark
-                          fontSize: '16px',
-                          background: 'white', // Make background visible
-                          borderRadius: '50%',
-                        }} />
-                      )}
-                    </div>
-                  );
-                })}
+              {/* --- 按类别分组渲染 (Comparison 分类已移除) --- */}
+              {Object.entries(
+                // Group options by category
+                structureOptions.reduce((acc, option) => {
+                  const category = option.category || 'Other';
+                  if (!acc[category]) {
+                    acc[category] = [];
+                  }
+                  acc[category].push(option);
+                  return acc;
+                }, {})
+              ).map(([category, optionsInCategory]) => (
+                 // ... (category rendering logic remains the same) ...
+                 <div key={category} style={{ marginBottom: '24px' }}> {/* Add margin between categories */}
+                  {/* Category Title (样式不变) */}
+                  <h4 style={{
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    color: '#1f2937', // slate-800
+                    borderBottom: '1px solid #e5e7eb', // gray-200
+                    paddingBottom: '8px',
+                    marginBottom: '16px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                  }}>
+                    {category} Sections
+                  </h4>
+                  {/* Options within the category */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px' }}> {/* Increased gap */}
+                    {optionsInCategory.map(option => {
+                      const isSelected = selectedStructureInstruction === option.instruction;
+                      return (
+                        <div
+                          key={option.id}
+                          onClick={() => handleStructureSelect(option.instruction)}
+                          style={{
+                            border: `2px solid ${isSelected ? '#38bdf8' : '#d1d5db'}`,
+                            borderRadius: '8px',
+                            padding: '12px', // Increased padding
+                            cursor: 'pointer',
+                            textAlign: 'center',
+                            width: 'calc(33.33% - 11px)', // 3 columns
+                            minWidth: '150px',
+                            background: isSelected ? '#f0f9ff' : '#fff',
+                            transition: 'all 0.2s ease',
+                            position: 'relative',
+                            boxShadow: isSelected ? '0 0 0 2px rgba(56, 189, 248, 0.3)' : 'none',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            minHeight: '130px', // Reduced min height
+                          }}
+                          onMouseEnter={e => { if (!isSelected) e.currentTarget.style.borderColor = '#9ca3af'; }}
+                          onMouseLeave={e => { if (!isSelected) e.currentTarget.style.borderColor = '#d1d5db'; }}
+                          title={option.instruction}
+                        >
+                          {isSelected && (
+                            <CheckCircleFilled style={{ color: '#0ea5e9', fontSize: '16px', position: 'absolute', top: '6px', right: '6px' }} />
+                          )}
+                          <div style={{ marginBottom: '8px', width: '100%', height: '60px' /* Reduced wireframe height */, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {option.wireframe}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#4b5563', fontWeight: 500, lineHeight: '1.3', marginTop: 'auto' }}>
+                            {option.label}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 分隔线 (可选) */}
+          {!isGeneratingEdit && (selectedStructureInstruction || editPrompt) && <div style={{ borderTop: '1px solid #e5e7eb', margin: '24px 0' }}></div>}
+
+          {/* 提示输入区域 */}
+          <div style={{ marginBottom: '16px' }}>
+             {/* --- 修改：使用彩色高亮提示文本 --- */}
+            <p style={{ color: '#2563eb', fontSize: '14px', marginBottom: '8px', fontWeight: 600 }}>
+              {selectedStructureInstruction ? 'Optional: Add specific instructions' : 'Or describe the changes you want?'}
+            </p>
+            <Input.TextArea
+              rows={6}
+              placeholder={selectedStructureInstruction ? "e.g., 'Focus on the benefits for small businesses'" : "e.g., 'Make the tone more professional', 'Add a sentence about our new service', 'Rewrite this to be shorter'"}
+              value={editPrompt}
+              onChange={e => setEditPrompt(e.target.value)}
+              disabled={isGeneratingEdit}
+              style={{ resize: 'none' }}
+            />
+          </div>
+
+          {/* 提示：如果选择了结构，可以不输入文字 (逻辑不变) */}
+          {selectedStructureInstruction && !editPrompt.trim() && !isGeneratingEdit && (
+            <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '-8px', marginBottom: '16px' }}>
+              You can generate based on the selected structure alone, or add more details above.
+            </p>
+          )}
+
+          {/* --- 新增：常用提示区域 --- */}
+          {!isGeneratingEdit && ( // 仅在未生成时显示
+            <div>
+              <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '8px' }}>
+                Quick prompts (click to add):
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                {commonPrompts.map(prompt => (
+                  <Tag
+                    key={prompt}
+                    onClick={() => handleCommonPromptClick(prompt)}
+                    style={{
+                      cursor: 'pointer',
+                      background: '#f3f4f6', // 浅灰色背景 (gray-100)
+                      borderColor: '#e5e7eb', // 边框颜色 (gray-200)
+                      color: '#4b5563', // 文字颜色 (gray-600)
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      transition: 'background-color 0.2s, border-color 0.2s',
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.background = '#e5e7eb'; // 悬停背景 (gray-200)
+                      e.currentTarget.style.borderColor = '#d1d5db'; // 悬停边框 (gray-300)
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = '#f3f4f6'; // 默认背景
+                      e.currentTarget.style.borderColor = '#e5e7eb'; // 默认边框
+                    }}
+                  >
+                    {prompt}
+                  </Tag>
+                ))}
               </div>
             </div>
           )}
 
-          {/* 文本输入区域 (逻辑不变) */}
-          <p style={{ marginBottom: 8, color: '#374151', fontSize: '14px', fontWeight: 500 }}>
-            {selectedStructureInstruction
-              ? 'Then, describe any additional changes or details:'
-              : 'Describe the changes you want AI to make to this section:'}
-          </p>
-          <Input.TextArea
-            rows={6} // 固定行数，因为不再有对比区域占用空间
-            placeholder="e.g., Use a warmer color palette, make the title bold, and link the button to '/contact'."
-            value={editPrompt}
-            onChange={(e) => setEditPrompt(e.target.value)}
-            style={{ background: '#f9fafb', color: '#111827', border: '1px solid #d1d5db', fontSize: '14px', marginBottom: '16px' }} // 减少底部边距
-            disabled={isGeneratingEdit}
-          />
-
-          {/* --- 移除：代码对比区域 --- */}
-          {/*
-          <div style={{ display: 'flex', gap: '16px', maxHeight: '45vh', marginTop: '16px' }}>
-             ... Original HTML pre block ...
-             ... AI Generated Suggestion pre block ...
-          </div>
-          */}
-
         </Spin>
-      </Modal>
-      {/* --- AI 编辑需求输入 Modal 结束 --- */}
+      </Drawer>
+      {/* --- AI 编辑 Drawer 结束 --- */}
 
       {/* AI 编辑预览控件 (逻辑不变) */}
       {isPreviewingEdit && editingSectionId && (
@@ -1678,7 +1891,7 @@ export default function HtmlPreview({ pageId }) {
            </Button>
          </div>
       )}
-
+      </div>
     </div>
   );
 }
