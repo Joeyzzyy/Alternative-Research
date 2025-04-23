@@ -81,7 +81,13 @@ const login = async (email, password) => {
 // Add register method
 const register = async (registerData) => {
   try {
-    const response = await apiClient.post('/customer/register', registerData);
+    // registerData 现在应包含 code, email, inviteCode, password
+    const response = await apiClient.post('/customer/register', {
+      code: registerData.code,
+      email: registerData.email,
+      inviteCode: registerData.inviteCode,
+      password: registerData.password
+    });
     return response.data;
   } catch (error) {
     console.error('Failed to register:', error);
@@ -114,9 +120,12 @@ const resetPassword = async (resetData) => {
   }
 };
 
-const googleLogin = async () => {
+// Google 登录
+const googleLogin = async (inviteCode) => {
   try {
-    const response = await apiClient.get('/customer/google?source=alternatively');
+    const params = { source: 'alternatively' };
+    if (inviteCode) params.inviteCode = inviteCode;
+    const response = await apiClient.get('/customer/google', { params });
     return response.data;
   } catch (error) {
     console.error('Failed to login with Google:', error);

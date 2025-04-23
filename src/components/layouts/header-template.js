@@ -127,120 +127,6 @@ export default function Header() {
     }
   }, []);
 
-  // 加载 Google One Tap 脚本
-  useEffect(() => {
-    const isUserLoggedIn = localStorage.getItem('alternativelyIsLoggedIn') === 'true';
-    if (typeof window !== 'undefined' && !isUserLoggedIn && !googleOneTapInitialized) {
-      if (!document.querySelector('script[src="https://accounts.google.com/gsi/client"]')) {
-        const script = document.createElement('script');
-        script.src = "https://accounts.google.com/gsi/client";
-        script.async = true;
-        script.defer = true;
-        script.onload = () => {
-          if (window.google?.accounts?.id) {
-            initializeGoogleOneTap();
-          } else {
-            setTimeout(initializeGoogleOneTap, 100); 
-          }
-        };
-        script.onerror = () => {
-          console.error('Failed to load Google GSI script.'); 
-        };
-        document.body.appendChild(script);
-      } else {
-        console.log('Google GSI script already exists. Attempting to initialize One Tap...'); // 添加日志
-        if (window.google?.accounts?.id) {
-          initializeGoogleOneTap();
-        } else {
-           console.warn('GSI script tag exists, but google.accounts.id not available. Waiting for potential late initialization.');
-           setTimeout(initializeGoogleOneTap, 500);
-        }
-      }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [googleOneTapInitialized]); // 移除 initializeGoogleOneTap，因为它现在是 useCallback 包裹的稳定函数
-
-  // 处理 Google One Tap 响应 (Moved Up)
-  const handleGoogleOneTapResponse = useCallback(async (response) => {
-    const key = 'googleOneTapLogin'; // 定义一个唯一的 key
-    try {
-      setLoading(true);
-      // 使用 messageApi 显示加载中消息
-      messageApi.loading({ content: 'Verifying Google login...', key, duration: 0 });
-      console.log('Google One Tap response:', response);
-      // 发送 ID 令牌到后端进行验证
-      const apiResponse = await apiClient.googleOneTapLogin(response.credential);
-      
-      if (apiResponse && apiResponse.data) {
-        // 存储用户数据
-        localStorage.setItem('alternativelyAccessToken', apiResponse.accessToken);
-        localStorage.setItem('alternativelyIsLoggedIn', 'true');
-        localStorage.setItem('alternativelyCustomerEmail', apiResponse.data.email);
-        localStorage.setItem('alternativelyCustomerId', apiResponse.data.customerId);
-        
-        // 更新状态
-        setIsLoggedIn(true);
-        setUserEmail(apiResponse.data.email);
-        
-        // 使用 messageApi 显示成功消息
-        messageApi.success({ content: 'Login successful!', key, duration: 2 });
-        
-        // 触发登录成功事件，通知其他组件
-        const loginSuccessEvent = new CustomEvent('alternativelyLoginSuccess');
-        window.dispatchEvent(loginSuccessEvent);
-      } else {
-        // 处理 API 返回但没有 data 的情况
-        messageApi.error({ content: 'Google login verification failed.', key, duration: 2 });
-      }
-    } catch (error) {
-      console.error("Google One Tap login failed:", error);
-      // 使用 messageApi 显示错误消息
-      messageApi.error({ content: 'Google login failed, please try again later', key, duration: 2 });
-    } finally {
-      setLoading(false);
-    }
-  // 移除 showNotification 依赖，添加 messageApi
-  }, [messageApi]); // Keep messageApi dependency, ensure apiClient is stable or added if needed
-
-  // 添加 Google One Tap 初始化函数
-  const initializeGoogleOneTap = useCallback(() => {
-    // 增加检查，确保只在未登录且未初始化时执行
-    if (googleOneTapInitialized || isLoggedIn || typeof window === 'undefined' || !window.google?.accounts?.id) {
-      console.log('Skipping One Tap initialization (already initialized, logged in, or GSI not ready).');
-      return;
-    }
-    
-    try {
-      window.google.accounts.id.initialize({
-        client_id: '491914743416-1o5v2lv5582cvc7lrrmslg5g5b4kr6c1.apps.googleusercontent.com', 
-        callback: handleGoogleOneTapResponse, // Now handleGoogleOneTapResponse is defined
-        // auto_select: true, // Temporarily disable auto_select
-        // cancel_on_tap_outside: true, // Temporarily disable cancel_on_tap_outside
-        use_fedcm_for_prompt: false // Explicitly disable FedCM for testing
-      });
-      
-      // 使用更详细的日志记录 prompt notification
-      window.google.accounts.id.prompt((notification) => {
-        if (notification.isNotDisplayed?.()) {
-          console.log('One Tap prompt not displayed. Reason:', notification.getNotDisplayedReason?.());
-        } else if (notification.isSkippedMoment?.()) {
-          console.log('One Tap prompt skipped. Reason:', notification.getSkippedReason?.());
-        } else if (notification.isDismissedMoment?.()) {
-           console.log('One Tap prompt dismissed. Reason:', notification.getDismissedReason?.());
-        } else if (notification.isDisplayed?.()) {
-           console.log('One Tap prompt displayed successfully (non-FedCM check).');
-        } else {
-           console.log('One Tap prompt notification received, but state is unclear or FedCM-specific.');
-        }
-      });
-      
-      setGoogleOneTapInitialized(true);
-    } catch (error) {
-      console.error('Google One Tap initialization failed:', error);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [googleOneTapInitialized, isLoggedIn, handleGoogleOneTapResponse]); // Keep handleGoogleOneTapResponse dependency
-
   // 当用户登出时重置 One Tap 状态
   useEffect(() => {
     if (!isLoggedIn && googleOneTapInitialized) {
@@ -286,11 +172,21 @@ export default function Header() {
 
   const handleGoogleLogin = async () => {
     const key = 'googleLogin';
+    let invitationCode = null;
+    try {
+      invitationCode = localStorage.getItem('invitationCode');
+    } catch (e) {
+      invitationCode = null;
+    }
     try {
       setLoading(true);
       messageApi.loading({ content: 'Connecting to Google...', key, duration: 0 });
-      const response = await apiClient.googleLogin();
+      const response = await apiClient.googleLogin(invitationCode);
       if (response && response.data) {
+        // 用完邀请码后立即删除
+        try {
+          localStorage.removeItem('invitationCode');
+        } catch (e) {}
         messageApi.destroy(key);
         window.location.href = response.data;
       } else {
@@ -437,6 +333,28 @@ export default function Header() {
     return () => {
       window.removeEventListener('alternativelyLoginSuccess', handleLoginSuccess);
     };
+  }, []);
+
+  useEffect(() => {
+    // 检查 URL 是否包含 invitation 参数，如果有则存入 localStorage
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const invitation = urlParams.get('invitation');
+      if (invitation) {
+        try {
+          localStorage.setItem('invitationCode', invitation);
+        } catch (e) {
+          // 忽略 localStorage 错误
+        }
+        // 移除 invitation 参数，不让用户看到
+        urlParams.delete('invitation');
+        const newUrl =
+          window.location.pathname +
+          (urlParams.toString() ? `?${urlParams.toString()}` : '') +
+          window.location.hash;
+        window.history.replaceState({}, '', newUrl);
+      }
+    }
   }, []);
 
   return (

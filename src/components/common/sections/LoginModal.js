@@ -188,15 +188,32 @@ const LoginModal = ({
       setErrorMessage('Passwords do not match');
       return;
     }
-    
+
+    // 新增：从 localStorage 获取 invitationCode
+    let invitationCode = null;
+    try {
+      invitationCode = localStorage.getItem('invitationCode');
+    } catch (e) {
+      // 兼容 SSR 或隐私模式
+      invitationCode = null;
+    }
+
     try {
       setLoading(true);
       const response = await apiClient.register({
         email: registerForm.email,
         password: registerForm.password,
-        code: registerForm.code
+        code: registerForm.code,
+        inviteCode: invitationCode || undefined, // 传递给接口
       });
-      
+
+      // 注册成功后删除 invitationCode
+      if (invitationCode) {
+        try {
+          localStorage.removeItem('invitationCode');
+        } catch (e) {}
+      }
+
       // Modified logic: Only treat as error if code is not 200
       if (response && response.code && response.code !== 200) {
         setErrorMessage(response.message || 'Registration failed. Please try again.');
@@ -311,8 +328,22 @@ const LoginModal = ({
   // 修改 handleGoogleLogin
   const handleGoogleLoginClick = async () => {
     setGoogleLoading(true);
+    // 新增：从 localStorage 获取 invitationCode
+    let invitationCode = null;
     try {
-      await handleGoogleLogin(); // 调用父组件传进来的 Google 登录逻辑
+      invitationCode = localStorage.getItem('invitationCode');
+    } catch (e) {
+      invitationCode = null;
+    }
+    try {
+      // 传递 invitationCode 给 handleGoogleLogin
+      await handleGoogleLogin(invitationCode); // 调用父组件传进来的 Google 登录逻辑
+      // 用完邀请码后立即删除
+      if (invitationCode) {
+        try {
+          localStorage.removeItem('invitationCode');
+        } catch (e) {}
+      }
     } catch (e) {
       // 可以加错误提示
     } finally {
