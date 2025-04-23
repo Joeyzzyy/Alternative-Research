@@ -314,7 +314,7 @@ async function getPageData() {
         },
         {
           componentName: "SubscriptionCard", 
-          sectionId: "pricing-1",
+          sectionId: "pricing",
         },
         {
           componentName: "Recommendations",
@@ -322,7 +322,7 @@ async function getPageData() {
         },
         {
           componentName: "Faqs",
-          sectionId: "faq-1",
+          sectionId: "faq",
           topContent: [
             {
               question: "How does your AI SaaS comparison tool work?",

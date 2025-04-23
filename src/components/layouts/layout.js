@@ -127,7 +127,7 @@ const CommonLayout = ({ article, keywords }) => {
               <div
                 key={`${section.componentName}-${section.sectionId}`}
                 className="w-full bg-white"
-                id="subscription-card"
+                id={section.sectionId}
               >
                 <Component
                   data={section}

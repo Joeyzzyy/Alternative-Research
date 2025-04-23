@@ -334,10 +334,10 @@ export default function Header() {
       label: "Pricing",
       color: "#000000", 
       fontWeight: "600",
-      link: "#pricing-1",
+      link: "#pricing",
       onClick: (e) => {
         e.preventDefault();
-        const element = document.getElementById('pricing-1');
+        const element = document.getElementById('pricing');
         if (element) {
           element.scrollIntoView();
         }
@@ -347,10 +347,10 @@ export default function Header() {
       label: "FAQ",
       color: "#000000", 
       fontWeight: "600",
-      link: "#faq-1",
+      link: "#faq",
       onClick: (e) => {
         e.preventDefault();
-        const element = document.getElementById('faq-1');
+        const element = document.getElementById('faq');
         if (element) {
           element.scrollIntoView();
         }
@@ -632,7 +632,7 @@ export default function Header() {
                         {/* 添加购买更多积分按钮 */}
                         <button 
                           onClick={() => {
-                            window.location.href = "/#pricing-1";
+                            window.location.href = "/#pricing";
                             setShowCreditsTooltip(false);
                           }}
                           className="w-full py-2 px-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-sm font-medium rounded-md transition-all duration-300 flex items-center justify-center"

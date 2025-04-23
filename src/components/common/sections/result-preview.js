@@ -522,7 +522,7 @@ const HistoryCardList = () => {
         >
           <div className="flex flex-col items-center justify-center py-6">
             <ExclamationCircleOutlined style={{ fontSize: 40, color: '#f87171' }} />
-            <div className="mt-4 text-lg font-semibold text-red-400">Are you sure you want to delete this page?</div>
+            <div className="mt-4 text-lg font-semibold text-red-400">Are you sure you want to delete this task, this action will remove all the pages under this task?</div>
             <div className="mt-2 text-gray-300 text-center">
               This action cannot be undone.
             </div>
