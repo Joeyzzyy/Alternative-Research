@@ -124,7 +124,7 @@ export default function InvitationPage() {
               lineHeight: 1.7,
             }}>
               <span style={{ fontWeight: 700, color: '#181C20' }}>{inviterName}</span>
-              <span> invites you to experience Alternatively and enjoy </span>
+              <span> invites you to experience altpage.ai and enjoy </span>
               <span style={{
                 color: '#2563eb',
                 fontWeight: 800,
