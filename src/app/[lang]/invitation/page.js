@@ -129,7 +129,7 @@ export default function InvitationPage() {
                 color: '#2563eb',
                 fontWeight: 800,
                 fontSize: '1em',
-              }}>5 free credits</span>
+              }}>20 credits</span>
               <span> for generating Alternative Pages for your product.</span>
             </div>
             <ul style={{
@@ -260,7 +260,7 @@ export default function InvitationPage() {
                 window.open(`https://altpage.ai?invitation=${code}`, '_blank');
               }}
             >
-              Claim Your 5 Free Credits
+              Claim Your 20 Credits
             </button>
           </div>
         </div>
