@@ -153,7 +153,7 @@ const ResearchTool = ({
         messageHandler.updateAgentMessage(answer, thinkingMessageId);
         messageHandler.addSystemMessage('If you are not satisfied with the competitors, you can put in the competitors you want to analyze!');
       } else {
-        messageHandler.updateAgentMessage('⚠️ Failed to generate alternatives: Invalid response from server', thinkingMessageId);
+        messageHandler.updateAgentMessage('Oops! The service encountered a temporary issue. Could you please try sending your message again?', thinkingMessageId);
       }
     } catch (error) {
       messageHandler.handleErrorMessage(error, thinkingMessageId);
@@ -1260,7 +1260,7 @@ const ResearchTool = ({
           messageHandler.updateAgentMessage(answer, thinkingMessageId);
         }
       } else {
-        messageHandler.updateAgentMessage('⚠️ Failed to get valid response from server', thinkingMessageId);
+        messageHandler.updateAgentMessage('Oops! The service encountered a temporary issue. Could you please try sending your message again?', thinkingMessageId);
       }
     } catch (error) {
       messageHandler.handleErrorMessage(error, thinkingMessageId);
@@ -1442,7 +1442,7 @@ const ResearchTool = ({
         websiteId,
       );
       if (greetingResponse?.code === 1058) {
-        messageHandler.updateAgentMessage("⚠️ Network error occurred. Please try again.", thinkingMessageId);
+        messageHandler.updateAgentMessage("Oops! The service encountered a temporary issue. Could you please try sending your message again?", thinkingMessageId);
         return;
       }
 
@@ -1457,7 +1457,7 @@ const ResearchTool = ({
             websiteId
           );
           if (searchResponse?.code === 1058) {
-            messageHandler.updateAgentMessage("⚠️ Network error occurred. Please try again.", thinkingMessageId);
+            messageHandler.updateAgentMessage("Oops! The service encountered a temporary issue. Could you please try sending your message again?", thinkingMessageId);
             return;
           }
           if (searchResponse?.code === 200 && searchResponse?.data?.websiteId) {
@@ -2283,7 +2283,7 @@ const ResearchTool = ({
           } else {
             // 如果API调用失败，仍然添加系统消息
             messageHandler.addSystemMessage(
-              "Failed to send completion message. Please try again later."
+              "Oops! The service encountered a temporary issue. Could you please try sending your message again?"
             );
           }
         } catch (error) {
