@@ -1893,20 +1893,26 @@ const ResearchTool = ({
       `;
 
       const title = document.createElement('h3');
-      title.className = 'text-xl font-semibold text-white mb-3 text-center';
-      title.textContent = 'Task Error';
+      title.className = 'text-xl font-semibold text-white mb-3 text-center flex items-center justify-center gap-2'; // 使用 flex 布局居中并添加间距
+      // 添加 😭 表情符号
+      title.innerHTML = `
+        <span>Oops! Something Went Wrong...</span>
+        <span class="text-2xl">😭</span> 
+      `;
 
       const description = document.createElement('p');
       description.className = 'text-gray-300 mb-2 text-center text-sm';
-      description.textContent = 'Error Description: ' + errorMessage; // 显示具体的错误信息或通用信息
+      // 更新描述，告知用户技术团队已知晓
+      description.textContent = `We encountered a hiccup processing your request (${errorMessage}). Our tech wizards have been notified and are on the case!`; 
 
       const creditInfo = document.createElement('p');
       creditInfo.className = 'text-green-400 mb-4 text-center text-sm font-medium';
-      creditInfo.textContent = 'Your credits have not been deducted for this task.';
+      creditInfo.textContent = 'Good news: Your credits have not been deducted for this task.'; // 保持不变
 
       const instruction = document.createElement('p');
       instruction.className = 'text-gray-400 mb-6 text-center text-sm';
-      instruction.textContent = 'Please return to the homepage and start a new task.';
+      // 更新指示，鼓励用户重试
+      instruction.textContent = 'Could you please try starting the task again from the homepage?'; 
 
       const buttonContainer = document.createElement('div');
       buttonContainer.className = 'flex justify-center'; // 居中按钮
