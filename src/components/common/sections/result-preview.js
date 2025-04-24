@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import apiClient from '../../../lib/api/index.js';
 import { Modal, Button, Spin, message } from 'antd';
-import { DeleteOutlined, ExclamationCircleOutlined, ReloadOutlined, LeftOutlined, RightOutlined, CloseOutlined } from '@ant-design/icons';
+import { DeleteOutlined, ExclamationCircleOutlined, ReloadOutlined, LeftOutlined, RightOutlined, CloseOutlined, ClearOutlined } from '@ant-design/icons';
 import HtmlPreview from './page-edit'; // 新增：引入HtmlPreview组件
 
 const HistoryCardList = () => {
@@ -373,7 +373,7 @@ const HistoryCardList = () => {
             {isClearingAll ? (
               <Spin size="small" />
             ) : (
-              <DeleteOutlined style={{ fontSize: 18, color: '#fca5a5' }} />
+              <ClearOutlined style={{ fontSize: 18, color: '#fca5a5' }} />
             )}
           </button>
         </div>
