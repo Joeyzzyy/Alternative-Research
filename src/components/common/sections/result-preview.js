@@ -664,6 +664,18 @@ const HistoryCardList = () => {
             closable={false}
             maskClosable={true}
           >
+            {/* === 只保留关闭按钮，删除按钮已移除 === */}
+            <div className="absolute top-3 right-4 z-30">
+              <button
+                onClick={handleModalClose}
+                className="p-2 rounded-full text-white bg-slate-800/60 hover:bg-slate-700/80 transition duration-200"
+                title="Close"
+                disabled={resultLoading}
+                style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }} // 增大点击区域
+              >
+                <CloseOutlined style={{ fontSize: 28, display: 'block' }} />
+              </button>
+            </div>
             {/* === 左右导航按钮 === */}
             {finishedTasks.length > 1 && selectedItem.generatorStatus === 'finished' && (
               <>
@@ -687,31 +699,7 @@ const HistoryCardList = () => {
                 </button>
               </>
             )}
-            {/* === 修改：将预览、编辑、删除、关闭按钮放在一个容器中 === */}
-            <div className="absolute top-3 right-4 z-30 flex items-center gap-2">
-              {/* === 预览按钮和编辑按钮已移至下方 iframe 地址栏 === */}
-
-              {/* 弹窗内删除按钮 */}
-              <button
-                onClick={() => setDeleteConfirm({ open: true, id: selectedItem.websiteId })}
-                className="p-1.5 rounded-full text-red-400 bg-slate-800/60 hover:bg-slate-700/80 transition duration-200"
-                title="Delete Task"
-                disabled={deletingId === selectedItem.websiteId || isClearingAll || resultLoading} // 如果正在加载详情也禁用
-              >
-                <DeleteOutlined style={{ fontSize: 16, display: 'block' }} />
-              </button>
-
-              {/* 自定义关闭按钮 */}
-              <button
-                onClick={handleModalClose}
-                className="p-1.5 rounded-full text-white bg-slate-800/60 hover:bg-slate-700/80 transition duration-200"
-                title="Close"
-                disabled={resultLoading} // 如果正在加载详情也禁用
-              >
-                <CloseOutlined style={{ fontSize: 16, display: 'block' }} />
-              </button>
-            </div>
-
+           
             {resultLoading ? (
               <div className="flex-1 flex items-center justify-center">
                 <Spin size="large" />
@@ -745,6 +733,20 @@ const HistoryCardList = () => {
                             }
                           }}
                         >
+                          {/* === 新增：右上角删除按钮 === */}
+                          <button
+                            className="absolute top-1 right-1 bg-red-700/70 hover:bg-red-800/80 text-white rounded-full p-1 shadow transition"
+                            title="Delete"
+                            style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            onClick={e => {
+                              e.stopPropagation();
+                              setDeleteConfirm({ open: true, id: item.websiteId });
+                            }}
+                            disabled={deletingId === item.websiteId || isClearingAll}
+                          >
+                            <DeleteOutlined style={{ fontSize: 14 }} />
+                          </button>
+                          {/* === 结束新增 === */}
                           <div className="w-full flex flex-col items-center">
                             <div className="font-semibold text-xs text-white mb-0 truncate w-full text-center">{item.website}</div>
                             <div className="mt-0.5">
@@ -1142,10 +1144,11 @@ const HistoryCardList = () => {
           <div className="absolute top-3 right-4 z-30 flex items-center gap-2">
             <button
               onClick={() => setEditPageId(null)}
-              className="p-1.5 rounded-full text-white bg-slate-800/60 hover:bg-slate-700/80 transition duration-200"
+              className="p-2 rounded-full text-white bg-slate-800/60 hover:bg-slate-700/80 transition duration-200"
               title="Close"
+              style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }} // 增大点击区域
             >
-              <CloseOutlined style={{ fontSize: 16, display: 'block' }} />
+              <CloseOutlined style={{ fontSize: 28, display: 'block' }} />
             </button>
           </div>
           {/* === 结束 === */}
