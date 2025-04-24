@@ -99,37 +99,73 @@ export default function HtmlPreview({ pageId }) {
 
   // Save edited content
   async function saveContent() {
-    if (!currentEdit.element) {
-      showNotification('No editable element selected', 'error');
-      return;
-    }
+    if (!currentEdit || !currentEdit.element) return;
+
     setSaving(true);
-    const doc = iframeRef.current?.contentDocument;
-    if (!doc) {
-      showNotification('Iframe document not found', 'error');
-      setSaving(false);
-      return;
-    }
+    const { element, content, originalContent, elementType, linkHref, originalLinkHref } = currentEdit;
 
     try {
-      if (currentEdit.element.tagName.toLowerCase() === 'img') {
-        currentEdit.element.setAttribute('src', currentEdit.content);
-      } else {
-        currentEdit.element.textContent = currentEdit.content;
+      // --- 修改：根据 elementType 更新 DOM ---
+      if (elementType === 'img') {
+        // 更新图片 src
+        if (content !== originalContent) {
+          element.setAttribute('src', content);
+        }
+      } else if (elementType === 'a') {
+        // 更新链接文本和 href
+        let changed = false;
+        if (content !== originalContent) {
+          element.textContent = content;
+          changed = true;
+        }
+        // 如果 href 有变化 (包括从无到有，从有到无，或值改变)
+        if (linkHref !== originalLinkHref) {
+          element.setAttribute('href', linkHref || '#'); // 如果为空则设置为 '#'，避免无效链接
+          changed = true;
+        }
+        if (!changed) {
+          // 如果文本和链接都没变，则不保存
+          closeSidebar();
+          return;
+        }
+      } else { // 默认为 'text' 类型
+        // 更新文本内容
+        if (content !== originalContent) {
+          element.textContent = content;
+        } else {
+          // 如果内容没变，则不保存
+          closeSidebar();
+          return;
+        }
       }
 
-      const updatedHtml = doc.documentElement.outerHTML;
+      // 获取更新后的整个页面 HTML
+      const updatedHtml = iframeRef.current.contentDocument.documentElement.outerHTML;
 
+      // 调用 API 保存
       await apiClient.editAlternativeHtml({
         html: updatedHtml,
         resultId: pageId,
       });
 
-      setShowSidebar(false);
-      showNotification('Changes saved successfully!', 'success');
+      // 更新内部状态（可选，取决于是否需要立即重渲染 iframe）
+      // setHtml(updatedHtml);
+
+      showNotification('Content saved successfully!', 'success');
+      closeSidebar();
+
     } catch (e) {
       console.error('Save failed:', e);
-      showNotification('Failed to save changes', 'error');
+      showNotification('Failed to save content', 'error');
+      // 可选：恢复原始内容？
+      // if (elementType === 'img') {
+      //   element.setAttribute('src', originalContent);
+      // } else if (elementType === 'a') {
+      //   element.textContent = originalContent;
+      //   element.setAttribute('href', originalLinkHref || '#');
+      // } else {
+      //   element.textContent = originalContent;
+      // }
     } finally {
       setSaving(false);
     }
@@ -307,40 +343,72 @@ export default function HtmlPreview({ pageId }) {
       }
 
       if (canEditEl) {
-        // 可编辑元素
+        // 可编辑元素 (带有 canEdit 属性)
+        const isImage = canEditEl.tagName.toLowerCase() === 'img';
+        const isLink = canEditEl.tagName.toLowerCase() === 'a'; // 检查 canEdit 元素是否是 a 标签
         setCurrentEdit({
           element: canEditEl,
-          content: canEditEl.tagName.toLowerCase() === 'img' ? canEditEl.getAttribute('src') : canEditEl.textContent,
-          selector: '', // 可选：可生成唯一选择器
-          originalContent: canEditEl.tagName.toLowerCase() === 'img' ? canEditEl.getAttribute('src') : canEditEl.textContent
+          // --- 修改：处理 canEdit 元素是 a 标签的情况 ---
+          elementType: isImage ? 'img' : (isLink ? 'a' : 'text'),
+          content: isImage ? canEditEl.getAttribute('src') : canEditEl.textContent,
+          selector: '',
+          originalContent: isImage ? canEditEl.getAttribute('src') : canEditEl.textContent,
+          // --- 如果是链接，获取 href ---
+          linkHref: isLink ? (canEditEl.getAttribute('href') || '') : null,
+          originalLinkHref: isLink ? (canEditEl.getAttribute('href') || '') : null,
         });
         setShowSidebar(true);
         return;
       }
 
-      // 没有canEdit属性，判断是否是独立的文字或图片区域
-      const tag = e.target.tagName.toLowerCase();
+      // 没有canEdit属性，判断是否是独立的文字、图片或链接区域
+      const targetElement = e.target; // 使用一个变量存储 e.target
+      const tag = targetElement.tagName.toLowerCase();
+
       if (tag === 'img') {
+        // 图片元素
         setCurrentEdit({
-          element: e.target,
-          content: e.target.getAttribute('src'),
+          element: targetElement,
+          elementType: 'img',
+          content: targetElement.getAttribute('src'),
           selector: '',
-          originalContent: e.target.getAttribute('src')
+          originalContent: targetElement.getAttribute('src'),
+          linkHref: null,
+          originalLinkHref: null,
         });
         setShowSidebar(true);
         return;
       }
-      // 判断是否是独立的文字节点（无子元素，且有文本内容）
-      if (
-        e.target.childNodes.length === 1 &&
-        e.target.childNodes[0].nodeType === 3 && // TEXT_NODE
-        e.target.textContent.trim().length > 0
-      ) {
+      // --- 修改：判断是否是链接 (<a> 标签)，不再强制要求有文本 ---
+      if (tag === 'a') {
         setCurrentEdit({
-          element: e.target,
-          content: e.target.textContent,
+          element: targetElement,
+          elementType: 'a', // 标记类型为链接
+          content: targetElement.textContent, // 链接的文本 (可能为空)
+          linkHref: targetElement.getAttribute('href') || '', // 链接的 URL
           selector: '',
-          originalContent: e.target.textContent
+          originalContent: targetElement.textContent, // 原始文本
+          originalLinkHref: targetElement.getAttribute('href') || '', // 原始 URL
+        });
+        setShowSidebar(true);
+        return;
+      }
+      // --- 修改：判断是否是独立的文字节点 (排除 <a> 和 <img> 标签) ---
+      if (
+        tag !== 'a' && tag !== 'img' && // 确保不是上面已经处理过的 <a> 或 <img> 标签
+        targetElement.childNodes.length === 1 &&
+        targetElement.childNodes[0].nodeType === 3 && // TEXT_NODE
+        targetElement.textContent.trim().length > 0
+      ) {
+        // 独立的文本节点
+        setCurrentEdit({
+          element: targetElement,
+          elementType: 'text',
+          content: targetElement.textContent,
+          selector: '',
+          originalContent: targetElement.textContent,
+          linkHref: null,
+          originalLinkHref: null,
         });
         setShowSidebar(true);
         return;
@@ -348,9 +416,9 @@ export default function HtmlPreview({ pageId }) {
 
       // 其他情况，弹出提示
       showNotification(
-        'All text and image areas on the page can be edited by clicking them.', // 第一个参数：字符串消息
-        'info', // 第二个参数：类型
-        2000 // 第三个参数：持续时间 (毫秒)
+        'All text, image, and link areas on the page can be edited by clicking them.',
+        'info',
+        2000
       );
     }
 
@@ -1354,7 +1422,12 @@ export default function HtmlPreview({ pageId }) {
         {/* Edit Sidebar - Updated Style for Right Sidebar */}
         {showSidebar && (
           <Drawer
-            title={currentEdit.element?.tagName === 'IMG' ? 'Edit Image Source' : 'Edit Content'}
+            // --- 修改：根据类型动态设置标题 ---
+            title={
+              currentEdit.elementType === 'img' ? 'Edit Image Source' :
+              currentEdit.elementType === 'a' ? 'Edit Link' :
+              'Edit Content'
+            }
             placement="right"
             closable={true} // 显示关闭按钮
             onClose={closeSidebar}
@@ -1371,37 +1444,40 @@ export default function HtmlPreview({ pageId }) {
                 </Button>
               </div>
             }
+            // --- 新增：为 Drawer Body 添加内边距 ---
+            styles={{ body: { padding: '16px 24px' } }} // 调整内边距
           >
-            {currentEdit.element?.tagName === 'IMG' ? (
+            {/* --- 修改：根据 elementType 渲染不同内容 --- */}
+            {currentEdit.elementType === 'img' ? (
               <>
-                {/* 图片编辑相关 UI */}
-                <Input.TextArea // --- 使用 Input.TextArea 替代原生 textarea 以获得一致样式 ---
+                {/* 图片编辑相关 UI (保持不变) */}
+                <Input.TextArea
                   value={currentEdit.content}
                   onChange={e => setCurrentEdit({ ...currentEdit, content: e.target.value })}
                   style={{
                     width: '100%',
-                    marginBottom: 12, // 添加一些间距
-                    fontFamily: 'monospace', // 保留等宽字体以便编辑 URL
-                    height: '300px', // --- 设置固定高度 ---
-                    resize: 'none', // 禁止调整大小
+                    marginBottom: 12,
+                    fontFamily: 'monospace',
+                    height: '150px', // 调整高度
+                    resize: 'none',
                   }}
                   placeholder="Enter image URL or select an image"
                 />
                 <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-                  <Button // --- 使用标准 Button ---
-                    type="primary" // --- 使用 primary 类型获得浅色主题下的标准样式 ---
+                  <Button
+                    type="primary"
                     onClick={() => setShowImageLibrary(true)}
                   >
                     Select/Upload Image
                   </Button>
                 </div>
-                {/* Image Preview */}
+                {/* Image Preview (保持不变) */}
                 {currentEdit.content && (
-                  <div style={{ textAlign: 'center', background: '#f0f0f0', padding: 8, borderRadius: 8, marginBottom: 16 }}> {/* --- 使用浅灰色背景 --- */}
+                  <div style={{ textAlign: 'center', background: '#f0f0f0', padding: 8, borderRadius: 8, marginBottom: 16 }}>
                     <img src={currentEdit.content} alt="Preview" style={{ maxWidth: '100%', maxHeight: 180, borderRadius: 4, display: 'block', margin: 'auto' }} />
                   </div>
                 )}
-                {/* Image Library Modal (移除深色样式) */}
+                {/* Image Library Modal (保持不变) */}
                 <Modal
                   open={showImageLibrary}
                   title="Image Library"
@@ -1631,18 +1707,50 @@ export default function HtmlPreview({ pageId }) {
                   </Modal>
                 </Modal>
               </>
+            ) : currentEdit.elementType === 'a' ? (
+              // --- 新增：链接编辑区域 ---
+              <>
+                {/* --- 修改：仅当 content 不为空时显示 Link Text 编辑 --- */}
+                {currentEdit.content && currentEdit.content.trim().length > 0 && (
+                  <div style={{ marginBottom: 16 }}>
+                    <label style={{ display: 'block', marginBottom: 4, fontWeight: 500, color: '#4b5563' }}>Link Text</label>
+                    <Input.TextArea
+                      value={currentEdit.content}
+                      onChange={e => setCurrentEdit({ ...currentEdit, content: e.target.value })}
+                      style={{
+                        width: '100%',
+                        height: '100px',
+                        resize: 'none',
+                      }}
+                      placeholder="Enter link text"
+                    />
+                  </div>
+                )}
+                {/* --- Link URL 编辑 (始终显示) --- */}
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', marginBottom: 4, fontWeight: 500, color: '#4b5563' }}>Link URL (href)</label>
+                  <Input
+                    value={currentEdit.linkHref}
+                    onChange={e => setCurrentEdit({ ...currentEdit, linkHref: e.target.value })}
+                    style={{ width: '100%' }}
+                    placeholder="e.g., https://example.com or /page"
+                  />
+                </div>
+              </>
             ) : (
-              // 文本编辑区域
-              <Input.TextArea // --- 使用 Input.TextArea ---
-                value={currentEdit.content}
-                onChange={e => setCurrentEdit({ ...currentEdit, content: e.target.value })}
-                style={{
-                  width: '100%',
-                  // --- 修改：设置固定高度 ---
-                  height: '300px',
-                  resize: 'none', // 禁止调整大小
-                }}
-              />
+              // --- 修改：普通文本编辑区域 ---
+              <>
+                <label style={{ display: 'block', marginBottom: 4, fontWeight: 500, color: '#4b5563' }}>Text Content</label>
+                <Input.TextArea
+                  value={currentEdit.content}
+                  onChange={e => setCurrentEdit({ ...currentEdit, content: e.target.value })}
+                  style={{
+                    width: '100%',
+                    height: '300px', // 保持较大高度
+                    resize: 'none',
+                  }}
+                />
+              </>
             )}
           </Drawer>
         )}
