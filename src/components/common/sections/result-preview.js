@@ -267,13 +267,6 @@ const HistoryCardList = () => {
     }
   }, [selectedPreviewId, resultDetail]);
 
-  // 滚动到左/右
-  const scrollBy = (offset) => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollBy({ left: offset, behavior: 'smooth' });
-    }
-  };
-
   // === 新增：useEffect 监听 verifiedDomains 变化并设置默认选中项 ===
   useEffect(() => {
     // 仅当 verifiedDomains 数组更新且包含元素时执行
@@ -286,27 +279,6 @@ const HistoryCardList = () => {
     }
     // 这个 effect 依赖于 verifiedDomains 状态
   }, [verifiedDomains]);
-
-  // === 新增：获取可导航的已完成任务列表 ===
-  const finishedTasks = historyList.filter(task => task.generatorStatus === 'finished');
-  const currentTaskIndex = finishedTasks.findIndex(task => task.websiteId === selectedItem?.websiteId);
-
-  // === 新增：导航到下一个/上一个已完成任务 ===
-  const navigateTask = (direction) => {
-    if (finishedTasks.length <= 1) return; // 如果只有一个或没有已完成任务，则不导航
-
-    let nextIndex;
-    if (direction === 'next') {
-      nextIndex = (currentTaskIndex + 1) % finishedTasks.length;
-    } else {
-      nextIndex = (currentTaskIndex - 1 + finishedTasks.length) % finishedTasks.length;
-    }
-
-    const nextTask = finishedTasks[nextIndex];
-    if (nextTask && nextTask.websiteId !== selectedItem?.websiteId) {
-      handleCardClick(nextTask); // 使用 handleCardClick 加载新任务的数据
-    }
-  };
 
   // === 新增：函数用于渲染任务状态标签 ===
   const renderStatusBadge = (status) => {
@@ -377,29 +349,7 @@ const HistoryCardList = () => {
             )}
           </button>
         </div>
-        {/* 左右滚动按钮 */}
-        <button
-          className="absolute left-64 top-1/2 -translate-y-1/2 z-20 bg-slate-800/80 hover:bg-slate-700/80 rounded-full p-2 shadow border border-slate-700 transition disabled:opacity-40"
-          style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          onClick={() => scrollBy(-360)}
-          aria-label="left scroll"
-        >
-          <span className="flex items-center justify-center w-full h-full">
-            <LeftOutlined style={{ fontSize: 20, color: '#38bdf8' }} />
-          </span>
-        </button>
-        <button
-          className="absolute right-64 top-1/2 -translate-y-1/2 z-20 bg-slate-800/80 hover:bg-slate-700/80 rounded-full p-2 shadow border border-slate-700 transition disabled:opacity-40"
-          style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          onClick={() => scrollBy(360)}
-          aria-label="right scroll"
-        >
-          <span className="flex items-center justify-center w-full h-full">
-            <RightOutlined style={{ fontSize: 20, color: '#38bdf8' }} />
-          </span>
-        </button>
         <div
-          ref={scrollRef}
           className="w-full max-w-7xl px-4 py-2 overflow-x-scroll scrollbar-hide relative"
           style={{
             scrollBehavior: 'smooth',
@@ -677,7 +627,7 @@ const HistoryCardList = () => {
               </button>
             </div>
             {/* === 左右导航按钮 === */}
-            {finishedTasks.length > 1 && selectedItem.generatorStatus === 'finished' && (
+            {/* {finishedTasks.length > 1 && selectedItem.generatorStatus === 'finished' && (
               <>
                 <button
                   className="absolute left-4 top-1/2 -translate-y-1/2 z-30 bg-slate-800/80 hover:bg-slate-700/90 rounded-full p-2 shadow border border-slate-700 transition disabled:opacity-40 flex items-center justify-center"
@@ -698,82 +648,80 @@ const HistoryCardList = () => {
                   <RightOutlined style={{ fontSize: 22, color: '#38bdf8' }} />
                 </button>
               </>
-            )}
+            )} */}
            
             {resultLoading ? (
               <div className="flex-1 flex items-center justify-center">
                 <Spin size="large" />
               </div>
             ) : Array.isArray(resultDetail?.data) && resultDetail.data.length > 0 ? (
-              <div className="flex flex-col flex-1 min-h-0 text-sm">
-                <div className="text-center text-lg font-bold text-cyan-300 pt-3 pb-1 tracking-wide flex-shrink-0">
-                  Task Preview
-                </div>
-                <div className="flex-shrink-0 px-4 pb-2 border-b border-slate-800">
-                  <div className="overflow-x-auto scrollbar-hide pb-1">
-                    <div className="inline-flex flex-row flex-nowrap gap-3">
-                      {historyList
-                        .filter(task => task.generatorStatus === 'finished')
-                        .map((item) => (
-                        <div
-                          key={item.websiteId}
-                          className={`
-                            group relative rounded-md bg-white/5 hover:bg-white/10 transition
-                            shadow-sm p-1.5 flex flex-col items-center justify-between
-                            min-h-[70px] w-[240px] max-w-[240px] flex-shrink-0
-                            border hover:border-primary-500
-                            cursor-pointer text-xxs
-                            ${selectedItem.websiteId === item.websiteId
-                              ? 'border-cyan-500 ring-1 ring-cyan-500/60 bg-white/10'
-                              : 'border-white/10'}
-                          `}
-                          onClick={() => {
-                            if (selectedItem.websiteId !== item.websiteId) {
-                              handleCardClick(item);
-                            }
+              <div className="flex flex-row flex-1 min-h-0 text-sm">
+                <div className="w-[280px] flex-shrink-0 flex flex-col border-r border-slate-800 bg-slate-950/30 overflow-hidden">
+                  <div className="text-center text-base font-bold text-cyan-300 pt-3 pb-2 tracking-wide flex-shrink-0 border-b border-slate-800">
+                    My Tasks
+                  </div>
+                  <div className="flex-1 overflow-y-auto scrollbar-hide p-3 space-y-3">
+                    {historyList
+                      .filter(task => task.generatorStatus === 'finished' || task.generatorStatus === 'processing' || task.generatorStatus === 'failed')
+                      .map((item) => (
+                      <div
+                        key={item.websiteId}
+                        className={`
+                          group relative rounded-lg bg-white/5 hover:bg-white/10 transition
+                          shadow-md p-3 flex flex-col items-start justify-between
+                          border hover:border-primary-500
+                          cursor-pointer text-xs
+                          ${selectedItem.websiteId === item.websiteId
+                            ? 'border-cyan-500 ring-1 ring-cyan-500/60 bg-gradient-to-r from-cyan-900/30 to-slate-900/50'
+                            : 'border-white/10'}
+                        `}
+                        onClick={() => {
+                          if (selectedItem.websiteId !== item.websiteId) {
+                            handleCardClick(item);
+                          }
+                        }}
+                      >
+                        <button
+                          className="absolute top-2 right-2 bg-red-700/70 hover:bg-red-800/80 text-white rounded-full p-1 shadow transition z-10"
+                          title="Delete"
+                          style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                          onClick={e => {
+                            e.stopPropagation();
+                            setDeleteConfirm({ open: true, id: item.websiteId });
                           }}
+                          disabled={deletingId === item.websiteId || isClearingAll}
                         >
-                          {/* === 新增：右上角删除按钮 === */}
-                          <button
-                            className="absolute top-1 right-1 bg-red-700/70 hover:bg-red-800/80 text-white rounded-full p-1 shadow transition"
-                            title="Delete"
-                            style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                            onClick={e => {
-                              e.stopPropagation();
-                              setDeleteConfirm({ open: true, id: item.websiteId });
-                            }}
-                            disabled={deletingId === item.websiteId || isClearingAll}
-                          >
-                            <DeleteOutlined style={{ fontSize: 14 }} />
-                          </button>
-                          {/* === 结束新增 === */}
-                          <div className="w-full flex flex-col items-center">
-                            <div className="font-semibold text-xs text-white mb-0 truncate w-full text-center">{item.website}</div>
-                            <div className="mt-0.5">
-                              {renderStatusBadge(item.generatorStatus)}
-                            </div>
-                            <div className="text-gray-400 mt-0.5">
-                              ID: <span className="text-gray-300 font-mono">{item.websiteId.substring(0, 8)}...</span>
-                            </div>
-                            {item.generatedStart && (
-                              <div className="text-gray-500">
-                                Start: {new Date(item.generatedStart).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}
-                              </div>
-                            )}
-                            {item.generatedEnd && (
-                              <div className="text-gray-500">
-                                End: {new Date(item.generatedEnd).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}
-                              </div>
-                            )}
+                          <DeleteOutlined style={{ fontSize: 16 }} />
+                        </button>
+                        <div className="w-full flex flex-col items-start">
+                          <div className="font-semibold text-sm text-white mb-1 truncate w-[90%]">{item.website}</div>
+                          <div className="mb-1.5">
+                            {renderStatusBadge(item.generatorStatus)}
                           </div>
+                          <div className="text-gray-400 text-xxs mb-0.5">
+                            ID: <span className="text-gray-300 font-mono">{item.websiteId.substring(0, 12)}...</span>
+                          </div>
+                          {item.generatedStart && (
+                            <div className="text-gray-500 text-xxs">
+                              Start: {new Date(item.generatedStart).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })}
+                            </div>
+                          )}
+                          {item.generatedEnd && (
+                            <div className="text-gray-500 text-xxs">
+                              End: {new Date(item.generatedEnd).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })}
+                            </div>
+                          )}
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-                <div className="flex flex-row flex-1 min-h-0 overflow-hidden p-4">
+                <div className="flex flex-col flex-1 min-h-0 overflow-hidden p-4">
                   <div className="flex flex-row flex-1 min-h-0 bg-gradient-to-br from-slate-900 via-slate-950 to-black rounded-lg shadow-xl overflow-hidden border border-slate-800">
                     <div className="w-[300px] p-3 flex flex-col gap-3 overflow-y-auto border-r border-slate-800 bg-slate-900/80 scrollbar-hide text-xs flex-shrink-0">
+                      <div className="text-center text-base font-bold text-cyan-300 pb-1 tracking-wide flex-shrink-0 border-b border-slate-700 mb-2">
+                        Result Details
+                      </div>
                       <div>
                         <div className="mb-1 text-sm font-bold text-cyan-300 tracking-wide pl-1">All Results</div>
                         <div className="flex flex-col gap-1.5">
@@ -803,7 +751,6 @@ const HistoryCardList = () => {
                           ))}
                         </div>
                       </div>
-                      <div className="border-t border-slate-700 my-1.5"></div>
                       <div>
                         <div className="text-xs font-semibold text-cyan-300 mb-0.5">Deploy Status</div>
                         {currentItem.deploymentStatus === 'publish' ? (
@@ -1033,7 +980,6 @@ const HistoryCardList = () => {
                         )}
                       </div>
                     </div>
-                    {/* Right: Preview */}
                     <div className="flex-1 flex justify-center bg-gradient-to-br from-black via-slate-950 to-slate-900 p-3 min-h-0">
                       {(() => {
                         const previewItem = resultDetail.data.find(i => i.resultId === selectedPreviewId);
@@ -1055,16 +1001,12 @@ const HistoryCardList = () => {
                                 <div className="w-2 h-2 rounded-full bg-red-400 mr-2"></div>
                                 <div className="w-2 h-2 rounded-full bg-yellow-400 mr-2"></div>
                                 <div className="w-2 h-2 rounded-full bg-green-400 mr-4"></div>
-                                <div className="flex-1 bg-gray-900 text-gray-200 text-xxs px-1.5 py-0.5 rounded border border-gray-700 truncate">
-                                  {previewUrl}
-                                </div>
-                                {/* === 新增：将预览和编辑按钮移到此处并高亮 === */}
                                 <button
                                   onClick={() => {
                                     if (previewUrl) window.open(previewUrl, '_blank');
                                   }}
                                   className={`
-                                    ml-2 px-2 py-0.5 rounded text-xs font-semibold text-white shadow-sm transition duration-200
+                                    mr-2 px-2 py-0.5 rounded text-xs font-semibold text-white shadow-sm transition duration-200
                                     bg-gradient-to-r from-green-500 to-cyan-500 hover:from-green-400 hover:to-cyan-400
                                     disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-600 disabled:to-gray-700
                                   `}
@@ -1080,7 +1022,7 @@ const HistoryCardList = () => {
                                     }
                                   }}
                                   className={`
-                                    ml-1 px-2 py-0.5 rounded text-xs font-semibold text-white shadow-sm transition duration-200
+                                    mr-2 px-2 py-0.5 rounded text-xs font-semibold text-white shadow-sm transition duration-200
                                     bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400
                                     disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-600 disabled:to-gray-700
                                   `}
@@ -1089,7 +1031,9 @@ const HistoryCardList = () => {
                                 >
                                   Edit
                                 </button>
-                                {/* === 结束新增按钮 === */}
+                                <div className="flex-1 bg-gray-900 text-gray-200 text-xxs px-1.5 py-0.5 rounded border border-gray-700 truncate">
+                                  {previewUrl}
+                                </div>
                               </div>
                             </div>
                             <div className="flex-1 overflow-hidden rounded-b-lg">
