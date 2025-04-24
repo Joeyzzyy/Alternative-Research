@@ -6,14 +6,14 @@ import { useSearchParams } from 'next/navigation'; // 新增：用于读取URL�
 // 邀请页面组件
 export default function InvitationPage() {
   const searchParams = useSearchParams(); // 新增
-  const code = searchParams.get('c') || 'LBYALTPAGE'; // 优先取URL参数，否则用默认
+  const code = searchParams.get('c') || 'ZH1-LBYALTPAGE'; // 优先取URL参数，否则用默认
 
   // code和姓名的映射
   const inviterMap = {
-    'LBYALTPAGE': '罗彬月',
+    'ZH1-LBYALTPAGE': '朱鹤',
     'ZYALTPAGE': '朱越',
   };
-  const inviterName = inviterMap[code] || '罗彬月'; // 默认罗彬月
+  const inviterName = inviterMap[code] || '朱鹤'; 
 
   return (
     <div style={{
