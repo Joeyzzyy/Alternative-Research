@@ -24,8 +24,8 @@ const BACKGROUNDS = {
   DAY_GHIBLI: { // 重命名 GHIBLI 为 DAY_GHIBLI
     type: 'image',
     value: 'url("/images/GHIBLI-BEST.png")',
-    overlay: 'bg-slate-950/60',
-    buttonStyle: 'bg-amber-500/30 hover:bg-amber-500/40 text-amber-200 border-amber-500/40 hover:border-amber-400/60',
+    overlay: 'bg-stone-900/60', // 统一为 stone
+    buttonStyle: 'bg-amber-500/30 hover:bg-amber-500/40 text-amber-100 border-amber-500/40 hover:border-amber-400/60',
     inputStyle: 'border-amber-400/30 focus:border-amber-300/50 shadow-amber-700/20',
     cardStyle: 'border-amber-500/30 hover:border-amber-400/50 shadow-amber-700/20'
   }
@@ -2531,7 +2531,7 @@ const ResearchTool = ({
           {contextHolder}
 
           {/* 覆盖层 */}
-          <div className={`absolute inset-0 ${getOverlayClass()}`}></div>
+          <div className={`absolute inset-0 bg-stone-900/60`}></div>
 
         {/* 添加垂直文本样式 */}
           <style jsx>{`
@@ -2546,33 +2546,28 @@ const ResearchTool = ({
         <div className={`relative z-10 w-full max-w-4xl px-8 py-12 initial-screen-content rounded-xl bg-transparent`}> {/* 移除背景和模糊 */}
           <div className={`text-center mb-8 text-shadow`}> {/* 应用 text-shadow */}
             {/* 修改 h1 以使用 Flexbox 进行对齐 */}
-            <h1 className={`text-4xl font-bold ${currentBackground === 'DAY_GHIBLI' ? 'text-amber-100' : 'text-white'} mb-6 drop-shadow-lg flex items-center justify-center gap-3`}> {/* 应用 drop-shadow, 添加 flex, items-center, justify-center, gap */}
+            <h1 className={`text-4xl font-bold text-amber-100 mb-6 drop-shadow-lg flex items-center justify-center gap-3`}> {/* 应用 drop-shadow, 添加 flex, items-center, justify-center, gap */}
               <span> {/* 将文本包裹在 span 中 */}
-                Turn Competitors'<span className={currentBackground === 'DAY_GHIBLI' ? 'text-amber-400' : 'text-blue-400'}>&nbsp;Popularity&nbsp;</span>
+                Turn Competitors'<span className="text-amber-400">&nbsp;Popularity&nbsp;</span>
                 Into Your Success
               </span>
               {/* 修改切换背景按钮 */}
               <Tooltip title={currentBackground === 'DAY_GHIBLI' ? "Switch to Night Mode" : "Switch to Day Mode"}>
                 <button
                   onClick={toggleBackground}
-                  // 调整 padding, 移除 gap, 保持其他样式
-                  // 移除 ml-4, 因为 gap 已经提供了间距
-                  // 移除 align-middle，因为它在 flex 布局中是多余的
                   className={`inline-flex items-center justify-center p-2 text-xs ${getButtonStyle()} rounded-full
                            backdrop-blur-sm transition-all border
                            shadow-lg hover:scale-105`} 
                 >
                   {/* 根据状态显示不同图标 */}
                   {currentBackground === 'DAY_GHIBLI'
-                    // 添加 flex-shrink-0 确保图标不收缩
-                    ? <BulbOutlined className="w-4 h-4 flex-shrink-0" /> 
-                    // 添加 flex-shrink-0 确保图标不收缩
-                    : <BulbFilled className="w-4 h-4 flex-shrink-0" />   
+                    ? <BulbOutlined className="flex-shrink-0" /> 
+                    : <BulbFilled className="flex-shrink-0" />   
                   }
                 </button>
               </Tooltip>
               </h1>
-            <p className={`text-lg ${currentBackground === 'DAY_GHIBLI' ? 'text-amber-200/90' : 'text-gray-300'} mb-8 drop-shadow-md`}> {/* 应用 drop-shadow */}
+            <p className={`text-lg text-amber-200/90 mb-8 drop-shadow-md`}> {/* 应用 drop-shadow */}
 
                 Create strategic alternative pages that capture high-intent traffic and convert browsers into customers.
               </p>
@@ -2599,11 +2594,11 @@ const ResearchTool = ({
                     localStorage.setItem('urlInput', e.target.value);
                   }}
                   // 强制使用 Day Ghibli 的边框/阴影样式，并保留 research-tool-input 类
-                  className={`research-tool-input bg-white/10 border rounded-xl text-lg w-full`}
+                  className={`research-tool-input border rounded-xl text-lg w-full bg-white/90 border-amber-600/50 focus:border-amber-500 focus:ring focus:ring-amber-500/30 text-stone-800 placeholder-stone-500/80`}
                   style={{
-                    backgroundColor: 'white',
-                    color: '#fff',  
-                    color: '#2d1a06',
+                    // 强制使用 Day Ghibli 的文字和背景色
+                    color: '#433422',
+                    backgroundColor: 'rgba(253, 230, 190, 0.85)',
                     height: '80px',
                     paddingRight: '220px', // 增加右侧内边距，容纳两个按钮
                     // 新增以下样式，防止 placeholder 溢出
@@ -2643,7 +2638,7 @@ const ResearchTool = ({
                   {/* 新增 History 按钮 */}
                   <button
                     type="button"
-                    className="px-6 py-4 text-base bg-gradient-to-r from-gray-600 to-gray-800 text-white rounded-xl border border-gray-400/50 hover:border-gray-300 shadow-lg transition-all duration-300 flex items-center gap-2"
+                    className="px-6 py-4 text-base rounded-xl border shadow-lg transition-all duration-300 flex items-center gap-2 bg-stone-700 text-stone-100 border-stone-500/50 hover:border-stone-400 hover:bg-stone-800"
                     style={{ height: '64px' }}
                     onClick={() => {
                       const el = document.getElementById('result-preview-section');
@@ -2678,95 +2673,61 @@ const ResearchTool = ({
             <div className="mt-12 max-w-4xl mx-auto">
             <h3 className={`text-xl font-semibold ${currentBackground === 'DAY_GHIBLI' ? 'text-amber-100' : 'text-white'} mb-6 text-center drop-shadow-lg`}>Some Outstanding Alternative Pages Cases Generated By Us</h3> {/* 应用 drop-shadow */}
               <div className="grid grid-cols-3 gap-6">
-              {/* Example Card 1: Page Ranking */}
-              <div
-                onClick={() => handleExampleClick('ranking')}
-                className={`${getCardStyle()} backdrop-blur-sm p-5 rounded-xl
-                           border cursor-pointer hover:-translate-y-1
-                           transition-all duration-300
-                         relative overflow-hidden group flex flex-col justify-between`} 
-              >
-                <div> {/* Group top content */}
-                  <div className={`absolute -right-6 -top-6 w-16 h-16 ${currentBackground === 'DAY_GHIBLI' ? 'bg-amber-400/20 group-hover:bg-amber-400/30' : 'bg-blue-400/20 group-hover:bg-blue-400/30'} rounded-full blur-xl transition-all`}></div>
-                  <div className="w-10 h-10 mb-3 flex items-center justify-center bg-white/90 rounded-lg">
-                    <svg className={`w-6 h-6 ${currentBackground === 'DAY_GHIBLI' ? 'text-amber-600' : 'text-blue-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                    </svg>
+                {/* 统一卡片样式 */}
+                {[1,2,3].map((i) => (
+                  <div
+                    key={i}
+                    onClick={() => handleExampleClick(i === 1 ? 'ranking' : i === 2 ? 'conversion' : 'sem')}
+                    className="bg-stone-800/40 border-amber-700/30 hover:border-amber-600/50 text-stone-300 backdrop-blur-sm p-5 rounded-xl border cursor-pointer hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="absolute -right-6 -top-6 w-16 h-16 bg-amber-500/10 group-hover:bg-amber-500/20 rounded-full blur-xl transition-all"></div>
+                      <div className="w-10 h-10 mb-3 flex items-center justify-center bg-white/90 rounded-lg">
+                        {/* 统一 icon 颜色 */}
+                        {i === 1 && (
+                          <svg className="w-6 h-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                          </svg>
+                        )}
+                        {i === 2 && (
+                          <svg className="w-6 h-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                          </svg>
+                        )}
+                        {i === 3 && (
+                          <svg className="w-6 h-6 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+                          </svg>
+                        )}
+                      </div>
+                      {/* 统一标题颜色 */}
+                      <div className="text-amber-300 group-hover:text-amber-200 font-medium mb-1 text-base">
+                        {i === 1 && 'Improve Search Ranking'}
+                        {i === 2 && 'Maximize Conversion Rates'}
+                        {i === 3 && 'Effective PPC Landing Pages'}
+                      </div>
+                      {/* 统一描述颜色 */}
+                      <div className="text-xs text-stone-400 group-hover:text-stone-300 mb-2">
+                        {i === 1 && 'SEO-focused pages designed to rank higher.'}
+                        {i === 2 && 'Targeted content to boost user engagement.'}
+                        {i === 3 && 'Optimized pages for paid campaigns.'}
+                      </div>
+                    </div>
+                    <div>
+                      {/* 统一结果颜色 */}
+                      <div className="mt-1 text-xs text-amber-400/90 group-hover:text-opacity-100 transition-opacity">
+                        <span className="font-semibold">Result:</span>
+                        {i === 1 && ' +45% Traffic, Page 1 Ranking'}
+                        {i === 2 && ' +25% Conversion, Niche Ranking Up'}
+                        {i === 3 && ' +15% Lead Conversion, 8 Keywords Ranked'}
+                      </div>
+                      {/* 统一箭头颜色 */}
+                      <div className="absolute bottom-3 right-3">
+                        <ArrowRightOutlined className="text-amber-500/50 group-hover:text-amber-400 transition-all" />
+                      </div>
+                    </div>
                   </div>
-                  <div className={`${currentBackground === 'DAY_GHIBLI' ? 'text-amber-300 group-hover:text-amber-200' : 'text-blue-300 group-hover:text-blue-200'} font-medium mb-1 text-base`}>Improve Search Ranking</div>
-                  {/* --- 修改：匿名化描述 --- */}
-                  <div className="text-xs text-gray-400 group-hover:text-gray-300 mb-2">SEO-focused pages designed to rank higher.</div>
-                </div>
-                <div> {/* Group bottom content including results and arrow */}
-                  {/* Result 保持不变 */}
-                  <div className={`mt-1 text-xs ${currentBackground === 'DAY_GHIBLI' ? 'text-amber-400/90' : 'text-cyan-400/90'} group-hover:text-opacity-100 transition-opacity`}>
-                    <span className="font-semibold">Result:</span> +45% Traffic, Page 1 Ranking
-                  </div>
-                  <div className="absolute bottom-3 right-3">
-                    <ArrowRightOutlined className={`${currentBackground === 'DAY_GHIBLI' ? 'text-amber-400/50 group-hover:text-amber-300' : 'text-blue-400/50 group-hover:text-blue-300'} transition-all`} />
-                  </div>
-                </div>
-              </div>
-
-              {/* Example Card 2: Conversion Rate */}
-              <div
-                onClick={() => handleExampleClick('conversion')}
-                className={`${getCardStyle()} backdrop-blur-sm p-5 rounded-xl
-                           border cursor-pointer hover:-translate-y-1
-                           transition-all duration-300
-                         relative overflow-hidden group flex flex-col justify-between`} 
-              >
-                 <div> {/* Group top content */}
-                  <div className={`absolute -right-6 -top-6 w-16 h-16 ${currentBackground === 'DAY_GHIBLI' ? 'bg-purple-400/20 group-hover:bg-purple-400/30' : 'bg-pink-400/20 group-hover:bg-pink-400/30'} rounded-full blur-xl transition-all`}></div> 
-                  <div className="w-10 h-10 mb-3 flex items-center justify-center bg-white/90 rounded-lg">
-                    <svg className={`w-6 h-6 ${currentBackground === 'DAY_GHIBLI' ? 'text-purple-600' : 'text-pink-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"> 
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                    </svg>
-                  </div>
-                  <div className={`${currentBackground === 'DAY_GHIBLI' ? 'text-purple-300 group-hover:text-purple-200' : 'text-pink-300 group-hover:text-pink-200'} font-medium mb-1 text-base`}>Maximize Conversion Rates</div> 
-                  {/* --- 修改：匿名化描述 --- */}
-                  <div className="text-xs text-gray-400 group-hover:text-gray-300 mb-2">Targeted content to boost user engagement.</div>
-                </div>
-                <div> {/* Group bottom content including results and arrow */}
-                  {/* Result 保持不变 */}
-                  <div className={`mt-1 text-xs ${currentBackground === 'DAY_GHIBLI' ? 'text-purple-400/90' : 'text-pink-400/90'} group-hover:text-opacity-100 transition-opacity`}> 
-                    <span className="font-semibold">Result:</span> +25% Conversion, Niche Ranking Up
-                  </div>
-                  <div className="absolute bottom-3 right-3">
-                    <ArrowRightOutlined className={`${currentBackground === 'DAY_GHIBLI' ? 'text-purple-400/50 group-hover:text-purple-300' : 'text-pink-400/50 group-hover:text-pink-300'} transition-all`} /> 
-                  </div>
-                </div>
-              </div>
-
-              {/* Example Card 3: PPC Landing Pages */}
-              <div
-                onClick={() => handleExampleClick('sem')}
-                className={`${getCardStyle()} backdrop-blur-sm p-5 rounded-xl
-                           border cursor-pointer hover:-translate-y-1
-                           transition-all duration-300
-                         relative overflow-hidden group flex flex-col justify-between`} 
-              >
-                <div> {/* Group top content */}
-                  <div className={`absolute -right-6 -top-6 w-16 h-16 ${currentBackground === 'DAY_GHIBLI' ? 'bg-rose-400/20 group-hover:bg-rose-400/30' : 'bg-orange-400/20 group-hover:bg-orange-400/30'} rounded-full blur-xl transition-all`}></div> 
-                  <div className="w-10 h-10 mb-3 flex items-center justify-center bg-white/90 rounded-lg">
-                    <svg className={`w-6 h-6 ${currentBackground === 'DAY_GHIBLI' ? 'text-rose-600' : 'text-orange-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor"> 
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
-                    </svg>
-                  </div>
-                  <div className={`${currentBackground === 'DAY_GHIBLI' ? 'text-rose-300 group-hover:text-rose-200' : 'text-orange-300 group-hover:text-orange-200'} font-medium mb-1 text-base`}>Effective PPC Landing Pages</div> 
-                  {/* --- 修改：匿名化描述 --- */}
-                  <div className="text-xs text-gray-400 group-hover:text-gray-300 mb-2">Optimized pages for paid campaigns.</div>
-                </div>
-                <div> {/* Group bottom content including results and arrow */}
-                  {/* Result 保持不变 */}
-                  <div className={`mt-1 text-xs ${currentBackground === 'DAY_GHIBLI' ? 'text-rose-400/90' : 'text-amber-400/90'} group-hover:text-opacity-100 transition-opacity`}> 
-                    <span className="font-semibold">Result:</span> +15% Lead Conversion, 8 Keywords Ranked
-                  </div>
-                  <div className="absolute bottom-3 right-3">
-                    <ArrowRightOutlined className={`${currentBackground === 'DAY_GHIBLI' ? 'text-rose-400/50 group-hover:text-rose-300' : 'text-orange-400/50 group-hover:text-orange-300'} transition-all`} /> 
-                  </div>
-                </div>
-              </div>
+                ))}
               </div>
             </div>
           </div>
