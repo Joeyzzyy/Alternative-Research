@@ -3010,7 +3010,7 @@ const ResearchTool = ({
                 </div>
                   <div className="flex items-center text-xs">
                       {/* --- 新增：Go Deploy Now 按钮 --- */}
-                        <div className="p-3 border-b border-gray-700/50 flex justify-end">
+                        <div className="p-3 flex justify-end" style={{padding: 0}}>
                             <div> 
                               <Button
                                 type="primary"
