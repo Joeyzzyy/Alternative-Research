@@ -5,11 +5,11 @@ import { UploadOutlined, DeleteOutlined, CheckOutlined, EditOutlined, CloseOutli
 
 // --- 新增：定义常用提示 ---
 const commonPrompts = [
-  "Make the heading larger",
-  "Make all text larger",
-  "Make all text smaller",
-  "Make the image larger",
-  "Make the image smaller",
+  "Increase the heading size by 10%",
+  "Increase all text size by 10%",
+  "Decrease all text size by 10%",
+  "Increase the image size by 10%",
+  "Decrease the image size by 10%",
   "Rewrite this to be more concise",
   "Improve the call to action",
   "Change the tone to be more professional",
