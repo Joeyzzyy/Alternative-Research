@@ -42,7 +42,6 @@ const ResearchTool = ({
   const [isMessageSending, setIsMessageSending] = useState(false);
   const [rightPanelTab, setRightPanelTab] = useState('details');
   const [currentWebsiteId, setCurrentWebsiteId] = useState(null);
-  const [detailsData, setDetailsData] = useState([]);
   const inputRef = useRef(null);
   const chatEndRef = useRef(null);
   const [showInitialScreen, setShowInitialScreen] = useState(true);
@@ -431,7 +430,7 @@ const ResearchTool = ({
     return filteredContent;
   };
 
-  const renderDetails = (details) => {
+  const renderDetails = () => {
     // 首先，合并相同 message_id 的 Agent 消息
     const mergedLogs = [];
     const agentMessageMap = new Map();
@@ -461,7 +460,7 @@ const ResearchTool = ({
                   id: message_id,
                   type: 'Agent',
                   content: filteredAnswer,
-                  timestamp: log.timestamp
+                  timestamp: log.timestamp,
                 });
               } else {
                 // 追加内容
@@ -589,11 +588,6 @@ const ResearchTool = ({
               difyContent = log.content;
             }
 
-            // 获取当前日志的累积内容
-            const currentHtmlContent = log.id === currentStreamIdRef.current 
-              ? htmlStreamRef.current 
-              : log.content;
-
             const latestHtmlLog = logs.filter(l => l.type === 'Html').slice(-1)[0];
             const latestHtmlLogId = latestHtmlLog ? latestHtmlLog.id : null;
 
@@ -651,23 +645,23 @@ const ResearchTool = ({
                   </div>
                 </div>
 
-                {/* Dify 日志内容渲染 - 优化布局和重点 */}
+                {/* Dify 日志内容渲染 - 低调高级风格 */}
                 {log.type === 'Dify' && difyContent && (
-                  <div className="text-[10px] text-gray-400 break-words leading-relaxed space-y-1">
-                    {/* Current Action - 高亮显示，标题和内容分行 */}
-                    <div className="font-semibold text-blue-400 text-xs mb-1">
+                  <div className="text-[11px] text-gray-300 break-words leading-relaxed space-y-1">
+                    {/* 当前动作标题 */}
+                    <div className="font-semibold text-base text-gray-200 mb-1">
                       Current Action
                     </div>
-                    {/* 简约版：只保留文字，title 渐变色加粗，status 紧跟其后 */}
+                    {/* 只保留文字，去除渐变色，低调显示 */}
                     <div className="flex items-center space-x-2 px-1 py-1">
                       <span
-                        className="font-bold text-sm bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400 bg-clip-text text-transparent"
+                        className="font-semibold text-gray-100 text-sm"
                         style={{ lineHeight: '1.2' }}
                       >
                         {difyContent.data.title || ''}
                       </span>
                       {difyContent.data && difyContent.data.status !== '' && (
-                        <span className={`ml-2 font-semibold text-xs ${getStatusColor(difyContent.data.status)}`}>
+                        <span className={`ml-2 font-medium text-xs ${getStatusColor(difyContent.data.status)}`}>
                           {difyContent.data.status}
                         </span>
                       )}
@@ -677,37 +671,37 @@ const ResearchTool = ({
                         </span>
                       )}
                     </div>
-                    {/* Execution Status（原Event） */}
+                    {/* 执行状态 */}
                     <div>
-                      <div className="font-semibold w-28 inline-block whitespace-nowrap">Execution Status:</div>
-                      <div className="inline-block">{difyContent.event || ''}</div>
+                      <span className="font-medium w-28 inline-block text-gray-400">执行状态：</span>
+                      <span className="inline-block text-gray-200">{difyContent.event || ''}</span>
                     </div>
-                    {/* Executor（原Step Name） */}
+                    {/* 执行者 */}
                     <div>
-                      <div className="font-semibold w-28 inline-block whitespace-nowrap">Executor:</div>
-                      <div className="inline-block">{log.step || difyContent.step || ''}</div>
+                      <span className="font-medium w-28 inline-block text-gray-400">执行者：</span>
+                      <span className="inline-block text-gray-200">{log.step || difyContent.step || ''}</span>
                     </div>
                     {/* Node ID */}
                     {difyContent.data && typeof difyContent.data === 'object' && (
                       <div>
-                        <div className="font-semibold w-28 inline-block whitespace-nowrap">Node ID:</div>
-                        <div className="inline-block">{difyContent.data.id || ''}</div>
+                        <span className="font-medium w-28 inline-block text-gray-400">节点ID：</span>
+                        <span className="inline-block text-gray-200">{difyContent.data.id || ''}</span>
                       </div>
                     )}
                     {/* Workflow ID */}
                     <div>
-                      <div className="font-semibold w-28 inline-block whitespace-nowrap">Workflow ID:</div>
-                      <div className="inline-block">{difyContent.workflow_id || ''}</div>
+                      <span className="font-medium w-28 inline-block text-gray-400">工作流ID：</span>
+                      <span className="inline-block text-gray-200">{difyContent.workflow_id || ''}</span>
                     </div>
                     {/* Task ID */}
                     <div>
-                      <div className="font-semibold w-28 inline-block whitespace-nowrap">Task ID:</div>
-                      <div className="inline-block">{difyContent.task_id || ''}</div>
+                      <span className="font-medium w-28 inline-block text-gray-400">任务ID：</span>
+                      <span className="inline-block text-gray-200">{difyContent.task_id || ''}</span>
                     </div>
                     {/* 错误信息 */}
                     {difyContent.data?.error && (
                       <div className="mt-1 pt-1 border-t border-gray-700/50 text-red-400">
-                        <span className="font-semibold">Error:</span> {difyContent.data.error}
+                        <span className="font-semibold">错误：</span> {difyContent.data.error}
                       </div>
                     )}
                   </div>
@@ -2134,7 +2128,7 @@ const ResearchTool = ({
           }
           else {
             // 其他类型的日志正常添加
-            setLogs(prevLogs => [...prevLogs, logData]);
+            setLogs(prevLogs => [...prevLogs, { ...logData, currentStep: currentStepNumber }]);
           }
         } catch (error) {
           console.error('Error parsing SSE message:', error);
@@ -3146,7 +3140,7 @@ const ResearchTool = ({
                     </div>
                     {/* --- 右侧日志内容区域 --- */}
                     <div className="flex-1 overflow-y-auto">
-                      {renderDetails(detailsData)}
+                      {renderDetails()}
                     </div>
                   </div>
                 )}
