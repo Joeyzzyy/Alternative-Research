@@ -2814,7 +2814,7 @@ const ResearchTool = ({
           {/* 左侧聊天面板 */}
           <div className="w-[35%] relative flex flex-col">
             {/* ... (聊天面板顶部和消息区域保持不变) ... */}
-            <div className="h-10 px-4 border-b border-gray-300/20 flex-shrink-0 flex items-center justify-between relative">
+            <div className="h-12 px-4 border-b border-gray-300/20 flex-shrink-0 flex items-center justify-between relative">
               <div className="flex items-center">
                 <img src="/images/alternatively-logo.png" alt="AltPage.ai" className="w-5 h-5 mr-1.5" />
                 <h2 className="text-sm font-semibold text-gray-100">Copilot</h2>
@@ -2984,7 +2984,7 @@ const ResearchTool = ({
             {/* 包裹 Tab 和 内容区域的容器 */}
             <div className="flex-1 flex flex-col overflow-hidden">
               {/* Tab 切换区域 */}
-              <div className="border-b border-gray-300/20 p-3 flex-shrink-0">
+              <div className="h-12 border-b border-gray-300/20 p-3 flex-shrink-0">
                 <div className="flex justify-between items-center">
                   <div className="flex space-x-4">
                     <button
