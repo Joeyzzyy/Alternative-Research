@@ -647,61 +647,61 @@ const ResearchTool = ({
 
                 {/* Dify 日志内容渲染 - 低调高级风格 */}
                 {log.type === 'Dify' && difyContent && (
-                  <div className="text-[11px] text-gray-300 break-words leading-relaxed space-y-1">
+                  <div className="text-[10px] text-gradient-metal break-words leading-relaxed space-y-1">
                     {/* 当前动作标题 */}
-                    <div className="font-semibold text-base text-gray-200 mb-1">
+                    <div className="font-semibold text-sm text-gradient-metal mb-1">
                       Current Action
                     </div>
                     {/* 只保留文字，去除渐变色，低调显示 */}
                     <div className="flex items-center space-x-2 px-1 py-1">
                       <span
-                        className="font-semibold text-gray-100 text-sm"
+                        className="font-semibold text-gradient-metal text-xs"
                         style={{ lineHeight: '1.2' }}
                       >
                         {difyContent.data.title || ''}
                       </span>
                       {difyContent.data && difyContent.data.status !== '' && (
-                        <span className={`ml-2 font-medium text-xs ${getStatusColor(difyContent.data.status)}`}>
+                        <span className={`ml-2 font-medium text-[11px] ${getStatusColor(difyContent.data.status)}`}>
                           {difyContent.data.status}
                         </span>
                       )}
                       {difyContent.data.elapsed_time !== undefined && (
-                        <span className="ml-2 text-gray-400 text-xs">
+                        <span className="ml-2 text-gradient-metal text-[11px]">
                           {difyContent.data.elapsed_time.toFixed(2)}s
                         </span>
                       )}
                     </div>
                     {/* 执行状态 */}
                     <div>
-                      <span className="font-medium w-28 inline-block text-gray-400">执行状态：</span>
-                      <span className="inline-block text-gray-200">{difyContent.event || ''}</span>
+                      <span className="font-medium w-28 inline-block text-gradient-metal">Status:</span>
+                      <span className="inline-block text-gradient-metal">{difyContent.event || ''}</span>
                     </div>
                     {/* 执行者 */}
                     <div>
-                      <span className="font-medium w-28 inline-block text-gray-400">执行者：</span>
-                      <span className="inline-block text-gray-200">{log.step || difyContent.step || ''}</span>
+                      <span className="font-medium w-28 inline-block text-gradient-metal">Executor:</span>
+                      <span className="inline-block text-gradient-metal">{log.step || difyContent.step || ''}</span>
                     </div>
                     {/* Node ID */}
                     {difyContent.data && typeof difyContent.data === 'object' && (
                       <div>
-                        <span className="font-medium w-28 inline-block text-gray-400">节点ID：</span>
-                        <span className="inline-block text-gray-200">{difyContent.data.id || ''}</span>
+                        <span className="font-medium w-28 inline-block text-gradient-metal">Node ID:</span>
+                        <span className="inline-block text-gradient-metal">{difyContent.data.id || ''}</span>
                       </div>
                     )}
                     {/* Workflow ID */}
                     <div>
-                      <span className="font-medium w-28 inline-block text-gray-400">工作流ID：</span>
-                      <span className="inline-block text-gray-200">{difyContent.workflow_id || ''}</span>
+                      <span className="font-medium w-28 inline-block text-gradient-metal">Workflow ID:</span>
+                      <span className="inline-block text-gradient-metal">{difyContent.workflow_id || ''}</span>
                     </div>
                     {/* Task ID */}
                     <div>
-                      <span className="font-medium w-28 inline-block text-gray-400">任务ID：</span>
-                      <span className="inline-block text-gray-200">{difyContent.task_id || ''}</span>
+                      <span className="font-medium w-28 inline-block text-gradient-metal">Task ID:</span>
+                      <span className="inline-block text-gradient-metal">{difyContent.task_id || ''}</span>
                     </div>
                     {/* 错误信息 */}
                     {difyContent.data?.error && (
-                      <div className="mt-1 pt-1 border-t border-gray-700/50 text-red-400">
-                        <span className="font-semibold">错误：</span> {difyContent.data.error}
+                      <div className="mt-1 pt-1 border-t border-gray-700/50 text-gradient-metal-error">
+                        <span className="font-semibold">Error:</span> {difyContent.data.error}
                       </div>
                     )}
                   </div>
@@ -3010,7 +3010,7 @@ const ResearchTool = ({
                 </div>
                   <div className="flex items-center text-xs">
                       {/* --- 新增：Go Deploy Now 按钮 --- */}
-                        <div className="p-3 flex justify-end" style={{padding: 0}}>
+                        <div className="p-3 flex justify-end" style={{padding: 0, marginLeft: 3}}>
                             <div> 
                               <Button
                                 type="primary"

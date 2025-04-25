@@ -85,6 +85,14 @@ const HistoryCardList = () => {
     }
     setHasToken(true);
     fetchHistory();
+
+    // === 新增：每隔1分钟自动刷新任务列表 ===
+    const intervalId = setInterval(() => {
+      fetchHistory();
+    }, 60000); // 60,000 毫秒 = 1分钟
+
+    // 清理定时器
+    return () => clearInterval(intervalId);
   }, []);
 
   // === 新增：监听登录成功事件，自动刷新历史数据 ===
@@ -350,8 +358,8 @@ const HistoryCardList = () => {
                 scrollRef.current.scrollBy({ left: -340, behavior: 'smooth' });
               }
             }}
-            aria-label="向左滚动"
-            title="向左滚动"
+            aria-label="Scroll left"
+            title="Scroll left"
             disabled={loading || historyList.length === 0}
           >
             <LeftOutlined style={{ fontSize: 22, color: '#38bdf8' }} />
@@ -365,8 +373,8 @@ const HistoryCardList = () => {
                 scrollRef.current.scrollBy({ left: 340, behavior: 'smooth' });
               }
             }}
-            aria-label="向右滚动"
-            title="向右滚动"
+            aria-label="Scroll Right"
+            title="Scroll Right"
             disabled={loading || historyList.length === 0}
           >
             <RightOutlined style={{ fontSize: 22, color: '#38bdf8' }} />
