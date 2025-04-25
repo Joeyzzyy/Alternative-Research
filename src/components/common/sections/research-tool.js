@@ -2992,10 +2992,6 @@ const ResearchTool = ({
                   <div className="flex items-center text-xs">
                       {/* --- 新增：Go Deploy Now 按钮 --- */}
                         <div className="p-3 border-b border-gray-700/50 flex justify-end">
-                          <Tooltip 
-                            title={browserTabs.length > 0 ? "Task in progress, please wait until it's finished." : ""}
-                            placement="left"
-                          >
                             <div> 
                               <Button
                                 type="primary"
@@ -3009,22 +3005,21 @@ const ResearchTool = ({
                                   }
                                 }}
                                 className={`transition-all duration-300 ${
-                                  browserTabs.length > 0 
+                                  browserTabs.length == 0 
                                     ? 'bg-gray-600 hover:bg-gray-600 cursor-not-allowed opacity-60' 
                                     : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-md hover:shadow-lg'
                                 }`}
                                 style={{ 
                                   border: 'none', 
-                                  fontWeight: 500,
-                                  fontSize: '13px',
-                                  padding: '6px 12px',
+                                  fontWeight: 300,
+                                  fontSize: '10px',
+                                  padding: '3px 8px',
                                   height: 'auto'
                                 }}
                               >
                                 Go Deploy Now
                               </Button>
                             </div>
-                          </Tooltip>
                         </div>
                       {/* --- 结束：Go Deploy Now 按钮 --- */}
                     <div className={`w-2 h-2 rounded-full mr-2 ${
