@@ -41,12 +41,10 @@ const ResearchTool = ({
   const [userInput, setUserInput] = useState('');
   const [isMessageSending, setIsMessageSending] = useState(false);
   const [rightPanelTab, setRightPanelTab] = useState('details');
-  const [customerId, setCustomerId] = useState(null);
   const [currentWebsiteId, setCurrentWebsiteId] = useState(null);
   const [detailsData, setDetailsData] = useState([]);
   const inputRef = useRef(null);
   const chatEndRef = useRef(null);
-  const [showDemo, setShowDemo] = useState(true);
   const [showInitialScreen, setShowInitialScreen] = useState(true);
   const [logs, setLogs] = useState([]);
   const competitorListProcessedRef = useRef(false);
@@ -78,6 +76,8 @@ const ResearchTool = ({
     
     return filteredMessage;
   };
+  const [styleChangeCompleted, setStyleChangeCompleted] = useState(false);
+  const hasTriggeredStep4Ref = useRef(false);
 
   // 页面加载时读取 localStorage 的 urlInput
   useEffect(() => {
@@ -348,14 +348,6 @@ const ResearchTool = ({
       window.removeEventListener('alternativelyLoginSuccess', handleLoginSuccess);
     };
   }, []); 
-
-  useEffect(() => {
-    const storedCustomerId = localStorage.getItem('alternativelyCustomerId');
-    const token = localStorage.getItem('alternativelyAccessToken');
-    if (storedCustomerId && token) {
-      setCustomerId(storedCustomerId);
-    }
-  }, []);
 
   const detailsRef = useRef(null);
   const codeContainerRef = useRef(null);
@@ -1273,6 +1265,7 @@ const ResearchTool = ({
     let thinkingMessageId;
     try {
       setIsProcessingTask(true);
+      hasTriggeredStep4Ref.current = false;
       const isLoggedIn = localStorage.getItem('alternativelyIsLoggedIn') === 'true';
       const token = localStorage.getItem('alternativelyAccessToken');
       // 处理未登录情况
@@ -1853,6 +1846,13 @@ const ResearchTool = ({
   useEffect(() => {
     // --- 添加 currentWebsiteId 到依赖项 ---
     if (!shouldConnectSSE || !currentWebsiteId) {
+      // --- 新增：如果不需要连接，确保停止重连提示 ---
+      isShowingReconnectNoticeRef.current = false;
+      if (sseReconnectNoticeTimeoutRef.current) {
+        clearTimeout(sseReconnectNoticeTimeoutRef.current);
+        sseReconnectNoticeTimeoutRef.current = null;
+      }
+      // --- 结束新增 ---
       return;
     }
     const customerId = localStorage.getItem('alternativelyCustomerId');
@@ -1992,6 +1992,16 @@ const ResearchTool = ({
           clearTimeout(retryTimeoutRef.current);
           retryTimeoutRef.current = null;
         }
+
+        // --- 新增：停止重连提示并在成功时通知 ---
+        isShowingReconnectNoticeRef.current = false;
+        if (sseReconnectNoticeTimeoutRef.current) {
+          clearTimeout(sseReconnectNoticeTimeoutRef.current);
+          sseReconnectNoticeTimeoutRef.current = null;
+          // 可选：显示连接成功的消息
+          messageApi.success('Agent connection re-established!', 2);
+        }
+        // --- 结束新增 ---
       };
 
       eventSource.onmessage = (event) => {
@@ -2008,8 +2018,11 @@ const ResearchTool = ({
           }
 
           if (logData.type === 'Html') {
+            if (!hasTriggeredStep4Ref.current && currentStep < 5) {
+              setCurrentStep(4);
+              hasTriggeredStep4Ref.current = true; // 标记第4步已触发
+            }
             // 如果是新的流式输出开始，重置累积的内容
-            setCurrentStep(4);
             if (!isStreamingRef.current || currentStreamIdRef.current !== logData.id) {
               htmlStreamRef.current = '';
               currentStreamIdRef.current = logData.id;
@@ -2044,7 +2057,6 @@ const ResearchTool = ({
           }
           // --- 新增 Color 类型流式处理的逻辑 ---
           else if (logData.type === 'Color') {
-            setCurrentStep(4); 
             // 如果是新的流式输出开始，重置累积的内容
             if (!isColorStreamingRef.current || currentColorStreamIdRef.current !== logData.id) {
               colorStreamRef.current = '';
@@ -2141,24 +2153,45 @@ const ResearchTool = ({
         
         setSseConnected(false);
         
+        // --- 新增：启动重连提示循环 ---
+        // 先清除可能存在的旧定时器
+        if (sseReconnectNoticeTimeoutRef.current) {
+          clearTimeout(sseReconnectNoticeTimeoutRef.current);
+          sseReconnectNoticeTimeoutRef.current = null;
+        }
+        isShowingReconnectNoticeRef.current = true; // 标记正在显示提示
+
+        const showReconnectNotice = () => {
+          // 如果标记为 false，则停止循环
+          if (!isShowingReconnectNoticeRef.current) return;
+
+          // 显示提示信息，持续 3 秒
+          messageApi.info('Agent connection lost. Attempting to reconnect...', 3);
+
+          // 设置下一个提示的定时器
+          sseReconnectNoticeTimeoutRef.current = setTimeout(showReconnectNotice, 3000); // 每 3 秒重复
+        };
+
+        // 立即显示第一个提示
+        showReconnectNotice();
+        // --- 结束新增 ---
+
         // 使用之前保存的计数值，而不是直接使用ref
         if (currentRetryCount < MAX_RETRY_COUNT) {
           // 先增加计数，再保存到ref
           const newRetryCount = currentRetryCount + 1;
           retryCountRef.current = newRetryCount;
-          
-          console.log('Retry count after increment:', newRetryCount);
-          
+
           // 使用指数退避策略计算延迟
           const delay = Math.min(BASE_RETRY_DELAY * Math.pow(2, newRetryCount - 1), MAX_RETRY_DELAY);
-          
-          console.log(`Retrying SSE connection in ${delay}ms (attempt ${newRetryCount}/${MAX_RETRY_COUNT})`);
-          
+
+          console.log(`Retrying SSE connection in ${delay}ms (Attempt ${newRetryCount}/${MAX_RETRY_COUNT})`);
+
           // 清除之前的超时
           if (retryTimeoutRef.current) {
             clearTimeout(retryTimeoutRef.current);
           }
-          
+
           retryTimeoutRef.current = setTimeout(() => {
             retryTimeoutRef.current = null;
             // 检查是否仍需要连接
@@ -2166,10 +2199,26 @@ const ResearchTool = ({
               connectSSE();
             } else {
               console.log('SSE connection no longer needed, skipping retry');
+              // --- 新增：如果不再需要连接，停止重连提示 ---
+              isShowingReconnectNoticeRef.current = false;
+              if (sseReconnectNoticeTimeoutRef.current) {
+                clearTimeout(sseReconnectNoticeTimeoutRef.current);
+                sseReconnectNoticeTimeoutRef.current = null;
+              }
+              // --- 结束新增 ---
             }
           }, delay);
         } else {
           console.log(`Maximum retry attempts (${MAX_RETRY_COUNT}) reached. Giving up.`);
+          // --- 新增：达到最大重试次数时停止提示 ---
+          isShowingReconnectNoticeRef.current = false;
+          if (sseReconnectNoticeTimeoutRef.current) {
+            clearTimeout(sseReconnectNoticeTimeoutRef.current);
+            sseReconnectNoticeTimeoutRef.current = null;
+          }
+          // 可选：显示最终的失败消息
+          messageApi.error('Failed to reconnect to the agent after multiple attempts.', 5);
+          // --- 结束新增 ---
         }
       };
     };
@@ -2187,10 +2236,17 @@ const ResearchTool = ({
         clearTimeout(retryTimeoutRef.current);
         retryTimeoutRef.current = null;
       }
+      // --- 新增：组件卸载时停止重连提示 ---
+      isShowingReconnectNoticeRef.current = false;
+      if (sseReconnectNoticeTimeoutRef.current) {
+        clearTimeout(sseReconnectNoticeTimeoutRef.current);
+        sseReconnectNoticeTimeoutRef.current = null;
+      }
+      // --- 结束新增 ---
       retryCountRef.current = 0;
     };
   // --- 将 currentWebsiteId 添加到依赖数组 ---
-  }, [shouldConnectSSE, currentWebsiteId]);
+  }, [shouldConnectSSE, currentWebsiteId]); // 确保 messageApi 也作为依赖项如果它是 props 或来自 context
 
   useEffect(() => {
     // 检查是否有任务完成的日志
@@ -2216,6 +2272,7 @@ const ResearchTool = ({
 
     if ((colorChangeFinishedLog) && shouldConnectSSE) {
       setShouldConnectSSE(false);
+      setStyleChangeCompleted(true);
     }
   }, [logs, shouldConnectSSE]);
 
@@ -2390,6 +2447,9 @@ const ResearchTool = ({
   const currentTextIndexRef = useRef(0); // Track which sentence to display
   const isDeletingRef = useRef(false); // Track if currently deleting
   const charIndexRef = useRef(0); // Track character index within the sentence
+  // --- 新增：用于 SSE 重连提示的 Ref ---
+  const sseReconnectNoticeTimeoutRef = useRef(null);
+  const isShowingReconnectNoticeRef = useRef(false);
 
   // Typewriter effect for placeholder
   useEffect(() => {
@@ -2933,61 +2993,86 @@ const ResearchTool = ({
                       {!showInitialScreen && (
                         <div className="relative">
                           <div className="flex items-center space-x-2 mb-3"> {/* 调整标题和图标布局 */}
-                            <div className="relative w-5 h-5 flex-shrink-0">
-                              <div className="absolute inset-0 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin"></div>
-                              <div className="absolute inset-1 rounded-full border-2 border-purple-500 border-b-transparent animate-spin" style={{animationDirection: 'reverse', animationDuration: '1.5s'}}></div>
-                            </div>
-                            <span className={`font-semibold text-sm ${currentBackground === 'DAY_GHIBLI' ? 'text-amber-200' : 'text-white'}`}>Progress</span>
+                            <svg className={`w-5 h-5 ${currentBackground === 'DAY_GHIBLI' ? 'text-amber-400' : 'text-blue-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                            </svg>
+                            <span className={`text-sm font-semibold ${currentBackground === 'DAY_GHIBLI' ? 'text-amber-200' : 'text-blue-300'}`}>Task Progress</span>
                           </div>
 
-                          {/* --- 修改为垂直布局 --- */}
+                          {/* --- 步骤列表 --- */}
                           <div className="flex flex-col space-y-2 w-full">
                             {/* Step 1 */}
-                            <div className={`text-xs rounded px-2 py-1.5 flex items-center transition-all duration-500 ${currentStep >= 1
-                              ? (currentBackground === 'DAY_GHIBLI' ? 'bg-gradient-to-r from-amber-600/40 to-orange-600/40 text-amber-100 border border-amber-500/60 shadow-sm shadow-amber-500/20' : 'bg-gradient-to-r from-indigo-500/40 to-blue-500/40 text-white border border-indigo-500/60 shadow-sm shadow-indigo-500/20')
+                            <div className={`text-xs rounded px-2 py-1.5 flex items-center justify-between transition-all duration-500 ${currentStep >= 1 // 高亮逻辑不变
+                              ? (currentBackground === 'DAY_GHIBLI' ? 'bg-gradient-to-r from-amber-500/40 to-orange-500/40 text-amber-100 border border-amber-500/60 shadow-sm shadow-amber-500/20' : 'bg-gradient-to-r from-blue-500/40 to-cyan-500/40 text-white border border-blue-500/60 shadow-sm shadow-blue-500/20')
                               : (currentBackground === 'DAY_GHIBLI' ? 'bg-amber-800/30 text-amber-300/70 border border-amber-700/40' : 'bg-slate-700/50 text-slate-400 border border-slate-600/40')}`}>
                               <span className={currentStep === 1 ? 'font-medium' : ''}>1. Find Competitors</span>
+                              {/* --- 添加勾选图标 --- */}
+                              {currentStep > 1 && (
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-green-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                              )}
                             </div>
+
                             {/* Step 2 */}
-                            <div className={`text-xs rounded px-2 py-1.5 flex items-center transition-all duration-500 ${currentStep >= 2
-                              ? (currentBackground === 'DAY_GHIBLI' ? 'bg-gradient-to-r from-amber-600/40 to-orange-600/40 text-amber-100 border border-amber-500/60 shadow-sm shadow-amber-500/20' : 'bg-gradient-to-r from-indigo-500/40 to-blue-500/40 text-white border border-indigo-500/60 shadow-sm shadow-indigo-500/20')
+                            <div className={`text-xs rounded px-2 py-1.5 flex items-center justify-between transition-all duration-500 ${currentStep >= 2 // 高亮逻辑不变
+                              ? (currentBackground === 'DAY_GHIBLI' ? 'bg-gradient-to-r from-orange-500/40 to-red-500/40 text-orange-100 border border-orange-500/60 shadow-sm shadow-orange-500/20' : 'bg-gradient-to-r from-cyan-500/40 to-teal-500/40 text-white border border-cyan-500/60 shadow-sm shadow-cyan-500/20')
                               : (currentBackground === 'DAY_GHIBLI' ? 'bg-amber-800/30 text-amber-300/70 border border-amber-700/40' : 'bg-slate-700/50 text-slate-400 border border-slate-600/40')}`}>
                               <span className={currentStep === 2 ? 'font-medium' : ''}>2. Select Competitor</span>
+                              {/* --- 添加勾选图标 --- */}
+                              {currentStep > 2 && (
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-green-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                              )}
                             </div>
+
                             {/* Step 3 */}
-                            <div className={`text-xs rounded px-2 py-1.5 flex items-center transition-all duration-500 ${currentStep >= 3
-                              ? (currentBackground === 'DAY_GHIBLI' ? 'bg-gradient-to-r from-amber-600/40 to-orange-600/40 text-amber-100 border border-amber-500/60 shadow-sm shadow-amber-500/20' : 'bg-gradient-to-r from-indigo-500/40 to-blue-500/40 text-white border border-indigo-500/60 shadow-sm shadow-indigo-500/20')
+                            <div className={`text-xs rounded px-2 py-1.5 flex items-center justify-between transition-all duration-500 ${currentStep >= 3 // 高亮逻辑不变
+                              ? (currentBackground === 'DAY_GHIBLI' ? 'bg-gradient-to-r from-red-500/40 to-pink-500/40 text-red-100 border border-red-500/60 shadow-sm shadow-red-500/20' : 'bg-gradient-to-r from-teal-500/40 to-green-500/40 text-white border border-teal-500/60 shadow-sm shadow-teal-500/20')
                               : (currentBackground === 'DAY_GHIBLI' ? 'bg-amber-800/30 text-amber-300/70 border border-amber-700/40' : 'bg-slate-700/50 text-slate-400 border border-slate-600/40')}`}>
                               <span className={currentStep === 3 ? 'font-medium' : ''}>3. Analyze Competitor</span>
+                              {/* --- 添加勾选图标 --- */}
+                              {currentStep > 3 && (
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-green-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                              )}
                             </div>
+
                             {/* Step 4 */}
-                            <div className={`text-xs rounded px-2 py-1.5 flex items-center transition-all duration-500 ${currentStep >= 4
-                              ? (currentBackground === 'DAY_GHIBLI' ? 'bg-gradient-to-r from-amber-600/40 to-orange-600/40 text-amber-100 border border-amber-500/60 shadow-sm shadow-amber-500/20' : 'bg-gradient-to-r from-indigo-500/40 to-blue-500/40 text-white border border-indigo-500/60 shadow-sm shadow-indigo-500/20')
+                            <div className={`text-xs rounded px-2 py-1.5 flex items-center justify-between transition-all duration-500 ${currentStep >= 4 // 高亮逻辑不变
+                              ? (currentBackground === 'DAY_GHIBLI' ? 'bg-gradient-to-r from-pink-500/40 to-purple-500/40 text-pink-100 border border-pink-500/60 shadow-sm shadow-pink-500/20' : 'bg-gradient-to-r from-green-500/40 to-lime-500/40 text-white border border-green-500/60 shadow-sm shadow-green-500/20')
                               : (currentBackground === 'DAY_GHIBLI' ? 'bg-amber-800/30 text-amber-300/70 border border-amber-700/40' : 'bg-slate-700/50 text-slate-400 border border-slate-600/40')}`}>
-                              <span className={currentStep === 4 ? 'font-medium' : ''}>4. Codes Generation</span>
+                              <span className={currentStep === 4 ? 'font-medium' : ''}>4. Page Generation</span>
+                              {/* --- 添加勾选图标 --- */}
+                              {currentStep > 4 && (
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-green-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                              )}
                             </div>
+
                             {/* Step 5 */}
-                            <div className={`text-xs rounded px-2 py-1.5 flex items-center transition-all duration-500 ${currentStep >= 5
-                              ? (currentBackground === 'DAY_GHIBLI' ? 'bg-gradient-to-r from-green-600/40 to-emerald-600/40 text-green-100 border border-green-500/60 shadow-sm shadow-green-500/20' : 'bg-gradient-to-r from-green-500/40 to-emerald-500/40 text-white border border-green-500/60 shadow-sm shadow-green-500/20')
+                            <div className={`text-xs rounded px-2 py-1.5 flex items-center justify-between transition-all duration-500 ${currentStep >= 5 // 高亮逻辑不变
+                              ? (currentBackground === 'DAY_GHIBLI' ? 'bg-gradient-to-r from-purple-500/40 to-indigo-500/40 text-purple-100 border border-purple-500/60 shadow-sm shadow-purple-500/20' : 'bg-gradient-to-r from-lime-500/40 to-emerald-500/40 text-white border border-lime-500/60 shadow-sm shadow-lime-500/20')
                               : (currentBackground === 'DAY_GHIBLI' ? 'bg-amber-800/30 text-amber-300/70 border border-amber-700/40' : 'bg-slate-700/50 text-slate-400 border border-slate-600/40')}`}>
-                              <span className={currentStep === 5 ? 'font-medium' : ''}>5. Style Change</span>
+                              <span className={currentStep === 5 ? 'font-medium' : ''}>5. Style Change(Optional)</span>
+                              {/* --- 添加勾选图标 (特殊逻辑) --- */}
+                              {(styleChangeCompleted || currentStep > 5) && ( // 如果改色完成 或 步骤已超过5
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-green-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                              )}
                             </div>
                           </div>
 
-                          {/* --- 完成提示信息 --- */}
-                          {currentStep >= 5 && (
-                            <div className="flex items-center mt-3 space-x-1.5">
-                              <svg className={`w-3.5 h-3.5 ${currentBackground === 'DAY_GHIBLI' ? 'text-green-400' : 'text-green-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                              </svg>
-                              <span className={`font-semibold text-xs ${currentBackground === 'DAY_GHIBLI' ? 'text-green-300' : 'text-green-400'}`}>Pages ready!</span>
-                            </div>
-                          )}
+                          {/* --- 移除独立的 Style Change Done! 提示 --- */}
+
                         </div>
                       )}
                     </div>
-
-                    {/* --- 新增：右侧日志内容区域 --- */}
+                    {/* --- 右侧日志内容区域 --- */}
                     <div className="flex-1 overflow-y-auto">
                       {renderDetails(detailsData)}
                     </div>
