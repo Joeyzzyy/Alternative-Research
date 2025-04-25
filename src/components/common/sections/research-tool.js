@@ -2307,11 +2307,9 @@ const ResearchTool = ({
         log.id === styleChangeFinishedLog.id ? {...log, processed: true} : log
       ));
       
-      // 处理改色任务完成 - 告知用户任务已完成
-      setIsProcessingTask(false);
+      setIsProcessingTask(true);
       messageHandler.addSystemMessage("Task completed! Thank you for using our service. You can find your generated page in the history records in the upper right corner of the page, where you can deploy and adjust it further.");
-      // 保持输入框禁用
-      // setInputDisabledDueToUrlGet(false); - 移除这行代码，保持输入框禁用
+      
     }
     
     // 添加检测任务完成的逻辑
@@ -2850,86 +2848,112 @@ const ResearchTool = ({
             {/* 输入框区域 */}
             <div className="p-4 border-t border-gray-300/20 flex-shrink-0"> {/* 保持这个区域不变 */}
               <div className="max-w-[600px] mx-auto">
-                <Tooltip
-                  title={(loading || isMessageSending || inputDisabledDueToUrlGet) ? "Agent is working, please wait a sec." : ""}
-                  placement="topLeft" // 可以根据需要调整位置
-                >
-                  <div className="relative">
-                    {/* --- 添加 JSX 样式块来定义占位符样式 --- */}
-                    <style jsx>{`
-                      .research-tool-input::placeholder {
-                        color: #a1887f; /* 调整为 Ghibli 主题下更可见的颜色 */
-                        opacity: 0.8; /* 确保可见性 */
-                      }
-                    `}</style>
-                    <Input
-                      autoComplete="off"
-                      name="no-autofill"
-                      ref={inputRef}
-                      value={userInput}
-                      onChange={(e) => setUserInput(e.target.value)}
-                      disabled={loading || isMessageSending || inputDisabledDueToUrlGet}
-                      // --- 修改：根据禁用状态设置 placeholder ---
-                      placeholder={
-                        !(loading || isMessageSending || inputDisabledDueToUrlGet)
-                          ? "Waiting for your answer..."
-                          : "" // 禁用时无 placeholder
-                      }
-                      // 强制使用 Day Ghibli 的边框/阴影样式，并保留 research-tool-input 类
-                      className={`research-tool-input bg-white/10 border rounded-xl text-sm ${BACKGROUNDS.DAY_GHIBLI.inputStyle}`}
-                      style={{
-                        // 强制使用 Day Ghibli 的文字和背景色
-                        color: '#433422',
-                        backgroundColor: 'rgba(253, 230, 190, 0.85)',
-                        height: '48px',
-                        transition: 'all 0.3s ease'
-                      }}
-                      onPressEnter={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        if (userInput.trim() && !loading && !isMessageSending && !inputDisabledDueToUrlGet) {
-                          handleUserInput(e);
-                        }
-                      }}
-                    />
-                    {/* 仅在任务进行中时显示中止按钮 */}
-                    {isProcessingTask && (
-                      <button
-                        type="button"
-                        className="absolute right-2 top-1/2 -translate-y-1/2 z-10 p-0"
-                        title="Abort Task"
-                        onClick={() => setShowAbortModal(true)}
-                        style={{
-                          height: '32px',
-                          width: '32px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          background: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)',
-                          borderRadius: '50%', // 保持按钮本身为圆形
-                          // 修改 box-shadow 以添加发光效果
-                          boxShadow: '0 0 12px 2px rgba(255, 75, 43, 0.6), 0 2px 4px 0 rgba(255,65,108,0.15)', // 添加红色/橙色发光
-                          border: 'none',
-                          transition: 'box-shadow 0.3s ease-in-out', // 平滑过渡
-                        }}
-                      >
-                        {/* 更小的白色方块 */}
-                        <div style={{
-                          width: '12px', // 调小尺寸
-                          height: '12px', // 调小尺寸
-                          background: 'white',
-                          borderRadius: '3px', // 保持方形（或轻微圆角）
-                          boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
-                        }} />
-                      </button>
-                    )}
+                {/* --- 修改：根据 styleChangeCompleted 条件渲染 --- */}
+                {styleChangeCompleted ? (
+                  // --- 新增：任务完成后的提示和按钮 ---
+                  <div className={`flex flex-col items-center justify-center p-4 rounded-lg ${
+                    currentBackground === 'DAY_GHIBLI' ? 'bg-amber-100/80 border border-amber-300/50' : 'bg-slate-800/60 border border-slate-700/50'
+                  }`}>
+                    <p className={`text-center mb-3 text-sm ${
+                      currentBackground === 'DAY_GHIBLI' ? 'text-amber-800' : 'text-gray-200'
+                    }`}>
+                      The current task is complete. You can start a new task to generate more pages!
+                    </p>
+                    <button
+                      onClick={() => window.open('https://altpage.ai', '_blank')}
+                      className={`px-5 py-2 text-sm font-medium rounded-md transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg ${
+                        currentBackground === 'DAY_GHIBLI'
+                          ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white hover:from-amber-600 hover:to-orange-600 border border-amber-600/50'
+                          : 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700 border border-blue-600/50'
+                      } hover:scale-105`}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                      </svg>
+                      Start New Task
+                    </button>
                   </div>
-                </Tooltip>
-                <div className="flex justify-end mt-3 px-1">
-                  <div className="text-xs text-gray-400">
-                    Press Enter ↵ to submit
-                  </div>
-                </div>
+                  // --- 结束新增 ---
+                ) : (
+                  // --- 原有的输入框逻辑 ---
+                  <>
+                    <Tooltip
+                      title={(loading || isMessageSending || inputDisabledDueToUrlGet) ? "Agent is working, please wait a sec." : ""}
+                      placement="topLeft"
+                    >
+                      <div className="relative">
+                        <style jsx>{`
+                          .research-tool-input::placeholder {
+                            color: #a1887f;
+                            opacity: 0.8;
+                          }
+                        `}</style>
+                        <Input
+                          autoComplete="off"
+                          name="no-autofill"
+                          ref={inputRef}
+                          value={userInput}
+                          onChange={(e) => setUserInput(e.target.value)}
+                          disabled={loading || isMessageSending || inputDisabledDueToUrlGet}
+                          placeholder={
+                            !(loading || isMessageSending || inputDisabledDueToUrlGet)
+                              ? "Waiting for your answer..."
+                              : ""
+                          }
+                          className={`research-tool-input bg-white/10 border rounded-xl text-sm ${BACKGROUNDS.DAY_GHIBLI.inputStyle}`}
+                          style={{
+                            color: '#433422',
+                            backgroundColor: 'rgba(253, 230, 190, 0.85)',
+                            height: '48px',
+                            transition: 'all 0.3s ease'
+                          }}
+                          onPressEnter={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            if (userInput.trim() && !loading && !isMessageSending && !inputDisabledDueToUrlGet) {
+                              handleUserInput(e);
+                            }
+                          }}
+                        />
+                        {isProcessingTask && ( // 中止按钮只在任务进行中显示
+                          <button
+                            type="button"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 p-0"
+                            title="Abort Task"
+                            onClick={() => setShowAbortModal(true)}
+                            style={{
+                              height: '32px',
+                              width: '32px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              background: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)',
+                              borderRadius: '50%',
+                              boxShadow: '0 0 12px 2px rgba(255, 75, 43, 0.6), 0 2px 4px 0 rgba(255,65,108,0.15)',
+                              border: 'none',
+                              transition: 'box-shadow 0.3s ease-in-out',
+                            }}
+                          >
+                            <div style={{
+                              width: '12px',
+                              height: '12px',
+                              background: 'white',
+                              borderRadius: '3px',
+                              boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
+                            }} />
+                          </button>
+                        )}
+                      </div>
+                    </Tooltip>
+                    <div className="flex justify-end mt-3 px-1">
+                      <div className="text-xs text-gray-400">
+                        Press Enter ↵ to submit
+                      </div>
+                    </div>
+                  </>
+                  // --- 结束原有输入框逻辑 ---
+                )}
+                {/* --- 结束修改 --- */}
               </div>
             </div>
           </div>
@@ -3066,9 +3090,6 @@ const ResearchTool = ({
                               )}
                             </div>
                           </div>
-
-                          {/* --- 移除独立的 Style Change Done! 提示 --- */}
-
                         </div>
                       )}
                     </div>
