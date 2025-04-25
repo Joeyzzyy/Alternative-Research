@@ -543,7 +543,7 @@ const ResearchTool = ({
 
     return (
       <div className="h-full flex flex-col" ref={detailsRef}>
-        <div className="p-3 space-y-2 overflow-y-auto">
+        <div className="p-3 space-y-2 overflow-y-auto flex-grow"> {/* 添加 flex-grow */}
           {/* 添加加载动画 - 更酷炫的进度指示器 */}
           
           {mergedLogs.map((log, index) => {
@@ -2249,12 +2249,6 @@ const ResearchTool = ({
   }, [shouldConnectSSE, currentWebsiteId]); // 确保 messageApi 也作为依赖项如果它是 props 或来自 context
 
   useEffect(() => {
-    // 检查是否有任务完成的日志
-    const finishedLog = logs.find(log => 
-      (log.type === 'Info' && log.step === 'GENERATION_FINISHED') ||
-      (log.type === 'Info' && log.step === 'GENERATION_CHANGE_FINISHED')
-    );
-
     // 检查是否存在 GENERATION_FINISHED 日志,是的话，就可以标记第5步生成完成
     const generationFinishedLog = logs.find(log => 
       log.type === 'Info' && 
@@ -2996,11 +2990,48 @@ const ResearchTool = ({
                   </button>
                 </div>
                   <div className="flex items-center text-xs">
+                      {/* --- 新增：Go Deploy Now 按钮 --- */}
+                        <div className="p-3 border-b border-gray-700/50 flex justify-end">
+                          <Tooltip 
+                            title={browserTabs.length > 0 ? "Task in progress, please wait until it's finished." : ""}
+                            placement="left"
+                          >
+                            <div> 
+                              <Button
+                                type="primary"
+                                icon={<ArrowRightOutlined />}
+                                onClick={() => {
+                                  if (browserTabs.length > 0) {
+                                    // 打开新标签页，并附带查询参数和哈希
+                                    window.open('https://altpage.ai?openPreviewModal=true#result-preview-section', '_blank');
+                                  } else {
+                                    messageApi.info('Please wait until at least one page has finished generating.')
+                                  }
+                                }}
+                                className={`transition-all duration-300 ${
+                                  browserTabs.length > 0 
+                                    ? 'bg-gray-600 hover:bg-gray-600 cursor-not-allowed opacity-60' 
+                                    : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-md hover:shadow-lg'
+                                }`}
+                                style={{ 
+                                  border: 'none', 
+                                  fontWeight: 500,
+                                  fontSize: '13px',
+                                  padding: '6px 12px',
+                                  height: 'auto'
+                                }}
+                              >
+                                Go Deploy Now
+                              </Button>
+                            </div>
+                          </Tooltip>
+                        </div>
+                      {/* --- 结束：Go Deploy Now 按钮 --- */}
                     <div className={`w-2 h-2 rounded-full mr-2 ${
                       sseConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
                     }`}></div>
                     <span className={currentBackground === 'DAY_GHIBLI' ? 'text-amber-800/80' : 'text-gray-400'}>Log Server {sseConnected ? 'Connected' : 'Disconnected'}</span>
-            </div>
+                  </div>
           </div>
         </div>
 

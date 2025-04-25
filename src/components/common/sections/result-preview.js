@@ -29,8 +29,24 @@ const HistoryCardList = () => {
   const [clearAllConfirmOpen, setClearAllConfirmOpen] = useState(false);
   const [isClearingAll, setIsClearingAll] = useState(false);
   const [editPageId, setEditPageId] = useState(null); // 新增：用于控制全屏编辑页面
-
   const currentItem = resultDetail?.data?.find(item => item.resultId === selectedPreviewId) || {};
+
+  // === 新增：函数用于检查 URL 参数并打开弹窗 ===
+  const checkUrlAndOpenModal = (list) => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('openPreviewModal') === 'true' && list && list.length > 0) {
+      // 优先选择第一个 'finished' 状态的项，否则选择列表中的第一个
+      const firstValidItem = list.find(item => item.generatorStatus === 'finished') || list[0];
+      if (firstValidItem) {
+        // 调用 handleCardClick 来处理弹窗打开和数据加载
+        handleCardClick(firstValidItem);
+        // 从 URL 中移除查询参数，避免刷新时重复触发
+        const currentUrl = new URL(window.location);
+        currentUrl.searchParams.delete('openPreviewModal');
+        history.replaceState(null, '', currentUrl.toString());
+      }
+    }
+  };
 
   // 获取历史数据
   const fetchHistory = async () => {
@@ -79,6 +95,7 @@ const HistoryCardList = () => {
         .filter(({ keep }) => keep)
         .map(({ item }) => item);
       setHistoryList(filteredList);
+      checkUrlAndOpenModal(filteredList);
     } catch (e) {
       setHistoryList([]);
     }
