@@ -245,11 +245,11 @@ async function getPageData() {
                     "links": [
                         {
                             "label": "Pricing",
-                            "url": "https://alternatively.websitelm.com/pricing"
+                            "url": "https://altpage.ai/pricing"
                         },
                         {
                             "label": "FAQ",
-                            "url": "https://alternatively.websitelm.com/faq"
+                            "url": "https://altpage.ai/faq"
                         }
                     ],
                     "title": "Features"
@@ -262,7 +262,7 @@ async function getPageData() {
                     "links": [
                         {
                             "label": "Terms and conditions",
-                            "url": "https://alternatively.websitelm.com/terms-and-conditions"
+                            "url": "https://altpage.ai/terms-and-conditions"
                         }
                     ],
                     "title": "Resources"
