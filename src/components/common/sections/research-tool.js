@@ -2000,6 +2000,7 @@ const ResearchTool = ({
         try {
           const logData = JSON.parse(event.data);
           console.log('logData', logData);
+          let currentStepNumber = currentStep;
 
           // 处理 Error 类型日志
           if (logData.type === 'Error') {
@@ -2012,7 +2013,7 @@ const ResearchTool = ({
           if (logData.type === 'Html') {
             if (!hasTriggeredStep4Ref.current && currentStep < 5) {
               setCurrentStep(4);
-              hasTriggeredStep4Ref.current = true; // 标记第4步已触发
+              hasTriggeredStep4Ref.current = true; 
             }
             // 如果是新的流式输出开始，重置累积的内容
             if (!isStreamingRef.current || currentStreamIdRef.current !== logData.id) {
@@ -2025,7 +2026,8 @@ const ResearchTool = ({
                 id: logData.id,
                 type: 'Html',
                 content: '',
-                timestamp: new Date().toISOString()
+                timestamp: new Date().toISOString(),
+                currentStep: currentStepNumber
               }]);
             }
 
@@ -2061,7 +2063,8 @@ const ResearchTool = ({
                 type: 'Color',
                 content: '', // 初始内容为空
                 step: logData.step,
-                timestamp: logData.timestamp || new Date().toISOString()
+                timestamp: logData.timestamp || new Date().toISOString(),
+                currentStep: currentStepNumber
               }]);
             }
 
@@ -2087,6 +2090,7 @@ const ResearchTool = ({
               content: Array.isArray(logData.content) ? logData.content : [], 
               step: logData.step,
               timestamp: logData.timestamp || new Date().toISOString(),
+              currentStep: currentStepNumber
             };
             setLogs(prevLogs => [...prevLogs, standardizedLog]);
           }
@@ -2100,6 +2104,7 @@ const ResearchTool = ({
               content: Array.isArray(logData.content) ? logData.content : [],
               step: logData.step,
               timestamp: logData.timestamp || new Date().toISOString(),
+              currentStep: currentStepNumber
             };
             setLogs(prevLogs => [...prevLogs, standardizedLog]);
           }
@@ -2113,6 +2118,7 @@ const ResearchTool = ({
               content: Array.isArray(logData.content) ? logData.content : [],
               step: logData.step,
               timestamp: logData.timestamp || new Date().toISOString(),
+              currentStep: currentStepNumber
             };
             setLogs(prevLogs => [...prevLogs, standardizedLog]);
           }
@@ -2120,8 +2126,11 @@ const ResearchTool = ({
             // 收到 Codes 类型，表示流式输出结束
             isStreamingRef.current = false;
             currentStreamIdRef.current = null;
-            // 正常添加 Codes 日志
-            setLogs(prevLogs => [...prevLogs, logData]);
+            const logWithStep = {
+              ...logData,
+              currentStep: currentStepNumber // 添加 currentStep 字段
+            };
+            setLogs(prevLogs => [...prevLogs, logWithStep]);
           }
           else {
             // 其他类型的日志正常添加
@@ -2811,11 +2820,39 @@ const ResearchTool = ({
           {/* 左侧聊天面板 */}
           <div className="w-[35%] relative flex flex-col">
             {/* ... (聊天面板顶部和消息区域保持不变) ... */}
-            <div className="h-10 px-4 border-b border-gray-300/20 flex-shrink-0">
+            <div className="h-10 px-4 border-b border-gray-300/20 flex-shrink-0 flex items-center justify-between relative">
               <div className="flex items-center">
                 <img src="/images/alternatively-logo.png" alt="AltPage.ai" className="w-5 h-5 mr-1.5" />
                 <h2 className="text-sm font-semibold text-gray-100">Copilot</h2>
               </div>
+              {isProcessingTask && ( // 中止按钮只在任务进行中显示
+                <button
+                  type="button"
+                  className="p-0"
+                  title="Abort Task"
+                  onClick={() => setShowAbortModal(true)}
+                  style={{
+                    height: '28px', // 缩小高度
+                    width: '28px',  // 缩小宽度
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'linear-gradient(135deg, #7f1d1d 0%, #b91c1c 100%)',
+                    borderRadius: '50%',
+                    boxShadow: '0 0 8px 1.5px rgba(185, 28, 28, 0.4), 0 2px 4px 0 rgba(127,29,29,0.10)',
+                    border: 'none',
+                    transition: 'box-shadow 0.3s ease-in-out',
+                  }}
+                >
+                  <div style={{
+                    width: '10px',   // 缩小内部方块
+                    height: '10px',  // 缩小内部方块
+                    background: 'white',
+                    borderRadius: '2px',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
+                  }} />
+                </button>
+              )}
             </div>
 
             <div className="flex-1 overflow-y-auto pt-12 px-4 pb-4 chat-messages-container">
@@ -2861,7 +2898,6 @@ const ResearchTool = ({
                   </div>
                   // --- 结束新增 ---
                 ) : (
-                  // --- 原有的输入框逻辑 ---
                   <>
                     <Tooltip
                       title={(loading || isMessageSending || inputDisabledDueToUrlGet) ? "Agent is working, please wait a sec." : ""}
@@ -2901,34 +2937,6 @@ const ResearchTool = ({
                             }
                           }}
                         />
-                        {isProcessingTask && ( // 中止按钮只在任务进行中显示
-                          <button
-                            type="button"
-                            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 p-0"
-                            title="Abort Task"
-                            onClick={() => setShowAbortModal(true)}
-                            style={{
-                              height: '32px',
-                              width: '32px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              background: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)',
-                              borderRadius: '50%',
-                              boxShadow: '0 0 12px 2px rgba(255, 75, 43, 0.6), 0 2px 4px 0 rgba(255,65,108,0.15)',
-                              border: 'none',
-                              transition: 'box-shadow 0.3s ease-in-out',
-                            }}
-                          >
-                            <div style={{
-                              width: '12px',
-                              height: '12px',
-                              background: 'white',
-                              borderRadius: '3px',
-                              boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
-                            }} />
-                          </button>
-                        )}
                       </div>
                     </Tooltip>
                     <div className="flex justify-end mt-3 px-1">
