@@ -884,14 +884,6 @@ const ResearchTool = ({
   };
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowDemo(false);
-    }, 10000);
-
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
     const style = document.createElement('style');
     style.innerHTML = `
       .agent-log-content-wrapper * {
