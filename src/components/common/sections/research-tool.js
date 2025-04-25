@@ -2826,32 +2826,37 @@ const ResearchTool = ({
                 <h2 className="text-sm font-semibold text-gray-100">Copilot</h2>
               </div>
               {isProcessingTask && ( // 中止按钮只在任务进行中显示
-                <button
-                  type="button"
-                  className="p-0"
-                  title="Abort Task"
-                  onClick={() => setShowAbortModal(true)}
-                  style={{
-                    height: '28px', // 缩小高度
-                    width: '28px',  // 缩小宽度
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: 'linear-gradient(135deg, #7f1d1d 0%, #b91c1c 100%)',
-                    borderRadius: '50%',
-                    boxShadow: '0 0 8px 1.5px rgba(185, 28, 28, 0.4), 0 2px 4px 0 rgba(127,29,29,0.10)',
-                    border: 'none',
-                    transition: 'box-shadow 0.3s ease-in-out',
-                  }}
-                >
-                  <div style={{
-                    width: '10px',   // 缩小内部方块
-                    height: '10px',  // 缩小内部方块
-                    background: 'white',
-                    borderRadius: '2px',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
-                  }} />
-                </button>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-gray-300">
+                    If you want to abort the current task...
+                  </span>
+                  <button
+                    type="button"
+                    className="p-0"
+                    title="Abort Task"
+                    onClick={() => setShowAbortModal(true)}
+                    style={{
+                      height: '28px',
+                      width: '28px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: 'linear-gradient(135deg, #7f1d1d 0%, #b91c1c 100%)',
+                      borderRadius: '50%',
+                      boxShadow: '0 0 8px 1.5px rgba(185, 28, 28, 0.4), 0 2px 4px 0 rgba(127,29,29,0.10)',
+                      border: 'none',
+                      transition: 'box-shadow 0.3s ease-in-out',
+                    }}
+                  >
+                    <div style={{
+                      width: '10px',
+                      height: '10px',
+                      background: 'white',
+                      borderRadius: '2px',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
+                    }} />
+                  </button>
+                </div>
               )}
             </div>
 
@@ -2939,6 +2944,26 @@ const ResearchTool = ({
                         />
                       </div>
                     </Tooltip>
+                    {/* 新增：显眼的输入提示条 */}
+                    {!(loading || isMessageSending || inputDisabledDueToUrlGet) && (
+                      <div
+                        className="mt-2 flex items-center justify-center gap-2 animate-pulse"
+                        style={{
+                          background: 'linear-gradient(90deg, #fbbf24 0%, #f59e42 100%)',
+                          color: '#fff',
+                          borderRadius: '8px',
+                          fontWeight: 'bold',
+                          fontSize: '0.95rem', // 字体大小缩小
+                          padding: '6px 0',    // 上下内边距也略微缩小
+                          boxShadow: '0 2px 12px 0 rgba(251,191,36,0.15)'
+                        }}
+                      >
+                        <svg className="w-4 h-4 text-white animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" />
+                        </svg>
+                        <span>It's your turn! Please enter your answer above 👆</span>
+                      </div>
+                    )}
                     <div className="flex justify-end mt-3 px-1">
                       <div className="text-xs text-gray-400">
                         Press Enter ↵ to submit
