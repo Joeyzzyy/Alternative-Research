@@ -33,6 +33,8 @@ const HistoryCardList = () => {
   const [isDomainModalVisible, setIsDomainModalVisible] = useState(false); // 新增：控制域名绑定弹窗
   const [currentProductInfo, setCurrentProductInfo] = useState(null); // 新增：存储产品信息
   const [currentCustomerId, setCurrentCustomerId] = useState(null); // 新增：存储 Customer ID
+  const [isDeletingVerification, setIsDeletingVerification] = useState(false);
+  const [deleteDomainConfirmOpen, setDeleteDomainConfirmOpen] = useState(false); // 新增：控制域名删除确认弹窗
   const currentItem = resultDetail?.data?.find(item => item.resultId === selectedPreviewId) || {};
 
   // === 新增：函数用于检查 URL 参数并打开弹窗 ===
@@ -311,6 +313,45 @@ const HistoryCardList = () => {
     setIsDomainModalVisible(false); // 关闭弹窗
     // 重新加载域名列表和产品信息
     loadVerifiedDomains(setCurrentProductInfo, setVerifiedDomains, setDomainLoading);
+  };
+
+  // === 新增：处理删除验证记录（实际执行删除） ===
+  const executeDeleteDomainVerification = async () => {
+    if (!currentProductInfo) {
+      messageApi.error('Product information not available.');
+      setDeleteDomainConfirmOpen(false); // 关闭确认弹窗
+      return;
+    }
+    setIsDeletingVerification(true);
+    setDeleteDomainConfirmOpen(false); // 关闭确认弹窗
+    const payload = {
+      productId: currentProductInfo.productId,
+      productName: currentProductInfo.productName,
+      website: '',
+      coreFeatures: currentProductInfo.productDesc,
+      competitors: currentProductInfo.competitors,
+      domainStatus: false
+    };
+    try {
+      const res = await apiClient.updateProduct(currentProductInfo.productId, payload);
+      if (res && res.code === 200) {
+        messageApi.success('Domain verification record deleted successfully.');
+        // 刷新域名列表和产品信息
+        await loadVerifiedDomains(setCurrentProductInfo, setVerifiedDomains, setDomainLoading);
+        // 清空已选发布 URL
+        setSelectedPublishUrl('');
+      } else {
+        messageApi.error('Failed to delete domain verification record.');
+      }
+    } catch (e) {
+      messageApi.error('Failed to delete domain verification record.');
+    }
+    setIsDeletingVerification(false);
+  };
+
+  // === 修改：处理删除验证记录（打开确认弹窗） ===
+  const handleDeleteDomainVerification = () => {
+    setDeleteDomainConfirmOpen(true);
   };
 
   if (!hasToken) {
@@ -818,38 +859,52 @@ const HistoryCardList = () => {
                                 </a>
                               </div>
                             )}
-                            <button
-                              className="mt-1 px-2 py-0.5 rounded bg-red-600 hover:bg-red-500 text-white text-xxs font-semibold transition w-fit"
-                              disabled={deployLoading}
-                              onClick={async () => {
-                                setDeployLoading(true);
-                                try {
-                                  const resp = await apiClient.updateAlternativePublishStatus(selectedPreviewId, 'unpublish');
-                                  if (resp?.code === 200) {
-                                    messageApi.success('Unpublished successfully!');
-                                    setResultDetail(prev => {
-                                      if (!prev || !Array.isArray(prev.data)) return prev;
-                                      return {
-                                        ...prev,
-                                        data: prev.data.map(item =>
-                                          item.resultId === selectedPreviewId
-                                            ? { ...item, deploymentStatus: 'unpublish' }
-                                            : item
-                                        )
-                                      };
-                                    });
-                                  } else {
-                                    messageApi.error(resp?.message || 'Unpublish failed');
+                            <div className="flex items-center gap-2 mt-1">
+                              <button
+                                className="px-2 py-0.5 rounded bg-red-600 hover:bg-red-500 text-white text-xxs font-semibold transition w-fit disabled:opacity-60 disabled:cursor-not-allowed"
+                                disabled={deployLoading}
+                                onClick={async () => {
+                                  setDeployLoading(true);
+                                  try {
+                                    const resp = await apiClient.updateAlternativePublishStatus(selectedPreviewId, 'unpublish');
+                                    if (resp?.code === 200) {
+                                      messageApi.success('Unpublished successfully!');
+                                      setResultDetail(prev => {
+                                        if (!prev || !Array.isArray(prev.data)) return prev;
+                                        return {
+                                          ...prev,
+                                          data: prev.data.map(item =>
+                                            item.resultId === selectedPreviewId
+                                              ? { ...item, deploymentStatus: 'unpublish' }
+                                              : item
+                                          )
+                                        };
+                                      });
+                                    } else {
+                                      messageApi.error(resp?.message || 'Unpublish failed');
+                                    }
+                                  } catch (e) {
+                                    messageApi.error(e.message || 'Unpublish failed');
+                                  } finally {
+                                    setDeployLoading(false);
                                   }
-                                } catch (e) {
-                                  messageApi.error(e.message || 'Unpublish failed');
-                                } finally {
-                                  setDeployLoading(false);
-                                }
-                              }}
-                            >
-                              {deployLoading ? 'Unpublishing...' : 'Unpublish'}
-                            </button>
+                                }}
+                              >
+                                {deployLoading ? 'Unpublishing...' : 'Unpublish'}
+                              </button>
+                              {/* === 修改：增加 verifiedDomains.length > 0 条件 === */}
+                              {currentProductInfo?.projectWebsite && verifiedDomains.length > 0 && (
+                                <button
+                                  onClick={handleDeleteDomainVerification} // 修改：调用打开确认弹窗的函数
+                                  className="p-1 rounded bg-yellow-700/80 hover:bg-yellow-600/90 text-white transition disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                                  title="Delete Domain Verification Record"
+                                  disabled={isDeletingVerification || domainLoading}
+                                  style={{ width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                >
+                                  {isDeletingVerification ? <Spin size="small" /> : <DeleteOutlined style={{ fontSize: 12 }} />}
+                                </button>
+                              )}
+                            </div>
                           </div>
                         ) : (
                           <span className="text-gray-300 font-bold text-xs">Not Published</span>
@@ -858,7 +913,21 @@ const HistoryCardList = () => {
                       {currentItem.deploymentStatus !== 'publish' && (
                         <>
                           <div>
-                            <div className="text-xs font-semibold text-cyan-300 mb-0.5">Publish URL</div>
+                            <div className="flex items-center justify-between mb-0.5">
+                              <div className="text-xs font-semibold text-cyan-300">Publish URL</div>
+                              {/* === 修改：增加 verifiedDomains.length > 0 条件 === */}
+                              {currentProductInfo?.projectWebsite && verifiedDomains.length > 0 && (
+                                <button
+                                  onClick={handleDeleteDomainVerification} // 修改：调用打开确认弹窗的函数
+                                  className="p-1 rounded bg-yellow-700/80 hover:bg-yellow-600/90 text-white transition disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                                  title="Delete Domain Verification Record"
+                                  disabled={isDeletingVerification || domainLoading}
+                                  style={{ width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                >
+                                  {isDeletingVerification ? <Spin size="small" /> : <DeleteOutlined style={{ fontSize: 12 }} />}
+                                </button>
+                              )}
+                            </div>
                             {domainLoading ? (
                               <div className="flex items-center gap-2 py-2">
                                 <Spin size="small" />
@@ -870,28 +939,11 @@ const HistoryCardList = () => {
                                 <button
                                   className="px-2 py-0.5 rounded bg-cyan-700 hover:bg-cyan-600 text-white text-xxs font-semibold transition"
                                   onClick={() => {
-                                    // === 修改：点击按钮时打开 DomainBindingModal ===
                                     if (currentCustomerId && currentProductInfo) {
                                       setIsDomainModalVisible(true);
                                     } else {
                                       messageApi.warning('Could not load necessary information to verify domain.');
-                                      // 可以选择尝试重新加载信息
-                                      // loadVerifiedDomains(setCurrentProductInfo, setVerifiedDomains, setDomainLoading);
                                     }
-                                    // === 移除原来的 window.open 逻辑 ===
-                                    // const accessToken = localStorage.getItem('alternativelyAccessToken') || '';
-                                    // const customerEmail = localStorage.getItem('alternativelyCustomerEmail') || '';
-                                    // const customerId = localStorage.getItem('alternativelyCustomerId') || '';
-                                    // let url = 'https://app.websitelm.com/dashboard';
-                                    // const params = [];
-                                    // if (accessToken) params.push(`authKey=${encodeURIComponent(accessToken)}`);
-                                    // if (customerEmail) params.push(`currentCustomerEmail=${encodeURIComponent(customerEmail)}`);
-                                    // if (customerId) params.push(`currentCustomerId=${encodeURIComponent(customerId)}`);
-                                    // if (params.length > 0) {
-                                    //   url += '?' + params.join('&');
-                                    // }
-                                    // window.open(url, '_blank');
-                                    // === 结束修改 ===
                                   }}
                                 >
                                   Go to verify domain
@@ -903,6 +955,7 @@ const HistoryCardList = () => {
                                   value={selectedPublishUrl}
                                   onChange={e => setSelectedPublishUrl(e.target.value)}
                                   className="w-full bg-slate-800/80 text-gray-100 border border-slate-700 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-cyan-400 transition text-xs"
+                                  disabled={isDeletingVerification}
                                 >
                                   {verifiedDomains.map(domain => (
                                     <option key={domain} value={domain}>{domain}</option>
@@ -922,7 +975,7 @@ const HistoryCardList = () => {
                           <div className="flex gap-2 mt-1.5">
                             {verifiedDomains.length > 0 && (
                               <button
-                                disabled={!selectedPublishUrl || deployLoading}
+                                disabled={!selectedPublishUrl || deployLoading || isDeletingVerification}
                                 onClick={async () => {
                                   setDeployLoading(true);
                                   try {
@@ -956,7 +1009,7 @@ const HistoryCardList = () => {
                                 }}
                                 className={`
                                   px-3 py-1 rounded font-semibold transition text-xxs
-                                  ${(!selectedPublishUrl || deployLoading)
+                                  ${(!selectedPublishUrl || deployLoading || isDeletingVerification)
                                     ? 'bg-cyan-900 text-cyan-300 cursor-not-allowed'
                                     : 'bg-cyan-600 hover:bg-cyan-500 text-white shadow-sm'}
                                 `}
@@ -1175,6 +1228,38 @@ const HistoryCardList = () => {
             }}
           />
         )}
+        {/* === 新增：域名删除确认弹窗 === */}
+        <Modal
+          open={deleteDomainConfirmOpen}
+          onCancel={() => setDeleteDomainConfirmOpen(false)}
+          footer={[
+            <Button
+              key="delete"
+              type="primary"
+              danger
+              loading={isDeletingVerification}
+              onClick={executeDeleteDomainVerification} // 调用执行删除的函数
+            >
+              Confirm Delete
+            </Button>,
+            <Button key="cancel" onClick={() => setDeleteDomainConfirmOpen(false)} disabled={isDeletingVerification}>
+              Cancel
+            </Button>
+          ]}
+          centered
+          title={null}
+          closable={!isDeletingVerification}
+          maskClosable={!isDeletingVerification}
+        >
+          <div className="flex flex-col items-center justify-center py-6">
+            <ExclamationCircleOutlined style={{ fontSize: 40, color: '#f87171' }} />
+            <div className="mt-4 text-lg font-semibold text-red-400">Confirm Deletion</div>
+            <div className="mt-2 text-gray-300 text-center">
+              Are you sure you want to delete the domain verification record for <span className="font-semibold text-white">{currentProductInfo?.projectWebsite}</span>?
+              <br/>This action might affect your published pages.
+            </div>
+          </div>
+        </Modal>
       </div>
     </div>
   );
