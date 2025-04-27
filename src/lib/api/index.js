@@ -557,6 +557,41 @@ const regenerateSection = async (regenerateData) => {
   }
 };
 
+// 新增：创建域名并添加 TXT 记录
+const createDomainWithTXT = async (domainData) => {
+  try {
+    const response = await apiClient.post('/domain', domainData);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to create domain and add TXT record:', error);
+    return null; // 或者根据需要抛出错误 throw error;
+  }
+};
+
+// 新增：验证域名接口
+const validateDomain = async (customerId) => {
+  try {
+    const response = await apiClient.get('/domain/validate', {
+      params: { customerId }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Failed to validate domain:', error);
+    return null;
+  }
+};
+
+// 新增：更新产品的方法
+const updateProduct = async (productId, productData) => {
+  try {
+    const response = await apiClient.put(`/products/${productId}`, productData);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to update product:', error);
+    return null;
+  }
+};
+
 apiClient.getCompetitorResearch = getCompetitorResearch;
 apiClient.login = login;
 apiClient.register = register;
@@ -594,5 +629,8 @@ apiClient.uploadMedia = uploadMedia;
 apiClient.getMedia = getMedia;
 apiClient.deleteMedia = deleteMedia;
 apiClient.regenerateSection = regenerateSection;
+apiClient.createDomainWithTXT = createDomainWithTXT;
+apiClient.validateDomain = validateDomain;
+apiClient.updateProduct = updateProduct;
 
 export default apiClient;

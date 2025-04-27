@@ -3,6 +3,7 @@ import apiClient from '../../../lib/api/index.js';
 import { Modal, Button, Spin, message } from 'antd';
 import { DeleteOutlined, ExclamationCircleOutlined, ReloadOutlined, LeftOutlined, RightOutlined, CloseOutlined, ClearOutlined } from '@ant-design/icons';
 import HtmlPreview from './page-edit'; // 新增：引入HtmlPreview组件
+import DomainBindingModal from '../DomainBindingModal'; // 新增：引入 DomainBindingModal
 
 const HistoryCardList = () => {
   const [historyList, setHistoryList] = useState([]);
@@ -29,6 +30,9 @@ const HistoryCardList = () => {
   const [clearAllConfirmOpen, setClearAllConfirmOpen] = useState(false);
   const [isClearingAll, setIsClearingAll] = useState(false);
   const [editPageId, setEditPageId] = useState(null); // 新增：用于控制全屏编辑页面
+  const [isDomainModalVisible, setIsDomainModalVisible] = useState(false); // 新增：控制域名绑定弹窗
+  const [currentProductInfo, setCurrentProductInfo] = useState(null); // 新增：存储产品信息
+  const [currentCustomerId, setCurrentCustomerId] = useState(null); // 新增：存储 Customer ID
   const currentItem = resultDetail?.data?.find(item => item.resultId === selectedPreviewId) || {};
 
   // === 新增：函数用于检查 URL 参数并打开弹窗 ===
@@ -84,6 +88,10 @@ const HistoryCardList = () => {
       return;
     }
     setHasToken(true);
+    // 新增：获取 Customer ID
+    const customerId = localStorage.getItem('alternativelyCustomerId');
+    setCurrentCustomerId(customerId);
+
     fetchHistory();
 
     // === 新增：每隔1分钟自动刷新任务列表 ===
@@ -223,11 +231,11 @@ const HistoryCardList = () => {
       setResultDetail({ error: 'Failed to load details.' });
     }
     setResultLoading(false);
-    // 选中卡片后，加载可用域名
+    // 选中卡片后，加载可用域名和产品信息
     if (item) {
-      await loadVerifiedDomains(setVerifiedDomains, setDomainLoading);
+      await loadVerifiedDomains(setCurrentProductInfo, setVerifiedDomains, setDomainLoading);
     }
-    setSelectedPublishUrl(''); 
+    setSelectedPublishUrl('');
     setDeployPreviewUrl('');
   };
 
@@ -295,6 +303,14 @@ const HistoryCardList = () => {
         {statusText}
       </span>
     );
+  };
+
+  // === 新增：处理域名验证成功的回调 ===
+  const handleDomainVerified = (verifiedDomain) => {
+    messageApi.success(`Domain ${verifiedDomain} verified successfully! Refreshing domain list...`);
+    setIsDomainModalVisible(false); // 关闭弹窗
+    // 重新加载域名列表和产品信息
+    loadVerifiedDomains(setCurrentProductInfo, setVerifiedDomains, setDomainLoading);
   };
 
   if (!hasToken) {
@@ -854,18 +870,28 @@ const HistoryCardList = () => {
                                 <button
                                   className="px-2 py-0.5 rounded bg-cyan-700 hover:bg-cyan-600 text-white text-xxs font-semibold transition"
                                   onClick={() => {
-                                    const accessToken = localStorage.getItem('alternativelyAccessToken') || '';
-                                    const customerEmail = localStorage.getItem('alternativelyCustomerEmail') || '';
-                                    const customerId = localStorage.getItem('alternativelyCustomerId') || '';
-                                    let url = 'https://app.websitelm.com/dashboard';
-                                    const params = [];
-                                    if (accessToken) params.push(`authKey=${encodeURIComponent(accessToken)}`);
-                                    if (customerEmail) params.push(`currentCustomerEmail=${encodeURIComponent(customerEmail)}`);
-                                    if (customerId) params.push(`currentCustomerId=${encodeURIComponent(customerId)}`);
-                                    if (params.length > 0) {
-                                      url += '?' + params.join('&');
+                                    // === 修改：点击按钮时打开 DomainBindingModal ===
+                                    if (currentCustomerId && currentProductInfo) {
+                                      setIsDomainModalVisible(true);
+                                    } else {
+                                      messageApi.warning('Could not load necessary information to verify domain.');
+                                      // 可以选择尝试重新加载信息
+                                      // loadVerifiedDomains(setCurrentProductInfo, setVerifiedDomains, setDomainLoading);
                                     }
-                                    window.open(url, '_blank');
+                                    // === 移除原来的 window.open 逻辑 ===
+                                    // const accessToken = localStorage.getItem('alternativelyAccessToken') || '';
+                                    // const customerEmail = localStorage.getItem('alternativelyCustomerEmail') || '';
+                                    // const customerId = localStorage.getItem('alternativelyCustomerId') || '';
+                                    // let url = 'https://app.websitelm.com/dashboard';
+                                    // const params = [];
+                                    // if (accessToken) params.push(`authKey=${encodeURIComponent(accessToken)}`);
+                                    // if (customerEmail) params.push(`currentCustomerEmail=${encodeURIComponent(customerEmail)}`);
+                                    // if (customerId) params.push(`currentCustomerId=${encodeURIComponent(customerId)}`);
+                                    // if (params.length > 0) {
+                                    //   url += '?' + params.join('&');
+                                    // }
+                                    // window.open(url, '_blank');
+                                    // === 结束修改 ===
                                   }}
                                 >
                                   Go to verify domain
@@ -1135,29 +1161,53 @@ const HistoryCardList = () => {
             </div>
           )}
         </Modal>
+        {/* === 新增：渲染 DomainBindingModal === */}
+        {currentCustomerId && (
+          <DomainBindingModal
+            visible={isDomainModalVisible}
+            onClose={() => setIsDomainModalVisible(false)}
+            productInfo={currentProductInfo} // 传递获取到的产品信息
+            customerId={currentCustomerId}   // 传递 Customer ID
+            onVerified={handleDomainVerified} // 处理验证成功的回调
+            onError={(error) => {
+              console.error("Domain binding/verification error:", error);
+              // messageApi.error(error.message || 'An error occurred during domain verification.'); // Modal 内部已有提示，这里可以省略或自定义
+            }}
+          />
+        )}
       </div>
     </div>
   );
 };
 
-const loadVerifiedDomains = async (setVerifiedDomains, setDomainLoading) => {
+const loadVerifiedDomains = async (setCurrentProductInfo, setVerifiedDomains, setDomainLoading) => {
   setDomainLoading?.(true);
+  setCurrentProductInfo(null); // 重置产品信息
+  setVerifiedDomains([]); // 重置域名列表
   try {
     // 1. 获取 Vercel 项目的 projectId
     const projectId = 'prj_wzQuo0EarALY8MsjNvPotb4wYO8S';
     let productInfo = null;
-    let domainConfigured = false;
-    const response = await apiClient.getProductsByCustomerId();
-    if (response?.code === 200) {
-      productInfo = response.data;
+    // === 修改：获取并存储产品信息 ===
+    try {
+      const response = await apiClient.getProductsByCustomerId();
+      if (response?.code === 200 && response.data) {
+        productInfo = response.data;
+        setCurrentProductInfo(productInfo); // 存储产品信息到 state
+      } else {
+        console.error("Failed to get product info:", response);
+        // 即使产品信息获取失败，也继续尝试获取域名，但可能无法进行验证绑定
+      }
+    } catch (productError) {
+      console.error("Error fetching product info:", productError);
+       // 即使产品信息获取失败，也继续尝试获取域名
     }
 
     // === 新增：检查 domainStatus ===
-    // 如果 domainStatus 明确为 false，则直接认为没有可用域名
     if (productInfo?.domainStatus === false) {
       setVerifiedDomains([]);
-      setDomainLoading?.(false); // 确保 loading 状态被关闭
-      return; // 提前退出函数
+      setDomainLoading?.(false);
+      return;
     }
     // === 结束新增检查 ===
 
@@ -1169,8 +1219,8 @@ const loadVerifiedDomains = async (setVerifiedDomains, setDomainLoading) => {
     const rootDomain = productInfo?.projectWebsite;
     if (!rootDomain) {
       setVerifiedDomains([]);
-      setDomainLoading?.(false); // 在 finally 中统一处理
-      return; // 提前退出
+      setDomainLoading?.(false);
+      return;
     }
 
     // 4. 过滤并检查域名 - 只保留以根域名结尾的域名
@@ -1213,10 +1263,10 @@ const loadVerifiedDomains = async (setVerifiedDomains, setDomainLoading) => {
 
     setVerifiedDomains(mergedDomains);
   } catch (error) {
-    // 发生异常，清空可用域名
+    console.error("Error loading verified domains:", error);
     setVerifiedDomains([]);
   } finally {
-    setDomainLoading?.(false); // 统一在 finally 中关闭 loading
+    setDomainLoading?.(false);
   }
 };
 
