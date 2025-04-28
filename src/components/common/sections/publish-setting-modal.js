@@ -786,14 +786,19 @@ const PublishSettingsModal = ({
                         disabled={!domainToVerify || verificationLoading || !currentProductInfo || !currentCustomerId}
                         className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border-none text-white font-semibold"
                       >
-                        Get TXT Record
+                        Get Verification Record
                       </Button>
                        {!currentProductInfo && <p className="text-yellow-400 text-xs mt-1">Product information is not loaded, cannot add domain.</p>}
                     </div>
                   )}
                   {(verificationStatus === 'pending_txt' || verificationStatus === 'verifying') && txtRecord && (
                     <div className="space-y-3">
-                      <p className="text-sm text-gray-300">Add the following TXT record to your domain's DNS settings.</p>
+                      <p className="text-sm text-gray-300">
+                        Add the following TXT record to your domain's DNS settings.
+                        <span className="block text-xs text-yellow-400/80 mt-1">
+                          If verification repeatedly fails, please delete the existing TXT record for this host in your DNS settings and add it again.
+                        </span>
+                      </p>
                       <div className="space-y-1 bg-slate-700/50 p-3 rounded border border-slate-600">
                         <p><strong className="text-gray-200">Type:</strong> <code className="text-cyan-300 bg-slate-800 px-1 rounded">TXT</code></p>
                         <p><strong className="text-gray-200">Name/Host:</strong></p>
