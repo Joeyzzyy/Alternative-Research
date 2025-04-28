@@ -468,7 +468,7 @@ const HistoryCardList = () => {
                           {statusText}
                         </div>
                         <div className="text-[10px] text-gray-400 mb-0.5">
-                          ID: <span className="text-gray-300 font-mono">{item.websiteId.substring(0, 8)}...</span>
+                          ID: <span className="text-gray-300 font-mono">{item.websiteId}</span>
                         </div>
                         {item.created_at && (
                           <div className="text-[10px] text-gray-500 mb-0.5">
@@ -715,7 +715,7 @@ const HistoryCardList = () => {
                               {renderStatusBadge(item.generatorStatus)}
                             </div>
                             <div className="text-gray-400 text-xxs mb-0.5">
-                              ID: <span className="text-gray-300 font-mono">{item.websiteId.substring(0, 12)}...</span>
+                              ID: <span className="text-gray-300 font-mono">{item.websiteId}</span>
                             </div>
                             {item.generatedStart && (
                               <div className="text-gray-500 text-xxs">
