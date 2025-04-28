@@ -328,9 +328,64 @@ const PublishSettingsModal = ({
       if (res?.code === 200) {
         messageApi.success(`Domain ${domainToVerify} verified successfully! Refreshing...`);
         setVerificationStatus('idle');
+        const verifiedDomainName = domainToVerify; // 暂存一下，因为下面会清空
         setDomainToVerify('');
         setTxtRecord(null);
-        onDomainChange(); // 通知父组件刷新数据
+
+        // 1. 先通知父组件刷新
+        onDomainChange();
+
+        // 2. 尝试自动添加 'alternative-pages' subfolder
+        try {
+          console.log("Attempting to auto-add 'alternative-pages' subfolder...");
+          // 获取当前 subfolders
+          const subfolderResp = await apiClient.getSubfolders();
+          let currentSubfolders = [];
+          if (subfolderResp?.code === 200 && Array.isArray(subfolderResp.data)) {
+            currentSubfolders = subfolderResp.data;
+          } else {
+            console.warn("Could not fetch current subfolders before auto-add:", subfolderResp);
+            // 如果获取失败，可以根据需要决定是否继续尝试添加
+            // 这里我们假设如果获取失败，就认为它不存在并尝试添加
+          }
+
+          const defaultSubfolder = 'alternative-pages';
+          if (!currentSubfolders.some(sf => sf.toLowerCase() === defaultSubfolder)) {
+            console.log(`'${defaultSubfolder}' not found, attempting to add.`);
+            const updatedList = [...currentSubfolders, defaultSubfolder];
+            const addSubfolderResp = await apiClient.updateSubfolders(updatedList);
+
+            if (addSubfolderResp?.code === 200) {
+              messageApi.info(`Default subfolder '${defaultSubfolder}' added automatically.`);
+              // === 新增：自动选中新添加的 subfolder ===
+              const newSubfolderUrl = `${verifiedDomainName}/${defaultSubfolder}`;
+              // 确保 verifiedDomains 列表在 loadData 更新后会包含这个 URL
+              // 直接设置选中状态，依赖 loadData 更新 verifiedDomains 列表
+              setSelectedPublishUrl(newSubfolderUrl);
+              // 注意：loadData 是异步的，这里设置后，UI 可能稍后才更新下拉框选项
+              // 但由于 onDomainChange() 已触发 loadData，最终状态应该是正确的
+              // === 结束新增部分 ===
+            } else {
+              // 自动添加失败，只在控制台记录错误，避免过多打扰用户
+              console.error("Error auto-adding default subfolder:", addSubfolderResp);
+              messageApi.warning(`Could not automatically add the '${defaultSubfolder}' subfolder. You may need to add it manually.`);
+            }
+          } else {
+            console.log(`Default subfolder '${defaultSubfolder}' already exists.`);
+            // === 新增：如果已存在，也尝试选中它 ===
+            const existingSubfolderUrl = `${verifiedDomainName}/${defaultSubfolder}`;
+            // 检查当前 verifiedDomains 是否已包含它 (可能 loadData 还未完成)
+            // 仍然尝试设置，依赖 loadData 更新列表
+            setSelectedPublishUrl(existingSubfolderUrl);
+            // === 结束新增部分 ===
+          }
+        } catch (subfolderError) {
+          // 自动添加过程中发生异常
+          console.error("Error during auto-add subfolder process:", subfolderError);
+          messageApi.warning(`An error occurred while trying to add the default '${defaultSubfolder}' subfolder.`);
+        }
+        // --- 自动添加逻辑结束 ---
+
       } else {
          const errorMsg = res?.message || 'Verification failed. Please double-check the TXT record and wait for DNS propagation.';
          setVerificationError(errorMsg);
