@@ -216,7 +216,7 @@ export default function Header() {
 
   const mainMenuItems = [
     {
-      label: "Generate Alternative Pages Now!",
+      label: "Go Back To Top",
       color: "#000000",
       fontWeight: "600",
       link: "#",
