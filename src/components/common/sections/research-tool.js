@@ -8,12 +8,12 @@ import MessageHandler from '../../../utils/MessageHandler';
 import HistoryCardList from './result-preview.js';
 
 const TAG_FILTERS = {
-  '\\[URL_GET\\]': '',  // 过滤 [URL_GET]
-  '\\[COMPETITOR_SELECTED\\]': '',  // 过滤 [COMPETITOR_SELECTED]
-  '\\[END\\]': '',  // 过滤 [END]
-  '\\[ALL_END\\]': '',  // 过滤 [COMPETITOR_SELECTED]
+  '\\[URL_GET\\]': '',  
+  '\\[COMPETITOR_SELECTED\\]': '',  
+  '\\[END\\]': '',  
+  '\\[ALL_END\\]': '',  
 };
-const ALTERNATIVELY_LOGO = '/images/alternatively-logo.png'; // 假设这是Alternatively的logo路径
+const ALTERNATIVELY_LOGO = '/images/alternatively-logo.png';
 
 const ResearchTool = ({ 
   setTargetShowcaseTab
@@ -35,20 +35,20 @@ const ResearchTool = ({
   const [browserTabs, setBrowserTabs] = useState([]);
   const [activeTab, setActiveTab] = useState(null);
   const [inputDisabledDueToUrlGet, setInputDisabledDueToUrlGet] = useState(false);
-  const messageHandler = useMemo(() => new MessageHandler(setMessages), [setMessages]); // 使用 useMemo 包装
+  const messageHandler = useMemo(() => new MessageHandler(setMessages), [setMessages]);
   const [sseConnected, setSseConnected] = useState(false);
   const retryCountRef = useRef(0);
   const retryTimeoutRef = useRef(null);
-  const htmlStreamRef = useRef('');  // 用于累积 HTML 流
+  const htmlStreamRef = useRef(''); 
   const isStreamingRef = useRef(false);
-  const currentStreamIdRef = useRef(null);  // 添加一个 ref 来跟踪当前正在流式输出的日志 ID
+  const currentStreamIdRef = useRef(null); 
   const [resultIds, setResultIds] = useState([]);
   const lastLogCountRef = useRef(0);
   const [isProcessingTask, setIsProcessingTask] = useState(false);
-  const [dynamicPlaceholder, setDynamicPlaceholder] = useState(''); // 新增状态
-  const placeholderIntervalRef = useRef(null); // Ref for interval ID
-  const placeholderTimeoutRef = useRef(null); // Ref for pause timeout
-  const [currentStep, setCurrentStep] = useState(1); // 添加这一行来跟踪当前步骤
+  const [dynamicPlaceholder, setDynamicPlaceholder] = useState('');
+  const placeholderIntervalRef = useRef(null); 
+  const placeholderTimeoutRef = useRef(null);
+  const [currentStep, setCurrentStep] = useState(1);
   const filterMessageTags = (message) => {
     let filteredMessage = message;
     Object.entries(TAG_FILTERS).forEach(([tag, replacement]) => {
@@ -59,8 +59,8 @@ const ResearchTool = ({
   };
   const [styleChangeCompleted, setStyleChangeCompleted] = useState(false);
   const hasTriggeredStep4Ref = useRef(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // 添加侧边栏展开状态
-  const [isUserLoggedIn, setIsUserLoggedIn] = useState(false); // 重命名：全局登录状态
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true); 
+  const [isUserLoggedIn, setIsUserLoggedIn] = useState(false); 
 
   useEffect(() => {
     const lastInput = localStorage.getItem('urlInput');
@@ -69,9 +69,9 @@ const ResearchTool = ({
     }
     const checkLoginStatus = () => {
       const loggedIn = localStorage.getItem('alternativelyIsLoggedIn') === 'true';
-      setIsUserLoggedIn(loggedIn); // 使用新的 setter
+      setIsUserLoggedIn(loggedIn); 
     };
-    checkLoginStatus(); // 初始检查
+    checkLoginStatus(); 
     window.addEventListener('storage', checkLoginStatus);
     return () => {
       window.removeEventListener('storage', checkLoginStatus);
@@ -294,7 +294,7 @@ const ResearchTool = ({
         chatContainer.scrollTop = chatContainer.scrollHeight;
       }
     }
-  }, [messages]); // 当消息数组变化时触发
+  }, [messages]);
 
   useEffect(() => {
       const timer = setTimeout(() => {
@@ -322,7 +322,7 @@ const ResearchTool = ({
     return () => {
       window.removeEventListener('alternativelyLoginSuccess', handleLoginSuccess);
     };
-  }, []); // 依赖项为空，确保只添加一次监听器
+  }, []);
 
   useEffect(() => {
     const handleLogoutSuccess = () => {
@@ -1933,7 +1933,6 @@ const ResearchTool = ({
       console.warn("Element with ID 'showcase-section' not found for scrolling.");
     }
   };
-
   const currentTextIndexRef = useRef(0); // Track which sentence to display
   const isDeletingRef = useRef(false); // Track if currently deleting
   const charIndexRef = useRef(0); // Track character index within the sentence
