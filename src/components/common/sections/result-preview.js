@@ -361,14 +361,14 @@ const HistoryCardList = () => {
   }
 
   return (
-    <div id="result-preview-section" className="min-h-[320px] flex flex-col items-center justify-center from-slate-950 via-slate-900 to-black text-white relative overflow-hidden">
+    <div id="result-preview-section" className="min-h-[320px] flex flex-col from-slate-950 via-slate-900 to-black text-white relative overflow-hidden">
       {/* 背景装饰 */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_#22d3ee20_0%,_transparent_50%)] opacity-70 pointer-events-none"></div>
       <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-purple-600/10 rounded-full filter blur-3xl opacity-40 animate-pulse pointer-events-none"></div>
       <div className="absolute bottom-1/4 right-1/4 w-72 h-72 bg-cyan-600/10 rounded-full filter blur-3xl opacity-40 animate-pulse pointer-events-none"></div>
-      <div className="relative z-10 w-full flex flex-col items-center">
+      <div className="relative z-10 w-full flex flex-col">
         {contextHolder}
-        <div className="w-full max-w-7xl px-4 mt-4 mb-2 flex justify-center items-center">
+        <div className="w-full max-w-7xl px-4 mt-4 mb-2 flex justify-center items-center mx-auto">
           <div
             className="text-base font-semibold tracking-wide text-transparent bg-clip-text mr-3"
             style={{
@@ -408,7 +408,7 @@ const HistoryCardList = () => {
         </div>
         <div
           className={`
-            w-full max-w-4xl px-4 py-2 relative
+            w-full max-w-4xl px-4 py-2 relative mx-auto
             transition-opacity duration-300 ease-in-out opacity-100
           `}
         >
