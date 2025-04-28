@@ -14,28 +14,6 @@ const TAG_FILTERS = {
   '\\[ALL_END\\]': '',  // 过滤 [COMPETITOR_SELECTED]
 };
 const ALTERNATIVELY_LOGO = '/images/alternatively-logo.png'; // 假设这是Alternatively的logo路径
-const BACKGROUNDS = {
-  NIGHT_GHIBLI: { // 重命名 DEFAULT 为 NIGHT_GHIBLI
-    type: 'image', // 类型改为 image
-    value: `
-      radial-gradient(circle at 80% 20%, #0ea5e933 0%, transparent 55%),
-      radial-gradient(circle at 20% 80%, #7c3aed33 0%, transparent 60%),
-      linear-gradient(to bottom, #020617 0%, #0f172a 60%, #000 100%)
-    `,
-    overlay: '', // 统一覆盖层样式
-    buttonStyle: 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border-blue-500/30 hover:border-blue-400/60',
-    inputStyle: 'border-blue-400/30 focus:border-blue-300/50 shadow-blue-700/20',
-    cardStyle: 'border-blue-500/30 hover:border-blue-400/50 shadow-blue-700/20'
-  },
-  DAY_GHIBLI: { // 重命名 GHIBLI 为 DAY_GHIBLI
-    type: 'image',
-    value: 'url("/images/GHIBLI-BEST.png")',
-    overlay: '', 
-    buttonStyle: 'bg-blue-500/30 hover:bg-blue-500/40 text-blue-100 border-blue-500/40 hover:border-blue-400/60',
-    inputStyle: 'border-blue-400/30 focus:border-blue-300/50 shadow-blue-700/20',
-    cardStyle: 'border-blue-500/30 hover:border-blue-400/50 shadow-blue-700/20'
-  }
-};
 
 const ResearchTool = ({ 
   setTargetShowcaseTab
@@ -2078,9 +2056,9 @@ const ResearchTool = ({
 
   const handleExampleClick = (exampleKey) => { // 参数名改为 exampleKey 以示清晰
     // 1. 调用从父组件传入的函数，设置目标 Tab Key
-    if (setTargetShowcaseTab) { 
+    if (setTargetShowcaseTab) {
       // --- 修改：传递新的 key ('ranking', 'conversion', 'sem') ---
-      setTargetShowcaseTab(exampleKey); 
+      setTargetShowcaseTab(exampleKey);
     } else {
       console.warn("setTargetShowcaseTab prop is missing in ResearchTool");
     }
@@ -2238,8 +2216,8 @@ const ResearchTool = ({
 
   if (showInitialScreen) {
     return (
-      <div className={`w-full h-screen flex items-center justify-center relative bg-cover bg-center bg-no-repeat`} // 保留原有布局
-             style={getBackgroundStyle()}>
+      <div className={`w-full h-screen flex items-center justify-center relative bg-cover bg-center bg-no-repeat bg-gradient-to-br from-slate-900 via-slate-950 to-black`} // 使用默认背景
+             >
           {/* Inject contextHolder */}
           {contextHolder}
 
@@ -2279,7 +2257,7 @@ const ResearchTool = ({
         <div className={`relative z-10 w-full max-w-4xl px-8 py-12 initial-screen-content rounded-xl bg-transparent`}> {/* 移除背景和模糊 */}
           <div className={`text-center mb-8 text-shadow`}> {/* 应用 text-shadow */}
             {/* 修改 h1 以使用 Flexbox 进行对齐 */}
-            <h1 className={`text-4xl font-bold text-blue-100 mb-6 drop-shadow-lg flex items-center justify-center gap-3`}> {/* 应用 drop-shadow, 添加 flex, items-center, justify-center, gap */}
+            <h1 className={`text-4xl font-bold text-white mb-6 drop-shadow-lg flex items-center justify-center gap-3`}> {/* 应用 drop-shadow, 添加 flex, items-center, justify-center, gap */}
               <span className="text-3xl">
                 <span className="text-blue-400 ">Add SEO-Optimized Alternative Pages To Your Site</span> <br></br>
                   To Turn Competitors'<span className="text-blue-400">&nbsp;Popularity&nbsp;</span>
@@ -2309,10 +2287,10 @@ const ResearchTool = ({
                     // 保存输入值到 localStorage
                     localStorage.setItem('urlInput', e.target.value);
                   }}
-                  // 强制使用 Day Ghibli 的边框/阴影样式，并保留 research-tool-input 类
+                  // --- 修改：移除条件样式，使用默认样式 ---
                   className={`research-tool-input border rounded-xl text-lg w-full bg-white/90 border-blue-600/50 focus:border-blue-500 focus:ring focus:ring-blue-500/30 text-stone-800 placeholder-stone-500/80`}
                   style={{
-                    color: '#433422',
+                    color: '#433422', // 保持 DAY_GHIBLI 的颜色，因为背景是白色
                     height: '80px',
                     paddingRight: '220px', // 增加右侧内边距，容纳两个按钮
                     textOverflow: 'ellipsis',
@@ -2325,11 +2303,10 @@ const ResearchTool = ({
                 <div className="absolute right-2 top-1/2 transform -translate-y-1/2 z-10 flex gap-2">
                   <button
                     type="submit"
+                    // --- 修改：移除条件样式，使用默认样式 ---
                     className={`px-6 py-4 text-base
-                      ${currentBackground === 'DAY_GHIBLI'
-                        ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-blue-100 border-blue-400/50 hover:border-blue-300 shadow-[0_0_15px_rgba(217,119,6,0.5)] hover:shadow-[0_0_25px_rgba(217,119,6,0.7)] hover:from-blue-500 hover:to-blue-600'
-                        : 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white border-blue-400/50 hover:border-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.5)] hover:shadow-[0_0_25px_rgba(59,130,246,0.7)] hover:from-blue-500 hover:to-indigo-600'
-                      } rounded-xl
+                      bg-gradient-to-r from-blue-600 to-indigo-700 text-white border-blue-400/50 hover:border-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.5)] hover:shadow-[0_0_25px_rgba(59,130,246,0.7)] hover:from-blue-500 hover:to-indigo-600
+                      rounded-xl
                       transition-all duration-300 flex items-center gap-2
                       border hover:scale-105 shadow-lg
                       ${isProcessingTask ? 'opacity-70 cursor-not-allowed hover:scale-100' : 'cursor-pointer'}`}
@@ -2368,7 +2345,8 @@ const ResearchTool = ({
           </div>
 
           <div className="mt-12 max-w-4xl mx-auto">
-              <h3 className={`text-xl font-semibold ${currentBackground === 'DAY_GHIBLI' ? 'text-blue-100' : 'text-white'} mb-6 text-center drop-shadow-lg`}>From Our Customers</h3> {/* 应用 drop-shadow */}
+              {/* --- 修改：移除条件文本颜色，使用 text-white --- */}
+              <h3 className={`text-xl font-semibold text-white mb-6 text-center drop-shadow-lg`}>From Our Customers</h3> {/* 应用 drop-shadow */}
               <div className="grid grid-cols-3 gap-6">
                 {/* 统一卡片样式 */}
                 {[1,2,3].map((i) => (
@@ -2434,37 +2412,17 @@ const ResearchTool = ({
   }
 
   return (
-    <ConfigProvider
-      theme={{
-        token: {
-          colorPrimary: currentBackground === 'DAY_GHIBLI' ? '#d97706' : '#3b82f6',
-        },
-      }}
-      wave={{ disabled: true }}
-    >
+    <>
       {contextHolder}
-      <div className={`w-full min-h-screen bg-cover bg-center bg-no-repeat text-white flex items-center justify-center p-4 relative overflow-hidden`}
+      <div className={`w-full min-h-screen bg-cover bg-center bg-no-repeat text-white flex items-center justify-center p-4 relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-950 to-black`}
            style={{
              paddingTop: "80px",
-             ...getBackgroundStyle()
            }}>
 
-        {/* 背景覆盖层 */}
-        <div className={`absolute inset-0 ${getOverlayClass()}`} style={{ paddingTop: "80px" }}></div>
-
-        {/* 添加漂浮元素 - 仅在 DAY_GHIBLI 模式下 */}
-        {currentBackground === 'DAY_GHIBLI' && (
-          <>
-            <div className="absolute top-[15%] left-[10%] w-8 h-8 rounded-full bg-blue-400/20 animate-float" style={{animationDuration: '8s'}}></div>
-            <div className="absolute top-[30%] right-[15%] w-6 h-6 rounded-full bg-blue-300/30 animate-float" style={{animationDuration: '12s', animationDelay: '2s'}}></div>
-            <div className="absolute bottom-[20%] left-[20%] w-10 h-10 rounded-full bg-blue-500/20 animate-float" style={{animationDuration: '10s', animationDelay: '1s'}}></div>
-          </>
-        )}
+        <div className={`absolute inset-0 bg-black/30 backdrop-blur-sm`} style={{ paddingTop: "80px" }}></div>
 
         <div className="relative z-10 w-full flex flex-row gap-6 h-[calc(100vh-140px)] px-4 text-sm">
-          {/* 左侧聊天面板 */}
           <div className="w-[35%] relative flex flex-col">
-            {/* ... (聊天面板顶部和消息区域保持不变) ... */}
             <div className="h-12 px-4 border-b border-gray-300/20 flex-shrink-0 flex items-center justify-between relative">
               <div className="flex items-center">
                 <img src="/images/alternatively-logo.png" alt="AltPage.ai" className="w-5 h-5 mr-1.5" />
@@ -2518,27 +2476,19 @@ const ResearchTool = ({
                   )}
             </div>
 
-            {/* 输入框区域 */}
             <div className="p-4 border-t border-gray-300/20 flex-shrink-0"> {/* 保持这个区域不变 */}
               <div className="max-w-[600px] mx-auto">
                 {/* --- 修改：根据 styleChangeCompleted 条件渲染 --- */}
                 {styleChangeCompleted ? (
-                  // --- 新增：任务完成后的提示和按钮 ---
-                  <div className={`flex flex-col items-center justify-center p-4 rounded-lg ${
-                    currentBackground === 'DAY_GHIBLI' ? 'bg-blue-100/80 border border-blue-300/50' : 'bg-slate-800/60 border border-slate-700/50'
-                  }`}>
-                    <p className={`text-center mb-3 text-sm ${
-                      currentBackground === 'DAY_GHIBLI' ? 'text-blue-800' : 'text-gray-200'
-                    }`}>
+                  <div className={`flex flex-col items-center justify-center p-4 rounded-lg bg-slate-800/60 border border-slate-700/50`}>
+                    <p className={`text-center mb-3 text-sm text-gray-200`}>
                       The current task is complete. You can start a new task to generate more pages!
                     </p>
                     <button
                       onClick={() => window.open('https://altpage.ai', '_blank')}
-                      className={`px-5 py-2 text-sm font-medium rounded-md transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg ${
-                        currentBackground === 'DAY_GHIBLI'
-                          ? 'bg-gradient-to-r from-blue-500 to-orange-500 text-white hover:from-blue-600 hover:to-orange-600 border border-blue-600/50'
-                          : 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700 border border-blue-600/50'
-                      } hover:scale-105`}
+                      className={`px-5 py-2 text-sm font-medium rounded-md transition-all duration-300 flex items-center gap-2 shadow-md hover:shadow-lg
+                        bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700 border border-blue-600/50
+                       hover:scale-105`}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -2546,7 +2496,6 @@ const ResearchTool = ({
                       Start New Task
                     </button>
                   </div>
-                  // --- 结束新增 ---
                 ) : (
                   <>
                     <Tooltip
@@ -2556,7 +2505,7 @@ const ResearchTool = ({
                       <div className="relative">
                         <style jsx>{`
                           .research-tool-input::placeholder {
-                            color: #a1887f;
+                            color: #9ca3af; /* Default placeholder color */
                             opacity: 0.8;
                           }
                         `}</style>
@@ -2572,10 +2521,8 @@ const ResearchTool = ({
                               ? "Waiting for your answer..."
                               : ""
                           }
-                          className={`research-tool-input bg-white/10 border rounded-xl text-sm ${BACKGROUNDS.DAY_GHIBLI.inputStyle}`}
+                          className={`research-tool-input bg-slate-700/50 border border-slate-600/50 rounded-xl text-sm text-gray-200 placeholder-gray-500`}
                           style={{
-                            color: '#433422',
-                            backgroundColor: 'rgba(253, 230, 190, 0.85)',
                             height: '48px',
                             transition: 'all 0.3s ease'
                           }}
@@ -2594,13 +2541,13 @@ const ResearchTool = ({
                       <div
                         className="mt-2 flex items-center justify-center gap-2 animate-pulse"
                         style={{
-                          background: 'linear-gradient(90deg, #fbbf24 0%, #f59e42 100%)',
+                          background: 'linear-gradient(90deg, #3b82f6 0%, #6366f1 100%)', // Changed gradient to blue/indigo
                           color: '#fff',
                           borderRadius: '8px',
                           fontWeight: 'bold',
                           fontSize: '0.95rem', // 字体大小缩小
                           padding: '6px 0',    // 上下内边距也略微缩小
-                          boxShadow: '0 2px 12px 0 rgba(251,191,36,0.15)'
+                          boxShadow: '0 2px 12px 0 rgba(59,130,246,0.15)' // Adjusted shadow color
                         }}
                       >
                         <svg className="w-4 h-4 text-white animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -2615,26 +2562,15 @@ const ResearchTool = ({
                       </div>
                     </div>
                   </>
-                  // --- 结束原有输入框逻辑 ---
                 )}
-                {/* --- 结束修改 --- */}
               </div>
             </div>
           </div>
 
-          {/* 右侧面板 */}
-          <div className={`w-[65%] ${
-            // 根据主题设置背景和边框
-            currentBackground === 'DAY_GHIBLI'
-              ? 'bg-blue-900/10 border-blue-700/30'
-              : 'bg-slate-900/10 border-blue-700/30' // Night: slate bg, blue border
-          } backdrop-blur-lg rounded-2xl border shadow-xl flex flex-col h-full relative overflow-hidden`}>
-            {/* --- 修改：移除这里的进度指示器 --- */}
-            {/* 独立出来的进度指示器区域 (已被移除) */}
-
-            {/* 包裹 Tab 和 内容区域的容器 */}
+          <div className={`w-[65%]
+            bg-slate-900/10 border-blue-700/30
+           backdrop-blur-lg rounded-2xl border shadow-xl flex flex-col h-full relative overflow-hidden`}>
             <div className="flex-1 flex flex-col overflow-hidden">
-              {/* Tab 切换区域 */}
               <div className="h-12 border-b border-gray-300/20 p-3 flex-shrink-0">
                 <div className="flex justify-between items-center">
                   <div className="flex space-x-4">
@@ -2642,8 +2578,8 @@ const ResearchTool = ({
                       onClick={() => setRightPanelTab('details')}
                       className={`text-sm ${
                         rightPanelTab === 'details'
-                          ? (currentBackground === 'DAY_GHIBLI' ? 'text-blue-600' : 'text-blue-400') + ' font-medium'
-                          : (currentBackground === 'DAY_GHIBLI' ? 'text-blue-700/70 hover:text-blue-600' : 'text-gray-400 hover:text-gray-200')
+                          ? 'text-blue-400 font-medium'
+                          : 'text-gray-400 hover:text-gray-200'
                       }`}
                     >
                       Execution Log
@@ -2652,8 +2588,8 @@ const ResearchTool = ({
                       onClick={() => setRightPanelTab('browser')}
                       className={`text-sm ${
                         rightPanelTab === 'browser'
-                           ? (currentBackground === 'DAY_GHIBLI' ? 'text-blue-600' : 'text-blue-400') + ' font-medium'
-                          : (currentBackground === 'DAY_GHIBLI' ? 'text-blue-700/70 hover:text-blue-600' : 'text-gray-400 hover:text-gray-200')
+                           ? 'text-blue-400 font-medium'
+                          : 'text-gray-400 hover:text-gray-200'
                       }`}
                     >
                       Browser
@@ -2661,7 +2597,7 @@ const ResearchTool = ({
                 </div>
                   <div className="flex items-center text-xs">
                       <div className="p-3 flex justify-end" style={{padding: 0, marginLeft: 3}}>
-                          <div> 
+                          <div>
                             <Button
                               type="primary"
                               icon={<ArrowRightOutlined />}
@@ -2674,12 +2610,12 @@ const ResearchTool = ({
                                 }
                               }}
                               className={`transition-all duration-300 ${
-                                browserTabs.length == 0 
-                                  ? 'bg-gray-600 hover:bg-gray-600 cursor-not-allowed opacity-60' 
+                                browserTabs.length == 0
+                                  ? 'bg-gray-600 hover:bg-gray-600 cursor-not-allowed opacity-60'
                                   : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-md hover:shadow-lg'
                               }`}
-                              style={{ 
-                                border: 'none', 
+                              style={{
+                                border: 'none',
                                 fontWeight: 300,
                                 fontSize: '10px',
                                 padding: '3px 8px',
@@ -2694,36 +2630,28 @@ const ResearchTool = ({
                     <div className={`w-2 h-2 rounded-full mr-2 ${
                       sseConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
                     }`}></div>
-                    <span className={currentBackground === 'DAY_GHIBLI' ? 'text-blue-800/80' : 'text-gray-400'}>Log Server {sseConnected ? 'Connected' : 'Disconnected'}</span>
+                    <span className={'text-gray-400'}>Log Server {sseConnected ? 'Connected' : 'Disconnected'}</span>
                   </div>
           </div>
         </div>
 
-              {/* 内容区域 */}
               <div className="flex-1 overflow-y-auto">
                 {rightPanelTab === 'details' && (
-                  // --- 新增：外层 Flex 容器 ---
                   <div className="flex h-full">
-                    {/* --- 新增：左侧垂直进度条区域 --- */}
-                    <div className={`w-48 flex-shrink-0 border-r border-gray-300/20 p-3 overflow-y-auto bg-slate-800/30 ${
-                      currentBackground === 'DAY_GHIBLI' ? 'border-blue-700/20 bg-blue-950/5' : 'border-gray-300/20 bg-slate-800/30'
-                    }`}>
-                      {/* --- 移动并修改进度指示器 --- */}
+                    <div className={`w-48 flex-shrink-0 border-r border-gray-300/20 p-3 overflow-y-auto bg-slate-800/30`}>
                       {!showInitialScreen && (
                         <div className="relative">
                           <div className="flex items-center space-x-2 mb-3"> {/* 调整标题和图标布局 */}
-                            <svg className={`w-5 h-5 ${currentBackground === 'DAY_GHIBLI' ? 'text-blue-400' : 'text-blue-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className={`w-5 h-5 text-blue-400`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
                             </svg>
-                            <span className={`text-sm font-semibold ${currentBackground === 'DAY_GHIBLI' ? 'text-blue-200' : 'text-blue-300'}`}>Task Progress</span>
+                            <span className={`text-sm font-semibold text-blue-300`}>Task Progress</span>
                           </div>
 
-                          {/* --- 步骤列表 --- */}
                           <div className="flex flex-col space-y-2 w-full">
-                            {/* Step 1 */}
                             <div className={`text-xs rounded px-2 py-1.5 flex items-center justify-between transition-all duration-500 ${currentStep >= 1 // 高亮逻辑不变
-                              ? (currentBackground === 'DAY_GHIBLI' ? 'bg-gradient-to-r from-blue-500/40 to-orange-500/40 text-blue-100 border border-blue-500/60 shadow-sm shadow-blue-500/20' : 'bg-gradient-to-r from-blue-500/40 to-cyan-500/40 text-white border border-blue-500/60 shadow-sm shadow-blue-500/20')
-                              : (currentBackground === 'DAY_GHIBLI' ? 'bg-blue-800/30 text-blue-300/70 border border-blue-700/40' : 'bg-slate-700/50 text-slate-400 border border-slate-600/40')}`}>
+                              ? 'bg-gradient-to-r from-blue-500/40 to-cyan-500/40 text-white border border-blue-500/60 shadow-sm shadow-blue-500/20'
+                              : 'bg-slate-700/50 text-slate-400 border border-slate-600/40'}`}>
                               <span className={currentStep === 1 ? 'font-medium' : ''}>1. Find Competitors</span>
                               {/* --- 添加勾选图标 --- */}
                               {currentStep > 1 && (
@@ -2733,10 +2661,9 @@ const ResearchTool = ({
                               )}
                             </div>
 
-                            {/* Step 2 */}
                             <div className={`text-xs rounded px-2 py-1.5 flex items-center justify-between transition-all duration-500 ${currentStep >= 2 // 高亮逻辑不变
-                              ? (currentBackground === 'DAY_GHIBLI' ? 'bg-gradient-to-r from-orange-500/40 to-red-500/40 text-orange-100 border border-orange-500/60 shadow-sm shadow-orange-500/20' : 'bg-gradient-to-r from-cyan-500/40 to-teal-500/40 text-white border border-cyan-500/60 shadow-sm shadow-cyan-500/20')
-                              : (currentBackground === 'DAY_GHIBLI' ? 'bg-blue-800/30 text-blue-300/70 border border-blue-700/40' : 'bg-slate-700/50 text-slate-400 border border-slate-600/40')}`}>
+                              ? 'bg-gradient-to-r from-cyan-500/40 to-teal-500/40 text-white border border-cyan-500/60 shadow-sm shadow-cyan-500/20'
+                              : 'bg-slate-700/50 text-slate-400 border border-slate-600/40'}`}>
                               <span className={currentStep === 2 ? 'font-medium' : ''}>2. Select Competitor</span>
                               {/* --- 添加勾选图标 --- */}
                               {currentStep > 2 && (
@@ -2746,10 +2673,9 @@ const ResearchTool = ({
                               )}
                             </div>
 
-                            {/* Step 3 */}
                             <div className={`text-xs rounded px-2 py-1.5 flex items-center justify-between transition-all duration-500 ${currentStep >= 3 // 高亮逻辑不变
-                              ? (currentBackground === 'DAY_GHIBLI' ? 'bg-gradient-to-r from-red-500/40 to-pink-500/40 text-red-100 border border-red-500/60 shadow-sm shadow-red-500/20' : 'bg-gradient-to-r from-teal-500/40 to-green-500/40 text-white border border-teal-500/60 shadow-sm shadow-teal-500/20')
-                              : (currentBackground === 'DAY_GHIBLI' ? 'bg-blue-800/30 text-blue-300/70 border border-blue-700/40' : 'bg-slate-700/50 text-slate-400 border border-slate-600/40')}`}>
+                              ? 'bg-gradient-to-r from-teal-500/40 to-green-500/40 text-white border border-teal-500/60 shadow-sm shadow-teal-500/20'
+                              : 'bg-slate-700/50 text-slate-400 border border-slate-600/40'}`}>
                               <span className={currentStep === 3 ? 'font-medium' : ''}>3. Analyze Competitor</span>
                               {/* --- 添加勾选图标 --- */}
                               {currentStep > 3 && (
@@ -2759,10 +2685,9 @@ const ResearchTool = ({
                               )}
                             </div>
 
-                            {/* Step 4 */}
                             <div className={`text-xs rounded px-2 py-1.5 flex items-center justify-between transition-all duration-500 ${currentStep >= 4 // 高亮逻辑不变
-                              ? (currentBackground === 'DAY_GHIBLI' ? 'bg-gradient-to-r from-pink-500/40 to-purple-500/40 text-pink-100 border border-pink-500/60 shadow-sm shadow-pink-500/20' : 'bg-gradient-to-r from-green-500/40 to-lime-500/40 text-white border border-green-500/60 shadow-sm shadow-green-500/20')
-                              : (currentBackground === 'DAY_GHIBLI' ? 'bg-blue-800/30 text-blue-300/70 border border-blue-700/40' : 'bg-slate-700/50 text-slate-400 border border-slate-600/40')}`}>
+                              ? 'bg-gradient-to-r from-green-500/40 to-lime-500/40 text-white border border-green-500/60 shadow-sm shadow-green-500/20'
+                              : 'bg-slate-700/50 text-slate-400 border border-slate-600/40'}`}>
                               <span className={currentStep === 4 ? 'font-medium' : ''}>4. Page Generation</span>
                               {/* --- 添加勾选图标 --- */}
                               {currentStep > 4 && (
@@ -2772,10 +2697,9 @@ const ResearchTool = ({
                               )}
                             </div>
 
-                            {/* Step 5 */}
                             <div className={`text-xs rounded px-2 py-1.5 flex items-center justify-between transition-all duration-500 ${currentStep >= 5 // 高亮逻辑不变
-                              ? (currentBackground === 'DAY_GHIBLI' ? 'bg-gradient-to-r from-purple-500/40 to-indigo-500/40 text-purple-100 border border-purple-500/60 shadow-sm shadow-purple-500/20' : 'bg-gradient-to-r from-lime-500/40 to-emerald-500/40 text-white border border-lime-500/60 shadow-sm shadow-lime-500/20')
-                              : (currentBackground === 'DAY_GHIBLI' ? 'bg-blue-800/30 text-blue-300/70 border border-blue-700/40' : 'bg-slate-700/50 text-slate-400 border border-slate-600/40')}`}>
+                              ? 'bg-gradient-to-r from-lime-500/40 to-emerald-500/40 text-white border border-lime-500/60 shadow-sm shadow-lime-500/20'
+                              : 'bg-slate-700/50 text-slate-400 border border-slate-600/40'}`}>
                               <span className={currentStep === 5 ? 'font-medium' : ''}>5. Style Change(Optional)</span>
                               {/* --- 添加勾选图标 (特殊逻辑) --- */}
                               {(styleChangeCompleted || currentStep > 5) && ( // 如果改色完成 或 步骤已超过5
@@ -2788,7 +2712,6 @@ const ResearchTool = ({
                         </div>
                       )}
                     </div>
-                    {/* --- 右侧日志内容区域 --- */}
                     <div className="flex-1 overflow-y-auto">
                       {renderDetails()}
                     </div>
@@ -2802,7 +2725,6 @@ const ResearchTool = ({
                       </div>
                     ) : (
                       <div className="p-3">
-                        {/* 标签栏 */}
                         <div className="flex items-center space-x-2 mb-3 overflow-x-auto">
                           {browserTabs.map((tab) => (
                             <button
@@ -2810,30 +2732,28 @@ const ResearchTool = ({
                               onClick={() => setActiveTab(tab.id)}
                               className={`px-3 py-1.5 text-xs rounded-full whitespace-nowrap ${
                                 activeTab === tab.id
-                                  ? (currentBackground === 'DAY_GHIBLI' ? 'bg-blue-500/20 text-blue-700' : 'bg-blue-500/20 text-blue-300')
-                                  : (currentBackground === 'DAY_GHIBLI' ? 'bg-blue-200/30 text-blue-700/80 hover:text-blue-600' : 'bg-gray-500/20 text-gray-400 hover:text-gray-300')
+                                  ? 'bg-blue-500/20 text-blue-300'
+                                  : 'bg-gray-500/20 text-gray-400 hover:text-gray-300'
                               }`}
                             >
                               {tab.title}
                             </button>
                           ))}
                         </div>
-  
-                        {/* 地址栏和预览区域 */}
+
                         {activeTab && (
                           <div>
-                            {/* 地址栏 */}
-                            <div className={`flex items-center mb-2 rounded-lg p-2 ${currentBackground === 'DAY_GHIBLI' ? 'bg-blue-100/50' : 'bg-gray-800/50'}`}>
-                              <div className={`flex-1 px-3 py-1.5 text-xs rounded mr-2 overflow-hidden overflow-ellipsis whitespace-nowrap ${currentBackground === 'DAY_GHIBLI' ? 'bg-blue-50/70 text-blue-900' : 'bg-gray-700/50 text-gray-300'}`}>
+                            <div className={`flex items-center mb-2 rounded-lg p-2 bg-gray-800/50`}>
+                              <div className={`flex-1 px-3 py-1.5 text-xs rounded mr-2 overflow-hidden overflow-ellipsis whitespace-nowrap bg-gray-700/50 text-gray-300`}>
                                 {browserTabs.find(tab => tab.id === activeTab)?.url}
                               </div>
                               <button
                                 onClick={() => window.open(browserTabs.find(tab => tab.id === activeTab)?.url, '_blank')}
-                                className={`p-1.5 rounded-md transition-colors duration-200 group ${currentBackground === 'DAY_GHIBLI' ? 'hover:bg-blue-200/50' : 'hover:bg-gray-700/50'}`}
+                                className={`p-1.5 rounded-md transition-colors duration-200 group hover:bg-gray-700/50`}
                                 title="Open in new tab"
                               >
                                 <svg
-                                  className={`w-4 h-4 transition-colors duration-200 ${currentBackground === 'DAY_GHIBLI' ? 'text-blue-700 group-hover:text-blue-600' : 'text-gray-400 group-hover:text-blue-400'}`}
+                                  className={`w-4 h-4 transition-colors duration-200 text-gray-400 group-hover:text-blue-400`}
                                   fill="none"
                                   stroke="currentColor"
                                   viewBox="0 0 24 24"
@@ -2847,8 +2767,7 @@ const ResearchTool = ({
                                 </svg>
                               </button>
                             </div>
-        
-                            {/* iframe 预览区域 */}
+
                             <div className="bg-white rounded-lg overflow-hidden">
                               <iframe
                                 src={browserTabs.find(tab => tab.id === activeTab)?.url}
@@ -2868,7 +2787,6 @@ const ResearchTool = ({
         </div>
       </div>
 
-      {/* 添加 Modal 组件 */}
       <Modal
         title="Generated Results"
         open={showResultIdsModal}
@@ -2879,7 +2797,6 @@ const ResearchTool = ({
         width={400}
         className="result-ids-modal"
         zIndex={1500}
-        // 将 maskStyle 替换为 styles.mask
         styles={{ mask: { backgroundColor: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(8px)' } }}
       >
         <div className="space-y-3">
@@ -2889,8 +2806,7 @@ const ResearchTool = ({
               <Button
                 type="primary"
                 onClick={() => window.open(`https://preview.websitelm.site/en/${id}`, '_blank')}
-                // 根据主题设置按钮颜色
-                className={`${currentBackground === 'DAY_GHIBLI' ? 'bg-blue-500 hover:bg-blue-600' : 'bg-blue-500 hover:bg-blue-600'}`}
+                className={`bg-blue-500 hover:bg-blue-600`}
               >
                 View Preview
               </Button>
@@ -2898,7 +2814,6 @@ const ResearchTool = ({
           ))}
         </div>
       </Modal>
-      {/* 弹窗和终止逻辑 */}
       <Modal
         open={showAbortModal}
         title="Abort Task"
@@ -2963,8 +2878,7 @@ const ResearchTool = ({
           )}
         </div>
       </Modal>
-      
-    </ConfigProvider>
+    </>
   );
 };
 
