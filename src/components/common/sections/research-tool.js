@@ -2418,7 +2418,7 @@ const ResearchTool = ({
                 {/* --- 修改：根据 styleChangeCompleted 条件渲染 --- */}
                 {styleChangeCompleted ? (
                   <div className={`flex flex-col items-center justify-center p-4 rounded-lg bg-slate-800/60 border border-slate-700/50`}>
-                    <p className={`text-center mb-3 text-sm text-gray-200`}>
+                    <p className={`text-center mb-3 text-sm `}>
                       The current task is complete. You can start a new task to generate more pages!
                     </p>
                     <button
@@ -2445,6 +2445,10 @@ const ResearchTool = ({
                             color: #9ca3af; /* Default placeholder color */
                             opacity: 0.8;
                           }
+                          /* === 新增：调整输入框右内边距 === */
+                          .research-tool-input {
+                            padding-right: 80px; /* 为按钮留出空间 */
+                          }
                         `}</style>
                         <Input
                           autoComplete="off"
@@ -2458,7 +2462,7 @@ const ResearchTool = ({
                               ? "Waiting for your answer..."
                               : ""
                           }
-                          className={`research-tool-input bg-slate-700/50 border border-slate-600/50 rounded-xl text-sm text-gray-200 placeholder-gray-500`}
+                          className={`research-tool-input bg-slate-700/50 border border-slate-600/50 rounded-xl text-sm placeholder-gray-500`}
                           style={{
                             height: '48px',
                             transition: 'all 0.3s ease'
@@ -2471,6 +2475,28 @@ const ResearchTool = ({
                             }
                           }}
                         />
+                        {/* === 新增：发送按钮 === */}
+                        <button
+                          type="button" // 防止触发表单提交
+                          onClick={(e) => {
+                            if (userInput.trim() && !loading && !isMessageSending && !inputDisabledDueToUrlGet) {
+                              handleUserInput(e);
+                            }
+                          }}
+                          disabled={loading || isMessageSending || inputDisabledDueToUrlGet || !userInput.trim()} // 同时检查输入是否为空
+                          className={`absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-2 text-xs font-medium rounded-md transition-all duration-300 flex items-center gap-1 shadow-sm
+                            ${(loading || isMessageSending || inputDisabledDueToUrlGet || !userInput.trim())
+                              ? 'bg-gray-500 text-gray-300 cursor-not-allowed opacity-70'
+                              : 'bg-blue-600 hover:bg-blue-500 text-white cursor-pointer hover:shadow-md'
+                            }`}
+                          style={{ height: '36px' }} // 按钮高度略小于输入框
+                        >
+                          Send
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M13 5l7 7-7 7M5 12h14" />
+                          </svg>
+                        </button>
+                        {/* === 结束新增 === */}
                       </div>
                     </Tooltip>
                     {/* 新增：显眼的输入提示条 */}
@@ -2516,7 +2542,7 @@ const ResearchTool = ({
                       className={`text-sm ${
                         rightPanelTab === 'details'
                           ? 'text-blue-400 font-medium'
-                          : 'text-gray-400 hover:text-gray-200'
+                          : 'text-gray-400 hover:'
                       }`}
                     >
                       Execution Log
@@ -2526,7 +2552,7 @@ const ResearchTool = ({
                       className={`text-sm ${
                         rightPanelTab === 'browser'
                            ? 'text-blue-400 font-medium'
-                          : 'text-gray-400 hover:text-gray-200'
+                          : 'text-gray-400 hover:'
                       }`}
                     >
                       Browser
