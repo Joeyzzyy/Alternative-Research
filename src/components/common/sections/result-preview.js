@@ -459,7 +459,7 @@ const HistoryCardList = () => {
                     >
                       <div className="w-full flex flex-col items-center">
                         <div className="font-semibold text-[11px] text-gray-300 mb-0.5">
-                          Task Origin Website
+                          Task Target Website
                         </div>
                         <div className="font-semibold text-xs text-white mb-1 truncate w-full text-center">
                           {item.website}
