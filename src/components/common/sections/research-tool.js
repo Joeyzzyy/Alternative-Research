@@ -1292,7 +1292,7 @@ const ResearchTool = ({
       hasTriggeredStep4Ref.current = false;
       const isLoggedIn = localStorage.getItem('alternativelyIsLoggedIn') === 'true';
       const token = localStorage.getItem('alternativelyAccessToken');
-      // 处理未登录情况
+      // Handle not logged in case
       if (!isLoggedIn || !token) {
         localStorage.setItem('urlInput', userInput);
         const showLoginEvent = new CustomEvent('showAlternativelyLoginModal');
@@ -1300,24 +1300,38 @@ const ResearchTool = ({
         setIsProcessingTask(false);
         return;
       }
-      // 获取用户套餐信息
+      // Get user package information
       try {
         const packageResponse = await apiClient.getCustomerPackage();
         if (packageResponse?.code === 200 && packageResponse.data) {
           const { pageGeneratorLimit, pageGeneratorUsage } = packageResponse.data;
           const availableCredits = pageGeneratorLimit - pageGeneratorUsage;
           if (availableCredits <= 0) {
-            showSubscriptionModal();
-            setIsProcessingTask(false);
-            return;
+            // --- MODIFICATION START ---
+            // Instead of showing modal, scroll to subscription card
+            const el = document.getElementById('pricing'); // Use the correct ID for your subscription section
+            if (el) {
+              messageApi.warning('You have run out of credits. Please purchase a plan to continue.', 2);
+              el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              // Optional: Add a visual cue like a temporary highlight or message near the card
+              // e.g., el.classList.add('highlight-subscription'); setTimeout(() => el.classList.remove('highlight-subscription'), 3000);
+            } else {
+              console.warn('Subscription card element not found for scrolling.');
+              // Fallback: Maybe show a simple alert or log an error
+            }
+            setIsProcessingTask(false); // Stop processing
+            return; // Exit the function
+            // --- MODIFICATION END ---
           }
         } else {
           console.warn('[DEBUG] Failed to get user package information, continuing without credit check');
         }
       } catch (creditError) {
         console.error('Error checking user credit:', creditError);
+        // Optionally handle this error, e.g., show a generic error message
       }
 
+      // Check for existing processing tasks (unchanged logic)
       try {
         const historyResponse = await apiClient.getAlternativeWebsiteList(1, 3);
         if (historyResponse?.code === 200 && historyResponse.data) {
@@ -1374,7 +1388,7 @@ const ResearchTool = ({
         console.error('[DEBUG] Error checking task status:', error);
       }
 
-      // 淡出初始页面
+      // Fade out initial screen (unchanged logic)
       const formElement = document.querySelector('.initial-screen-content form');
       if (formElement) {
         formElement.classList.add('form-transition', 'fade-out');
@@ -1404,8 +1418,7 @@ const ResearchTool = ({
         }
       }, 300);
       setLoading(true);
-      const formattedInput = userInput.trim(); // 用户在界面看到的消息内容
-      // 抽取url中的host
+      const formattedInput = userInput.trim();
       let inputForAPI = '';
       try {
         // 检查是否是URL格式
@@ -1498,373 +1511,8 @@ const ResearchTool = ({
       messageHandler.handleErrorMessage(error, thinkingMessageId);
     } finally {
       setLoading(false);
+      // --- REMOVED --- setIsProcessingTask(false) was here, moved earlier in credit check fail case
     }
-  };
-
-  const showSubscriptionModal = () => {
-    // 创建模态容器
-    const modalContainer = document.createElement('div');
-    modalContainer.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 backdrop-blur-sm';
-    
-    // 创建模态内容 - 缩小整体尺寸
-    const modalContent = document.createElement('div');
-    modalContent.className = 'bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 rounded-xl shadow-2xl p-4 max-w-3xl w-full border border-purple-500/30 relative overflow-hidden';
-    
-    // 添加背景装饰
-    const bgDecoration1 = document.createElement('div');
-    bgDecoration1.className = 'absolute inset-0 bg-[radial-gradient(circle_at_top_right,_#22d3ee15_0%,_transparent_60%)]';
-    
-    const bgDecoration2 = document.createElement('div');
-    bgDecoration2.className = 'absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_#a78bfa15_0%,_transparent_60%)]';
-    
-    // 添加标题 - 更有吸引力的文案
-    const title = document.createElement('h2');
-    title.className = 'text-3xl sm:text-4xl font-bold mb-4 text-white leading-tight text-center';
-    title.innerHTML = 'Oops! <span class="text-rose-400">You\'ve Run Out of Credits</span> 🚀';
-    
-    // 添加描述 - 缩小字体和间距
-    const description = document.createElement('p');
-    description.className = 'text-lg text-gray-300 mb-8 max-w-3xl mx-auto leading-relaxed text-center';
-    description.textContent = 'Upgrade now to continue creating amazing alternative pages and stay ahead of your competition!';
-    
-    // 创建计费周期切换 - 减少上边距
-    const billingToggleContainer = document.createElement('div');
-    billingToggleContainer.className = 'mt-8 flex justify-center';
-    
-    const billingToggle = document.createElement('div');
-    billingToggle.className = 'relative bg-slate-800/50 backdrop-blur-sm p-1 rounded-full flex border border-slate-700/50';
-    
-    // 年付选项
-    const yearlyButton = document.createElement('button');
-    yearlyButton.className = 'relative py-1.5 px-5 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-300 bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-rose-500/20 text-white shadow-inner shadow-cyan-500/10';
-    yearlyButton.innerHTML = '<span class="absolute inset-0 rounded-full bg-slate-700/50 backdrop-blur-sm"></span><span class="relative">Annual · Save 20%</span>';
-    
-    // 月付选项
-    const monthlyButton = document.createElement('button');
-    monthlyButton.className = 'relative py-1.5 px-5 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-300 text-gray-400 hover:text-gray-200';
-    monthlyButton.innerHTML = '<span class="relative">Monthly</span>';
-    
-    billingToggle.appendChild(yearlyButton);
-    billingToggle.appendChild(monthlyButton);
-    billingToggleContainer.appendChild(billingToggle);
-    
-    // 创建计划卡片容器 - 减少上边距
-    const plansContainer = document.createElement('div');
-    plansContainer.className = 'mt-8 grid gap-6 lg:grid-cols-2 max-w-3xl mx-auto';
-    
-    // 标准计划 - 减小内边距
-    const standardPlan = document.createElement('div');
-    standardPlan.className = 'relative flex flex-col rounded-2xl p-6 transition-all duration-500 text-center backdrop-blur-sm bg-slate-900/70 border border-slate-700/50 shadow-lg shadow-cyan-500/5 hover:shadow-xl hover:shadow-cyan-500/10 hover:translate-y-[-4px]';
-    
-    // 专业计划 - 减小内边距
-    const proPlan = document.createElement('div');
-    proPlan.className = 'relative flex flex-col rounded-2xl p-6 transition-all duration-500 text-center backdrop-blur-sm bg-gradient-to-b from-slate-800/95 to-slate-900/95 border-2 border-purple-500/50 ring-4 ring-purple-500/10 scale-[1.02] shadow-xl shadow-purple-500/20 hover:translate-y-[-4px]';
-    
-    // 添加热门标签 - 调整位置和大小
-    const popularTag = document.createElement('div');
-    popularTag.className = 'absolute -top-4 left-1/2 -translate-x-1/2';
-    popularTag.innerHTML = '<div class="bg-gradient-to-r from-purple-500 to-rose-500 text-white px-4 py-1 rounded-full text-xs font-bold shadow-lg shadow-purple-500/20">MOST POPULAR ✨</div>';
-    proPlan.appendChild(popularTag);
-    
-    // 设置初始价格为年付
-    let currentBilling = 'yearly';
-    
-    // 标准计划内容 - 减小字体和间距，高亮页面生成数量
-    standardPlan.innerHTML += `
-      <h3 class="text-xl font-bold text-white mt-3">Standard</h3>
-      <div class="mt-3 flex items-baseline justify-center">
-        <div class="flex items-baseline">
-          <span class="text-4xl font-bold tracking-tight text-white">$36</span>
-          <span class="text-lg text-gray-400 ml-1">/mo</span>
-        </div>
-      </div>
-      <div class="mt-2">
-        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-900/30 text-emerald-400 border border-emerald-700/30">
-          <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 14a6 6 0 110-12 6 6 0 010 12zm-1-5h2v2H9v-2zm0-6h2v4H9V5z"/>
-          </svg>
-          Save 20%
-        </span>
-      </div>
-      <p class="mt-3 text-sm text-gray-300">Everything you need to start creating alternative pages</p>
-      <div class="mt-6 relative group">
-        <div class="absolute -inset-0.5 rounded-xl blur-sm bg-gradient-to-r from-cyan-500 to-blue-500 opacity-50 group-hover:opacity-70 transition duration-300"></div>
-        <button class="relative w-full py-3 px-4 rounded-xl text-white text-sm font-medium bg-slate-900 transition-all duration-300 transform hover:-translate-y-1 active:translate-y-0">
-          Choose This Plan
-        </button>
-      </div>
-      <div class="mt-6 space-y-4">
-        <div>
-          <h4 class="text-xs font-semibold uppercase tracking-wide mb-3 text-cyan-400">
-            Features include:
-          </h4>
-          <ul class="space-y-3 text-xs">
-            <li class="flex items-start">
-              <div class="w-4 h-4 mr-2 rounded-full flex-shrink-0 flex items-center justify-center bg-cyan-500/20">
-                <svg class="w-2.5 h-2.5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <span class="text-gray-300 text-left">
-                <span class="bg-gradient-to-r from-cyan-400 to-blue-400 bg-clip-text text-transparent font-bold">30 alternative pages</span> generation & style change/month
-              </span>
-            </li>
-            <li class="flex items-start">
-              <div class="w-4 h-4 mr-2 rounded-full flex-shrink-0 flex items-center justify-center bg-cyan-500/20">
-                <svg class="w-2.5 h-2.5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <span class="text-gray-300 text-left">Auto AI images grabbing and generation</span>
-            </li>
-            <li class="flex items-start">
-              <div class="w-4 h-4 mr-2 rounded-full flex-shrink-0 flex items-center justify-center bg-cyan-500/20">
-                <svg class="w-2.5 h-2.5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <span class="text-gray-300 text-left">Auto internal links insertion</span>
-            </li>
-            <li class="flex items-start">
-              <div class="w-4 h-4 mr-2 rounded-full flex-shrink-0 flex items-center justify-center bg-cyan-500/20">
-                <svg class="w-2.5 h-2.5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <span class="text-gray-300 text-left">AI page design and generation</span>
-            </li>
-            <li class="flex items-start">
-              <div class="w-4 h-4 mr-2 rounded-full flex-shrink-0 flex items-center justify-center bg-cyan-500/20">
-                <svg class="w-2.5 h-2.5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <span class="text-gray-300 text-left">Standard support</span>
-            </li>
-            <li class="flex items-start">
-              <div class="w-4 h-4 mr-2 rounded-full flex-shrink-0 flex items-center justify-center bg-cyan-500/20">
-                <svg class="w-2.5 h-2.5 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <span class="text-gray-300 text-left">1 Free onboarding call</span>
-            </li>
-          </ul>
-        </div>
-      </div>
-    `;
-    
-    // 专业计划内容 - 减小字体和间距，高亮页面生成数量
-    proPlan.innerHTML += `
-      <h3 class="text-xl font-bold text-white mt-3">Professional</h3>
-      <div class="mt-3 flex items-baseline justify-center">
-        <div class="flex items-baseline">
-          <span class="text-4xl font-bold tracking-tight bg-gradient-to-r from-purple-400 to-rose-400 bg-clip-text text-transparent">$99</span>
-          <span class="text-lg text-gray-400 ml-1">/mo</span>
-        </div>
-      </div>
-      <div class="mt-2">
-        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-900/30 text-emerald-400 border border-emerald-700/30">
-          <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 14a6 6 0 110-12 6 6 0 010 12zm-1-5h2v2H9v-2zm0-6h2v4H9V5z"/>
-          </svg>
-          Save 23%
-        </span>
-      </div>
-      <p class="mt-3 text-sm text-gray-300">Perfect for teams scaling alternative page production</p>
-      <div class="mt-6 relative group">
-        <div class="absolute -inset-0.5 rounded-xl blur-sm bg-gradient-to-r from-purple-500 via-fuchsia-500 to-rose-500 opacity-70 group-hover:opacity-100 transition duration-300"></div>
-        <button class="relative w-full py-3 px-4 rounded-xl text-white text-sm font-medium bg-slate-900 transition-all duration-300 transform hover:-translate-y-1 active:translate-y-0">
-          Choose This Plan
-        </button>
-      </div>
-      <div class="mt-6 space-y-4">
-        <div>
-          <h4 class="text-xs font-semibold uppercase tracking-wide mb-3 text-purple-400">
-            Everything in Standard, plus:
-          </h4>
-          <ul class="space-y-3 text-xs">
-            <li class="flex items-start">
-              <div class="w-4 h-4 mr-2 rounded-full flex-shrink-0 flex items-center justify-center bg-purple-500/20">
-                <svg class="w-2.5 h-2.5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <span class="text-gray-300 text-left">
-                <span class="bg-gradient-to-r from-purple-400 to-rose-400 bg-clip-text text-transparent font-bold text-base animate-pulse">100 alternative pages</span> generation/month
-              </span>
-            </li>
-            <li class="flex items-start">
-              <div class="w-4 h-4 mr-2 rounded-full flex-shrink-0 flex items-center justify-center bg-purple-500/20">
-                <svg class="w-2.5 h-2.5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <span class="text-gray-300 text-left">Auto AI images grabbing and generation</span>
-            </li>
-            <li class="flex items-start">
-              <div class="w-4 h-4 mr-2 rounded-full flex-shrink-0 flex items-center justify-center bg-purple-500/20">
-                <svg class="w-2.5 h-2.5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <span class="text-gray-300 text-left">Auto internal links insertion</span>
-            </li>
-            <li class="flex items-start">
-              <div class="w-4 h-4 mr-2 rounded-full flex-shrink-0 flex items-center justify-center bg-purple-500/20">
-                <svg class="w-2.5 h-2.5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <span class="text-gray-300 text-left">AI page design and generation</span>
-            </li>
-            <li class="flex items-start">
-              <div class="w-4 h-4 mr-2 rounded-full flex-shrink-0 flex items-center justify-center bg-purple-500/20">
-                <svg class="w-2.5 h-2.5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <span class="text-gray-300 text-left">Priority page generation</span>
-            </li>
-          </ul>
-        </div>
-        <div>
-          <h4 class="text-xs font-semibold uppercase tracking-wide mb-3 text-purple-400">
-            Pro features:
-          </h4>
-          <ul class="space-y-3 text-xs">
-            <li class="flex items-start">
-              <div class="w-4 h-4 mr-2 rounded-full flex-shrink-0 flex items-center justify-center bg-purple-500/20">
-                <svg class="w-2.5 h-2.5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <span class="text-gray-300 text-left">More alternative pages generation</span>
-            </li>
-            <li class="flex items-start">
-              <div class="w-4 h-4 mr-2 rounded-full flex-shrink-0 flex items-center justify-center bg-purple-500/20">
-                <svg class="w-2.5 h-2.5 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <span class="text-gray-300 text-left">Unlimited Page Section Re-generation</span>
-            </li>
-            <li class="flex items-start">
-              <div class="w-4 h-4 mr-2 rounded-full flex-shrink-0 flex items-center justify-center bg-purple-500/20">
-                <svg class="w-2.5 h-2.5 text-purple-400" fill="none" viewBodangerouslySetInnerHTMLx="0 0 24 24" stroke="currentColor">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <span class="text-gray-300 text-left">Priority support</span>
-            </li>
-          </ul>
-        </div>
-      </div>
-    `;
-    
-    // 添加关闭按钮
-    const closeButton = document.createElement('button');
-    closeButton.className = 'absolute top-3 right-3 text-gray-400 hover:text-white transition-colors cursor-pointer';
-    closeButton.innerHTML = `
-      <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-      </svg>
-    `;
-    
-    closeButton.onclick = () => {
-      document.body.removeChild(modalContainer);
-    };
-    
-    // 添加底部文本 - 减小字体和上边距
-    const bottomText = document.createElement('p');
-    bottomText.className = 'text-center text-gray-400 text-xs mt-6';
-    bottomText.textContent = 'You will receive credits immediately after purchasing a subscription';
-    
-    // 组装模态框
-    modalContent.appendChild(bgDecoration1);
-    modalContent.appendChild(bgDecoration2);
-    modalContent.appendChild(title);
-    modalContent.appendChild(description);
-    modalContent.appendChild(billingToggleContainer);
-    plansContainer.appendChild(standardPlan);
-    plansContainer.appendChild(proPlan);
-    modalContent.appendChild(plansContainer);
-    modalContent.appendChild(bottomText);
-    modalContent.appendChild(closeButton);
-    modalContainer.appendChild(modalContent);
-    
-    // 添加点击事件处理程序
-    standardPlan.querySelector('button').onclick = () => {
-      document.body.removeChild(modalContainer);
-      // ★★★ 新增：滚动到订阅卡片 ★★★
-      setTimeout(() => {
-        const el = document.getElementById('subscription-card');
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      }, 100);
-    };
-    
-    proPlan.querySelector('button').onclick = () => {
-      document.body.removeChild(modalContainer);
-      // ★★★ 新增：滚动到订阅卡片 ★★★
-      setTimeout(() => {
-        const el = document.getElementById('subscription-card');
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      }, 100);
-    };
-    
-    // 添加月付/年付切换功能
-    yearlyButton.onclick = () => {
-      if (currentBilling !== 'yearly') {
-        currentBilling = 'yearly';
-        
-        // 更新按钮样式
-        yearlyButton.className = 'relative py-1.5 px-5 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-300 bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-rose-500/20 text-white shadow-inner shadow-cyan-500/10';
-        yearlyButton.innerHTML = '<span class="absolute inset-0 rounded-full bg-slate-700/50 backdrop-blur-sm"></span><span class="relative">Annual · Save 20%</span>';
-        
-        monthlyButton.className = 'relative py-1.5 px-5 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-300 text-gray-400 hover:text-gray-200';
-        monthlyButton.innerHTML = '<span class="relative">Monthly</span>';
-        
-        // 更新价格
-        standardPlan.querySelector('.text-4xl').textContent = '$36';
-        proPlan.querySelector('.text-4xl').textContent = '$99';
-        
-        // 显示折扣标签
-        const standardDiscount = standardPlan.querySelector('.inline-flex');
-        const proDiscount = proPlan.querySelector('.inline-flex');
-        if (standardDiscount) standardDiscount.style.display = 'inline-flex';
-        if (proDiscount) proDiscount.style.display = 'inline-flex';
-      }
-    };
-    
-    monthlyButton.onclick = () => {
-      if (currentBilling !== 'monthly') {
-        currentBilling = 'monthly';
-        
-        // 更新按钮样式
-        monthlyButton.className = 'relative py-1.5 px-5 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-300 bg-gradient-to-r from-cyan-500/20 via-purple-500/20 to-rose-500/20 text-white shadow-inner shadow-cyan-500/10';
-        monthlyButton.innerHTML = '<span class="absolute inset-0 rounded-full bg-slate-700/50 backdrop-blur-sm"></span><span class="relative">Monthly</span>';
-        
-        yearlyButton.className = 'relative py-1.5 px-5 rounded-full text-sm font-medium whitespace-nowrap transition-all duration-300 text-gray-400 hover:text-gray-200';
-        yearlyButton.innerHTML = '<span class="relative">Annual · Save 20%</span>';
-        
-        // 更新价格
-        standardPlan.querySelector('.text-4xl').textContent = '$45';
-        proPlan.querySelector('.text-4xl').textContent = '$129';
-        
-        // 隐藏折扣标签
-        const standardDiscount = standardPlan.querySelector('.inline-flex');
-        const proDiscount = proPlan.querySelector('.inline-flex');
-        if (standardDiscount) standardDiscount.style.display = 'none';
-        if (proDiscount) proDiscount.style.display = 'none';
-      }
-    };
-    
-    // 显示模态框
-    document.body.appendChild(modalContainer);
   };
 
   useEffect(() => {
@@ -2279,7 +1927,7 @@ const ResearchTool = ({
       retryCountRef.current = 0;
     };
   // --- 将 currentWebsiteId 添加到依赖数组 ---
-  }, [shouldConnectSSE, currentWebsiteId]); // 确保 messageApi 也作为依赖项如果它是 props 或来自 context
+  }, [shouldConnectSSE, currentWebsiteId, messageHandler, apiClient]); // Added dependencies
 
   useEffect(() => {
     // 检查是否存在 GENERATION_FINISHED 日志,是的话，就可以标记第5步生成完成

@@ -94,8 +94,10 @@ const SubscriptionCard = () => {
             {
               title: "Features include:",
               items: [
-                `${planMap.Standard.monthly?.pageLimit ?? 30} alternative pages generation & style change/month`,
-                "Auto AI images grabbing and generation",
+                `300 credits/month (can be used for alternative page or blog generation)`,
+                `Generate up to ${planMap.Standard.monthly?.pageLimit ?? 30} pages in total /month`,
+                `Freely hosting 30 pages on our server`,
+                "Auto images grabbing and matching",
                 "Auto internal links insertion",
                 "AI page design and generation",
                 "Standard support",
@@ -117,8 +119,10 @@ const SubscriptionCard = () => {
             {
               title: "Everything in Standard, plus:",
               items: [
-                `${planMap.Professional.monthly?.pageLimit ?? 100} alternative pages generation/month`,
-                "Auto AI images grabbing and generation",
+                `1000 credits/month (can be used for alternative page or blog generation)`,
+                `Generate up to ${planMap.Professional.monthly?.pageLimit ?? 100} pages in total /month`,
+                `Freely hosting 100 pages on our server`,
+                "Auto images grabbing and matching",
                 "Auto internal links insertion",
                 "AI page design and generation",
                 "Priority page generation",
@@ -158,8 +162,8 @@ const SubscriptionCard = () => {
   }, []);
 
   const displayData = {
-    title: "While You Enjoy Your Free Pro Trial, Explore Our Plans",
-    subTitle: "Compare our plans and features to see how Pro plan benefits can help grow your business.",
+    title: "Pricing",
+    subTitle: "Choose the plan that's right for you",
     bottomContent: {
       plans: plans
     }
@@ -261,16 +265,16 @@ const SubscriptionCard = () => {
                       </span>
                       <span className={`
                         text-5xl font-extrabold tracking-tight drop-shadow-lg animate-bounce
-                        ${plan.popular 
+                        ${plan.popular
                           ? 'bg-gradient-to-r from-yellow-300 via-pink-400 to-purple-500 bg-clip-text text-transparent'
                           : 'bg-gradient-to-r from-cyan-300 via-blue-400 to-green-400 bg-clip-text text-transparent'
                         }
                       `}>
-                        {plan.name === "Standard" && "30"}
-                        {plan.name === "Professional" && "100"}
+                        {plan.name === "Standard" && "300"}
+                        {plan.name === "Professional" && "1000"}
                       </span>
                     </span>
-                    <span className="text-base text-gray-300 ml-1">alterpages/month</span>
+                    <span className="text-base text-gray-300 ml-1">credits/month</span>
                   </div>
 
                   <p className="mt-4 text-gray-300">{plan.description}</p>
