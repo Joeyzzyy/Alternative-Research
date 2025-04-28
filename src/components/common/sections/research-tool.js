@@ -80,13 +80,27 @@ const ResearchTool = ({
   const [styleChangeCompleted, setStyleChangeCompleted] = useState(false);
   const hasTriggeredStep4Ref = useRef(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true); // 添加侧边栏展开状态
+  const [isUserLoggedIn, setIsUserLoggedIn] = useState(false); // 重命名：全局登录状态
 
-  // 页面加载时读取 localStorage 的 urlInput
+  // 页面加载时读取 localStorage 的 urlInput 和 检查初始登录状态
   useEffect(() => {
     const lastInput = localStorage.getItem('urlInput');
     if (lastInput) {
       setUserInput(lastInput);
     }
+    // 初始化登录状态
+    const checkLoginStatus = () => {
+      const loggedIn = localStorage.getItem('alternativelyIsLoggedIn') === 'true';
+      setIsUserLoggedIn(loggedIn); // 使用新的 setter
+    };
+    checkLoginStatus(); // 初始检查
+
+    // 监听存储变化，以防在其他标签页登录/登出
+    window.addEventListener('storage', checkLoginStatus);
+
+    return () => {
+      window.removeEventListener('storage', checkLoginStatus);
+    };
   }, []);
 
   const validateDomain = (input) => {
@@ -333,6 +347,7 @@ const ResearchTool = ({
 
   useEffect(() => {
     const handleLoginSuccess = () => {
+      setIsUserLoggedIn(true); // 更新全局登录状态 (使用新的 setter)
       // 检查是否有待处理的用户输入
       if (localStorage.getItem('urlInput')) {
         // 延迟一点执行，确保登录状态已完全更新
@@ -343,13 +358,33 @@ const ResearchTool = ({
         }, 500);
       }
     };
-    
+
     window.addEventListener('alternativelyLoginSuccess', handleLoginSuccess);
-    
+
     return () => {
       window.removeEventListener('alternativelyLoginSuccess', handleLoginSuccess);
     };
-  }, []); 
+  }, []); // 依赖项为空，确保只添加一次监听器
+
+  // 新增：监听登出事件
+  useEffect(() => {
+    const handleLogoutSuccess = () => {
+      setIsUserLoggedIn(false); // 更新全局登录状态 (使用新的 setter)
+      // 这里可以添加登出后需要执行的其他逻辑，例如清空聊天记录等
+      // setMessages([]);
+      // setLogs([]);
+      // setShowInitialScreen(true); // 可能需要重置UI到初始状态
+    };
+
+    // 假设登出事件名为 'alternativelyLogoutSuccess'
+    // 请根据你的实际事件名称修改
+    window.addEventListener('alternativelyLogoutSuccess', handleLogoutSuccess);
+
+    return () => {
+      // 请根据你的实际事件名称修改
+      window.removeEventListener('alternativelyLogoutSuccess', handleLogoutSuccess);
+    };
+  }, []); // 依赖项为空
 
   const detailsRef = useRef(null);
   const codeContainerRef = useRef(null);
@@ -2587,7 +2622,7 @@ const ResearchTool = ({
           {contextHolder}
 
           {/* === 修改：固定定位的侧边栏容器，添加状态控制和按钮 === */}
-          {/* --- 修改：进一步减小收起时的宽度 --- */}
+          {isUserLoggedIn && (
           <div className={`fixed top-[80px] left-4 bottom-4 z-50 bg-slate-900/60 backdrop-blur-md rounded-lg shadow-xl border border-slate-700/50 flex flex-col transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-72' : 'w-10'} overflow-visible`}> {/* 修改宽度 w-12 -> w-10 */}
             {/* 切换按钮 */}
             {/* --- 修改：再次调整按钮位置以适应新宽度 --- */}
@@ -2607,6 +2642,7 @@ const ResearchTool = ({
               {isSidebarOpen && <HistoryCardList />}
             </div>
           </div>
+          )}
           {/* === 结束修改侧边栏 === */}
 
           {/* 覆盖层 */}
