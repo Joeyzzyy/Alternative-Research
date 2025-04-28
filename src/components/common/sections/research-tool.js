@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import { Input, Button, Card, Spin, message, Tag, Tooltip, Avatar, ConfigProvider, Pagination, Dropdown, Menu, Modal } from 'antd';
-import { SearchOutlined, ClearOutlined, ArrowRightOutlined, InfoCircleOutlined, SendOutlined, UserOutlined, RobotOutlined, LoadingOutlined, BulbOutlined, BulbFilled } from '@ant-design/icons';
+import { SearchOutlined, ClearOutlined, ArrowRightOutlined, InfoCircleOutlined, SendOutlined, UserOutlined, RobotOutlined, LoadingOutlined, BulbOutlined, BulbFilled, LeftOutlined, RightOutlined } from '@ant-design/icons';
 import apiClient from '../../../lib/api/index.js';
 import { EventSourcePolyfill } from 'event-source-polyfill';
 import MessageHandler from '../../../utils/MessageHandler';
@@ -79,6 +79,7 @@ const ResearchTool = ({
   };
   const [styleChangeCompleted, setStyleChangeCompleted] = useState(false);
   const hasTriggeredStep4Ref = useRef(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // 添加侧边栏展开状态
 
   // 页面加载时读取 localStorage 的 urlInput
   useEffect(() => {
@@ -2550,6 +2551,12 @@ const ResearchTool = ({
     };
   }, [isProcessingTask, currentStep, canProcessCompetitors]);
 
+  // --- 新增：侧边栏切换函数 ---
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
+  // --- 结束新增 ---
+
   if (initialLoading) {
     return (
       <div className="w-full min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 
@@ -2578,6 +2585,29 @@ const ResearchTool = ({
              style={getBackgroundStyle()}>
           {/* Inject contextHolder */}
           {contextHolder}
+
+          {/* === 修改：固定定位的侧边栏容器，添加状态控制和按钮 === */}
+          {/* --- 修改：进一步减小收起时的宽度 --- */}
+          <div className={`fixed top-[80px] left-4 bottom-4 z-50 bg-slate-900/60 backdrop-blur-md rounded-lg shadow-xl border border-slate-700/50 flex flex-col transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-72' : 'w-10'} overflow-visible`}> {/* 修改宽度 w-12 -> w-10 */}
+            {/* 切换按钮 */}
+            {/* --- 修改：再次调整按钮位置以适应新宽度 --- */}
+            <button
+              onClick={toggleSidebar}
+              className="absolute top-1/2 -right-2 transform -translate-y-1/2 z-[51] bg-slate-700 hover:bg-slate-600 text-white w-6 h-10 rounded-r-md flex items-center justify-center transition-colors shadow-md" // 修改 -right-3 -> -right-2
+              title={isSidebarOpen ? "Collapse History" : "Expand History"}
+              style={{ outline: 'none' }} // 移除默认 outline
+            >
+              {isSidebarOpen ? <LeftOutlined style={{ fontSize: '12px' }} /> : <RightOutlined style={{ fontSize: '12px' }} />}
+            </button>
+
+            {/* 内容容器，根据状态控制透明度和交互 */}
+            {/* --- 保持内容隐藏逻辑不变 --- */}
+            <div className={`flex-1 overflow-y-auto transition-opacity duration-200 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+              {/* 条件渲染或始终渲染但隐藏 */}
+              {isSidebarOpen && <HistoryCardList />}
+            </div>
+          </div>
+          {/* === 结束修改侧边栏 === */}
 
           {/* 覆盖层 */}
           <div className={`absolute inset-0 bg-stone-900/60`}></div>

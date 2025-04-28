@@ -293,10 +293,6 @@ async function getPageData() {
           sectionId: "research-tool",
         },
         {
-          componentName: "ResultPreview",
-          sectionId: "result-preview",
-        },
-        {
           componentName: "FeatureIntro",
           sectionId: "feature-intro-1"
         },

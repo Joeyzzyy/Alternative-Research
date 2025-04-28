@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import apiClient from '../../../lib/api/index.js';
 import { Modal, Button, Spin, message } from 'antd';
-import { DeleteOutlined, ExclamationCircleOutlined, ReloadOutlined, LeftOutlined, RightOutlined, CloseOutlined, ClearOutlined } from '@ant-design/icons';
+import { DeleteOutlined, ExclamationCircleOutlined, ReloadOutlined, LeftOutlined, RightOutlined, CloseOutlined, ClearOutlined, EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
 import HtmlPreview from './page-edit'; // 新增：引入HtmlPreview组件
 import DomainBindingModal from '../DomainBindingModal'; // 新增：引入 DomainBindingModal
 
@@ -35,6 +35,7 @@ const HistoryCardList = () => {
   const [currentCustomerId, setCurrentCustomerId] = useState(null); // 新增：存储 Customer ID
   const [isDeletingVerification, setIsDeletingVerification] = useState(false);
   const [deleteDomainConfirmOpen, setDeleteDomainConfirmOpen] = useState(false); // 新增：控制域名删除确认弹窗
+  const [isSidebarVisible, setIsSidebarVisible] = useState(true); // 新增：控制详情弹窗侧边栏可见性
   const currentItem = resultDetail?.data?.find(item => item.resultId === selectedPreviewId) || {};
 
   // === 新增：函数用于检查 URL 参数并打开弹窗 ===
@@ -245,6 +246,7 @@ const HistoryCardList = () => {
     setSelectedItem(null);
     setResultDetail(null);
     setSelectedPreviewId(null);
+    setIsSidebarVisible(true); // 新增：关闭弹窗时重置侧边栏状态
   };
 
   useEffect(() => {
@@ -301,7 +303,7 @@ const HistoryCardList = () => {
       statusText = "Failed";
     }
     return (
-      <span className={`px-2 py-0.5 rounded-full text-xs font-bold border ${statusColor}`}>
+      <span className={`px-2 py-0.5 rounded-full text-xxs font-bold border ${statusColor}`}>
         {statusText}
       </span>
     );
@@ -359,26 +361,25 @@ const HistoryCardList = () => {
   }
 
   return (
-    <div id="result-preview-section" className="min-h-[320px] flex flex-col items-center justify-center bg-gradient-to-b from-slate-950 via-slate-900 to-black text-white relative overflow-hidden">
+    <div id="result-preview-section" className="min-h-[320px] flex flex-col items-center justify-center from-slate-950 via-slate-900 to-black text-white relative overflow-hidden">
       {/* 背景装饰 */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_#22d3ee20_0%,_transparent_50%)] opacity-70 pointer-events-none"></div>
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_#a78bfa25_0%,_transparent_55%)] opacity-70 pointer-events-none"></div>
       <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-purple-600/10 rounded-full filter blur-3xl opacity-40 animate-pulse pointer-events-none"></div>
       <div className="absolute bottom-1/4 right-1/4 w-72 h-72 bg-cyan-600/10 rounded-full filter blur-3xl opacity-40 animate-pulse pointer-events-none"></div>
       <div className="relative z-10 w-full flex flex-col items-center">
         {contextHolder}
         <div className="w-full max-w-7xl px-4 mt-4 mb-2 flex justify-center items-center">
           <div
-            className="text-base font-semibold tracking-wide text-transparent bg-clip-text"
+            className="text-base font-semibold tracking-wide text-transparent bg-clip-text mr-3"
             style={{
               backgroundImage: 'linear-gradient(90deg, #38bdf8 0%, #a78bfa 100%)'
             }}
           >
-            My tasks
+            My Tasks
           </div>
           {/* 刷新按钮 */}
           <button
-            className="ml-3 flex items-center justify-center bg-slate-800/80 hover:bg-slate-700/80 rounded-full p-2 transition border border-slate-700"
+            className="flex items-center justify-center bg-slate-800/80 hover:bg-slate-700/80 rounded-full p-2 transition border border-slate-700 mr-2"
             style={{ width: 32, height: 32 }}
             onClick={fetchHistory}
             disabled={loading || isClearingAll}
@@ -392,7 +393,7 @@ const HistoryCardList = () => {
           </button>
           {/* === 新增：全部清除按钮 === */}
           <button
-            className="ml-2 flex items-center justify-center bg-red-800/70 hover:bg-red-700/80 rounded-full p-2 transition border border-red-700"
+            className="flex items-center justify-center bg-red-800/70 hover:bg-red-700/80 rounded-full p-2 transition border border-red-700 mr-2"
             style={{ width: 32, height: 32 }}
             onClick={() => setClearAllConfirmOpen(true)}
             disabled={loading || isClearingAll || historyList.length === 0}
@@ -405,50 +406,23 @@ const HistoryCardList = () => {
             )}
           </button>
         </div>
-        <div className="w-full max-w-7xl px-4 py-2 relative">
-          {/* === 左侧滚动按钮 === */}
-          <button
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-slate-800/80 hover:bg-slate-700/90 rounded-full p-2 shadow border border-slate-700 transition disabled:opacity-40"
-            style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            onClick={() => {
-              if (scrollRef.current) {
-                scrollRef.current.scrollBy({ left: -340, behavior: 'smooth' });
-              }
-            }}
-            aria-label="Scroll left"
-            title="Scroll left"
-            disabled={loading || historyList.length === 0}
-          >
-            <LeftOutlined style={{ fontSize: 22, color: '#38bdf8' }} />
-          </button>
-          {/* === 右侧滚动按钮 === */}
-          <button
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-20 bg-slate-800/80 hover:bg-slate-700/90 rounded-full p-2 shadow border border-slate-700 transition disabled:opacity-40"
-            style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            onClick={() => {
-              if (scrollRef.current) {
-                scrollRef.current.scrollBy({ left: 340, behavior: 'smooth' });
-              }
-            }}
-            aria-label="Scroll Right"
-            title="Scroll Right"
-            disabled={loading || historyList.length === 0}
-          >
-            <RightOutlined style={{ fontSize: 22, color: '#38bdf8' }} />
-          </button>
-          {/* 横向滚动区域 */}
+        <div
+          className={`
+            w-full max-w-4xl px-4 py-2 relative
+            transition-opacity duration-300 ease-in-out opacity-100
+          `}
+        >
           <div
-            className="overflow-x-scroll scrollbar-hide"
+            className="overflow-y-auto"
             ref={scrollRef}
             style={{
               scrollBehavior: 'smooth',
-              scrollbarWidth: 'none', // Firefox
-              msOverflowStyle: 'none', // IE/Edge
+              maxHeight: 'calc(100vh - 180px)'
             }}
           >
-            <div className="inline-flex flex-row flex-nowrap gap-x-6 gap-y-8 justify-center min-w-full">
+            <div className="space-y-3 py-2">
               {loading ? (
-                <div className="flex items-center justify-center w-full h-[120px] min-w-full">
+                <div className="flex items-center justify-center w-full h-[120px]">
                   <Spin />
                 </div>
               ) : historyList.length === 0 ? (
@@ -471,36 +445,37 @@ const HistoryCardList = () => {
                     <div
                       key={item.websiteId}
                       className={`
-                        group relative rounded-xl bg-white/5 hover:bg-white/10 transition
-                        shadow-lg p-6 flex flex-col items-center justify-between
-                        min-h-[120px] w-[340px] max-w-[340px]
+                        group relative rounded-lg bg-white/5 hover:bg-white/10 transition
+                        shadow-md p-2.5 flex flex-col items-center justify-between
+                        min-h-[80px] w-full max-w-md mx-auto
                         border border-white/10 hover:border-primary-500
                         cursor-pointer
                       `}
                       onClick={() => handleCardClick(item)}
                     >
                       <div className="w-full flex flex-col items-center">
-                        <div className="font-semibold text-base text-gray-300 mb-1">
+                        <div className="font-semibold text-[11px] text-gray-300 mb-0.5">
                           Task Origin Website
                         </div>
-                        <div className="font-semibold text-lg text-white mb-2">{item.website}</div>
-                        <div className={`text-xs font-bold mb-2 ${statusColor}`}>
+                        <div className="font-semibold text-xs text-white mb-1 truncate w-full text-center">
+                          {item.website}
+                        </div>
+                        <div className={`text-[10px] font-bold mb-1 ${statusColor}`}>
                           {statusText}
                         </div>
-                        <div className="text-xs text-gray-400 mb-1">
-                          ID: <span className="text-gray-300">{item.websiteId}</span>
+                        <div className="text-[10px] text-gray-400 mb-0.5">
+                          ID: <span className="text-gray-300 font-mono">{item.websiteId.substring(0, 8)}...</span>
                         </div>
                         {item.created_at && (
-                          <div className="text-xs text-gray-500 mb-1">
-                            Created: {new Date(item.created_at).toLocaleString()}
+                          <div className="text-[10px] text-gray-500 mb-0.5">
+                            Created: {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </div>
                         )}
-                        {/* 新增：生成开始和结束时间 */}
-                        <div className="text-xs text-gray-500 mb-1">
-                          Start Time: {item.generatedStart ? new Date(item.generatedStart).toLocaleString() : '-'}
+                        <div className="text-[10px] text-gray-500 mb-0.5">
+                          Start: {item.generatedStart ? new Date(item.generatedStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
                         </div>
-                        <div className="text-xs text-gray-500 mb-1">
-                          End Time: {item.generatedEnd ? new Date(item.generatedEnd).toLocaleString() : '-'}
+                        <div className="text-[10px] text-gray-500">
+                          End: {item.generatedEnd ? new Date(item.generatedEnd).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
                         </div>
                         {/* finished 状态小预览 */}
                         {item.generatorStatus === 'finished' && item.resultId && (
@@ -516,16 +491,16 @@ const HistoryCardList = () => {
                       </div>
                       {/* Delete button */}
                       <button
-                        className="absolute top-3 right-3 bg-red-700/70 hover:bg-red-800/80 text-white rounded-full p-2 shadow transition"
+                        className="absolute top-1 right-1 bg-red-700/60 hover:bg-red-800/70 text-white rounded-full p-1 shadow transition"
                         title="Delete"
-                        style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         onClick={e => {
                           e.stopPropagation();
                           setDeleteConfirm({ open: true, id: item.websiteId });
                         }}
                         disabled={deletingId === item.websiteId || isClearingAll}
                       >
-                        <DeleteOutlined style={{ fontSize: 18 }} />
+                        <DeleteOutlined style={{ fontSize: 12 }} />
                       </button>
                     </div>
                   );
@@ -534,7 +509,7 @@ const HistoryCardList = () => {
             </div>
           </div>
         </div>
-        {/* 删除确认弹窗 */}
+        {/* Delete confirmation modal */}
         <Modal
           open={deleteConfirm.open}
           onCancel={() => setDeleteConfirm({ open: false, id: null })}
@@ -545,10 +520,9 @@ const HistoryCardList = () => {
               danger
               loading={deletingId === deleteConfirm.id}
               onClick={async () => {
-                // === 修改：调用 handleDelete 时，告知其成功后需要关闭详情弹窗（如果当前弹窗是打开的） ===
                 const shouldCloseModal = !!selectedItem && selectedItem.websiteId === deleteConfirm.id;
                 await handleDelete(deleteConfirm.id, shouldCloseModal);
-                setDeleteConfirm({ open: false, id: null }); // 关闭确认弹窗
+                setDeleteConfirm({ open: false, id: null });
               }}
             >
               Delete
@@ -568,7 +542,7 @@ const HistoryCardList = () => {
             </div>
           </div>
         </Modal>
-        {/* === 新增：全部清除确认弹窗 === */}
+        {/* Clear All confirmation modal */}
         <Modal
           open={clearAllConfirmOpen}
           onCancel={() => setClearAllConfirmOpen(false)}
@@ -599,7 +573,7 @@ const HistoryCardList = () => {
             </div>
           </div>
         </Modal>
-        {/* failed 状态弹窗 */}
+        {/* failed status modal */}
         <Modal
           open={failedModal.open}
           onCancel={() => setFailedModal({ open: false, id: null })}
@@ -631,14 +605,14 @@ const HistoryCardList = () => {
             </div>
           </div>
         </Modal>
-        {/* processing 状态弹窗 */}
+        {/* processing status modal */}
         <Modal
           open={processingModal}
           onCancel={() => setProcessingModal(false)}
           footer={[
-            <Button 
-              key="ok" 
-              type="primary" 
+            <Button
+              key="ok"
+              type="primary"
               onClick={() => setProcessingModal(false)}
               style={{
                 background: 'linear-gradient(90deg, #38bdf8 0%, #a78bfa 100%)',
@@ -704,106 +678,102 @@ const HistoryCardList = () => {
             closable={false}
             maskClosable={true}
           >
-            {/* === 只保留关闭按钮，删除按钮已移除 === */}
+            {/* Close button */}
             <div className="absolute top-3 right-4 z-30">
               <button
                 onClick={handleModalClose}
                 className="p-2 rounded-full text-white bg-slate-800/60 hover:bg-slate-700/80 transition duration-200"
                 title="Close"
                 disabled={resultLoading}
-                style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }} // 增大点击区域
+                style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
                 <CloseOutlined style={{ fontSize: 28, display: 'block' }} />
               </button>
             </div>
-            {/* === 左右导航按钮 === */}
-            {/* {finishedTasks.length > 1 && selectedItem.generatorStatus === 'finished' && (
-              <>
-                <button
-                  className="absolute left-4 top-1/2 -translate-y-1/2 z-30 bg-slate-800/80 hover:bg-slate-700/90 rounded-full p-2 shadow border border-slate-700 transition disabled:opacity-40 flex items-center justify-center"
-                  style={{ width: 40, height: 40 }}
-                  onClick={() => navigateTask('prev')}
-                  aria-label="Previous Task"
-                  title="Previous Task"
-                >
-                  <LeftOutlined style={{ fontSize: 22, color: '#38bdf8' }} />
-                </button>
-                <button
-                  className="absolute right-4 top-1/2 -translate-y-1/2 z-30 bg-slate-800/80 hover:bg-slate-700/90 rounded-full p-2 shadow border border-slate-700 transition disabled:opacity-40 flex items-center justify-center"
-                  style={{ width: 40, height: 40 }}
-                  onClick={() => navigateTask('next')}
-                  aria-label="Next Task"
-                  title="Next Task"
-                >
-                  <RightOutlined style={{ fontSize: 22, color: '#38bdf8' }} />
-                </button>
-              </>
-            )} */}
-           
+            {/* Sidebar toggle button */}
+            <button
+              onClick={() => setIsSidebarVisible(!isSidebarVisible)}
+              className="absolute top-1/2 left-0 -translate-y-1/2 z-30 bg-slate-700/80 hover:bg-slate-600/90 rounded-r-md py-3 px-1 shadow border-y border-r border-slate-600 transition duration-300 ease-in-out"
+              style={{ transform: `translateY(-50%) translateX(${isSidebarVisible ? '280px' : '0px'})` }}
+              title={isSidebarVisible ? "Collapse Sidebar" : "Expand Sidebar"}
+            >
+              {isSidebarVisible
+                ? <LeftOutlined style={{ fontSize: 16, color: '#94a3b8' }} />
+                : <RightOutlined style={{ fontSize: 16, color: '#e2e8f0' }} />
+              }
+            </button>
+
             {resultLoading ? (
               <div className="flex-1 flex items-center justify-center">
                 <Spin size="large" />
               </div>
             ) : Array.isArray(resultDetail?.data) && resultDetail.data.length > 0 ? (
-              <div className="flex flex-row flex-1 min-h-0 text-sm">
-                <div className="w-[280px] flex-shrink-0 flex flex-col border-r border-slate-800 bg-slate-950/30 overflow-hidden">
-                  <div className="text-center text-base font-bold text-cyan-300 pt-3 pb-2 tracking-wide flex-shrink-0 border-b border-slate-800">
-                    My Tasks
-                  </div>
-                  <div className="flex-1 overflow-y-auto scrollbar-hide p-3 space-y-3">
-                    {historyList
-                      .filter(task => task.generatorStatus === 'finished' || task.generatorStatus === 'processing' || task.generatorStatus === 'failed')
-                      .map((item) => (
-                      <div
-                        key={item.websiteId}
-                        className={`
-                          group relative rounded-lg bg-white/5 hover:bg-white/10 transition
-                          shadow-md p-3 flex flex-col items-start justify-between
-                          border hover:border-primary-500
-                          cursor-pointer text-xs
-                          ${selectedItem.websiteId === item.websiteId
-                            ? 'border-cyan-500 ring-1 ring-cyan-500/60 bg-gradient-to-r from-cyan-900/30 to-slate-900/50'
-                            : 'border-white/10'}
-                        `}
-                        onClick={() => {
-                          if (selectedItem.websiteId !== item.websiteId) {
-                            handleCardClick(item);
-                          }
-                        }}
-                      >
-                        <button
-                          className="absolute top-2 right-2 bg-red-700/70 hover:bg-red-800/80 text-white rounded-full p-1 shadow transition z-10"
-                          title="Delete"
-                          style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                          onClick={e => {
-                            e.stopPropagation();
-                            setDeleteConfirm({ open: true, id: item.websiteId });
+              <div className="flex flex-row flex-1 min-h-0 text-sm relative">
+                {/* Sidebar container */}
+                <div className={`
+                  ${isSidebarVisible ? 'w-[280px]' : 'w-0'}
+                  flex-shrink-0 flex flex-col border-r border-slate-800 bg-slate-950/30 overflow-hidden
+                  transition-all duration-300 ease-in-out
+                `}>
+                  <div className={`flex flex-col h-full ${isSidebarVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'} transition-opacity duration-150 delay-150`}>
+                    <div className="text-center text-base font-bold text-cyan-300 pt-3 pb-2 tracking-wide flex-shrink-0 border-b border-slate-800">
+                      My Tasks
+                    </div>
+                    <div className="flex-1 overflow-y-auto scrollbar-hide p-3 space-y-3">
+                      {historyList
+                        .filter(task => task.generatorStatus === 'finished' || task.generatorStatus === 'processing' || task.generatorStatus === 'failed')
+                        .map((item) => (
+                        <div
+                          key={item.websiteId}
+                          className={`
+                            group relative rounded-lg bg-white/5 hover:bg-white/10 transition
+                            shadow-md p-3 flex flex-col items-start justify-between
+                            border hover:border-primary-500
+                            cursor-pointer text-xs
+                            ${selectedItem.websiteId === item.websiteId
+                              ? 'border-cyan-500 ring-1 ring-cyan-500/60 bg-gradient-to-r from-cyan-900/30 to-slate-900/50'
+                              : 'border-white/10'}
+                          `}
+                          onClick={() => {
+                            if (selectedItem.websiteId !== item.websiteId) {
+                              handleCardClick(item);
+                            }
                           }}
-                          disabled={deletingId === item.websiteId || isClearingAll}
                         >
-                          <DeleteOutlined style={{ fontSize: 16 }} />
-                        </button>
-                        <div className="w-full flex flex-col items-start">
-                          <div className="font-semibold text-sm text-white mb-1 truncate w-[90%]">{item.website}</div>
-                          <div className="mb-1.5">
-                            {renderStatusBadge(item.generatorStatus)}
-                          </div>
-                          <div className="text-gray-400 text-xxs mb-0.5">
-                            ID: <span className="text-gray-300 font-mono">{item.websiteId.substring(0, 12)}...</span>
-                          </div>
-                          {item.generatedStart && (
-                            <div className="text-gray-500 text-xxs">
-                              Start: {new Date(item.generatedStart).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })}
+                          <button
+                            className="absolute top-2 right-2 bg-red-700/70 hover:bg-red-800/80 text-white rounded-full p-1 shadow transition z-10"
+                            title="Delete"
+                            style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            onClick={e => {
+                              e.stopPropagation();
+                              setDeleteConfirm({ open: true, id: item.websiteId });
+                            }}
+                            disabled={deletingId === item.websiteId || isClearingAll}
+                          >
+                            <DeleteOutlined style={{ fontSize: 12 }} />
+                          </button>
+                          <div className="w-full flex flex-col items-start">
+                            <div className="font-semibold text-sm text-white mb-1 truncate w-[calc(100%-30px)]">{item.website}</div>
+                            <div className="mb-1.5">
+                              {renderStatusBadge(item.generatorStatus)}
                             </div>
-                          )}
-                          {item.generatedEnd && (
-                            <div className="text-gray-500 text-xxs">
-                              End: {new Date(item.generatedEnd).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })}
+                            <div className="text-gray-400 text-xxs mb-0.5">
+                              ID: <span className="text-gray-300 font-mono">{item.websiteId.substring(0, 12)}...</span>
                             </div>
-                          )}
+                            {item.generatedStart && (
+                              <div className="text-gray-500 text-xxs">
+                                Start: {new Date(item.generatedStart).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })}
+                              </div>
+                            )}
+                            {item.generatedEnd && (
+                              <div className="text-gray-500 text-xxs">
+                                End: {new Date(item.generatedEnd).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })}
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 </div>
                 <div className="flex flex-col flex-1 min-h-0 overflow-hidden p-4">
@@ -892,10 +862,9 @@ const HistoryCardList = () => {
                               >
                                 {deployLoading ? 'Unpublishing...' : 'Unpublish'}
                               </button>
-                              {/* === 修改：增加 verifiedDomains.length > 0 条件 === */}
                               {currentProductInfo?.projectWebsite && verifiedDomains.length > 0 && (
                                 <button
-                                  onClick={handleDeleteDomainVerification} // 修改：调用打开确认弹窗的函数
+                                  onClick={handleDeleteDomainVerification}
                                   className="p-1 rounded bg-yellow-700/80 hover:bg-yellow-600/90 text-white transition disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
                                   title="Delete Domain Verification Record"
                                   disabled={isDeletingVerification || domainLoading}
@@ -915,10 +884,9 @@ const HistoryCardList = () => {
                           <div>
                             <div className="flex items-center justify-between mb-0.5">
                               <div className="text-xs font-semibold text-cyan-300">Publish URL</div>
-                              {/* === 修改：增加 verifiedDomains.length > 0 条件 === */}
                               {currentProductInfo?.projectWebsite && verifiedDomains.length > 0 && (
                                 <button
-                                  onClick={handleDeleteDomainVerification} // 修改：调用打开确认弹窗的函数
+                                  onClick={handleDeleteDomainVerification}
                                   className="p-1 rounded bg-yellow-700/80 hover:bg-yellow-600/90 text-white transition disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
                                   title="Delete Domain Verification Record"
                                   disabled={isDeletingVerification || domainLoading}
@@ -1092,7 +1060,7 @@ const HistoryCardList = () => {
                         )}
                       </div>
                     </div>
-                    <div className="flex-1 flex justify-center bg-gradient-to-br from-black via-slate-950 to-slate-900 p-3 min-h-0">
+                    <div className="flex-1 flex justify-center from-black via-slate-950 to-slate-900 p-3 min-h-0">
                       {(() => {
                         const previewItem = resultDetail.data.find(i => i.resultId === selectedPreviewId);
                         if (!previewItem) {
@@ -1170,7 +1138,7 @@ const HistoryCardList = () => {
             )}
           </Modal>
         )}
-        {/* === 新增：全屏编辑页面弹窗 === */}
+        {/* Fullscreen edit page modal */}
         <Modal
           open={!!editPageId}
           onCancel={() => setEditPageId(null)}
@@ -1196,39 +1164,36 @@ const HistoryCardList = () => {
           title={null}
           wrapClassName="fullscreen-modal"
         >
-          {/* === 还原第一个弹窗的关闭按钮样式和位置 === */}
           <div className="absolute top-3 right-4 z-30 flex items-center gap-2">
             <button
               onClick={() => setEditPageId(null)}
               className="p-2 rounded-full text-white bg-slate-800/60 hover:bg-slate-700/80 transition duration-200"
               title="Close"
-              style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }} // 增大点击区域
+              style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
               <CloseOutlined style={{ fontSize: 28, display: 'block' }} />
             </button>
           </div>
-          {/* === 结束 === */}
           {editPageId && (
             <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
               <HtmlPreview pageId={editPageId} />
             </div>
           )}
         </Modal>
-        {/* === 新增：渲染 DomainBindingModal === */}
+        {/* Domain Binding Modal */}
         {currentCustomerId && (
           <DomainBindingModal
             visible={isDomainModalVisible}
             onClose={() => setIsDomainModalVisible(false)}
-            productInfo={currentProductInfo} // 传递获取到的产品信息
-            customerId={currentCustomerId}   // 传递 Customer ID
-            onVerified={handleDomainVerified} // 处理验证成功的回调
+            productInfo={currentProductInfo}
+            customerId={currentCustomerId}
+            onVerified={handleDomainVerified}
             onError={(error) => {
               console.error("Domain binding/verification error:", error);
-              // messageApi.error(error.message || 'An error occurred during domain verification.'); // Modal 内部已有提示，这里可以省略或自定义
             }}
           />
         )}
-        {/* === 新增：域名删除确认弹窗 === */}
+        {/* Domain delete confirmation modal */}
         <Modal
           open={deleteDomainConfirmOpen}
           onCancel={() => setDeleteDomainConfirmOpen(false)}
@@ -1238,7 +1203,7 @@ const HistoryCardList = () => {
               type="primary"
               danger
               loading={isDeletingVerification}
-              onClick={executeDeleteDomainVerification} // 调用执行删除的函数
+              onClick={executeDeleteDomainVerification}
             >
               Confirm Delete
             </Button>,
