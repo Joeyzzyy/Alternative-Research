@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } from 'react';
 import { Input, Button, Card, Spin, message, Tag, Tooltip, Avatar, ConfigProvider, Pagination, Dropdown, Menu, Modal } from 'antd';
 import { SearchOutlined, ClearOutlined, ArrowRightOutlined, InfoCircleOutlined, SendOutlined, UserOutlined, RobotOutlined, LoadingOutlined, BulbOutlined, BulbFilled, LeftOutlined, RightOutlined } from '@ant-design/icons';
 import apiClient from '../../../lib/api/index.js';
@@ -53,8 +53,8 @@ const ResearchTool = ({
   const [browserTabs, setBrowserTabs] = useState([]);
   const [activeTab, setActiveTab] = useState(null);
   const [inputDisabledDueToUrlGet, setInputDisabledDueToUrlGet] = useState(false);
-  const [currentBackground, setCurrentBackground] = useState('DAY_GHIBLI'); // 默认使用 NIGHT_GHIBLI
-  const messageHandler = new MessageHandler(setMessages);
+  const [currentBackground, setCurrentBackground] = useState('NIGHT_GHIBLI');
+  const messageHandler = useMemo(() => new MessageHandler(setMessages), [setMessages]); // 使用 useMemo 包装
   const [sseConnected, setSseConnected] = useState(false);
   const retryCountRef = useRef(0);
   const retryTimeoutRef = useRef(null);
@@ -2205,10 +2205,6 @@ const ResearchTool = ({
     };
   }, [showInitialScreen]); // Rerun effect when showInitialScreen changes
 
-  // 在组件的顶部，与其他 useState 声明一起添加这两个状态
-  const [selectedHistoryItem, setSelectedHistoryItem] = useState(null);
-  const [resultModalVisible, setResultModalVisible] = useState(false);
-
   useEffect(() => {
     // 判断是否进入竞品分析阶段
     const shouldWarnOnRefresh = isProcessingTask;
@@ -2331,10 +2327,6 @@ const ResearchTool = ({
                 </button>
               </Tooltip>
               </h1>
-            <p className={`text-lg text-amber-200/90 mb-8 drop-shadow-md`}> {/* 应用 drop-shadow */}
-
-                Create strategic alternative pages that capture high-intent traffic and convert browsers into customers.
-              </p>
             </div>
 
             <div className="relative max-w-3xl mx-auto">
