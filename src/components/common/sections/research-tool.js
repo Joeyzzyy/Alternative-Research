@@ -2715,20 +2715,6 @@ const ResearchTool = ({
                       </>
                     )}
                   </button>
-                  {/* 新增 History 按钮 */}
-                  <button
-                    type="button"
-                    className="px-6 py-4 text-base rounded-xl border shadow-lg transition-all duration-300 flex items-center gap-2 bg-stone-700 text-stone-100 border-stone-500/50 hover:border-stone-400 hover:bg-stone-800"
-                    style={{ height: '64px' }}
-                    onClick={() => {
-                      const el = document.getElementById('result-preview-section');
-                      if (el) {
-                        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                      }
-                    }}
-                  >
-                    <span className="relative z-10">History</span>
-                  </button>
                 </div>
                 </div>
             </form>

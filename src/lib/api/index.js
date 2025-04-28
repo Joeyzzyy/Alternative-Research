@@ -381,6 +381,19 @@ const getSubfolders = async () => {
   }
 };
 
+// 新增：更新子文件夹的方法
+const updateSubfolders = async (subfolders) => {
+  try {
+    const response = await apiClient.put('/customer/subfolder', {
+      subfolder: subfolders
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Failed to update subfolder:', error);
+    return null;
+  }
+};
+
 // 新增：获取 Vercel 项目域名信息
 const getVercelDomainInfo = async (projectId) => {
   try {
@@ -617,6 +630,7 @@ apiClient.generateWebsiteId = generateWebsiteId;
 apiClient.getAlternativeWebsiteResultList = getAlternativeWebsiteResultList;
 apiClient.getProductsByCustomerId = getProductsByCustomerId;
 apiClient.getSubfolders = getSubfolders;
+apiClient.updateSubfolders = updateSubfolders;
 apiClient.getVercelDomainInfo = getVercelDomainInfo;
 apiClient.getVercelDomainConfig = getVercelDomainConfig;
 apiClient.updateAlternativePublishStatus = updateAlternativePublishStatus;

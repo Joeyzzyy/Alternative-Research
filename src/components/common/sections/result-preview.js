@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import apiClient from '../../../lib/api/index.js';
-import { Modal, Button, Spin, message, Select } from 'antd';
+import { Modal, Button, Spin, message, Select, Radio } from 'antd';
 import { DeleteOutlined, ExclamationCircleOutlined, ReloadOutlined, LeftOutlined, CopyOutlined, RightOutlined, CloseOutlined, ClearOutlined, EditOutlined } from '@ant-design/icons';
-import HtmlPreview from './page-edit'; // 新增：引入HtmlPreview组件
+import HtmlPreview from './page-edit';
+import PublishSettingsModal from './publish-setting-modal';
 
 const HistoryCardList = () => {
   const [historyList, setHistoryList] = useState([]);
@@ -19,196 +20,34 @@ const HistoryCardList = () => {
   const [selectedPublishUrl, setSelectedPublishUrl] = useState('');
   const [deployLoading, setDeployLoading] = useState(false);
   const [deployPreviewUrl, setDeployPreviewUrl] = useState('');
-  const [domainLoading, setDomainLoading] = useState(false);
   const scrollRef = useRef(null);
   const [hasToken, setHasToken] = useState(true);
-  const [slugEditing, setSlugEditing] = useState(false);
   const [slugInput, setSlugInput] = useState('');
-  const [slugSaving, setSlugSaving] = useState(false);
   const [processingModal, setProcessingModal] = useState(false);
   const [clearAllConfirmOpen, setClearAllConfirmOpen] = useState(false);
   const [isClearingAll, setIsClearingAll] = useState(false);
   const [editPageId, setEditPageId] = useState(null); // 新增：用于控制全屏编辑页面
   const [currentProductInfo, setCurrentProductInfo] = useState(null); // 新增：存储产品信息
   const [currentCustomerId, setCurrentCustomerId] = useState(null); // 新增：存储 Customer ID
-  const [isDeletingVerification, setIsDeletingVerification] = useState(false);
   const [deleteDomainConfirmOpen, setDeleteDomainConfirmOpen] = useState(false); // 新增：控制域名删除确认弹窗
   const [isSidebarVisible, setIsSidebarVisible] = useState(true); // 新增：控制详情弹窗侧边栏可见性
   const [isPublishSettingsModalVisible, setIsPublishSettingsModalVisible] = useState(false); // 新增：控制发布设置弹窗
   const currentItem = resultDetail?.data?.find(item => item.resultId === selectedPreviewId) || {};
 
-  // === 新增：域名验证相关 State ===
-  const [verificationStatus, setVerificationStatus] = useState('idle'); // idle, input, pending_txt, verifying, failed
-  const [domainToVerify, setDomainToVerify] = useState(''); // 用户输入的待验证域名
-  const [txtRecord, setTxtRecord] = useState(null); // { name, type, value }
-  const [verificationLoading, setVerificationLoading] = useState(false); // 验证过程中的加载状态
-  const [verificationError, setVerificationError] = useState(null); // 验证过程中的错误信息
-  // === 结束新增 State ===
-
-  // === 新增：处理添加域名以获取 TXT 记录 ===
-  const handleAddDomain = async () => {
-    if (!domainToVerify || !currentProductInfo || !currentCustomerId) { // 新增检查 currentCustomerId
-      messageApi.error('Please enter a domain name and ensure product info and customer ID are loaded.');
-      return;
-    }
-    setVerificationLoading(true);
-    setVerificationError(null);
-    setTxtRecord(null);
-    setVerificationStatus('pending_txt'); // 先假设会拿到TXT
-
+  const fetchProductInfo = async () => {
     try {
-      // 1. 更新产品信息中的 projectWebsite (这部分逻辑可能需要保留，取决于你的业务需求)
-      //    如果 createDomainWithTXT 内部不处理产品更新，则保留此步骤
-      const updatePayload = {
-        productId: currentProductInfo.productId,
-        productName: currentProductInfo.productName,
-        website: domainToVerify, // 使用用户输入的域名
-        coreFeatures: currentProductInfo.productDesc,
-        competitors: currentProductInfo.competitors,
-        domainStatus: true // 标记为尝试绑定
-      };
-      const updateRes = await apiClient.updateProduct(currentProductInfo.productId, updatePayload);
-      if (updateRes?.code !== 200) {
-        // 如果更新产品失败，可以选择中断或继续尝试添加域名
-        console.warn('Failed to update product with domain before adding, but proceeding to add domain.');
-        // throw new Error(updateRes?.message || 'Failed to update product with domain.');
+      const res = await apiClient.getProductsByCustomerId();
+      if (res) {
+        setCurrentProductInfo(res.data);
       } else {
-         // 更新成功后，更新本地 productInfo state
-         setCurrentProductInfo(prev => ({ ...prev, projectWebsite: domainToVerify, domainStatus: true }));
+        console.warn("Failed to fetch product info or no product info available.");
+        setCurrentProductInfo(null); // 确保在失败时设置为 null
       }
-
-
-      // === 修改：调用正确的 API 方法 ===
-      // 2. 调用 API 添加域名并获取 TXT 记录
-      const addRes = await apiClient.createDomainWithTXT({
-        domainName: domainToVerify,
-        customerId: currentCustomerId, // 传递 customerId
-      });
-
-      // === 修改：根据 createDomainWithTXT 的响应结构处理 ===
-      if (addRes?.code === 10042) { // 域名已被占用
-         const errorMsg = addRes.message || 'This domain is already taken.';
-         // 尝试获取现有域名的验证信息 (如果 API 支持)
-         // 注意：这里的 getVercelDomainInfo 可能仍然需要，或者需要另一个 API
-         messageApi.info(`${errorMsg} Fetching existing verification info...`);
-         try {
-            // 假设 getVercelDomainInfo 或类似 API 可以获取信息
-            const verifyInfoRes = await apiClient.getVercelDomainInfo(domainToVerify); // 或者其他获取信息的 API
-            if (verifyInfoRes?.verification && verifyInfoRes.verification.length > 0) {
-              const txt = verifyInfoRes.verification.find(v => v.type === 'TXT');
-              if (txt) {
-                setTxtRecord({ name: txt.domain, type: txt.type, value: txt.value });
-                setVerificationStatus('pending_txt');
-              } else {
-                throw new Error('Could not find TXT verification record for existing domain.');
-              }
-            } else if (verifyInfoRes?.verified) {
-               messageApi.success('Domain is already verified!');
-               setVerificationStatus('idle');
-               await loadVerifiedDomains(setCurrentProductInfo, setVerifiedDomains, setDomainLoading);
-            } else {
-              throw new Error(verifyInfoRes?.error?.message || 'Failed to get verification info for existing domain.');
-            }
-         } catch (getInfoError) {
-            console.error("Error getting info for existing domain:", getInfoError);
-            setVerificationError(getInfoError.message || errorMsg); // 显示获取信息错误或原始占用错误
-            setVerificationStatus('failed');
-         }
-
-      } else if (addRes?.code === 200 && addRes.data?.txt) {
-        // 成功获取 TXT 记录
-        try {
-          const parsedTxt = JSON.parse(addRes.data.txt);
-          if (parsedTxt?.host && parsedTxt?.value) {
-            setTxtRecord({
-              name: parsedTxt.host,
-              value: parsedTxt.value,
-              type: 'TXT'
-            });
-            setVerificationStatus('pending_txt');
-          } else {
-            throw new Error('Invalid TXT record format received.');
-          }
-        } catch (parseError) {
-          console.error("Error parsing TXT record:", parseError);
-          throw new Error('Received invalid verification data.');
-        }
-      } else {
-         // 其他错误或未预期的成功响应 (例如，不需要验证的子域名？)
-         // 根据 createDomainWithTXT 的实际行为调整这里的逻辑
-         const errorMsg = addRes?.message || 'Failed to get verification record.';
-         // 检查是否可能是添加成功但无需验证的情况
-         if (addRes?.code === 200 && !addRes.data?.txt) {
-            messageApi.success('Domain added or already configured.');
-            setVerificationStatus('idle');
-            await loadVerifiedDomains(setCurrentProductInfo, setVerifiedDomains, setDomainLoading);
-         } else {
-            throw new Error(errorMsg);
-         }
-      }
-    } catch (e) {
-      console.error("Error adding domain:", e);
-      setVerificationError(e.message || 'Failed to get verification record.');
-      setVerificationStatus('failed'); // 标记为失败
-      // 如果添加失败，可能需要将 productInfo 中的 domainStatus 重置回 false
-      // (根据实际业务逻辑决定是否需要回滚)
-      // await apiClient.updateProduct(...); // 可选的回滚操作
-    } finally {
-      setVerificationLoading(false);
+    } catch (error) {
+      console.error("Error fetching product info:", error);
+      messageApi.error("Failed to load product information.");
+      setCurrentProductInfo(null); // 确保在出错时设置为 null
     }
-  };
-
-  // === 新增：处理最终的域名验证 ===
-  const handleVerifyDomain = async () => {
-    // === 修改：使用 validateDomain API ===
-    if (!domainToVerify || !currentCustomerId) { // 确保有域名和 customerId
-       messageApi.error('Missing domain name or customer ID for verification.');
-       return;
-    }
-    setVerificationLoading(true);
-    setVerificationError(null);
-    setVerificationStatus('verifying'); // 设置为验证中状态
-
-    try {
-      // === 修改：调用 validateDomain ===
-      const res = await apiClient.validateDomain({
-         customerId: currentCustomerId,
-         // 确认 validateDomain 是否需要 domainName 参数，如果需要则添加
-         // domainName: domainToVerify
-      });
-
-      // === 修改：根据 validateDomain 的响应处理 ===
-      if (res?.code === 200) { // 假设 200 表示验证成功
-        messageApi.success(`Domain ${domainToVerify} verified successfully! Refreshing list...`);
-        setVerificationStatus('idle'); // 重置状态
-        setDomainToVerify(''); // 清空输入
-        setTxtRecord(null);
-        // 验证成功后，刷新域名列表
-        await loadVerifiedDomains(setCurrentProductInfo, setVerifiedDomains, setDomainLoading);
-        // 不需要关闭弹窗，UI 会自动更新
-      } else {
-         // 验证失败
-         const errorMsg = res?.message || 'Verification failed. Please double-check the TXT record and wait for DNS propagation.';
-         setVerificationError(errorMsg);
-         setVerificationStatus('pending_txt'); // 保持在待验证状态，允许重试
-      }
-    } catch (e) {
-      console.error("Error verifying domain:", e);
-      setVerificationError(e.message || 'An error occurred during verification.');
-      setVerificationStatus('pending_txt'); // 保持在待验证状态
-    } finally {
-      setVerificationLoading(false);
-    }
-  };
-
-  // === 新增：复制文本到剪贴板 ===
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text).then(() => {
-      messageApi.success('Copied to clipboard!');
-    }, (err) => {
-      messageApi.error('Failed to copy!');
-      console.error('Could not copy text: ', err);
-    });
   };
 
   // === 新增：函数用于检查 URL 参数并打开弹窗 ===
@@ -239,6 +78,8 @@ const HistoryCardList = () => {
         return;
       }
       setHasToken(true);
+      const customerId = localStorage.getItem('alternativelyCustomerId');
+      setCurrentCustomerId(customerId);
       const res = await apiClient.getAlternativeWebsiteList(1, 200);
       let list = [];
       if (res && Array.isArray(res.data)) {
@@ -269,7 +110,7 @@ const HistoryCardList = () => {
     setCurrentCustomerId(customerId);
 
     fetchHistory();
-
+    fetchProductInfo();
     // === 新增：每隔1分钟自动刷新任务列表 ===
     const intervalId = setInterval(() => {
       fetchHistory();
@@ -316,7 +157,6 @@ const HistoryCardList = () => {
     setDeletingId(null);
   };
 
-  // === 新增：执行全部清除 ===
   const executeClearAll = async () => {
     setIsClearingAll(true);
     setClearAllConfirmOpen(false); // 关闭确认弹窗
@@ -407,10 +247,6 @@ const HistoryCardList = () => {
       setResultDetail({ error: 'Failed to load details.' });
     }
     setResultLoading(false);
-    // 选中卡片后，加载可用域名和产品信息
-    if (item) {
-      await loadVerifiedDomains(setCurrentProductInfo, setVerifiedDomains, setDomainLoading);
-    }
     setSelectedPublishUrl('');
     setDeployPreviewUrl('');
   };
@@ -482,43 +318,44 @@ const HistoryCardList = () => {
     );
   };
 
-  // === 新增：处理删除验证记录（实际执行删除） ===
-  const executeDeleteDomainVerification = async () => {
-    if (!currentProductInfo) {
-      messageApi.error('Product information not available.');
-      setDeleteDomainConfirmOpen(false); // 关闭确认弹窗
-      return;
-    }
-    setIsDeletingVerification(true);
-    setDeleteDomainConfirmOpen(false); // 关闭确认弹窗
-    const payload = {
-      productId: currentProductInfo.productId,
-      productName: currentProductInfo.productName,
-      website: '',
-      coreFeatures: currentProductInfo.productDesc,
-      competitors: currentProductInfo.competitors,
-      domainStatus: false
-    };
-    try {
-      const res = await apiClient.updateProduct(currentProductInfo.productId, payload);
-      if (res && res.code === 200) {
-        messageApi.success('Domain verification record deleted successfully.');
-        // 刷新域名列表和产品信息
-        await loadVerifiedDomains(setCurrentProductInfo, setVerifiedDomains, setDomainLoading);
-        // 清空已选发布 URL
-        setSelectedPublishUrl('');
-      } else {
-        messageApi.error('Failed to delete domain verification record.');
+
+  // === 新增：发布成功后的回调函数 ===
+  const handlePublishSuccess = async () => {
+    messageApi.info('Refreshing task details...');
+    // 重新获取当前选中任务的详情
+    if (selectedItem?.websiteId) {
+      setResultLoading(true); // 显示加载状态
+      try {
+        const res = await apiClient.getAlternativeWebsiteResultList(selectedItem.websiteId);
+        setResultDetail(res);
+        // 保持当前选中的 previewId，如果它仍然存在
+        if (Array.isArray(res?.data) && res.data.some(d => d.resultId === selectedPreviewId)) {
+          // 不需要改变 selectedPreviewId
+        } else if (Array.isArray(res?.data) && res.data.length > 0) {
+          // 如果之前的 previewId 不存在了，默认选中第一个
+          setSelectedPreviewId(res.data[0].resultId);
+          setSlugInput(res.data[0].slug || '');
+        } else {
+          // 如果没有结果了
+          setSelectedPreviewId(null);
+          setSlugInput('');
+        }
+      } catch (e) {
+        setResultDetail({ error: 'Failed to reload details after publish.' });
+        messageApi.error('Failed to reload task details.');
+      } finally {
+        setResultLoading(false); // 结束加载状态
       }
-    } catch (e) {
-      messageApi.error('Failed to delete domain verification record.');
     }
-    setIsDeletingVerification(false);
+    // 可选：也可以刷新整个列表，如果发布状态影响列表显示
+    // await fetchHistory();
   };
 
-  // === 修改：处理删除验证记录（打开确认弹窗） ===
-  const handleDeleteDomainVerification = () => {
-    setDeleteDomainConfirmOpen(true);
+  // === 新增：域名更改后的回调函数 ===
+  const handleDomainChange = async () => {
+    messageApi.info('Domain settings changed, refreshing product info...');
+    // 重新获取产品信息，这会更新传递给 Modal 的 currentProductInfo
+    await fetchProductInfo();
   };
 
   if (!hasToken) {
@@ -945,10 +782,10 @@ const HistoryCardList = () => {
                   <div className="flex flex-row flex-1 min-h-0 bg-gradient-to-br from-slate-900 via-slate-950 to-black rounded-lg shadow-xl overflow-hidden border border-slate-800">
                     <div className="w-[300px] p-3 flex flex-col gap-3 overflow-y-auto border-r border-slate-800 bg-slate-900/80 scrollbar-hide text-xs flex-shrink-0">
                       <div className="text-center text-base font-bold text-cyan-300 pb-1 tracking-wide flex-shrink-0 border-b border-slate-700 mb-2">
-                        Result Details
+                        Task Details
                       </div>
                       <div>
-                        <div className="mb-1 text-sm font-bold text-cyan-300 tracking-wide pl-1">All Results</div>
+                        <div className="mb-1 text-sm font-bold text-cyan-300 tracking-wide pl-1">All Pages Under This Task</div>
                         <div className="flex flex-col gap-1.5">
                           {resultDetail.data.map((item, idx) => (
                             <div
@@ -964,9 +801,6 @@ const HistoryCardList = () => {
                             >
                               <div className="flex items-center justify-between">
                                 <div className="font-semibold text-xs text-white truncate max-w-[140px]">{item.slug || item.websiteId}</div>
-                                {selectedPreviewId === item.resultId && (
-                                  <span className="ml-2 text-cyan-400 text-xs font-bold">Selected</span>
-                                )}
                               </div>
                               <div className="text-xxs text-gray-400 break-all mt-0.5">Result ID: {item.resultId}</div>
                               <div className="text-xxs text-gray-500 mt-0.5">
@@ -1027,17 +861,6 @@ const HistoryCardList = () => {
                               >
                                 {deployLoading ? 'Unpublishing...' : 'Unpublish'}
                               </button>
-                              {currentProductInfo?.projectWebsite && verifiedDomains.length > 0 && (
-                                <button
-                                  onClick={handleDeleteDomainVerification}
-                                  className="p-1 rounded bg-yellow-700/80 hover:bg-yellow-600/90 text-white transition disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-                                  title="Delete Domain Verification Record"
-                                  disabled={isDeletingVerification || domainLoading}
-                                  style={{ width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                >
-                                  {isDeletingVerification ? <Spin size="small" /> : <DeleteOutlined style={{ fontSize: 12 }} />}
-                                </button>
-                              )}
                             </div>
                           </div>
                         ) : (
@@ -1114,7 +937,6 @@ const HistoryCardList = () => {
                                     disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-600 disabled:to-gray-700
                                   `}
                                   title="Bind Your Own Domain" // 修改 title 回去
-                                  disabled={!selectedPreviewId || resultLoading || currentItem.deploymentStatus === 'publish'} // 如果已发布则禁用
                                 >
                                   Bind Your Own Domain {/* 修改按钮文本回去 */}
                                 </button>
@@ -1184,469 +1006,23 @@ const HistoryCardList = () => {
             </div>
           )}
         </Modal>
-        {/* Domain delete confirmation modal */}
-        <Modal
-          open={deleteDomainConfirmOpen}
-          onCancel={() => setDeleteDomainConfirmOpen(false)}
-          footer={[
-            <Button
-              key="delete"
-              type="primary"
-              danger
-              loading={isDeletingVerification}
-              onClick={executeDeleteDomainVerification}
-            >
-              Confirm Delete
-            </Button>,
-            <Button key="cancel" onClick={() => setDeleteDomainConfirmOpen(false)} disabled={isDeletingVerification}>
-              Cancel
-            </Button>
-          ]}
-          centered
-          title={null}
-          closable={!isDeletingVerification}
-          maskClosable={!isDeletingVerification}
-        >
-          <div className="flex flex-col items-center justify-center py-6">
-            <ExclamationCircleOutlined style={{ fontSize: 40, color: '#f87171' }} />
-            <div className="mt-4 text-lg font-semibold text-red-400">Confirm Deletion</div>
-            <div className="mt-2 text-gray-300 text-center">
-              Are you sure you want to delete the domain verification record for <span className="font-semibold text-white">{currentProductInfo?.projectWebsite}</span>?
-              <br/>This action might affect your published pages.
-            </div>
-          </div>
-        </Modal>
-        {/* === 新增：发布设置弹窗 (Publish Settings Modal) === */}
-        <Modal
-          open={isPublishSettingsModalVisible}
-          onCancel={() => setIsPublishSettingsModalVisible(false)}
-          title={<span className="text-white font-semibold text-base">Bind Your Own Domain</span>}
-          footer={null}
-          width={650}
-          centered
-          styles={{
-            body: { background: '#1e293b', padding: '24px', borderRadius: '8px' },
-            header: { background: '#1e293b', borderBottom: '1px solid #334155', color: 'white', padding: '16px 24px' },
-            content: { background: '#1e293b', padding: 0 },
-          }}
-          closable={true}
-          maskClosable={true}
-          destroyOnClose
-        >
-          {currentItem && (
-            <div className="text-gray-200"> {/* === 修改：为整个弹窗内容设置默认浅色文字 === */}
-              {/* === Domain Section === */}
-              <div className="mb-5 pb-5 border-b border-slate-700">
-                <h3 className="text-lg font-semibold text-white mb-3">Domain Binding</h3>
-                {/* === 修改：根据是否有已验证域名显示不同内容 === */}
-                {verifiedDomains.length > 0 ? (
-                  // === 有域名：显示下拉选择 ===
-                  <div className="space-y-3">
-                    <label htmlFor="publish-url-select" className="block text-sm font-medium text-gray-300">Select Verified Domain/Subfolder:</label>
-                    <Select
-                      id="publish-url-select"
-                      value={selectedPublishUrl}
-                      onChange={(value) => setSelectedPublishUrl(value)}
-                      loading={domainLoading}
-                      className="w-full domain-select-override" // 添加自定义类名以便覆盖样式
-                      placeholder="Select a domain or subfolder"
-                      // === 修改：为 Select 组件添加样式覆盖 ===
-                      dropdownStyle={{ background: '#2a3a50', border: '1px solid #475569' }} // 下拉菜单背景和边框
-                      // optionLabelProp="label" // 如果需要显示复杂内容
-                    >
-                      {verifiedDomains.map(url => (
-                        <Select.Option
-                          key={url}
-                          value={url}
-                          className="domain-select-option-override" // 添加自定义类名
-                          // === 修改：为 Option 添加样式 (这里移除内联 style，统一在 CSS 中处理) ===
-                          // style={{ color: '#e2e8f0', backgroundColor: '#2a3a50' }}
-                        >
-                          {/* 可以在这里添加图标等 */}
-                          <span>{url}</span>
-                        </Select.Option>
-                      ))}
-                    </Select>
-                     {/* === 修改：删除按钮颜色 === */}
-                     {currentProductInfo?.projectWebsite && currentProductInfo?.domainStatus && (
-                      <div className="mt-2 flex justify-end">
-                        <Button
-                          type="link"
-                          danger
-                          size="small"
-                          onClick={handleDeleteDomainVerification}
-                          loading={isDeletingVerification}
-                          // === 修改：调整删除按钮颜色 ===
-                          className="text-red-400 hover:text-red-300"
-                        >
-                          Remove Domain Binding
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  // === 无域名：显示验证流程 ===
-                  <Spin spinning={verificationLoading} tip={<span className="text-gray-300">{verificationStatus === 'verifying' ? "Verifying..." : "Processing..."}</span>}> {/* === 修改：Spin 提示文字颜色 === */}
-                    {/* === 修改：错误提示文字颜色 === */}
-                    {verificationError && <p className="text-red-400 text-sm mb-3">{verificationError}</p>}
-
-                    {/* === 步骤 1: 输入域名 === */}
-                    {verificationStatus === 'idle' && (
-                      <div className="space-y-3">
-                        {/* === 修改：段落文字颜色 === */}
-                        <p className="text-sm text-gray-300">Enter the domain name you want to associate with your site (e.g., mydomain.com).</p>
-                        <input
-                          type="text"
-                          placeholder="example.com"
-                          value={domainToVerify}
-                          onChange={(e) => {
-                            setDomainToVerify(e.target.value.trim());
-                            setVerificationError(null); // 清除旧错误
-                          }}
-                          // === 修改：输入框样式和 placeholder 颜色 ===
-                          className="w-full px-3 py-2 rounded bg-slate-700 border border-slate-600 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
-                          disabled={verificationLoading}
-                        />
-                        <Button
-                          type="primary"
-                          onClick={handleAddDomain}
-                          loading={verificationLoading}
-                          disabled={!domainToVerify || verificationLoading}
-                          className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border-none text-white font-semibold"
-                        >
-                          Get TXT Record
-                        </Button>
-                      </div>
-                    )}
-
-                    {/* === 步骤 2: 显示 TXT 记录 === */}
-                    {(verificationStatus === 'pending_txt' || verificationStatus === 'verifying') && txtRecord && (
-                      <div className="space-y-3">
-                        {/* === 修改：段落文字颜色 === */}
-                        <p className="text-sm text-gray-300">Add the following TXT record to your domain's DNS settings. This may take a few minutes to propagate.</p>
-                        <div className="space-y-1 bg-slate-700/50 p-3 rounded border border-slate-600">
-                          {/* === 修改：标签文字颜色 === */}
-                          <p><strong className="text-gray-200">Type:</strong> <code className="text-cyan-300 bg-slate-800 px-1 rounded">TXT</code></p>
-                          {/* === 修改：标签文字颜色和 code 颜色 === */}
-                          <p><strong className="text-gray-200">Name/Host:</strong></p>
-                          <div className="flex items-center justify-between bg-slate-800 px-2 py-1 rounded">
-                            <code className="text-cyan-300 break-all mr-2">{txtRecord.name}</code>
-                            {/* === 修改：复制图标颜色 === */}
-                            <Button icon={<CopyOutlined className="text-gray-300 hover:text-white"/>} type="text" size="small" onClick={() => copyToClipboard(txtRecord.name)} />
-                          </div>
-                           {/* === 修改：标签文字颜色和 code 颜色 === */}
-                          <p><strong className="text-gray-200">Value/Content:</strong></p>
-                          <div className="flex items-center justify-between bg-slate-800 px-2 py-1 rounded">
-                            <code className="text-cyan-300 break-all mr-2">{txtRecord.value}</code>
-                             {/* === 修改：复制图标颜色 === */}
-                            <Button icon={<CopyOutlined className="text-gray-300 hover:text-white"/>} type="text" size="small" onClick={() => copyToClipboard(txtRecord.value)} />
-                          </div>
-                        </div>
-                         {/* === 修改：段落文字颜色 === */}
-                        <p className="text-xs text-gray-400">Once added, click the button below to verify. DNS changes can sometimes take time to update globally.</p>
-                        <Button
-                          type="primary"
-                          onClick={handleVerifyDomain}
-                          loading={verificationLoading && verificationStatus === 'verifying'}
-                          disabled={verificationLoading}
-                          className="w-full bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-500 hover:to-teal-500 border-none text-white font-semibold"
-                        >
-                          {verificationLoading && verificationStatus === 'verifying' ? 'Verifying...' : 'Verify DNS Record'}
-                        </Button>
-                        {/* === 修改：允许返回修改域名的按钮 === */}
-                        <Button
-                          type="default"
-                          onClick={() => {
-                            setVerificationStatus('idle');
-                            setTxtRecord(null);
-                            setVerificationError(null);
-                            // 保留 domainToVerify 输入框中的值
-                          }}
-                          disabled={verificationLoading}
-                          className="w-full bg-slate-600 hover:bg-slate-500 border-slate-500 text-white"
-                        >
-                          Change Domain
-                        </Button>
-                      </div>
-                    )}
-
-                    {/* === 步骤 3: 验证失败 === */}
-                    {verificationStatus === 'failed' && (
-                       <div className="space-y-3">
-                          {/* === 修改：失败提示文字颜色 === */}
-                         <p className="text-red-400 text-sm">{verificationError || 'Verification process failed.'}</p>
-                         <Button
-                           type="primary"
-                           onClick={() => {
-                             setVerificationStatus('idle');
-                             setVerificationError(null);
-                             // 保留 domainToVerify 输入框中的值以便重试
-                           }}
-                           className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border-none text-white font-semibold"
-                         >
-                           Try Again
-                         </Button>
-                       </div>
-                    )}
-                    {/* 验证成功后会自动刷新域名列表并显示 Select，无需在此处处理 'verified' 状态 */}
-                  </Spin>
-                )}
-              </div>
-
-              {/* === Slug Section (保持不变，但确保内部文字颜色也适配) === */}
-              <div className="mb-5">
-                <h3 className="text-lg font-semibold text-white mb-3">Page Slug</h3>
-                {/* === 修改：段落文字颜色 === */}
-                <p className="text-sm text-gray-300 mb-2">Set a unique slug for this page version (e.g., 'main-landing-page'). Used in the URL.</p>
-                {slugEditing ? (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={slugInput}
-                      onChange={(e) => setSlugInput(e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, ''))} // 实时格式化
-                      // === 修改：输入框样式和 placeholder 颜色 ===
-                      className="flex-grow px-3 py-1.5 rounded bg-slate-700 border border-slate-600 text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 text-sm"
-                      placeholder="e.g., main-landing-page"
-                      disabled={slugSaving}
-                    />
-                    <div className="flex gap-1 flex-shrink-0">
-                      <button
-                        className="px-3 py-1.5 rounded bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={slugSaving || !slugInput}
-                        onClick={async () => {
-                          // ... (save slug logic - 保持不变) ...
-                          setSlugSaving(true);
-                          try {
-                            if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slugInput)) {
-                               messageApi.error('Slug can only contain lowercase letters, numbers, and hyphens, and cannot start or end with a hyphen.');
-                               setSlugSaving(false);
-                               return;
-                            }
-                            const resp = await apiClient.updateAlternativeSlug(selectedPreviewId, slugInput);
-                            if (resp?.code === 1071) {
-                              messageApi.error('Slug already exists. Please choose a different slug.');
-                            } else if (resp?.code === 200) {
-                              messageApi.success('Slug updated successfully');
-                              setResultDetail(prev => {
-                                if (!prev || !Array.isArray(prev.data)) return prev;
-                                return {
-                                  ...prev,
-                                  data: prev.data.map(item =>
-                                    item.resultId === selectedPreviewId
-                                      ? { ...item, slug: slugInput }
-                                      : item
-                                  )
-                                };
-                              });
-                              setSlugEditing(false);
-                            } else {
-                               messageApi.error(resp?.message || 'Failed to update slug');
-                            }
-                          } catch (e) {
-                            messageApi.error('Failed to update slug');
-                          }
-                          setSlugSaving(false);
-                        }}
-                      >
-                        {slugSaving ? <Spin size="small" /> : 'Save Slug'}
-                      </button>
-                      <button
-                        // === 修改：取消按钮样式 ===
-                        className="px-3 py-1.5 rounded bg-slate-600 hover:bg-slate-500 text-white text-xs font-semibold transition"
-                        onClick={() => {
-                          const current = resultDetail?.data?.find(i => i.resultId === selectedPreviewId);
-                          setSlugInput(current?.slug || '');
-                          setSlugEditing(false);
-                        }}
-                        disabled={slugSaving}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between gap-2 bg-slate-700/60 px-3 py-2 rounded border border-slate-600 min-h-[38px]">
-                    {/* === 修改：Slug 显示文字颜色 === */}
-                    <span className="text-gray-100 text-sm break-all mr-2">{slugInput || <span className="text-gray-400 italic">No slug set</span>}</span>
-                    <button
-                      // === 修改：编辑按钮样式 ===
-                      className="px-3 py-1 rounded bg-slate-600 hover:bg-slate-500 text-white text-xs font-semibold transition flex-shrink-0 flex items-center gap-1"
-                      onClick={() => setSlugEditing(true)}
-                    >
-                      {/* === 修改：编辑图标颜色 === */}
-                      <EditOutlined className="text-gray-300" />
-                      Edit
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* === Publish Button 和 Preview URL (仅当有域名和 slug 时显示) === */}
-              {verifiedDomains.length > 0 && (
-                <div className="mt-4 pt-4 flex flex-col gap-3 border-t border-slate-700">
-                   {selectedPublishUrl && slugInput && (
-                    <div className="bg-slate-800/50 p-3 rounded-md border border-slate-700/50">
-                      {/* === 修改：预览 URL 标签文字颜色 === */}
-                      <div className="text-sm font-semibold text-cyan-300 mb-1">Publish Preview URL</div>
-                      {/* === 修改：预览 URL 链接颜色 === */}
-                      <div className="text-cyan-400 underline break-all hover:text-cyan-300 transition cursor-default text-sm">
-                        {`https://${selectedPublishUrl}/${slugInput}`}
-                      </div>
-                    </div>
-                  )}
-                  <button
-                    disabled={!selectedPublishUrl || !slugInput || deployLoading || isDeletingVerification || slugEditing || verificationLoading}
-                    onClick={async () => {
-                      // ... (publish logic - 保持不变) ...
-                      setDeployLoading(true);
-                      try {
-                         if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slugInput)) {
-                           messageApi.error('Invalid slug format. Please fix the slug before publishing.');
-                           setDeployLoading(false);
-                           return;
-                         }
-                        if (slugEditing) {
-                           messageApi.warning('Please save or cancel the slug edit before publishing.');
-                           setDeployLoading(false);
-                           return;
-                        }
-                        const resp = await apiClient.updateAlternativePublishStatus(
-                          selectedPreviewId,
-                          'publish',
-                          selectedPublishUrl,
-                          slugInput
-                        );
-                        if (resp?.code === 200) {
-                          messageApi.success('Published successfully!');
-                          setIsPublishSettingsModalVisible(false);
-                          setResultDetail(prev => {
-                            if (!prev || !Array.isArray(prev.data)) return prev;
-                            return {
-                              ...prev,
-                              data: prev.data.map(item =>
-                                item.resultId === selectedPreviewId
-                                  ? { ...item, deploymentStatus: 'publish', siteUrl: `https://${selectedPublishUrl}`, slug: slugInput }
-                                  : item
-                              )
-                            };
-                          });
-                           setTimeout(fetchHistory, 1000);
-                        } else {
-                          messageApi.error(resp?.message || 'Publish failed');
-                        }
-                      } catch (e) {
-                        messageApi.error(e.message || 'Publish failed');
-                      } finally {
-                        setDeployLoading(false);
-                      }
-                    }}
-                    className={`
-                      w-full px-4 py-2.5 rounded font-semibold transition text-base shadow-lg
-                      ${(!selectedPublishUrl || !slugInput || deployLoading || isDeletingVerification || slugEditing || verificationLoading)
-                        ? 'bg-cyan-800/70 text-cyan-400/80 cursor-not-allowed opacity-80'
-                        : 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-cyan-500/30'}
-                    `}
-                  >
-                    {deployLoading ? <Spin /> : 'Publish Now'}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </Modal>
+        {/* === 新增：渲染 PublishSettingsModal === */}
+        {isPublishSettingsModalVisible && currentItem && currentProductInfo && currentCustomerId && (
+          <PublishSettingsModal
+            open={isPublishSettingsModalVisible}
+            onClose={() => setIsPublishSettingsModalVisible(false)}
+            apiClient={apiClient}
+            messageApi={messageApi}
+            currentItem={currentItem} // 传递当前选中的页面项
+            currentProductInfo={currentProductInfo} // 传递当前产品信息
+            currentCustomerId={currentCustomerId} // 传递 Customer ID
+            onPublishSuccess={handlePublishSuccess} // 传递发布成功回调
+            onDomainChange={handleDomainChange} // 传递域名变更回调
+          />
+        )}
       </div>
     </div>
   );
-};
-
-const loadVerifiedDomains = async (setCurrentProductInfo, setVerifiedDomains, setDomainLoading) => {
-  setDomainLoading?.(true);
-  setCurrentProductInfo(null); // 重置产品信息
-  setVerifiedDomains([]); // 重置域名列表
-  try {
-    // 1. 获取 Vercel 项目的 projectId
-    const projectId = 'prj_wzQuo0EarALY8MsjNvPotb4wYO8S';
-    let productInfo = null;
-    // === 修改：获取并存储产品信息 ===
-    try {
-      const response = await apiClient.getProductsByCustomerId();
-      if (response?.code === 200 && response.data) {
-        productInfo = response.data;
-        setCurrentProductInfo(productInfo); // 存储产品信息到 state
-      } else {
-        console.error("Failed to get product info:", response);
-        // 即使产品信息获取失败，也继续尝试获取域名，但可能无法进行验证绑定
-      }
-    } catch (productError) {
-      console.error("Error fetching product info:", productError);
-       // 即使产品信息获取失败，也继续尝试获取域名
-    }
-
-    // === 新增：检查 domainStatus ===
-    if (productInfo?.domainStatus === false) {
-      setVerifiedDomains([]);
-      setDomainLoading?.(false);
-      return;
-    }
-    // === 结束新增检查 ===
-
-    // 2. 获取域名列表
-    const domainResp = await apiClient.getVercelDomainInfo(projectId);
-    const domains = domainResp?.domains || [];
-
-    // 3. 获取根域名
-    const rootDomain = productInfo?.projectWebsite;
-    if (!rootDomain) {
-      setVerifiedDomains([]);
-      setDomainLoading?.(false);
-      return;
-    }
-
-    // 4. 过滤并检查域名 - 只保留以根域名结尾的域名
-    const verifiedDomainsPromises = domains
-      .filter(domain =>
-        domain.verified &&
-        !domain.name.includes('vercel.app') &&
-        (domain.name === rootDomain || domain.name.endsWith(`.${rootDomain}`))
-      )
-      .map(async domain => {
-        try {
-          // 检查域名配置
-          const config = await apiClient.getVercelDomainConfig(domain.name);
-          return !config?.misconfigured ? domain.name : null;
-        } catch (error) {
-          // 某个域名配置获取失败，忽略
-          return null;
-        }
-      });
-
-    // 5. 等待所有配置检查完成
-    const verifiedDomainsList = (await Promise.all(verifiedDomainsPromises)).filter(Boolean);
-
-    // 6. 获取子文件夹
-    let subfolders = [];
-    try {
-      const subfolderResp = await apiClient.getSubfolders();
-      if (subfolderResp?.code === 200 && Array.isArray(subfolderResp.data)) {
-        subfolders = subfolderResp.data;
-      }
-    } catch (error) {
-      // 获取子文件夹失败，忽略
-    }
-
-    // 7. 合并验证过的域名和子文件夹路径
-    const mergedDomains = [
-      ...verifiedDomainsList,
-      ...subfolders.map(subfolder => `${rootDomain}/${subfolder}`)
-    ];
-
-    setVerifiedDomains(mergedDomains);
-  } catch (error) {
-    console.error("Error loading verified domains:", error);
-    setVerifiedDomains([]);
-  } finally {
-    setDomainLoading?.(false);
-  }
 };
 
 // 隐藏滚动条样式
@@ -1723,6 +1099,30 @@ const loadVerifiedDomains = async (setCurrentProductInfo, setVerifiedDomains, se
     background-color: #1e40af !important; /* 选中时深蓝色背景 */
     color: #ffffff !important; /* 选中时白色文字 */
     font-weight: 600; /* 加粗选中的选项 */
+  }
+  /* === 新增：覆盖 antd Radio.Group 和 Radio.Button 样式 === */
+  .publish-mode-radio-group .ant-radio-button-wrapper {
+    background-color: #334155 !important; /* 未选中背景 */
+    border-color: #475569 !important;
+    color: #cbd5e1 !important; /* 未选中文字 */
+    box-shadow: none !important;
+  }
+  .publish-mode-radio-group .ant-radio-button-wrapper:hover {
+    background-color: #475569 !important; /* 悬停背景 */
+    color: #e2e8f0 !important;
+  }
+  .publish-mode-radio-group .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled) {
+    background-color: #0ea5e9 !important; /* 选中背景 (青色) */
+    border-color: #0284c7 !important;
+    color: #ffffff !important; /* 选中文字 */
+  }
+  .publish-mode-radio-group .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled):hover {
+     background-color: #0369a1 !important; /* 选中悬停背景 */
+     border-color: #075985 !important;
+  }
+  /* 移除按钮间的间距（如果需要更紧凑） */
+  .publish-mode-radio-group .ant-radio-button-wrapper:not(:first-child)::before {
+    width: 0; /* 隐藏分隔线 */
   }
 `}</style>
 
