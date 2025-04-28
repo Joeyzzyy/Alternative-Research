@@ -25,7 +25,6 @@ const PublishSettingsModal = ({
   const [slugEditing, setSlugEditing] = useState(false);
   const [slugSaving, setSlugSaving] = useState(false);
   const [deployLoading, setDeployLoading] = useState(false);
-  const [deleteDomainConfirmOpen, setDeleteDomainConfirmOpen] = useState(false);
   const [isDeletingVerification, setIsDeletingVerification] = useState(false);
   const [verifiedDomains, setVerifiedDomains] = useState([]);
   const [domainLoading, setDomainLoading] = useState(false);
@@ -411,17 +410,38 @@ const PublishSettingsModal = ({
 
   // === 删除域名绑定相关函数 ===
   const handleDeleteDomainVerification = () => {
-    setDeleteDomainConfirmOpen(true);
+    // === 修改：使用 modal.confirm ===
+    modal.confirm({
+      title: <span className="text-red-400">Confirm Domain Binding Removal</span>,
+      icon: <ExclamationCircleOutlined style={{ color: '#f87171' }} />,
+      content: (
+        <div>
+          Are you sure you want to remove the domain binding for {currentProductInfo?.projectWebsite}?
+          <br/>This action might affect your published pages using this domain.
+        </div>
+      ),
+      okText: 'Confirm Removal',
+      okType: 'danger',
+      cancelText: 'Cancel',
+      centered: true,
+      // okButtonProps: { loading: isDeletingVerification }, // modal.confirm 会自动处理按钮 loading
+      // cancelButtonProps: { disabled: isDeletingVerification },
+      onOk: async () => {
+        // 调用执行删除的函数
+        await executeDeleteDomainVerification();
+      },
+    });
+    // setDeleteDomainConfirmOpen(true); // 移除旧逻辑
   };
 
   const executeDeleteDomainVerification = async () => {
     if (!currentProductInfo) {
       messageApi.error('Product information not available.');
-      setDeleteDomainConfirmOpen(false);
+      // setDeleteDomainConfirmOpen(false); // 移除旧逻辑
       return;
     }
-    setIsDeletingVerification(true);
-    setDeleteDomainConfirmOpen(false);
+    setIsDeletingVerification(true); // 仍然需要这个来控制触发按钮的 loading 状态
+    // setDeleteDomainConfirmOpen(false); // 移除旧逻辑
     const payload = {
       productId: currentProductInfo.productId,
       productName: currentProductInfo.productName,
@@ -915,44 +935,6 @@ const PublishSettingsModal = ({
       {/* === 新增：渲染 contextHolder === */}
       {/* 它不会渲染任何可见元素，但为 modal 实例提供了上下文 */}
       {contextHolder}
-
-      {/* Domain delete confirmation modal (内部) */}
-      <Modal
-        open={deleteDomainConfirmOpen}
-        onCancel={() => setDeleteDomainConfirmOpen(false)}
-        footer={[
-          <Button
-            key="delete"
-            type="primary"
-            danger
-            loading={isDeletingVerification}
-            onClick={executeDeleteDomainVerification}
-          >
-            Confirm Delete
-          </Button>,
-          <Button key="cancel" onClick={() => setDeleteDomainConfirmOpen(false)} disabled={isDeletingVerification}>
-            Cancel
-          </Button>
-        ]}
-        centered
-        title={null}
-        closable={!isDeletingVerification}
-        maskClosable={!isDeletingVerification}
-        styles={{ // 确保嵌套 modal 样式正确
-           body: { background: '#1e293b', padding: '24px', borderRadius: '8px' },
-           header: { background: '#1e293b', borderBottom: '1px solid #334155', color: 'white', padding: '16px 24px' },
-           content: { background: '#1e293b', padding: 0 },
-        }}
-      >
-        <div className="flex flex-col items-center justify-center py-6 px-6 text-white">
-          <ExclamationCircleOutlined style={{ fontSize: 40, color: '#f87171' }} />
-          <div className="mt-4 text-lg font-semibold text-red-400">Confirm Deletion</div>
-          <div className="mt-2 text-gray-300 text-center">
-            Are you sure you want to delete the domain verification record for <span className="font-semibold text-white">{currentProductInfo?.projectWebsite}</span>?
-            <br/>This action might affect your published pages.
-          </div>
-        </div>
-      </Modal>
 
       {/* === 添加 Subfolder 的 Modal (放在主 Modal return 内部的末尾) === */}
       <Modal
