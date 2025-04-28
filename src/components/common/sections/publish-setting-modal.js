@@ -15,7 +15,6 @@ const PublishSettingsModal = ({
   onPublishSuccess, // 发布成功后的回调
   onDomainChange, // 域名绑定/解绑/验证成功后的回调
 }) => {
-  const [publishMode, setPublishMode] = useState('subfolder');
   const [verificationStatus, setVerificationStatus] = useState('idle'); // idle, pending_txt, verifying, failed
   const [domainToVerify, setDomainToVerify] = useState('');
   const [txtRecord, setTxtRecord] = useState(null);
@@ -623,23 +622,8 @@ const PublishSettingsModal = ({
                       )}
                     </div>
                   )}
-                  <div className="mb-3">
-                    <label className="block text-sm font-medium text-gray-300 mb-1.5">Publish Mode:</label>
-                    <Radio.Group
-                      onChange={(e) => setPublishMode(e.target.value)}
-                      value={publishMode}
-                      optionType="button"
-                      buttonStyle="solid"
-                      className="publish-mode-radio-group"
-                    >
-                      <Radio.Button value="subfolder" className="publish-mode-radio-button">
-                        Subfolder <span className="text-xs text-cyan-200 ml-1">(Recommended)</span>
-                      </Radio.Button>
-                      <Radio.Button value="subdomain" className="publish-mode-radio-button">Subdomain</Radio.Button>
-                    </Radio.Group>
-                  </div>
-                  {/* === Subfolder 管理 UI (仅在 subfolder 模式下显示) === */}
-                  {publishMode === 'subfolder' && currentProductInfo?.projectWebsite && (
+                  {/* === Subfolder 管理 UI (移除 publishMode 条件) === */}
+                  {currentProductInfo?.projectWebsite && ( // 只依赖根域名是否存在
                     <Spin spinning={subfolderLoading} tip={<span className="text-gray-300">Loading subfolders...</span>}>
                       <div className="mt-4 pt-4 border-t border-slate-700 space-y-3">
                         <div className="flex justify-between items-center">
@@ -982,28 +966,29 @@ export default PublishSettingsModal;
     color: #cbd5e1 !important; /* 默认选项文字颜色 */
   }
 
-  /* === 覆盖 antd Radio.Group 和 Radio.Button 样式 === */
+  /* === 移除 Radio.Group 相关样式 === */
+  /*
   .publish-mode-radio-group .ant-radio-button-wrapper {
-    background-color: #334155 !important; /* 未选中背景 */
+    background-color: #334155 !important;
     border-color: #475569 !important;
-    color: #cbd5e1 !important; /* 未选中文字 */
+    color: #cbd5e1 !important;
     box-shadow: none !important;
   }
   .publish-mode-radio-group .ant-radio-button-wrapper:hover {
-    background-color: #475569 !important; /* 悬停背景 */
+    background-color: #475569 !important;
     color: #e2e8f0 !important;
   }
   .publish-mode-radio-group .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled) {
-    background-color: #0ea5e9 !important; /* 选中背景 (青色) */
+    background-color: #0ea5e9 !important;
     border-color: #0284c7 !important;
-    color: #ffffff !important; /* 选中文字 */
+    color: #ffffff !important;
   }
   .publish-mode-radio-group .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled):hover {
-     background-color: #0369a1 !important; /* 选中悬停背景 */
+     background-color: #0369a1 !important;
      border-color: #075985 !important;
   }
-  /* 移除按钮间的间距（如果需要更紧凑） */
   .publish-mode-radio-group .ant-radio-button-wrapper:not(:first-child)::before {
-    width: 0; /* 隐藏分隔线 */
+    width: 0;
   }
+  */
 `}</style>
