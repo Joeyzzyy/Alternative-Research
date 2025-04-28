@@ -6,6 +6,7 @@ export default function BottomBanner({ onClick }) {
   const [isLoggedIn, setIsLoggedIn] = useState(true);
   const [show, setShow] = useState(false);
   const [userEmail, setUserEmail] = useState('');
+  const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
     // 检查本地登录状态
@@ -28,6 +29,7 @@ export default function BottomBanner({ onClick }) {
       if (storedIsLoggedIn === 'true' && storedEmail) {
         setIsLoggedIn(true);
         setUserEmail(storedEmail);
+        setIsVisible(false);
       }
     };
     window.addEventListener('alternativelyLoginSuccess', handleLoginSuccess);
@@ -36,7 +38,7 @@ export default function BottomBanner({ onClick }) {
     };
   }, []);
 
-  if (isLoggedIn) return null;
+  if (isLoggedIn || !isVisible) return null;
 
   return (
     <div
@@ -81,6 +83,21 @@ export default function BottomBanner({ onClick }) {
         onClick={onClick}
       >
         Quick Start
+      </button>
+      <button
+        onClick={() => setIsVisible(false)}
+        className="ml-6 text-gray-500 hover:text-gray-700 transition-colors"
+        style={{
+          fontSize: '1.5rem',
+          lineHeight: '1',
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          padding: '0.2rem 0.5rem'
+        }}
+        aria-label="Close Banner"
+      >
+        &times;
       </button>
     </div>
   );
