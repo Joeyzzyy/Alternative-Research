@@ -310,10 +310,8 @@ const ResearchTool = ({
 
   useEffect(() => {
     if (chatEndRef.current && messages.length > 0) {
-      // 使用更精确的选择器找到聊天消息容器
       const chatContainer = document.querySelector('.chat-messages-container');
       if (chatContainer) {
-        // 设置滚动位置到底部
         chatContainer.scrollTop = chatContainer.scrollHeight;
       }
     }
@@ -330,7 +328,6 @@ const ResearchTool = ({
   useEffect(() => {
     const handleLoginSuccess = () => {
       setIsUserLoggedIn(true); // 更新全局登录状态 (使用新的 setter)
-      // 检查是否有待处理的用户输入
       if (localStorage.getItem('urlInput')) {
         // 延迟一点执行，确保登录状态已完全更新
         setTimeout(() => {
@@ -348,14 +345,11 @@ const ResearchTool = ({
     };
   }, []); // 依赖项为空，确保只添加一次监听器
 
-  // 新增：监听登出事件
   useEffect(() => {
     const handleLogoutSuccess = () => {
       setIsUserLoggedIn(false);
     };
-
     window.addEventListener('alternativelyLogoutSuccess', handleLogoutSuccess);
-
     return () => {
       window.removeEventListener('alternativelyLogoutSuccess', handleLogoutSuccess);
     };
@@ -383,7 +377,7 @@ const ResearchTool = ({
       (match, thinkingContent) => {
         const formattedThinking = thinkingContent
           .replace(/\.([\s\u00A0]+)/g, '. <br />')
-          .replace(/\n/g, '<br />') // ★★★ 关键：换行符转为 <br />
+          .replace(/\n/g, '<br />')
           .trim();
         return `<div class="thinking-block p-2 my-2 bg-gray-100 rounded text-xs text-gray-600">
                   <div class="font-medium mb-1">Thinking Process:</div>
@@ -392,7 +386,6 @@ const ResearchTool = ({
       }
     );
     
-    // 2. 处理 Action: 标签 - 转换为格式化的动作区块
     filteredContent = filteredContent.replace(
       /Action:\s*(.*?)(?=Thought:|<details|$)/gs,
       (match, actionContent) => {
@@ -442,7 +435,6 @@ const ResearchTool = ({
         try {
           const content = log.content;
           if (content.organic_data) {
-            // 如果 organic_data 是字符串，则需要解析；如果已经是对象，则直接使用
             const organicData = typeof content.organic_data === 'string' 
               ? JSON.parse(content.organic_data) 
               : content.organic_data;
@@ -450,7 +442,6 @@ const ResearchTool = ({
             if (organicData.event === 'agent_message') {
               const { message_id, answer } = organicData;
               
-              // 过滤日志内容
               const filteredAnswer = filterLogContent(answer);
               
               if (!agentMessageMap.has(message_id)) {
@@ -461,23 +452,19 @@ const ResearchTool = ({
                   timestamp: log.timestamp,
                 });
               } else {
-                // 追加内容
                 const existingLog = agentMessageMap.get(message_id);
                 existingLog.content += filteredAnswer;
               }
             }
           }
         } catch (error) {
-          // 保留 try-catch 以处理可能的错误，例如 organic_data 仍然是字符串但格式不正确
           console.error('Error processing Agent log content:', error, 'Original log:', log);
         }
       } else {
-        // 非 Agent 消息直接添加
         mergedLogs.push(log);
       }
     });
     
-    // 第二步：将合并后的 Agent 消息添加到结果中
     agentMessageMap.forEach(mergedLog => {
       mergedLog.content = filterLogContent(mergedLog.content)
       .replace(/\.([\s\u00A0]+)/g, '. <br />')
@@ -485,11 +472,8 @@ const ResearchTool = ({
       mergedLogs.push(mergedLog);
     });
     
-    // 按时间戳排序 (确保先合并再排序)
     mergedLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); // <--- 修改为倒序排序
 
-    // --- 修改：找到最新的 Agent Log ID (现在是数组中的第一个 Agent log) ---
-    // 因为数组已经按时间倒序，第一个 Agent 类型的日志就是最新的
     const latestAgentLog = mergedLogs.find(l => l.type === 'Agent'); // 直接在倒序数组中查找第一个
     const latestAgentLogId = latestAgentLog ? latestAgentLog.id : null;
 
@@ -505,23 +489,18 @@ const ResearchTool = ({
     };
 
     const handleImageLoad = (e) => {
-      // 使图片可见
       e.target.classList.remove('opacity-0');
       e.target.classList.add('opacity-100');
       
-      // 可选：移除父链接的背景图，避免重叠
       const parentLink = e.target.closest('a');
       if (parentLink) {
         parentLink.style.backgroundImage = 'none'; 
-        // 可以设置一个透明或其他的背景色
         parentLink.style.backgroundColor = 'transparent'; 
       }
     };
     
-    // 处理图片加载错误
     const handleImageError = (e) => {
       e.target.onerror = null; // 防止无限循环
-      // 隐藏失败的 img 元素，让背景占位符显示出来
       e.target.style.display = 'none'; 
     
       // 禁用父链接
@@ -529,20 +508,14 @@ const ResearchTool = ({
       if (parentLink) {
         parentLink.onclick = (event) => event.preventDefault();
         parentLink.style.cursor = 'default';
-        // 确保占位符背景仍然可见 (以防万一被 onLoad 移除了)
-        // 注意: 确保这里的路径和颜色与 className 中的一致
         parentLink.style.backgroundImage = `url('/images/image-cannot-be-displayed.png')`; 
         parentLink.style.backgroundColor = '#4A5568'; // Tailwind bg-gray-700 的颜色值
       }
-      // 可以在控制台记录错误，方便调试
-      // console.error("Image failed to load:", e.target.src); 
     };
 
     return (
       <div className="h-full flex flex-col" ref={detailsRef}>
         <div className="p-3 space-y-2 overflow-y-auto flex-grow"> {/* 添加 flex-grow */}
-          {/* 添加加载动画 - 更酷炫的进度指示器 */}
-          
           {mergedLogs.map((log, index) => {
             // 跳过 Info 和 Codes 类型的日志
             if (log.type === 'Info' || log.type === 'Codes') {
@@ -992,32 +965,6 @@ const ResearchTool = ({
         font-size: 16px;
       }
       
-      .text-shadow {
-        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
-      }
-      
-      /* 修复历史面板的样式问题 */
-      .history-dropdown .ant-dropdown-menu {
-        padding: 0 !important;
-        background: transparent !important;
-        box-shadow: none !important;
-        border-radius: 0 !important;
-      }
-      
-      .history-dropdown .ant-dropdown-menu-item {
-        padding: 0 !important;
-        margin: 0 !important;
-        background: transparent !important;
-      }
-      
-      .history-dropdown .ant-dropdown-menu-item:hover {
-        background: transparent !important;
-      }
-      
-      .history-dropdown .ant-dropdown-menu-item-active {
-        background: transparent !important;
-      }
-      
       .animate-fadeIn {
         animation: fadeIn 0.5s ease-out forwards;
         opacity: 0;
@@ -1067,47 +1014,6 @@ const ResearchTool = ({
       .h-full, .overflow-y-auto, .chat-messages-container {
         scrollbar-width: thin;
         scrollbar-color: rgba(59, 130, 246, 0.5) rgba(15, 23, 42, 0.1);
-      }
-      
-      @keyframes pulse-slow {
-        0%, 100% { opacity: 0.1; }
-        50% { opacity: 0.3; }
-      }
-      
-      @keyframes float-slow {
-        0% { transform: translateY(0) translateX(0); opacity: 0; }
-        50% { opacity: 0.8; }
-        100% { transform: translateY(-10px) translateX(5px); opacity: 0; }
-      }
-      
-      @keyframes progress {
-        0% { transform: translateX(-100%); }
-        50% { transform: translateX(0); }
-        100% { transform: translateX(100%); }
-      }
-      
-      .animate-pulse-slow {
-        animation: pulse-slow 3s ease-in-out infinite;
-      }
-      
-      .animate-float-slow {
-        animation: float-slow 4s ease-in-out infinite;
-      }
-      
-      .animate-progress {
-        animation: progress 2s ease-in-out infinite;
-      }
-      
-      .delay-0 {
-        animation-delay: 0s;
-      }
-      
-      .delay-100 {
-        animation-delay: 0.2s;
-      }
-      
-      .delay-200 {
-        animation-delay: 0.4s;
       }
     `;
     document.head.appendChild(style);
@@ -2194,9 +2100,23 @@ const ResearchTool = ({
 
   if (initialLoading) {
     return (
-      <div className="w-full min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 
-                    flex items-center justify-center" style={{ paddingTop: "80px" }}>
-        <div className="text-center">
+      <div className="w-full min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950
+                    flex items-center justify-center relative overflow-hidden" // 添加 relative 和 overflow-hidden
+           style={{
+             paddingTop: "80px",
+             // 降低光晕透明度
+             backgroundImage: `
+               radial-gradient(circle at top left, rgba(59, 130, 246, 0.1) 0%, transparent 30%), /* 降低 alpha 值 */
+               radial-gradient(circle at bottom right, rgba(129, 140, 248, 0.07) 0%, transparent 40%), /* 降低 alpha 值 */
+               linear-gradient(to bottom, #020617, #0f172a, #020617) /* 保持原有渐变 */
+             `,
+             backgroundSize: 'cover', // 确保渐变覆盖整个区域
+             backgroundPosition: 'center',
+             backgroundRepeat: 'no-repeat'
+           }}>
+        {/* 添加一个绝对定位的伪元素用于更柔和的整体光晕 */}
+        <div className="absolute inset-0 bg-gradient-radial from-slate-900/5 via-transparent to-transparent opacity-40"></div> {/* 降低透明度 */}
+        <div className="text-center relative z-10"> {/* 确保内容在光晕之上 */}
           <img 
             src="/images/alternatively-logo.png" 
             alt="AltPage.ai" 
@@ -2216,16 +2136,23 @@ const ResearchTool = ({
 
   if (showInitialScreen) {
     return (
-      <div className={`w-full h-screen flex items-center justify-center relative bg-cover bg-center bg-no-repeat bg-gradient-to-br from-slate-900 via-slate-950 to-black`} // 使用默认背景
-             >
-          {/* Inject contextHolder */}
+      <div className={`w-full h-screen flex items-center justify-center relative bg-cover bg-center bg-no-repeat bg-gradient-to-br from-slate-900 via-slate-950 to-black overflow-hidden`} // 添加 overflow-hidden
+           style={{
+             // 降低光晕透明度
+             backgroundImage: `
+               radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.12) 0%, transparent 40%), /* 降低 alpha 值 */
+               radial-gradient(circle at 90% 80%, rgba(167, 139, 250, 0.1) 0%, transparent 50%), /* 降低 alpha 值 */
+               radial-gradient(ellipse at center, rgba(255, 255, 255, 0.02) 0%, transparent 70%), /* 降低 alpha 值 */
+               linear-gradient(to bottom right, #1e293b, #0f172a, #000000) /* 保持原有渐变 */
+             `,
+             backgroundSize: 'cover',
+             backgroundPosition: 'center',
+             backgroundRepeat: 'no-repeat'
+           }}
+           >
           {contextHolder}
-
-          {/* === 修改：固定定位的侧边栏容器，添加状态控制和按钮 === */}
           {isUserLoggedIn && (
           <div className={`fixed top-[80px] left-4 bottom-4 z-50 bg-slate-900/60 backdrop-blur-md rounded-lg shadow-xl border border-slate-700/50 flex flex-col transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-72' : 'w-10'} overflow-visible`}> {/* 修改宽度 w-12 -> w-10 */}
-            {/* 切换按钮 */}
-            {/* --- 修改：再次调整按钮位置以适应新宽度 --- */}
             <button
               onClick={toggleSidebar}
               className="absolute top-1/2 -right-2 transform -translate-y-1/2 z-[51] bg-slate-700 hover:bg-slate-600 text-white w-6 h-10 rounded-r-md flex items-center justify-center transition-colors shadow-md" // 修改 -right-3 -> -right-2
@@ -2417,9 +2344,19 @@ const ResearchTool = ({
       <div className={`w-full min-h-screen bg-cover bg-center bg-no-repeat text-white flex items-center justify-center p-4 relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-950 to-black`}
            style={{
              paddingTop: "80px",
+             // 降低光晕透明度
+             backgroundImage: `
+               radial-gradient(circle at 20% 30%, rgba(59, 130, 246, 0.08) 0%, transparent 35%), /* 降低 alpha 值 */
+               radial-gradient(circle at 80% 70%, rgba(129, 140, 248, 0.05) 0%, transparent 45%), /* 降低 alpha 值 */
+               linear-gradient(to bottom right, #1e293b, #0f172a, #000000) /* 保持原有渐变 */
+             `,
+             backgroundSize: 'cover',
+             backgroundPosition: 'center',
+             backgroundRepeat: 'no-repeat'
            }}>
 
-        <div className={`absolute inset-0 bg-black/30 backdrop-blur-sm`} style={{ paddingTop: "80px" }}></div>
+        {/* 移除原有的模糊层，因为光晕效果已包含背景 */}
+        {/* <div className={`absolute inset-0 bg-black/30 backdrop-blur-sm`} style={{ paddingTop: "80px" }}></div> */}
 
         <div className="relative z-10 w-full flex flex-row gap-6 h-[calc(100vh-140px)] px-4 text-sm">
           <div className="w-[35%] relative flex flex-col">
