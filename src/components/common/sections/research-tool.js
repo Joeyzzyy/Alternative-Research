@@ -1,7 +1,7 @@
 'use client';
-import React, { useState, useEffect, useRef, useMemo, useCallback, useLayoutEffect } from 'react';
-import { Input, Button, Card, Spin, message, Tag, Tooltip, Avatar, ConfigProvider, Pagination, Dropdown, Menu, Modal } from 'antd';
-import { SearchOutlined, ClearOutlined, ArrowRightOutlined, InfoCircleOutlined, SendOutlined, UserOutlined, RobotOutlined, LoadingOutlined, BulbOutlined, BulbFilled, LeftOutlined, RightOutlined } from '@ant-design/icons';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { Input, Button, Spin, message, Tooltip, Avatar, Modal } from 'antd';
+import { ArrowRightOutlined, InfoCircleOutlined, UserOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
 import apiClient from '../../../lib/api/index.js';
 import { EventSourcePolyfill } from 'event-source-polyfill';
 import MessageHandler from '../../../utils/MessageHandler';
@@ -35,7 +35,6 @@ const ResearchTool = ({
   const [browserTabs, setBrowserTabs] = useState([]);
   const [activeTab, setActiveTab] = useState(null);
   const [inputDisabledDueToUrlGet, setInputDisabledDueToUrlGet] = useState(false);
-  const [currentBackground, setCurrentBackground] = useState('NIGHT_GHIBLI');
   const messageHandler = useMemo(() => new MessageHandler(setMessages), [setMessages]); // 使用 useMemo 包装
   const [sseConnected, setSseConnected] = useState(false);
   const retryCountRef = useRef(0);
@@ -44,7 +43,6 @@ const ResearchTool = ({
   const isStreamingRef = useRef(false);
   const currentStreamIdRef = useRef(null);  // 添加一个 ref 来跟踪当前正在流式输出的日志 ID
   const [resultIds, setResultIds] = useState([]);
-  const [showResultIdsModal, setShowResultIdsModal] = useState(false);
   const lastLogCountRef = useRef(0);
   const [isProcessingTask, setIsProcessingTask] = useState(false);
   const [dynamicPlaceholder, setDynamicPlaceholder] = useState(''); // 新增状态
@@ -64,22 +62,17 @@ const ResearchTool = ({
   const [isSidebarOpen, setIsSidebarOpen] = useState(true); // 添加侧边栏展开状态
   const [isUserLoggedIn, setIsUserLoggedIn] = useState(false); // 重命名：全局登录状态
 
-  // 页面加载时读取 localStorage 的 urlInput 和 检查初始登录状态
   useEffect(() => {
     const lastInput = localStorage.getItem('urlInput');
     if (lastInput) {
       setUserInput(lastInput);
     }
-    // 初始化登录状态
     const checkLoginStatus = () => {
       const loggedIn = localStorage.getItem('alternativelyIsLoggedIn') === 'true';
       setIsUserLoggedIn(loggedIn); // 使用新的 setter
     };
     checkLoginStatus(); // 初始检查
-
-    // 监听存储变化，以防在其他标签页登录/登出
     window.addEventListener('storage', checkLoginStatus);
-
     return () => {
       window.removeEventListener('storage', checkLoginStatus);
     };
@@ -89,27 +82,20 @@ const ResearchTool = ({
     if (!input || !input.trim()) return false;
     let domain = input.trim();
     try {
-      // 首先检查是否是纯数字，如果是则直接拒绝
       if (/^\d+$/.test(domain)) {
         return false;
       }
-      // 尝试将输入解析为URL
-      // 如果输入不包含协议，添加临时协议以便解析
       if (!domain.match(/^https?:\/\//i)) {
         domain = 'https://' + domain;
       }
-      // 使用URL API解析域名
       const url = new URL(domain);
       domain = url.hostname;
-      // 验证域名格式 - 必须至少包含一个点，表示有顶级域名
       if (!domain.includes('.')) {
         return false;
       }
-      // 验证域名格式
       const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
       return domainRegex.test(domain);
     } catch (error) {
-      // URL解析失败
       return false;
     }
   };
@@ -117,7 +103,6 @@ const ResearchTool = ({
   const [showAbortModal, setShowAbortModal] = useState(false);
   const [aborting, setAborting] = useState(false);
 
-  // 监听日志变化，在有新日志时自动切回 execution log
   useEffect(() => {
     if (rightPanelTab === 'browser' && logs.length > lastLogCountRef.current) {
       setRightPanelTab('details');
@@ -125,7 +110,6 @@ const ResearchTool = ({
     lastLogCountRef.current = logs.length;
   }, [logs, rightPanelTab]);
 
-  // Add a useEffect to reset inputDisabledDueToUrlGet when messages are updated
   useEffect(() => {
     // Only reset if there are messages and input is currently disabled
     if (messages.length > 0 && inputDisabledDueToUrlGet) {
@@ -161,21 +145,16 @@ const ResearchTool = ({
     }
   };
 
-  // 在 renderChatMessage 里，定义一个函数用于将域名变成可点击链接
   const linkifyDomains = (text) => {
-    // 匹配类似 surferseo.com、frase.io 这样的域名
     return text.replace(
       /([a-zA-Z0-9-]+\.[a-zA-Z]{2,})(?![^<]*>)/g,
       (match) => {
-        // 忽略已经在标签里的内容
-        // 这里默认 http 协议，你也可以用 https
         return `<a href="https://${match}" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;text-decoration:underline;">${match}</a>`;
       }
     );
   };
 
   const renderChatMessage = (message, index) => {
-    // 更低调的 system 消息样式
     if (message.source === 'system') {
       return (
         <div
@@ -835,15 +814,6 @@ const ResearchTool = ({
     );
   };
 
-  const getBackgroundStyle = () => {
-    const bg = BACKGROUNDS[currentBackground];
-    return { backgroundImage: bg.value };
-  };
-
-  const getOverlayClass = () => {
-    return BACKGROUNDS[currentBackground].overlay;
-  };
-
   useEffect(() => {
     const style = document.createElement('style');
     style.innerHTML = `
@@ -1311,7 +1281,6 @@ const ResearchTool = ({
       setUserInput('');
       localStorage.removeItem('urlInput');
 
-      // 使用原始的 formattedInput 添加用户消息到界面
       messageHandler.addUserMessage(formattedInput);
       while (messageHandler.isProcessing) {
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -1814,7 +1783,6 @@ const ResearchTool = ({
   }, [logs, shouldConnectSSE]);
 
   useEffect(() => {
-    // 检查是否有符合条件的 API 请求
     const apiLog = logs.find(log => 
       log.type === 'API' && 
       log.step === 'GET_RESULT_COMPETITORS_SEMRUSH_API' &&
@@ -1901,7 +1869,6 @@ const ResearchTool = ({
   useEffect(() => {
     const allCodesLogs = logs.filter(log => log.type === 'Codes' && log.content?.resultId);
     
-    // 重置已处理日志ID列表
     processedLogIdsRef.current = [];
     
     const newCodesLogs = allCodesLogs;
@@ -1941,7 +1908,6 @@ const ResearchTool = ({
     }
   }, [logs]); // 只依赖 logs
 
-  // 确保 processedLogIdsRef 被正确初始化
   const processedLogIdsRef = useRef([]);
 
   useEffect(() => {
@@ -1949,16 +1915,6 @@ const ResearchTool = ({
       processedLogIdsRef.current = [];
     };
   }, []);
-
-  // 获取当前主题的按钮样式
-  const getButtonStyle = () => {
-    return BACKGROUNDS[currentBackground].buttonStyle;
-  };
-  
-  // 获取当前主题的卡片样式
-  const getCardStyle = () => {
-    return BACKGROUNDS[currentBackground].cardStyle;
-  };
 
   const handleExampleClick = (exampleKey) => { // 参数名改为 exampleKey 以示清晰
     // 1. 调用从父组件传入的函数，设置目标 Tab Key
@@ -1978,15 +1934,12 @@ const ResearchTool = ({
     }
   };
 
-  // Typewriter effect refs (moved outside useEffect)
   const currentTextIndexRef = useRef(0); // Track which sentence to display
   const isDeletingRef = useRef(false); // Track if currently deleting
   const charIndexRef = useRef(0); // Track character index within the sentence
-  // --- 新增：用于 SSE 重连提示的 Ref ---
   const sseReconnectNoticeTimeoutRef = useRef(null);
   const isShowingReconnectNoticeRef = useRef(false);
 
-  // Typewriter effect for placeholder
   useEffect(() => {
     const placeholderTexts = [
       "Enter product website URL to get started.",
@@ -2068,14 +2021,11 @@ const ResearchTool = ({
   }, [showInitialScreen]); // Rerun effect when showInitialScreen changes
 
   useEffect(() => {
-    // 判断是否进入竞品分析阶段
     const shouldWarnOnRefresh = isProcessingTask;
-    // currentStep >= 3 假设为竞品分析阶段，请根据你的实际逻辑调整
 
     const handleBeforeUnload = (e) => {
       if (shouldWarnOnRefresh) {
         e.preventDefault();
-        // 标准写法，部分浏览器需要 returnValue
         e.returnValue = 'Task is running, refreshing may cause the task to be cleaned up, continue?';
         return e.returnValue;
       }
@@ -2092,11 +2042,9 @@ const ResearchTool = ({
     };
   }, [isProcessingTask, currentStep, canProcessCompetitors]);
 
-  // --- 新增：侧边栏切换函数 ---
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
-  // --- 结束新增 ---
 
   if (initialLoading) {
     return (
@@ -2344,7 +2292,6 @@ const ResearchTool = ({
       <div className={`w-full min-h-screen bg-cover bg-center bg-no-repeat text-white flex items-center justify-center p-4 relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-950 to-black`}
            style={{
              paddingTop: "80px",
-             // 降低光晕透明度
              backgroundImage: `
                radial-gradient(circle at 20% 30%, rgba(59, 130, 246, 0.08) 0%, transparent 35%), /* 降低 alpha 值 */
                radial-gradient(circle at 80% 70%, rgba(129, 140, 248, 0.05) 0%, transparent 45%), /* 降低 alpha 值 */
@@ -2354,9 +2301,6 @@ const ResearchTool = ({
              backgroundPosition: 'center',
              backgroundRepeat: 'no-repeat'
            }}>
-
-        {/* 移除原有的模糊层，因为光晕效果已包含背景 */}
-        {/* <div className={`absolute inset-0 bg-black/30 backdrop-blur-sm`} style={{ paddingTop: "80px" }}></div> */}
 
         <div className="relative z-10 w-full flex flex-row gap-6 h-[calc(100vh-140px)] px-4 text-sm">
           <div className="w-[35%] relative flex flex-col">
@@ -2415,7 +2359,6 @@ const ResearchTool = ({
 
             <div className="p-4 border-t border-gray-300/20 flex-shrink-0"> {/* 保持这个区域不变 */}
               <div className="max-w-[600px] mx-auto">
-                {/* --- 修改：根据 styleChangeCompleted 条件渲染 --- */}
                 {styleChangeCompleted ? (
                   <div className={`flex flex-col items-center justify-center p-4 rounded-lg bg-slate-800/60 border border-slate-700/50`}>
                     <p className={`text-center mb-3 text-sm `}>
@@ -2475,9 +2418,8 @@ const ResearchTool = ({
                             }
                           }}
                         />
-                        {/* === 新增：发送按钮 === */}
                         <button
-                          type="button" // 防止触发表单提交
+                          type="button"
                           onClick={(e) => {
                             if (userInput.trim() && !loading && !isMessageSending && !inputDisabledDueToUrlGet) {
                               handleUserInput(e);
@@ -2499,7 +2441,6 @@ const ResearchTool = ({
                         {/* === 结束新增 === */}
                       </div>
                     </Tooltip>
-                    {/* 新增：显眼的输入提示条 */}
                     {!(loading || isMessageSending || inputDisabledDueToUrlGet) && (
                       <div
                         className="mt-2 flex items-center justify-center gap-2 animate-pulse"
@@ -2529,7 +2470,6 @@ const ResearchTool = ({
               </div>
             </div>
           </div>
-
           <div className={`w-[65%]
             bg-slate-900/10 border-blue-700/30
            backdrop-blur-lg rounded-2xl border shadow-xl flex flex-col h-full relative overflow-hidden`}>
@@ -2597,7 +2537,6 @@ const ResearchTool = ({
                   </div>
           </div>
         </div>
-
               <div className="flex-1 overflow-y-auto">
                 {rightPanelTab === 'details' && (
                   <div className="flex h-full">
@@ -2734,7 +2673,7 @@ const ResearchTool = ({
                             <div className="bg-white rounded-lg overflow-hidden">
                               <iframe
                                 src={browserTabs.find(tab => tab.id === activeTab)?.url}
-                                className="w-full h-[calc(100vh-280px)]" // --- 修改：调整回 iframe 高度 ---
+                                className="w-full h-[calc(100vh-280px)]" 
                                 title="Preview"
                               />
                             </div>
@@ -2749,34 +2688,6 @@ const ResearchTool = ({
           </div>
         </div>
       </div>
-
-      <Modal
-        title="Generated Results"
-        open={showResultIdsModal}
-        onCancel={() => {
-          setShowResultIdsModal(false);
-        }}
-        footer={null}
-        width={400}
-        className="result-ids-modal"
-        zIndex={1500}
-        styles={{ mask: { backgroundColor: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(8px)' } }}
-      >
-        <div className="space-y-3">
-          {resultIds.map((id, index) => (
-            <div key={index} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
-              <span className="text-gray-300">Result #{index + 1}</span>
-              <Button
-                type="primary"
-                onClick={() => window.open(`https://preview.websitelm.site/en/${id}`, '_blank')}
-                className={`bg-blue-500 hover:bg-blue-600`}
-              >
-                View Preview
-              </Button>
-            </div>
-          ))}
-        </div>
-      </Modal>
       <Modal
         open={showAbortModal}
         title="Abort Task"
