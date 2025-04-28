@@ -3066,10 +3066,11 @@ const ResearchTool = ({
                                 fontWeight: 300,
                                 fontSize: '10px',
                                 padding: '3px 8px',
-                                height: 'auto'
+                                height: 'auto',
+                                marginRight: '10px'
                               }}
                             >
-                              Go Bind Your Own Domain
+                              Bind Your Own Domain
                             </Button>
                           </div>
                       </div>
