@@ -2083,14 +2083,14 @@ const ResearchTool = ({
 
   if (showInitialScreen) {
     return (
-      <div className={`w-full h-screen flex items-center justify-center relative bg-cover bg-center bg-no-repeat bg-gradient-to-br from-slate-900 via-slate-950 to-black overflow-hidden`} // 添加 overflow-hidden
+      <div className={`w-full h-screen flex items-center justify-center relative bg-cover bg-center bg-no-repeat bg-gradient-to-br from-slate-900 via-slate-950 to-black overflow-hidden`} // Tailwind class remains for fallback/structure, style overrides
            style={{
              // 降低光晕透明度
              backgroundImage: `
-               radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.12) 0%, transparent 40%), /* 降低 alpha 值 */
-               radial-gradient(circle at 90% 80%, rgba(167, 139, 250, 0.1) 0%, transparent 50%), /* 降低 alpha 值 */
-               radial-gradient(ellipse at center, rgba(255, 255, 255, 0.02) 0%, transparent 70%), /* 降低 alpha 值 */
-               linear-gradient(to bottom right, #1e293b, #0f172a, #000000) /* 保持原有渐变 */
+               radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.12) 0%, transparent 20%), /* 将 40% 改为 30%，使光晕更聚焦 */
+               radial-gradient(circle at 90% 80%, rgba(167, 139, 250, 0.1) 0%, transparent 50%), /* 保持不变 */
+               radial-gradient(ellipse at center, rgba(255, 255, 255, 0.02) 0%, transparent 70%), /* 保持不变 */
+               linear-gradient(to bottom right, #475569, #0f172a, #000000) /* 保持上次修改 */
              `,
              backgroundSize: 'cover',
              backgroundPosition: 'center',
@@ -2129,19 +2129,26 @@ const ResearchTool = ({
 
         {/* Ensure content is above the effects - 保持原有布局不变 */}
         <div className={`relative z-10 w-full max-w-4xl px-8 py-12 initial-screen-content rounded-xl bg-transparent`}> {/* 移除背景和模糊 */}
-          <div className={`text-center mb-8 text-shadow`}> {/* 应用 text-shadow */}
-            {/* 修改 h1 以使用 Flexbox 进行对齐 */}
-            <h1 className={`text-4xl font-bold text-white mb-6 drop-shadow-lg flex items-center justify-center gap-3`}> {/* 应用 drop-shadow, 添加 flex, items-center, justify-center, gap */}
-              <span className="text-3xl">
-                <span className="text-blue-400 ">Add SEO-Optimized Alternative Pages To Your Site</span> <br></br>
-                  To Turn Competitors'<span className="text-blue-400">&nbsp;Popularity&nbsp;</span>
-                  Into Your Traffic
-              </span>
-              
-              </h1>
-            </div>
+          <div className={`text-center mb-8`}> {/* 移除 text-shadow 类，将在 span 上直接应用 */}
+            {/* 修改 h1：调整布局为垂直，修改内部 span 样式 */}
+            <h1 className={`text-4xl font-bold mb-6 flex flex-col items-center justify-center gap-1`}> {/* 改为 flex-col, 调整 gap */}
+              {/* 1. Wrap title in a relative container for badge positioning */}
+              <div className="relative inline-block">
+                {/* 2. Update gradient and add glow text-shadow */}
+                <span className="text-5xl font-bold bg-gradient-to-b from-white via-gray-200 to-gray-400 bg-clip-text text-transparent [text-shadow:0_0_10px_rgba(255,255,255,0.4)]"> {/* 更亮的渐变 + 白色辉光阴影 */}
+                  Create Alternative Pages
+                  <br />
+                  With Our AI Agent
+                </span>
+                {/* 3. Add SEO-Friendly Badge - Refined Style */}
+                <span className="absolute top-0 -right-4 transform -translate-y-1/2 rotate-12 bg-gradient-to-r from-blue-400 to-cyan-400 text-white text-xs font-semibold px-2.5 py-px rounded shadow-lg whitespace-nowrap ring-1 ring-white/20"> {/* 调整颜色、字体、内边距、阴影、添加细边框 */}
+                  SEO-Friendly
+                </span>
+              </div>
+            </h1>
+          </div>
 
-            <div className="relative max-w-3xl mx-auto">
+          <div className="relative max-w-3xl mx-auto">
             <form onSubmit={(e) => {
               e.preventDefault();
               if (!validateDomain(userInput)) {
