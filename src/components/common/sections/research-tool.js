@@ -2135,7 +2135,7 @@ const ResearchTool = ({
               {/* 1. Wrap title in a relative container for badge positioning */}
               <div className="relative inline-block">
                 {/* 2. Update gradient and add glow text-shadow */}
-                <span className="text-5xl font-bold bg-gradient-to-b from-white via-gray-200 to-gray-400 bg-clip-text text-transparent [text-shadow:0_0_10px_rgba(255,255,255,0.4)]"> {/* 更亮的渐变 + 白色辉光阴影 */}
+                <span className="text-6xl font-bold bg-gradient-to-b from-white via-gray-200 to-gray-400 bg-clip-text text-transparent [text-shadow:0_0_10px_rgba(255,255,255,0.4)]"> {/* 更亮的渐变 + 白色辉光阴影 */}
                   Create Alternative Pages
                   <br />
                   With Our AI Agent
