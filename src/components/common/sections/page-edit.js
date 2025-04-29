@@ -62,6 +62,11 @@ export default function HtmlPreview({ pageId }) {
   const [isPreviewingOriginal, setIsPreviewingOriginal] = useState(false); // 新增：是否正在预览原始版本
   const [selectedStructureInstruction, setSelectedStructureInstruction] = useState(''); // 新增：选中的结构指令
   // --- AI 编辑状态结束 ---
+  // --- 新增：直接代码编辑状态 ---
+  const [isEditingSectionCode, setIsEditingSectionCode] = useState(false); // 是否正在编辑 Section 代码
+  const [sectionCodeContent, setSectionCodeContent] = useState(''); // 当前编辑的 Section 代码内容
+  const [codeEditingSectionId, setCodeEditingSectionId] = useState(null); // 正在编辑代码的 Section ID
+  // --- 直接代码编辑状态结束 ---
 
   // Show notification and set auto-hide
   const showNotification = (message, type = 'success', duration = 3000) => {
@@ -1165,6 +1170,122 @@ export default function HtmlPreview({ pageId }) {
     });
   };
 
+  // --- 新增：开始直接编辑 Section 代码 ---
+  function handleInitiateCodeEdit(sectionId) {
+    console.log(`Initiating code edit for section: ${sectionId}`);
+    const iframe = iframeRef.current;
+    if (!iframe || !iframe.contentDocument) {
+      message.error('Iframe content not ready.');
+      return;
+    }
+    const doc = iframe.contentDocument;
+    const element = doc.getElementById(sectionId);
+
+    if (element) {
+      // 滚动到区域
+      scrollToSection(sectionId);
+      // 设置状态并打开 Modal
+      setCodeEditingSectionId(sectionId);
+      setSectionCodeContent(element.outerHTML); // 获取当前 HTML
+      setIsEditingSectionCode(true); // 打开代码编辑 Modal
+    } else {
+      message.error(`Could not find section "${sectionId}" in the preview to edit.`);
+      setCodeEditingSectionId(null);
+    }
+  }
+
+  // --- 新增：取消代码编辑 ---
+  function handleCancelCodeEdit() {
+    setIsEditingSectionCode(false);
+    setSectionCodeContent('');
+    setCodeEditingSectionId(null);
+  }
+
+  // --- 新增：保存代码编辑 ---
+  async function handleSaveCodeEdit() {
+    if (!codeEditingSectionId || !sectionCodeContent) {
+      message.error("Cannot save: Missing section ID or code content.");
+      return;
+    }
+
+    const iframe = iframeRef.current;
+    if (!iframe || !iframe.contentDocument) {
+      message.error('Iframe content not accessible to save changes.');
+      handleCancelCodeEdit(); // 关闭 Modal 并重置
+      return;
+    }
+    const doc = iframe.contentDocument;
+    const originalElement = doc.getElementById(codeEditingSectionId);
+
+    if (!originalElement || !originalElement.parentNode) {
+       message.error(`Cannot save: Original section element with ID "${codeEditingSectionId}" not found.`);
+       handleCancelCodeEdit();
+       return;
+    }
+
+    // 尝试解析并替换
+    try {
+      // 使用 parseHtmlString (或类似逻辑) 创建新元素
+      // 注意：parseHtmlString 可能会添加预览样式，我们可能需要移除或调整
+      const tempDiv = doc.createElement('div');
+      tempDiv.innerHTML = sectionCodeContent.trim();
+      let newElement = tempDiv.firstChild;
+      while (newElement && newElement.nodeType !== 1) {
+        newElement = newElement.nextSibling;
+      }
+
+      if (!newElement || newElement.nodeType !== 1) {
+         // 尝试包裹
+         const wrapper = doc.createElement('div'); // 用 div 包裹，避免引入 section 标签
+         while(tempDiv.firstChild) {
+            wrapper.appendChild(tempDiv.firstChild);
+         }
+         if (wrapper.childNodes.length === 1 && wrapper.firstChild.nodeType === 1) {
+             newElement = wrapper.firstChild;
+         } else {
+             // 如果还是不行，可能需要更复杂的处理或报错
+             throw new Error("Parsed HTML did not result in a single root element.");
+         }
+      }
+
+      if (newElement && newElement.nodeType === 1) {
+        newElement.id = codeEditingSectionId; // 确保 ID 正确
+        // 移除 parseHtmlString 可能添加的样式 (如果用了的话)
+        newElement.style.outline = '';
+        newElement.style.transition = '';
+
+        // 替换 DOM 中的元素
+        originalElement.parentNode.replaceChild(newElement, originalElement);
+        console.log(`Section ${codeEditingSectionId} updated with new code.`);
+
+        // 获取更新后的完整 HTML
+        const updatedFullHtml = doc.documentElement.outerHTML;
+
+        // 调用 API 保存
+        setSaving(true); // 使用现有 saving 状态
+        showNotification('Applying code changes...', 'info', 1500);
+
+        await apiClient.editAlternativeHtml({
+          html: updatedFullHtml,
+          resultId: pageId,
+        });
+
+        showNotification('Code changes applied successfully!', 'success');
+        handleCancelCodeEdit(); // 关闭 Modal
+
+      } else {
+        throw new Error("Could not parse edited code into a valid element.");
+      }
+
+    } catch (error) {
+      console.error('Error saving code edit:', error);
+      message.error(`Failed to save code changes: ${error.message}`);
+      // 保存失败，不关闭 Modal，让用户可以复制或重试
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div style={{ width: '100%', height: '100%', background: '#18181c', display: 'flex', flexDirection: 'column', position: 'relative' }}>
       {/* --- 新增：自定义滚动条样式 --- */}
@@ -1353,42 +1474,79 @@ export default function HtmlPreview({ pageId }) {
                   {section.label}
                 </button>
                 {/* --- "AI Regenerate" 按钮 (保持样式，确保对齐) --- */}
-                <Button
-                  type="primary"
-                  size="small"
-                  onClick={(e) => {
-                     e.stopPropagation(); // 阻止事件冒泡
-                     handleInitiateEdit(section.id);
-                  }}
-                  disabled={isPreviewingEdit || isGeneratingEdit}
-                  style={{
-                    background: 'linear-gradient(90deg, #38bdf8 0%, #818cf8 100%)',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    fontWeight: 600,
-                    padding: '4px 12px',
-                    color: '#ffffff',
-                    boxShadow: '0 2px 5px rgba(56, 189, 248, 0.3)',
-                    transition: 'all 0.3s ease',
-                    whiteSpace: 'nowrap',
-                    // 保持左边距与带缩进的标题对齐
-                    marginLeft: '11px', // 等于标题按钮的 paddingLeft (8px) + borderLeftWidth (3px)
-                  }}
-                  onMouseOver={e => {
-                    if (!isPreviewingEdit && !isGeneratingEdit) {
-                      e.currentTarget.style.boxShadow = '0 4px 10px rgba(56, 189, 248, 0.5)';
-                      e.currentTarget.style.transform = 'translateY(-1px)';
-                    }
-                  }}
-                  onMouseOut={e => {
-                    e.currentTarget.style.boxShadow = '0 2px 5px rgba(56, 189, 248, 0.3)';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                  }}
-                  title={`AI Regenerate Section: ${section.label}`}
-                >
-                  AI Regenerate
-                </Button>
+                <div style={{ display: 'flex', gap: '8px', marginLeft: '11px' /* 与标题对齐 */ }}>
+                  <Button
+                    type="primary"
+                    size="small"
+                    onClick={(e) => {
+                       e.stopPropagation(); // 阻止事件冒泡
+                       handleInitiateEdit(section.id);
+                    }}
+                    disabled={isPreviewingEdit || isGeneratingEdit || isEditingSectionCode} // 增加 isEditingSectionCode 禁用条件
+                    style={{
+                      background: 'linear-gradient(90deg, #38bdf8 0%, #818cf8 100%)',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      padding: '4px 12px',
+                      color: '#ffffff',
+                      boxShadow: '0 2px 5px rgba(56, 189, 248, 0.3)',
+                      transition: 'all 0.3s ease',
+                      whiteSpace: 'nowrap',
+                      // 移除左边距，由父 div 控制
+                      // marginLeft: '11px',
+                    }}
+                    onMouseOver={e => {
+                      if (!isPreviewingEdit && !isGeneratingEdit && !isEditingSectionCode) { // 增加 isEditingSectionCode 条件
+                        e.currentTarget.style.boxShadow = '0 4px 10px rgba(56, 189, 248, 0.5)';
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                      }
+                    }}
+                    onMouseOut={e => {
+                      e.currentTarget.style.boxShadow = '0 2px 5px rgba(56, 189, 248, 0.3)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                    title={`AI Regenerate Section: ${section.label}`}
+                  >
+                    AI Regenerate
+                  </Button>
+                  {/* --- 新增：编辑代码按钮 --- */}
+                  <Button
+                    // type="default" // 使用默认样式或自定义
+                    size="small"
+                    icon={<EditOutlined />}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleInitiateCodeEdit(section.id);
+                    }}
+                    disabled={isPreviewingEdit || isGeneratingEdit || isEditingSectionCode} // 禁用条件
+                    style={{
+                      // background: '#475569', // slate-600
+                      // color: '#e2e8f0', // slate-200
+                      // border: '1px solid #64748b', // slate-500
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      padding: '4px 10px', // 调整 padding
+                      transition: 'all 0.3s ease',
+                      whiteSpace: 'nowrap',
+                    }}
+                     onMouseOver={e => {
+                      if (!isPreviewingEdit && !isGeneratingEdit && !isEditingSectionCode) {
+                        // e.currentTarget.style.background = '#64748b'; // slate-500
+                        // e.currentTarget.style.borderColor = '#94a3b8'; // slate-400
+                      }
+                    }}
+                    onMouseOut={e => {
+                      // e.currentTarget.style.background = '#475569'; // slate-600
+                      // e.currentTarget.style.borderColor = '#64748b'; // slate-500
+                    }}
+                    title={`Edit Code for Section: ${section.label}`}
+                  >
+                    Edit Code
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
@@ -2000,6 +2158,51 @@ export default function HtmlPreview({ pageId }) {
          </div>
       )}
       </div>
+      {/* --- 新增：代码编辑 Modal --- */}
+      <Modal
+        title={`Edit Code for Section: ${codeEditingSectionId || ''}`}
+        open={isEditingSectionCode}
+        onCancel={handleCancelCodeEdit}
+        width="80vw" // 使用视口宽度的 80%
+        // height="70vh" // 可以设置高度，但通常 Modal 会自适应内容
+        destroyOnClose // 关闭时销毁内部状态
+        footer={[
+          <Button key="back" onClick={handleCancelCodeEdit}>
+            Cancel
+          </Button>,
+          <Button key="submit" type="primary" loading={saving} onClick={handleSaveCodeEdit}>
+            Save Code Changes
+          </Button>,
+        ]}
+        styles={{ // 使用 styles 来自定义 body 样式
+          body: {
+             height: '65vh', // 设置 Modal Body 的固定高度
+             overflowY: 'hidden', // 隐藏 Modal Body 的滚动条
+             padding: '0', // 移除内边距，让 TextArea 占满
+          }
+        }}
+      >
+        <Input.TextArea
+          value={sectionCodeContent}
+          onChange={e => setSectionCodeContent(e.target.value)}
+          placeholder="Enter HTML code for the section..."
+          style={{
+            height: '100%', // 占满 Modal Body 高度
+            width: '100%', // 占满 Modal Body 宽度
+            fontFamily: 'monospace', // 使用等宽字体
+            fontSize: '14px',
+            lineHeight: '1.6',
+            border: 'none', // 移除边框
+            resize: 'none', // 禁止调整大小
+            outline: 'none', // 移除聚焦时的轮廓
+            padding: '16px', // 添加内边距
+            overflowY: 'auto', // 允许文本域内部滚动
+            background: '#1e293b', // 深色背景 (slate-800)
+            color: '#e2e8f0', // 亮色文字 (slate-200)
+          }}
+        />
+      </Modal>
+      {/* --- 代码编辑 Modal 结束 --- */}
     </div>
   );
 }
