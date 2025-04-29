@@ -26,27 +26,10 @@ const HistoryCardList = () => {
   const [clearAllConfirmOpen, setClearAllConfirmOpen] = useState(false);
   const [isClearingAll, setIsClearingAll] = useState(false);
   const [editPageId, setEditPageId] = useState(null); // 新增：用于控制全屏编辑页面
-  const [currentProductInfo, setCurrentProductInfo] = useState(null); // 新增：存储产品信息
   const [currentCustomerId, setCurrentCustomerId] = useState(null); // 新增：存储 Customer ID
   const [isSidebarVisible, setIsSidebarVisible] = useState(true); // 新增：控制详情弹窗侧边栏可见性
   const [isPublishSettingsModalVisible, setIsPublishSettingsModalVisible] = useState(false); // 新增：控制发布设置弹窗
   const currentItem = resultDetail?.data?.find(item => item.resultId === selectedPreviewId) || {};
-
-  const fetchProductInfo = async () => {
-    try {
-      const res = await apiClient.getProductsByCustomerId();
-      if (res) {
-        setCurrentProductInfo(res.data);
-      } else {
-        console.warn("Failed to fetch product info or no product info available.");
-        setCurrentProductInfo(null); // 确保在失败时设置为 null
-      }
-    } catch (error) {
-      console.error("Error fetching product info:", error);
-      messageApi.error("Failed to load product information.");
-      setCurrentProductInfo(null); // 确保在出错时设置为 null
-    }
-  };
 
   // === 新增：函数用于检查 URL 参数并打开弹窗 ===
   const checkUrlAndOpenModal = (list) => {
@@ -108,7 +91,6 @@ const HistoryCardList = () => {
     setCurrentCustomerId(customerId);
 
     fetchHistory();
-    fetchProductInfo();
     // === 新增：每隔1分钟自动刷新任务列表 ===
     const intervalId = setInterval(() => {
       fetchHistory();
@@ -356,7 +338,7 @@ const HistoryCardList = () => {
   const handleDomainChange = async () => {
     messageApi.info('Domain settings changed, refreshing product info...');
     // 重新获取产品信息，这会更新传递给 Modal 的 currentProductInfo
-    await fetchProductInfo();
+    // await fetchProductInfo(); // 删除：不再调用获取产品信息
   };
 
   if (!hasToken) {
@@ -882,21 +864,14 @@ const HistoryCardList = () => {
                                 {/* === 修改：按钮文案改回，点击打开新弹窗 === */}
                                 <button
                                   onClick={() => {
-                                    // === 新增：添加日志诊断 ===
                                     console.log('Bind button clicked. Checking conditions:');
                                     console.log('isPublishSettingsModalVisible (before set):', isPublishSettingsModalVisible);
                                     console.log('currentItem:', currentItem);
-                                    console.log('currentProductInfo:', currentProductInfo);
                                     console.log('currentCustomerId:', currentCustomerId);
                                     // 检查所有条件是否满足
                                     if (!currentItem || Object.keys(currentItem).length === 0) {
                                       console.error('currentItem is missing or empty.');
                                       messageApi.error('Cannot open publish settings: Task details are missing.');
-                                      return; // 阻止打开弹窗
-                                    }
-                                    if (!currentProductInfo) {
-                                      console.error('currentProductInfo is missing.');
-                                      messageApi.error('Cannot open publish settings: Product information is missing.');
                                       return; // 阻止打开弹窗
                                     }
                                     if (!currentCustomerId) {
@@ -906,7 +881,6 @@ const HistoryCardList = () => {
                                     }
                                     // 打开发布设置弹窗
                                     setIsPublishSettingsModalVisible(true);
-                                    console.log('isPublishSettingsModalVisible (after set):', true); // 直接打印 true，因为 setState 是异步的
                                   }}
                                   className={`
                                     ml-2 px-2 py-2 rounded text-xs font-semibold text-white shadow-sm transition duration-200
@@ -984,14 +958,13 @@ const HistoryCardList = () => {
           )}
         </Modal>
         {/* === 新增：渲染 PublishSettingsModal === */}
-        {isPublishSettingsModalVisible && currentItem && currentProductInfo && currentCustomerId && (
+        {isPublishSettingsModalVisible && currentItem && currentCustomerId && (
           <PublishSettingsModal
             open={isPublishSettingsModalVisible}
             onClose={() => setIsPublishSettingsModalVisible(false)}
             apiClient={apiClient}
             messageApi={messageApi}
             currentItem={currentItem} // 传递当前选中的页面项
-            currentProductInfo={currentProductInfo} // 传递当前产品信息
             currentCustomerId={currentCustomerId} // 传递 Customer ID
             onPublishSuccess={handlePublishSuccess} // 传递发布成功回调
             onDomainChange={handleDomainChange} // 传递域名变更回调

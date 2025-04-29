@@ -223,23 +223,6 @@ const CustomizableResearchUI = forwardRef(({ initialActiveKey = 'ranking', targe
           centered
           className="showcase-tabs"
         />
-
-        <div className="mt-20 text-center">
-          <button 
-            className="px-8 py-3.5 rounded-full relative overflow-hidden group"
-            onClick={() => {
-              window.scrollTo({
-                top: 0,
-                behavior: 'smooth'
-              });
-            }}
-            type="button"
-          >
-            <span className="absolute inset-0 bg-gradient-to-r from-cyan-500 via-purple-500 to-rose-500 animate-gradient-x"></span>
-            <span className="absolute inset-0.5 rounded-full bg-slate-900 group-hover:bg-slate-800 transition-colors duration-300"></span>
-            <span className="relative text-white font-medium">Create Your Success Story Today</span>
-          </button>
-        </div>
       </div>
 
       <style jsx global>{`

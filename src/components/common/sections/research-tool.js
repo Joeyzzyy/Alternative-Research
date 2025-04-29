@@ -1501,8 +1501,6 @@ const ResearchTool = ({
         if (sseReconnectNoticeTimeoutRef.current) {
           clearTimeout(sseReconnectNoticeTimeoutRef.current);
           sseReconnectNoticeTimeoutRef.current = null;
-          // 可选：显示连接成功的消息
-          messageApi.success('Agent connection re-established!', 2);
         }
         // --- 结束新增 ---
       };
@@ -1676,9 +1674,6 @@ const ResearchTool = ({
         const showReconnectNotice = () => {
           // 如果标记为 false，则停止循环
           if (!isShowingReconnectNoticeRef.current) return;
-
-          // 显示提示信息，持续 3 秒
-          messageApi.info('Agent connection lost. Attempting to reconnect...', 3);
 
           // 设置下一个提示的定时器
           sseReconnectNoticeTimeoutRef.current = setTimeout(showReconnectNotice, 3000); // 每 3 秒重复

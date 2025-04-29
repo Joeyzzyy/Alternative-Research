@@ -627,6 +627,30 @@ const deleteVercelDomain = async (projectId, domainName) => {
   }
 };
 
+// 新增：获取域名
+const getDomain = async (customerId) => {
+  try {
+    const response = await apiClient.get('/domain', {
+      params: { customerId }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Failed to get domain:', error);
+    return null; // 或者根据需要抛出错误 throw error;
+  }
+};
+
+// 新增：删除客户域名
+const deleteDomain = async (domainId) => {
+  try {
+    const response = await apiClient.delete(`/domain/${domainId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to delete domain:', error);
+    throw error; // 或者返回 null，取决于错误处理策略
+  }
+};
+
 apiClient.getCompetitorResearch = getCompetitorResearch;
 apiClient.login = login;
 apiClient.register = register;
@@ -670,5 +694,7 @@ apiClient.validateDomain = validateDomain;
 apiClient.updateProduct = updateProduct;
 apiClient.addVercelDomain = addVercelDomain;
 apiClient.deleteVercelDomain = deleteVercelDomain;
+apiClient.getDomain = getDomain;
+apiClient.deleteDomain = deleteDomain;
 
 export default apiClient;

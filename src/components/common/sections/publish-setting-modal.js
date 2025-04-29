@@ -10,7 +10,6 @@ const PublishSettingsModal = ({
   apiClient, // 传入 apiClient 实例
   messageApi, // 传入 messageApi 实例
   currentItem, // 传入当前选中的任务项 { resultId, slug, ... }
-  currentProductInfo: initialProductInfo, // 传入当前产品信息
   currentCustomerId, // 传入 Customer ID
   onPublishSuccess, // 发布成功后的回调
   onDomainChange, // 域名绑定/解绑/验证成功后的回调
@@ -28,7 +27,9 @@ const PublishSettingsModal = ({
   const [isDeletingVerification, setIsDeletingVerification] = useState(false);
   const [verifiedDomains, setVerifiedDomains] = useState([]);
   const [domainLoading, setDomainLoading] = useState(false);
-  const [currentProductInfo, setCurrentProductInfo] = useState(initialProductInfo);
+  // === 新增：根域名 State ===
+  const [rootDomain, setRootDomain] = useState(null); // 用于存储 getDomain 获取的根域名
+  const [rootDomainId, setRootDomainId] = useState(null); // 新增：用于存储根域名的 ID
   // === 新增：子域名相关 State ===
   const [subdomains, setSubdomains] = useState([]);
   const [subdomainLoading, setSubdomainLoading] = useState(false);
@@ -50,63 +51,72 @@ const PublishSettingsModal = ({
   const loadData = async () => {
     setDomainLoading(true);
     setVerifiedDomains([]); // 重置
-    // setCurrentProductInfo(null); // 不在这里重置，避免闪烁，让 initialProductInfo 或 API 调用结果覆盖
-    let productInfo = initialProductInfo; // 优先使用传入的
+    setRootDomain(null); // 重置根域名
+    setRootDomainId(null); // 新增：重置根域名 ID
+    setSubdomains([]); // 重置子域名
+    setActiveCollapseKey([]); // 重置 Collapse
+
+    if (!currentCustomerId) {
+      console.warn("Cannot load data without customerId.");
+      setDomainLoading(false);
+      return;
+    }
+
+    let fetchedRootDomain = null;
 
     try {
-      // 1. 获取产品信息 (如果外部没传入最新的，或者需要刷新)
-      //    如果外部没有传入 productInfo，则尝试获取
-      if (!productInfo && currentCustomerId) {
-         try {
-            const response = await apiClient.getProductsByCustomerId();
-            if (response?.code === 200 && response.data) {
-               productInfo = response.data;
-               // setCurrentProductInfo(productInfo); // 在下面统一设置
-            } else {
-               console.error("Failed to get product info inside modal:", response);
-            }
-         } catch (productError) {
-            console.error("Error fetching product info inside modal:", productError);
-         }
+      // 1. === 修改：获取根域名 ===
+      try {
+        const domainRes = await apiClient.getDomain(currentCustomerId);
+        console.log('getDomain response:', domainRes); // 增加日志方便调试
+
+        // === 修改：根据新的响应结构判断域名是否已绑定并验证成功 ===
+        if (domainRes?.code === 200 && domainRes.data && domainRes.data.verifiedStatus === 'SUCCESS' && domainRes.data.domainName) {
+          fetchedRootDomain = domainRes.data.domainName;
+          setRootDomain(fetchedRootDomain); // 设置根域名状态
+          setRootDomainId(domainRes.data.domainId); // 修改：使用 domainId
+          console.log('Fetched and verified root domain:', fetchedRootDomain, 'with ID:', domainRes.data.domainId); // 修改：使用 domainId
+        } else {
+          // 可能是未绑定、验证未完成、API 返回 code 不为 200 或 data 结构不符
+          console.log('No verified root domain bound for this customer or failed to fetch.');
+          // 不需要设置错误消息，因为这可能是正常情况（用户未绑定域名或验证中）
+        }
+      } catch (domainError) {
+        console.error("Error fetching root domain:", domainError);
+        messageApi.error('Failed to load root domain information.');
+        // 即使获取根域名失败，也可能需要继续尝试加载 Vercel 域名（如果 projectId 已知）
+        // 但如果后续逻辑强依赖根域名，则可以在这里 return
+        // return; // 暂时不 return，允许继续尝试加载 Vercel 域名
       }
-      // 确保 currentProductInfo 更新
-      setCurrentProductInfo(productInfo);
 
-
-      // 2. 检查 domainStatus
-      if (!productInfo || productInfo.domainStatus === false) {
+      // 2. === 修改：检查根域名是否存在 ===
+      //    如果 Vercel 相关操作必须基于已绑定的根域名，则在这里判断
+      if (!fetchedRootDomain) {
         setVerifiedDomains([]);
-        setSelectedPublishUrl(''); // 没有绑定域名，清空选择
-        setSubdomains([]); // 没有根域名，清空子域名
+        setSelectedPublishUrl('');
+        setSubdomains([]);
         setDomainLoading(false);
-        setActiveCollapseKey([]); // 折叠子域名部分
-        return;
+        setActiveCollapseKey([]);
+        console.log('No verified root domain available, skipping Vercel domain checks.');
+        return; // 没有已验证的根域名，不需要进行后续 Vercel 检查
       }
 
       // 3. 获取 Vercel 项目的 projectId (硬编码或从配置获取)
       const projectId = VERCEL_PROJECT_ID; // 使用常量
 
-      // 4. 获取域名列表
+      // 4. 获取 Vercel 域名列表
       const domainResp = await apiClient.getVercelDomainInfo(projectId);
       const domains = domainResp?.domains || [];
 
-      // 5. 获取根域名
-      const rootDomain = productInfo?.projectWebsite;
-      if (!rootDomain) {
-        setVerifiedDomains([]);
-        setSelectedPublishUrl(''); // 没有根域名，清空选择
-        setSubdomains([]); // 没有根域名，清空子域名
-        setDomainLoading(false);
-        setActiveCollapseKey([]); // 折叠子域名部分
-        return;
-      }
+      // 5. === 修改：使用 fetchedRootDomain ===
+      const currentRootDomain = fetchedRootDomain; // 使用从 getDomain 获取的根域名
 
       // 6. 过滤并检查域名 (包括根域名和子域名)
       const verifiedDomainsPromises = domains
         .filter(domain =>
           domain.verified && // 必须是 vercel 验证通过的
           !domain.name.includes('vercel.app') && // 排除 vercel 默认域名
-          (domain.name === rootDomain || domain.name.endsWith(`.${rootDomain}`)) // 必须是根域名或其子域名
+          (domain.name === currentRootDomain || domain.name.endsWith(`.${currentRootDomain}`)) // 必须是根域名或其子域名
         )
         .map(async domain => {
           try {
@@ -127,7 +137,7 @@ const PublishSettingsModal = ({
 
       // 8. 设置默认选中项
       // 过滤掉根域名，只在子域名中选择
-      const selectableSubdomains = verifiedDomainsList.filter(d => d !== rootDomain);
+      const selectableSubdomains = verifiedDomainsList.filter(d => d !== currentRootDomain); // 使用 currentRootDomain
 
       if (selectableSubdomains.length > 0) {
         // 尝试保持之前的选择 (如果它仍然在可选列表中)
@@ -139,11 +149,11 @@ const PublishSettingsModal = ({
         setSelectedPublishUrl(''); // 没有可选的子域名了
       }
 
-      // === 新增：在 loadData 结束时，如果根域名存在，则加载子域名 ===
-      if (rootDomain) {
-        await loadSubdomains(); // 等待子域名加载完成
+      // === 修改：在 loadData 结束时，如果根域名存在，则加载子域名 ===
+      if (currentRootDomain) { // 使用 currentRootDomain
+        await loadSubdomains(currentRootDomain); // 传递根域名给 loadSubdomains
         // 如果有子域名或根域名已验证，则展开 Collapse
-        if (subdomains.length > 0 || verifiedDomainsList.includes(rootDomain)) {
+        if (subdomains.length > 0 || verifiedDomainsList.includes(currentRootDomain)) {
            setActiveCollapseKey(['subdomains']);
         } else {
            setActiveCollapseKey([]);
@@ -153,29 +163,32 @@ const PublishSettingsModal = ({
          setActiveCollapseKey([]); // 没有根域名则不展开
       }
 
-
     } catch (error) {
-      console.error("Error loading verified domains in modal:", error);
+      console.error("Error loading domain data in modal:", error);
+      // 避免覆盖上面 getDomain 可能设置的 rootDomain
+      // setRootDomain(null);
       setVerifiedDomains([]);
       setSelectedPublishUrl('');
       setSubdomains([]); // 出错时也清空子域名
       setActiveCollapseKey([]);
+      // 新增：出错时也清空 rootDomainId
+      setRootDomainId(null);
       messageApi.error('Failed to load domain information.');
     } finally {
       setDomainLoading(false);
     }
   };
 
-  // === 新增：加载子域名的函数 ===
-  const loadSubdomains = async () => {
-    if (!currentProductInfo?.projectWebsite) {
-      console.log("No root domain found, skipping subdomain load.");
+  // === 修改：加载子域名的函数，接收根域名作为参数 ===
+  const loadSubdomains = async (currentRootDomain) => {
+    if (!currentRootDomain) { // 使用传入的参数判断
+      console.log("No root domain provided, skipping subdomain load.");
       setSubdomains([]);
       return;
     }
     setSubdomainLoading(true);
     setSubdomains([]); // 重置
-    const rootDomain = currentProductInfo.projectWebsite;
+    // const rootDomain = currentProductInfo.projectWebsite; // 删除旧代码
     // TODO: 替换为实际的 Vercel Project ID
     const projectId = 'prj_wzQuo0EarALY8MsjNvPotb4wYO8S'; // 保持和 loadData 一致
 
@@ -184,9 +197,9 @@ const PublishSettingsModal = ({
       const domainResp = await apiClient.getVercelDomainInfo(projectId);
       const allDomains = domainResp?.domains || [];
 
-      // 2. 过滤出当前根域名下的子域名
+      // 2. === 修改：使用传入的 currentRootDomain 过滤 ===
       const potentialSubdomains = allDomains.filter(domain =>
-        domain.apexName === rootDomain && domain.name !== rootDomain
+        domain.apexName === currentRootDomain && domain.name !== currentRootDomain
       );
 
       // 3. 获取每个子域名的详细配置信息
@@ -231,15 +244,12 @@ const PublishSettingsModal = ({
       apiClient,
       messageApi,
       currentItem,
-      currentProductInfo,
       currentCustomerId,
       onPublishSuccess,
       onDomainChange,
     });
 
     if (open) {
-      // 使用传入的 productInfo 初始化
-      setCurrentProductInfo(initialProductInfo);
       // 设置初始 slug
       setSlugInput(currentItem?.slug || '');
       // 重置状态
@@ -248,16 +258,8 @@ const PublishSettingsModal = ({
       setTxtRecord(null);
       setVerificationError(null);
       setSlugEditing(false);
-      // 加载域名等信息
-      loadData();
-      // === 新增：如果根域名存在，则加载子域名 ===
-      if (initialProductInfo?.projectWebsite) {
-        loadSubdomains();
-        setActiveCollapseKey(['subdomains']); // 默认展开子域名部分
-      } else {
-        setSubdomains([]); // 确保没有根域名时子域名列表为空
-        setActiveCollapseKey([]); // 没有根域名则不展开
-      }
+      // 加载域名等信息 (loadData 现在会自己获取根域名)
+      loadData(); // loadData 内部会使用 currentCustomerId
       // === 新增：设置子域名前缀默认值 ===
       setSubdomainPrefix('alternative'); // 设置默认值
     } else {
@@ -265,7 +267,8 @@ const PublishSettingsModal = ({
        setSelectedPublishUrl('');
        setVerifiedDomains([]);
        setDomainLoading(false);
-       setCurrentProductInfo(null);
+       setRootDomain(null); // 新增：关闭时重置根域名
+       setRootDomainId(null); // 新增：关闭时重置根域名 ID
        // === 新增：关闭时重置子域名状态 ===
        setSubdomains([]);
        setSubdomainLoading(false);
@@ -274,12 +277,12 @@ const PublishSettingsModal = ({
        setActiveCollapseKey([]); // 关闭时重置 Collapse 状态
        setIsDeletingSubdomain(false); // 关闭时重置删除状态
     }
-  }, [open, currentItem, initialProductInfo]); // 依赖 open, currentItem 和 initialProductInfo
+  }, [open, currentItem, currentCustomerId]); // 修改依赖，添加 currentCustomerId
 
   // === 域名验证相关函数 (从 result-preview.js 移动过来) ===
   const handleAddDomain = async () => {
-    if (!domainToVerify || !currentProductInfo || !currentCustomerId) {
-      messageApi.error('Please enter a domain name and ensure product info and customer ID are available.');
+    if (!domainToVerify || !currentCustomerId) {
+      messageApi.error('Please enter a domain name and ensure Customer ID is available.');
       return;
     }
     setVerificationLoading(true);
@@ -288,31 +291,7 @@ const PublishSettingsModal = ({
     setVerificationStatus('pending_txt');
 
     try {
-      // 1. 更新产品信息中的 projectWebsite (如果需要)
-      const updatePayload = {
-        productId: currentProductInfo.productId,
-        productName: currentProductInfo.productName,
-        website: domainToVerify,
-        coreFeatures: currentProductInfo.productDesc, // 确保这些字段存在
-        competitors: currentProductInfo.competitors, // 确保这些字段存在
-        domainStatus: true
-      };
-      // 先尝试更新产品信息
-      try {
-        const updateRes = await apiClient.updateProduct(currentProductInfo.productId, updatePayload);
-        if (updateRes?.code !== 200) {
-          console.warn('Failed to update product with domain before adding, but proceeding.');
-        } else {
-           // 更新成功后，同步本地 state (虽然很快会通过 onDomainChange 刷新，但先更新)
-           setCurrentProductInfo(prev => ({ ...prev, projectWebsite: domainToVerify, domainStatus: true }));
-        }
-      } catch (updateError) {
-         console.error("Error updating product before adding domain:", updateError);
-         // 即使更新失败，也尝试继续添加域名
-      }
-
-
-      // 2. 调用 API 添加域名并获取 TXT 记录
+      // 1. 调用 API 添加域名并获取 TXT 记录
       const addRes = await apiClient.createDomainWithTXT({
         domainName: domainToVerify,
         customerId: currentCustomerId,
@@ -375,8 +354,6 @@ const PublishSettingsModal = ({
       console.error("Error adding domain:", e);
       setVerificationError(e.message || 'Failed to get verification record.');
       setVerificationStatus('failed');
-      // 考虑是否需要回滚产品信息更新 (如果之前更新了)
-      // await apiClient.updateProduct(...);
     } finally {
       setVerificationLoading(false);
     }
@@ -400,8 +377,11 @@ const PublishSettingsModal = ({
         setDomainToVerify('');
         setTxtRecord(null);
 
-        // 1. 先通知父组件刷新
-        onDomainChange(); // 这会触发 loadData 重新加载域名
+        // === 修改：调用 loadData 刷新模态框内部状态 ===
+        await loadData(); // 重新加载根域名、Vercel 域名和子域名列表
+
+        // 1. 先通知父组件刷新 (如果父组件仍需此通知)
+        onDomainChange(); // 这会触发父组件的逻辑 (如果需要)
 
       } else {
          const errorMsg = res?.message || 'Verification failed. Please double-check the TXT record and wait for DNS propagation.';
@@ -434,53 +414,56 @@ const PublishSettingsModal = ({
       icon: <ExclamationCircleOutlined style={{ color: '#f87171' }} />,
       content: (
         <div>
-          Are you sure you want to remove the domain binding for {currentProductInfo?.projectWebsite}?
+          {/* 修改：使用 rootDomain state */}
+          Are you sure you want to remove the domain binding for {rootDomain}?
           <br/>This action might affect your published pages using this domain.
+          <br/><span className="text-xs text-yellow-400">Note: This only removes the binding in our system. You may need to remove the domain from Vercel separately if it's no longer needed.</span>
         </div>
       ),
       okText: 'Confirm Removal',
       okType: 'danger',
       cancelText: 'Cancel',
       centered: true,
-      // okButtonProps: { loading: isDeletingVerification }, // modal.confirm 会自动处理按钮 loading
-      // cancelButtonProps: { disabled: isDeletingVerification },
       onOk: async () => {
         // 调用执行删除的函数
         await executeDeleteDomainVerification();
       },
     });
-    // setDeleteDomainConfirmOpen(true); // 移除旧逻辑
   };
 
   const executeDeleteDomainVerification = async () => {
-    if (!currentProductInfo) {
-      messageApi.error('Product information not available.');
-      // setDeleteDomainConfirmOpen(false); // 移除旧逻辑
+    // 修改：检查 rootDomainId 是否存在
+    if (!rootDomainId || !currentCustomerId) {
+      messageApi.error('Root domain ID or customer information not available.');
       return;
     }
-    setIsDeletingVerification(true); // 仍然需要这个来控制触发按钮的 loading 状态
-    // setDeleteDomainConfirmOpen(false); // 移除旧逻辑
-    const payload = {
-      productId: currentProductInfo.productId,
-      productName: currentProductInfo.productName,
-      website: '', // 清空 website
-      coreFeatures: currentProductInfo.productDesc,
-      competitors: currentProductInfo.competitors,
-      domainStatus: false // 标记为未绑定
-    };
+    setIsDeletingVerification(true);
     try {
-      const res = await apiClient.updateProduct(currentProductInfo.productId, payload);
+      // === 修改：调用 deleteDomain API ===
+      console.log(`Attempting to delete domain with ID: ${rootDomainId}`);
+      const res = await apiClient.deleteDomain(rootDomainId); // 使用 rootDomainId 调用接口
+
+      // 检查后端返回的 code
       if (res && res.code === 200) {
-        messageApi.success('Domain verification record deleted successfully.');
+        messageApi.success(`Domain binding for ${rootDomain} removed successfully.`);
         setSelectedPublishUrl(''); // 清空选择
-        onDomainChange(); // 通知父组件刷新数据
+        setRootDomain(null); // 清空本地根域名状态
+        setRootDomainId(null); // 新增：清空本地根域名 ID 状态
+        setVerifiedDomains([]); // 清空验证域名列表，因为根域名没了
+        setSubdomains([]); // 清空子域名列表
+        setActiveCollapseKey([]); // 收起 Collapse
+        onDomainChange(); // 通知父组件刷新数据 (父组件可能需要重新获取 getDomain)
       } else {
-        messageApi.error(res?.message || 'Failed to delete domain verification record.');
+        // API 调用成功但业务逻辑失败 (code 不是 200)
+        messageApi.error(res?.message || 'Failed to remove domain binding.');
       }
     } catch (e) {
-      messageApi.error(e.message || 'Failed to delete domain verification record.');
+      // API 调用本身失败 (网络错误、服务器错误等)
+      console.error("Error deleting domain binding:", e);
+      messageApi.error(e.response?.data?.message || e.message || 'Failed to remove domain binding.');
+    } finally { // 确保 loading 状态被重置
+       setIsDeletingVerification(false);
     }
-    setIsDeletingVerification(false);
   };
 
   // === 发布函数 ===
@@ -628,7 +611,7 @@ const PublishSettingsModal = ({
     // if (subdomains.length >= ...) { ... }
 
     setIsAddingSubdomain(true);
-    const fullDomain = `${validPrefix}.${currentProductInfo.projectWebsite}`;
+    const fullDomain = `${validPrefix}.${rootDomain}`; // 使用 rootDomain state
     const projectId = VERCEL_PROJECT_ID;
 
     // 准备 Vercel API 需要的数据载荷
@@ -655,8 +638,8 @@ const PublishSettingsModal = ({
       messageApi.success(`Please add the DNS records below to finish the verification of ${fullDomain} `);
 
       // 添加成功后刷新列表并设置默认值
-      await loadData(); // 重新加载子域名列表
-      setSubdomainPrefix('alternative'); // <--- 修改：重置为默认值，而不是清空
+      await loadData(); // 重新加载根域名、Vercel 域名和子域名列表
+      setSubdomainPrefix('alternative');
 
     } catch (error) {
       console.error('Failed to add subdomain:', error);
@@ -687,7 +670,7 @@ const PublishSettingsModal = ({
 
   // === 新增：Collapse 组件的 Panel 定义 ===
   const getSubdomainPanel = () => {
-    if (!currentProductInfo?.projectWebsite || verifiedDomains.length === 0) {
+    if (!rootDomain || verifiedDomains.length === 0) { // 使用 rootDomain state
       return null; // 如果没有根域名或未验证，不显示子域名部分
     }
 
@@ -707,9 +690,9 @@ const PublishSettingsModal = ({
               disabled={isAddingSubdomain || subdomainLoading}
               onPressEnter={handleAddSubdomain}
             />
-            {currentProductInfo?.projectWebsite && (
+            {rootDomain && (
               <span className="px-3 py-1.5 text-sm text-gray-400 bg-slate-600 flex-shrink-0 rounded-r">
-                .{currentProductInfo.projectWebsite}
+                .{rootDomain}
               </span>
             )}
           </div>
@@ -824,31 +807,26 @@ const PublishSettingsModal = ({
           <Spin spinning={domainLoading} tip={<span className="text-gray-300">Loading domains...</span>}>
             <div className="pb-5 border-b border-slate-700">
               <h3 className="text-lg font-semibold text-white mb-4">Domain Binding</h3>
-              {verifiedDomains.length > 0 ? (
+              {rootDomain ? (
                 <div className="space-y-4">
-                  {currentProductInfo?.projectWebsite && (
-                    <div className="p-3 bg-slate-700/50 rounded border border-slate-600 flex items-center justify-between flex-wrap gap-2">
-                      <div>
-                        <span className="text-sm font-medium text-gray-300">Bound Root Domain: </span>
-                        <span className="text-sm font-semibold text-cyan-300">{currentProductInfo.projectWebsite}</span>
-                      </div>
-                      {currentProductInfo?.domainStatus && (
-                        <Button
-                          type="link"
-                          danger
-                          size="small"
-                          onClick={handleDeleteDomainVerification}
-                          loading={isDeletingVerification}
-                          className="text-red-400 hover:text-red-300 flex-shrink-0"
-                        >
-                          Remove Binding
-                        </Button>
-                      )}
+                  <div className="p-3 bg-slate-700/50 rounded border border-slate-600 flex items-center justify-between flex-wrap gap-2">
+                    <div>
+                      <span className="text-sm font-medium text-gray-300">Bound Root Domain: </span>
+                      <span className="text-sm font-semibold text-cyan-300">{rootDomain}</span>
                     </div>
-                  )}
+                    <Button
+                      type="link"
+                      danger
+                      size="small"
+                      onClick={handleDeleteDomainVerification}
+                      loading={isDeletingVerification}
+                      className="text-red-400 hover:text-red-300 flex-shrink-0"
+                    >
+                      Remove Binding
+                    </Button>
+                  </div>
                 </div>
               ) : (
-                // 无域名：显示验证流程
                 <Spin spinning={verificationLoading} tip={<span className="text-gray-300">{verificationStatus === 'verifying' ? "Verifying..." : "Processing..."}</span>}>
                   {verificationError && <p className="text-red-400 text-sm mb-3">{verificationError}</p>}
                   {verificationStatus === 'idle' && (
@@ -863,18 +841,18 @@ const PublishSettingsModal = ({
                           setVerificationError(null);
                         }}
                         className="w-full px-3 py-2 rounded bg-slate-700 border border-slate-600 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
-                        disabled={verificationLoading || !currentProductInfo}
+                        disabled={verificationLoading || !currentCustomerId}
                       />
                       <Button
                         type="primary"
                         onClick={handleAddDomain}
                         loading={verificationLoading}
-                        disabled={!domainToVerify || verificationLoading || !currentProductInfo || !currentCustomerId}
+                        disabled={!domainToVerify || verificationLoading || !currentCustomerId}
                         className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border-none text-white font-semibold"
                       >
                         Get Verification Record
                       </Button>
-                       {!currentProductInfo && <p className="text-yellow-400 text-xs mt-1">Product information is not loaded, cannot add domain.</p>}
+                      {!currentCustomerId && <p className="text-yellow-400 text-xs mt-1">Customer ID is not available, cannot add domain.</p>}
                     </div>
                   )}
                   {(verificationStatus === 'pending_txt' || verificationStatus === 'verifying') && txtRecord && (
@@ -969,9 +947,8 @@ const PublishSettingsModal = ({
                   allowClear // 允许清空选择
                   disabled={domainLoading || isDeletingSubdomain || isAddingSubdomain} // 加载或操作时禁用
                 >
-                  {/* === 修改：过滤掉根域名 === */}
                   {verifiedDomains
-                    .filter(url => url !== currentProductInfo?.projectWebsite)
+                    .filter(url => url !== rootDomain)
                     .map(url => (
                       <Select.Option
                         key={url}
@@ -982,8 +959,7 @@ const PublishSettingsModal = ({
                       </Select.Option>
                   ))}
                 </Select>
-                 {/* 添加提示，如果没有可选子域名 */}
-                 {verifiedDomains.length > 0 && verifiedDomains.filter(url => url !== currentProductInfo?.projectWebsite).length === 0 && (
+                 {verifiedDomains.length > 0 && verifiedDomains.filter(url => url !== rootDomain).length === 0 && (
                    <p className="text-xs text-yellow-400 mt-1">No available subdomains to select. Add a subdomain below.</p>
                  )}
               </div>
