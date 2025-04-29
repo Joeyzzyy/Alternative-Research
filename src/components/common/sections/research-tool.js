@@ -2227,7 +2227,7 @@ const ResearchTool = ({
 
           {/* --- 修改：进一步增大容器最大宽度 --- */}
           <div className="mt-12 max-w-6xl mx-auto"> {/* 从 max-w-5xl 改为 max-w-6xl */}
-              <h3 className={`text-xl font-semibold text-white mb-6 text-center drop-shadow-lg`}>What We Have Created For Our Customers</h3>
+              <h3 className={`text-xl font-semibold text-white mb-6 text-center drop-shadow-lg`}>Check Alternative Pages We Have Created For Our Customers</h3>
               {/* --- 修改：改为两列网格 --- */}
               <div className="grid grid-cols-3 gap-8"> {/* 改为 grid-cols-2, 可以适当增大 gap */}
                 {[

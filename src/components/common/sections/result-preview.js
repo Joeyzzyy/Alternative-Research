@@ -28,7 +28,6 @@ const HistoryCardList = () => {
   const [editPageId, setEditPageId] = useState(null); // 新增：用于控制全屏编辑页面
   const [currentProductInfo, setCurrentProductInfo] = useState(null); // 新增：存储产品信息
   const [currentCustomerId, setCurrentCustomerId] = useState(null); // 新增：存储 Customer ID
-  const [deleteDomainConfirmOpen, setDeleteDomainConfirmOpen] = useState(false); // 新增：控制域名删除确认弹窗
   const [isSidebarVisible, setIsSidebarVisible] = useState(true); // 新增：控制详情弹窗侧边栏可见性
   const [isPublishSettingsModalVisible, setIsPublishSettingsModalVisible] = useState(false); // 新增：控制发布设置弹窗
   const currentItem = resultDetail?.data?.find(item => item.resultId === selectedPreviewId) || {};
@@ -883,8 +882,31 @@ const HistoryCardList = () => {
                                 {/* === 修改：按钮文案改回，点击打开新弹窗 === */}
                                 <button
                                   onClick={() => {
+                                    // === 新增：添加日志诊断 ===
+                                    console.log('Bind button clicked. Checking conditions:');
+                                    console.log('isPublishSettingsModalVisible (before set):', isPublishSettingsModalVisible);
+                                    console.log('currentItem:', currentItem);
+                                    console.log('currentProductInfo:', currentProductInfo);
+                                    console.log('currentCustomerId:', currentCustomerId);
+                                    // 检查所有条件是否满足
+                                    if (!currentItem || Object.keys(currentItem).length === 0) {
+                                      console.error('currentItem is missing or empty.');
+                                      messageApi.error('Cannot open publish settings: Task details are missing.');
+                                      return; // 阻止打开弹窗
+                                    }
+                                    if (!currentProductInfo) {
+                                      console.error('currentProductInfo is missing.');
+                                      messageApi.error('Cannot open publish settings: Product information is missing.');
+                                      return; // 阻止打开弹窗
+                                    }
+                                    if (!currentCustomerId) {
+                                      console.error('currentCustomerId is missing.');
+                                      messageApi.error('Cannot open publish settings: Customer ID is missing.');
+                                      return; // 阻止打开弹窗
+                                    }
                                     // 打开发布设置弹窗
                                     setIsPublishSettingsModalVisible(true);
+                                    console.log('isPublishSettingsModalVisible (after set):', true); // 直接打印 true，因为 setState 是异步的
                                   }}
                                   className={`
                                     ml-2 px-2 py-2 rounded text-xs font-semibold text-white shadow-sm transition duration-200
