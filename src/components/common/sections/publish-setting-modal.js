@@ -84,13 +84,8 @@ const PublishSettingsModal = ({
       } catch (domainError) {
         console.error("Error fetching root domain:", domainError);
         messageApi.error('Failed to load root domain information.');
-        // 即使获取根域名失败，也可能需要继续尝试加载 Vercel 域名（如果 projectId 已知）
-        // 但如果后续逻辑强依赖根域名，则可以在这里 return
-        // return; // 暂时不 return，允许继续尝试加载 Vercel 域名
       }
 
-      // 2. === 修改：检查根域名是否存在 ===
-      //    如果 Vercel 相关操作必须基于已绑定的根域名，则在这里判断
       if (!fetchedRootDomain) {
         setVerifiedDomains([]);
         setSelectedPublishUrl('');
@@ -670,15 +665,15 @@ const PublishSettingsModal = ({
 
   // === 新增：Collapse 组件的 Panel 定义 ===
   const getSubdomainPanel = () => {
-    if (!rootDomain || verifiedDomains.length === 0) { // 使用 rootDomain state
-      return null; // 如果没有根域名或未验证，不显示子域名部分
+    if (!rootDomain) {
+      return null;
     }
 
     return (
       <Collapse.Panel
         header={<span className="text-base font-semibold text-white">Manage Subdomains</span>}
         key="subdomains"
-        className="subdomain-collapse-panel" // 添加自定义类名
+        className="subdomain-collapse-panel"
       >
         <div className="flex items-center gap-2 mb-4">
           <div className="flex flex-grow items-center rounded border border-slate-600 bg-slate-700 focus-within:border-cyan-500 focus-within:ring-1 focus-within:ring-cyan-500">
@@ -921,15 +916,17 @@ const PublishSettingsModal = ({
           </Spin>
 
           {/* === 新增：子域名管理区域 (使用 Collapse 组件) === */}
-          <Collapse
-            activeKey={activeCollapseKey}
-            onChange={(keys) => setActiveCollapseKey(keys)}
-            ghost
-            expandIcon={({ isActive }) => <CaretRightOutlined rotate={isActive ? 90 : 0} style={{ color: '#94a3b8', fontSize: '14px' }} />}
-            className="subdomain-collapse-override"
-          >
-            {getSubdomainPanel()}
-          </Collapse>
+          {rootDomain && (
+            <Collapse
+              ghost
+              activeKey={activeCollapseKey}
+              onChange={(keys) => setActiveCollapseKey(Array.isArray(keys) ? keys : [keys])}
+              expandIcon={({ isActive }) => <CaretRightOutlined rotate={isActive ? 90 : 0} style={{ color: 'white', fontSize: '12px' }} />}
+              className="domain-collapse-override"
+            >
+              {getSubdomainPanel()}
+            </Collapse>
+          )}
 
           {/* === URL 选择和 Slug Section (仅在有验证域名时显示) === */}
           {verifiedDomains.length > 0 && (
@@ -1140,15 +1137,15 @@ export default PublishSettingsModal;
   }
 
   /* === 新增：自定义 Collapse 样式 === */
-  .subdomain-collapse-override.ant-collapse {
+  .domain-collapse-override.ant-collapse {
     background-color: transparent; /* Collapse 背景透明 */
     border: 1px solid #334155; /* 添加边框 */
     border-radius: 6px; /* 添加圆角 */
   }
-  .subdomain-collapse-override > .ant-collapse-item {
+  .domain-collapse-override > .ant-collapse-item {
     border-bottom: none; /* 移除 Panel 之间的默认分隔线 */
   }
-  .subdomain-collapse-override > .ant-collapse-item > .ant-collapse-header {
+  .domain-collapse-override > .ant-collapse-item > .ant-collapse-header {
     color: #e2e8f0; /* Header 文字颜色 */
     padding: 12px 16px; /* 调整 Header 内边距 */
     align-items: center; /* 垂直居中图标和文字 */
@@ -1156,17 +1153,17 @@ export default PublishSettingsModal;
     border-radius: 6px 6px 0 0; /* 顶部圆角 */
   }
    /* 当 Panel 展开时，移除 Header 底部圆角 */
-  .subdomain-collapse-override > .ant-collapse-item.ant-collapse-item-active > .ant-collapse-header {
+  .domain-collapse-override > .ant-collapse-item.ant-collapse-item-active > .ant-collapse-header {
     border-radius: 6px 6px 0 0;
     border-bottom: 1px solid #334155; /* 展开时添加分隔线 */
   }
-  .subdomain-collapse-override > .ant-collapse-item > .ant-collapse-content {
+  .domain-collapse-override > .ant-collapse-item > .ant-collapse-content {
     background-color: #1e293b; /* 内容区域背景色 (与 Modal body 一致) */
     color: #cbd5e1; /* 内容区域文字颜色 */
     border-top: none; /* 移除内容区域顶部边框 */
     border-radius: 0 0 6px 6px; /* 底部圆角 */
   }
-  .subdomain-collapse-override > .ant-collapse-item > .ant-collapse-content > .ant-collapse-content-box {
+  .domain-collapse-override > .ant-collapse-item > .ant-collapse-content > .ant-collapse-content-box {
     padding: 16px; /* 内容区域内边距 */
   }
   /* 覆盖 Panel 内部的样式 */
