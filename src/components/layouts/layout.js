@@ -9,7 +9,6 @@ import ResearchTool from '../common/sections/research-tool';
 import SubscriptionCard from '../common/sections/subscription-card';
 import FeatureIntro from '../common/sections/feature-intro';
 import FeatureIntroLeftRight from '../common/sections/feature-intro-left-right';
-import FeatureIntroRightLeft from '../common/sections/feature-intro-right-left';
 import Recommendations from '../common/sections/recommendations';
 import ShowCase from '../common/sections/show-case';
 import ResultPreview from '../common/sections/result-preview';
@@ -23,7 +22,6 @@ const COMPONENT_MAP = {
   SubscriptionCard: SubscriptionCard,
   FeatureIntro: FeatureIntro,
   FeatureIntroLeftRight: FeatureIntroLeftRight,
-  FeatureIntroRightLeft: FeatureIntroRightLeft,
   Recommendations: Recommendations,
   ResultPreview: ResultPreview,
   ShowCase: ShowCase,

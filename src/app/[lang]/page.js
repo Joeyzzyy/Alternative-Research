@@ -301,10 +301,6 @@ async function getPageData() {
           sectionId: "feature-intro-left-right-1"
         },
         {
-          componentName: "FeatureIntroRightLeft",
-          sectionId: "feature-intro-right-left-1"
-        },
-        {
           componentName: "ShowCase",
           sectionId: "show-case",
         },
