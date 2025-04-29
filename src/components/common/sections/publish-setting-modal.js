@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Button, Spin, Select, Radio, Input, message, App } from 'antd';
-import { CopyOutlined, EditOutlined, ExclamationCircleOutlined, PlusOutlined, DeleteOutlined, CloseOutlined } from '@ant-design/icons';
+import { Modal, Button, Spin, Select, Radio, Input, message, App, Tag, Alert, Table, Collapse } from 'antd';
+import { CopyOutlined, EditOutlined, ExclamationCircleOutlined, CloseOutlined, DeleteOutlined, ReloadOutlined, CaretRightOutlined } from '@ant-design/icons';
 // 假设 apiClient 是通过 props 传入或者可以从 context 获取
 // import apiClient from '@/services/apiClient'; // 根据你的项目结构调整
 
@@ -29,39 +29,39 @@ const PublishSettingsModal = ({
   const [verifiedDomains, setVerifiedDomains] = useState([]);
   const [domainLoading, setDomainLoading] = useState(false);
   const [currentProductInfo, setCurrentProductInfo] = useState(initialProductInfo);
-
-  // === 新增 Subfolder 相关 State ===
-  const [subfolders, setSubfolders] = useState([]);
-  const [subfolderLoading, setSubfolderLoading] = useState(false);
-  const [showAddSubfolderModal, setShowAddSubfolderModal] = useState(false);
-  const [newSubfolderInput, setNewSubfolderInput] = useState('');
-  const [isAddingSubfolder, setIsAddingSubfolder] = useState(false);
-  // 可以考虑添加删除时的 loading 状态，如果需要更精细的控制
-  // const [deletingSubfolder, setDeletingSubfolder] = useState(null);
+  // === 新增：子域名相关 State ===
+  const [subdomains, setSubdomains] = useState([]);
+  const [subdomainLoading, setSubdomainLoading] = useState(false);
+  // === 新增：添加子域名相关 State ===
+  const [subdomainPrefix, setSubdomainPrefix] = useState('');
+  const [isAddingSubdomain, setIsAddingSubdomain] = useState(false);
+  const [activeCollapseKey, setActiveCollapseKey] = useState([]); // 用于控制 Collapse 组件的展开/收起
+  // === 新增：删除子域名相关 State ===
+  const [isDeletingSubdomain, setIsDeletingSubdomain] = useState(false); // 添加删除子域名的 loading 状态
 
   // === 新增：使用 useModal Hook ===
   const [modal, contextHolder] = Modal.useModal(); // 获取 modal 实例和 contextHolder
+
+  // === Vercel Project ID (需要确认来源) ===
+  // 假设从某个配置或环境变量获取，或者暂时硬编码 (与 loadSubdomains 保持一致)
+  const VERCEL_PROJECT_ID = 'prj_wzQuo0EarALY8MsjNvPotb4wYO8S';
 
   // === 内部加载已验证域名和产品信息的函数 ===
   const loadData = async () => {
     setDomainLoading(true);
     setVerifiedDomains([]); // 重置
-    setCurrentProductInfo(null); // 重置
-    let productInfo = null;
+    // setCurrentProductInfo(null); // 不在这里重置，避免闪烁，让 initialProductInfo 或 API 调用结果覆盖
+    let productInfo = initialProductInfo; // 优先使用传入的
+
     try {
       // 1. 获取产品信息 (如果外部没传入最新的，或者需要刷新)
-      //    为了简化，我们优先使用传入的 initialProductInfo，
-      //    但在验证成功或解绑后，需要调用 onDomainChange 让外部刷新并重新传入
-      productInfo = initialProductInfo; // 使用传入的
-      setCurrentProductInfo(productInfo);
-
-      // 如果外部没有传入 productInfo，则尝试获取
+      //    如果外部没有传入 productInfo，则尝试获取
       if (!productInfo && currentCustomerId) {
          try {
             const response = await apiClient.getProductsByCustomerId();
             if (response?.code === 200 && response.data) {
                productInfo = response.data;
-               setCurrentProductInfo(productInfo);
+               // setCurrentProductInfo(productInfo); // 在下面统一设置
             } else {
                console.error("Failed to get product info inside modal:", response);
             }
@@ -69,17 +69,22 @@ const PublishSettingsModal = ({
             console.error("Error fetching product info inside modal:", productError);
          }
       }
+      // 确保 currentProductInfo 更新
+      setCurrentProductInfo(productInfo);
 
 
       // 2. 检查 domainStatus
       if (!productInfo || productInfo.domainStatus === false) {
         setVerifiedDomains([]);
+        setSelectedPublishUrl(''); // 没有绑定域名，清空选择
+        setSubdomains([]); // 没有根域名，清空子域名
         setDomainLoading(false);
+        setActiveCollapseKey([]); // 折叠子域名部分
         return;
       }
 
       // 3. 获取 Vercel 项目的 projectId (硬编码或从配置获取)
-      const projectId = 'prj_wzQuo0EarALY8MsjNvPotb4wYO8S';
+      const projectId = VERCEL_PROJECT_ID; // 使用常量
 
       // 4. 获取域名列表
       const domainResp = await apiClient.getVercelDomainInfo(projectId);
@@ -89,77 +94,131 @@ const PublishSettingsModal = ({
       const rootDomain = productInfo?.projectWebsite;
       if (!rootDomain) {
         setVerifiedDomains([]);
+        setSelectedPublishUrl(''); // 没有根域名，清空选择
+        setSubdomains([]); // 没有根域名，清空子域名
         setDomainLoading(false);
+        setActiveCollapseKey([]); // 折叠子域名部分
         return;
       }
 
-      // 6. 过滤并检查域名
+      // 6. 过滤并检查域名 (包括根域名和子域名)
       const verifiedDomainsPromises = domains
         .filter(domain =>
-          domain.verified &&
-          !domain.name.includes('vercel.app') &&
-          (domain.name === rootDomain || domain.name.endsWith(`.${rootDomain}`))
+          domain.verified && // 必须是 vercel 验证通过的
+          !domain.name.includes('vercel.app') && // 排除 vercel 默认域名
+          (domain.name === rootDomain || domain.name.endsWith(`.${rootDomain}`)) // 必须是根域名或其子域名
         )
         .map(async domain => {
           try {
+            // 再次检查配置，确保没有 misconfigured
             const config = await apiClient.getVercelDomainConfig(domain.name);
             return !config?.misconfigured ? domain.name : null;
           } catch (error) {
+            // 获取配置失败，视为未完全验证通过
+            console.warn(`Could not get config for ${domain.name}, excluding from verified list.`);
             return null;
           }
         });
 
       const verifiedDomainsList = (await Promise.all(verifiedDomainsPromises)).filter(Boolean);
 
-      // 7. 获取子文件夹 (移动到这里，确保 rootDomain 存在后才加载)
-      let loadedSubfolders = [];
-      if (rootDomain) { // 仅当根域名存在时加载
-        setSubfolderLoading(true);
-        try {
-          const subfolderResp = await apiClient.getSubfolders();
-          if (subfolderResp?.code === 200 && Array.isArray(subfolderResp.data)) {
-            loadedSubfolders = subfolderResp.data;
-            setSubfolders(loadedSubfolders); // 更新 state
-          } else {
-            setSubfolders([]); // 清空或处理错误
-          }
-        } catch (error) {
-          console.error("Error loading subfolders:", error);
-          messageApi.error('Failed to load subfolder list.');
-          setSubfolders([]); // 清空
-        } finally {
-          setSubfolderLoading(false);
+      // 7. 设置验证通过的域名列表
+      setVerifiedDomains(verifiedDomainsList);
+
+      // 8. 设置默认选中项
+      // 过滤掉根域名，只在子域名中选择
+      const selectableSubdomains = verifiedDomainsList.filter(d => d !== rootDomain);
+
+      if (selectableSubdomains.length > 0) {
+        // 尝试保持之前的选择 (如果它仍然在可选列表中)
+        if (!selectedPublishUrl || !selectableSubdomains.includes(selectedPublishUrl)) {
+           setSelectedPublishUrl(selectableSubdomains[0]); // 否则选第一个子域名
         }
+        // 如果之前的选择还在，则保持不变
       } else {
-         setSubfolders([]); // 如果没有根域名，清空子文件夹
+        setSelectedPublishUrl(''); // 没有可选的子域名了
       }
 
-      // 8. 合并 (现在包含从 state 加载的 subfolders)
-      const mergedDomains = [
-        ...verifiedDomainsList,
-        // 使用 state 中的 subfolders
-        ...loadedSubfolders.map(subfolder => `${rootDomain}/${subfolder}`)
-      ];
-
-      setVerifiedDomains(mergedDomains);
-
-      // 9. 设置默认选中项
-      if (mergedDomains.length > 0) {
-        // 尝试保持之前的选择，否则选第一个
-        if (!selectedPublishUrl || !mergedDomains.includes(selectedPublishUrl)) {
-           setSelectedPublishUrl(mergedDomains[0]);
+      // === 新增：在 loadData 结束时，如果根域名存在，则加载子域名 ===
+      if (rootDomain) {
+        await loadSubdomains(); // 等待子域名加载完成
+        // 如果有子域名或根域名已验证，则展开 Collapse
+        if (subdomains.length > 0 || verifiedDomainsList.includes(rootDomain)) {
+           setActiveCollapseKey(['subdomains']);
+        } else {
+           setActiveCollapseKey([]);
         }
       } else {
-        setSelectedPublishUrl('');
+         setSubdomains([]); // 确保没有根域名时子域名列表为空
+         setActiveCollapseKey([]); // 没有根域名则不展开
       }
+
 
     } catch (error) {
       console.error("Error loading verified domains in modal:", error);
       setVerifiedDomains([]);
       setSelectedPublishUrl('');
+      setSubdomains([]); // 出错时也清空子域名
+      setActiveCollapseKey([]);
       messageApi.error('Failed to load domain information.');
     } finally {
       setDomainLoading(false);
+    }
+  };
+
+  // === 新增：加载子域名的函数 ===
+  const loadSubdomains = async () => {
+    if (!currentProductInfo?.projectWebsite) {
+      console.log("No root domain found, skipping subdomain load.");
+      setSubdomains([]);
+      return;
+    }
+    setSubdomainLoading(true);
+    setSubdomains([]); // 重置
+    const rootDomain = currentProductInfo.projectWebsite;
+    // TODO: 替换为实际的 Vercel Project ID
+    const projectId = 'prj_wzQuo0EarALY8MsjNvPotb4wYO8S'; // 保持和 loadData 一致
+
+    try {
+      // 1. 获取项目下的所有域名
+      const domainResp = await apiClient.getVercelDomainInfo(projectId);
+      const allDomains = domainResp?.domains || [];
+
+      // 2. 过滤出当前根域名下的子域名
+      const potentialSubdomains = allDomains.filter(domain =>
+        domain.apexName === rootDomain && domain.name !== rootDomain
+      );
+
+      // 3. 获取每个子域名的详细配置信息
+      const subdomainsWithConfigPromises = potentialSubdomains.map(async (domain) => {
+        try {
+          const config = await apiClient.getVercelDomainConfig(domain.name);
+          return {
+            ...domain, // 保留 Vercel 返回的基础信息 (name, apexName, createdAt, etc.)
+            verified: !config?.misconfigured, // 根据 misconfigured 判断验证状态
+            configDetails: config, // 存储完整的配置信息
+          };
+        } catch (error) {
+          console.error(`Failed to get config for subdomain ${domain.name}:`, error);
+          // 即使获取配置失败，也返回基础信息，标记为未验证
+          return {
+            ...domain,
+            verified: false,
+            configDetails: null, // 表示配置获取失败
+          };
+        }
+      });
+
+      const resolvedSubdomains = await Promise.all(subdomainsWithConfigPromises);
+      setSubdomains(resolvedSubdomains);
+      console.log('Loaded subdomains:', resolvedSubdomains);
+
+    } catch (error) {
+      console.error("Error loading subdomains:", error);
+      messageApi.error('Failed to load subdomain information.');
+      setSubdomains([]); // 出错时清空
+    } finally {
+      setSubdomainLoading(false);
     }
   };
 
@@ -191,18 +250,27 @@ const PublishSettingsModal = ({
       setSlugEditing(false);
       // 加载域名等信息
       loadData();
-      // 重置 subfolder 相关状态
-      setSubfolders([]);
-      setSubfolderLoading(false);
-      setShowAddSubfolderModal(false);
-      setNewSubfolderInput('');
-      setIsAddingSubfolder(false);
+      // === 新增：如果根域名存在，则加载子域名 ===
+      if (initialProductInfo?.projectWebsite) {
+        loadSubdomains();
+        setActiveCollapseKey(['subdomains']); // 默认展开子域名部分
+      } else {
+        setSubdomains([]); // 确保没有根域名时子域名列表为空
+        setActiveCollapseKey([]); // 没有根域名则不展开
+      }
     } else {
        // 关闭时重置状态，避免下次打开残留
        setSelectedPublishUrl('');
        setVerifiedDomains([]);
        setDomainLoading(false);
        setCurrentProductInfo(null);
+       // === 新增：关闭时重置子域名状态 ===
+       setSubdomains([]);
+       setSubdomainLoading(false);
+       setSubdomainPrefix(''); // 关闭时也清空输入
+       setIsAddingSubdomain(false);
+       setActiveCollapseKey([]); // 关闭时重置 Collapse 状态
+       setIsDeletingSubdomain(false); // 关闭时重置删除状态
     }
   }, [open, currentItem, initialProductInfo]); // 依赖 open, currentItem 和 initialProductInfo
 
@@ -327,63 +395,11 @@ const PublishSettingsModal = ({
       if (res?.code === 200) {
         messageApi.success(`Domain ${domainToVerify} verified successfully! Refreshing...`);
         setVerificationStatus('idle');
-        const verifiedDomainName = domainToVerify; // 暂存一下，因为下面会清空
         setDomainToVerify('');
         setTxtRecord(null);
 
         // 1. 先通知父组件刷新
-        onDomainChange();
-
-        // 2. 尝试自动添加 'alternative-pages' subfolder
-        try {
-          console.log("Attempting to auto-add 'alternative-pages' subfolder...");
-          // 获取当前 subfolders
-          const subfolderResp = await apiClient.getSubfolders();
-          let currentSubfolders = [];
-          if (subfolderResp?.code === 200 && Array.isArray(subfolderResp.data)) {
-            currentSubfolders = subfolderResp.data;
-          } else {
-            console.warn("Could not fetch current subfolders before auto-add:", subfolderResp);
-            // 如果获取失败，可以根据需要决定是否继续尝试添加
-            // 这里我们假设如果获取失败，就认为它不存在并尝试添加
-          }
-
-          const defaultSubfolder = 'alternative-pages';
-          if (!currentSubfolders.some(sf => sf.toLowerCase() === defaultSubfolder)) {
-            console.log(`'${defaultSubfolder}' not found, attempting to add.`);
-            const updatedList = [...currentSubfolders, defaultSubfolder];
-            const addSubfolderResp = await apiClient.updateSubfolders(updatedList);
-
-            if (addSubfolderResp?.code === 200) {
-              messageApi.info(`Default subfolder '${defaultSubfolder}' added automatically.`);
-              // === 新增：自动选中新添加的 subfolder ===
-              const newSubfolderUrl = `${verifiedDomainName}/${defaultSubfolder}`;
-              // 确保 verifiedDomains 列表在 loadData 更新后会包含这个 URL
-              // 直接设置选中状态，依赖 loadData 更新 verifiedDomains 列表
-              setSelectedPublishUrl(newSubfolderUrl);
-              // 注意：loadData 是异步的，这里设置后，UI 可能稍后才更新下拉框选项
-              // 但由于 onDomainChange() 已触发 loadData，最终状态应该是正确的
-              // === 结束新增部分 ===
-            } else {
-              // 自动添加失败，只在控制台记录错误，避免过多打扰用户
-              console.error("Error auto-adding default subfolder:", addSubfolderResp);
-              messageApi.warning(`Could not automatically add the '${defaultSubfolder}' subfolder. You may need to add it manually.`);
-            }
-          } else {
-            console.log(`Default subfolder '${defaultSubfolder}' already exists.`);
-            // === 新增：如果已存在，也尝试选中它 ===
-            const existingSubfolderUrl = `${verifiedDomainName}/${defaultSubfolder}`;
-            // 检查当前 verifiedDomains 是否已包含它 (可能 loadData 还未完成)
-            // 仍然尝试设置，依赖 loadData 更新列表
-            setSelectedPublishUrl(existingSubfolderUrl);
-            // === 结束新增部分 ===
-          }
-        } catch (subfolderError) {
-          // 自动添加过程中发生异常
-          console.error("Error during auto-add subfolder process:", subfolderError);
-          messageApi.warning(`An error occurred while trying to add the default '${defaultSubfolder}' subfolder.`);
-        }
-        // --- 自动添加逻辑结束 ---
+        onDomainChange(); // 这会触发 loadData 重新加载域名
 
       } else {
          const errorMsg = res?.message || 'Verification failed. Please double-check the TXT record and wait for DNS propagation.';
@@ -465,128 +481,6 @@ const PublishSettingsModal = ({
     setIsDeletingVerification(false);
   };
 
-  // === 新增 Subfolder 相关函数 ===
-
-  // 加载 Subfolders (现在集成在 loadData 中，但保留独立函数以便复用)
-  const loadSubfolders = async () => {
-    if (!currentProductInfo?.projectWebsite) {
-      setSubfolders([]);
-      return;
-    }
-    setSubfolderLoading(true);
-    try {
-      const subfolderResp = await apiClient.getSubfolders();
-      if (subfolderResp?.code === 200 && Array.isArray(subfolderResp.data)) {
-        setSubfolders(subfolderResp.data);
-      } else {
-        setSubfolders([]);
-        // messageApi.error('Failed to load subfolders.'); // 避免重复提示
-      }
-    } catch (error) {
-      console.error("Error loading subfolders:", error);
-      messageApi.error('Failed to load subfolder list.');
-      setSubfolders([]);
-    } finally {
-      setSubfolderLoading(false);
-    }
-  };
-
-  // 打开添加 Subfolder 模态框
-  const handleAddSubfolderClick = () => {
-    setNewSubfolderInput(''); // 清空输入
-    setShowAddSubfolderModal(true);
-  };
-
-  // 关闭添加 Subfolder 模态框
-  const handleCancelAddSubfolder = () => {
-    setShowAddSubfolderModal(false);
-  };
-
-  // 确认添加 Subfolder
-  const handleOkAddSubfolder = async () => {
-    const trimmedInput = newSubfolderInput.trim().toLowerCase();
-    if (!trimmedInput) {
-      messageApi.warning('Please enter a subfolder name.');
-      return;
-    }
-    // 简单的 slug 格式校验 (可选，根据需求调整)
-    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(trimmedInput)) {
-       messageApi.error('Subfolder can only contain lowercase letters, numbers, and hyphens, and cannot start or end with a hyphen.');
-       return;
-    }
-
-    // 检查重复 (忽略大小写)
-    if (subfolders.some(sf => sf.toLowerCase() === trimmedInput)) {
-      messageApi.error('This subfolder already exists.');
-      return;
-    }
-
-    setIsAddingSubfolder(true);
-    try {
-      const updatedList = [...subfolders, trimmedInput];
-      const resp = await apiClient.updateSubfolders(updatedList); // API 需要接收整个列表
-
-      if (resp?.code === 200) {
-        messageApi.success('Subfolder added successfully.');
-        await loadSubfolders(); // 重新加载列表
-        // 重新加载 verifiedDomains 以更新 Select 选项
-        await loadData(); // 或者只更新 verifiedDomains 部分
-        setShowAddSubfolderModal(false);
-      } else {
-        messageApi.error(resp?.message || 'Failed to add subfolder.');
-      }
-    } catch (e) {
-      console.error("Error adding subfolder:", e);
-      messageApi.error(e.message || 'Failed to add subfolder.');
-    } finally {
-      setIsAddingSubfolder(false);
-    }
-  };
-
-  // 点击删除 Subfolder 按钮
-  const handleDeleteSubfolderClick = (subfolderToDelete) => {
-    // 修改：使用 modal 实例的 confirm 方法
-    modal.confirm({
-      title: 'Delete Subfolder',
-      content: `Are you sure you want to delete the subfolder "${subfolderToDelete}"? This might affect published pages using this path.`,
-      okText: 'Delete',
-      okType: 'danger',
-      cancelText: 'Cancel',
-      centered: true,
-      // onOk 逻辑保持不变
-      onOk: async () => {
-        try {
-          const filteredList = subfolders.filter(sf => sf !== subfolderToDelete);
-          const resp = await apiClient.updateSubfolders(filteredList); // API 需要接收过滤后的列表
-
-          if (resp?.code === 200) {
-            messageApi.success('Subfolder deleted successfully.');
-            await loadSubfolders(); // 重新加载列表
-             // 重新加载 verifiedDomains 以更新 Select 选项
-            await loadData(); // 或者只更新 verifiedDomains 部分
-
-            // 如果删除的是当前选中的 URL，则清空选择
-            const deletedUrl = `${currentProductInfo?.projectWebsite}/${subfolderToDelete}`;
-            if (selectedPublishUrl === deletedUrl) {
-              setSelectedPublishUrl('');
-            }
-          } else {
-            messageApi.error(resp?.message || 'Failed to delete subfolder.');
-          }
-        } catch (e) {
-          console.error("Error deleting subfolder:", e);
-          messageApi.error(e.message || 'Failed to delete subfolder.');
-        }
-      },
-      // 注意：这里的 style/bodyStyle 可能仍然需要，取决于你的全局 antd 配置
-      // 如果你的 App 或 ConfigProvider 配置了深色主题，useModal 应该能自动适配
-      // 如果仍然有问题，可以尝试在这里添加样式覆盖
-      // className: 'your-custom-confirm-modal-class', // 可以添加自定义类名来覆盖样式
-      // style: { background: '#1e293b', color: 'white' }, // 最后的手段
-      // bodyStyle: { background: '#1e293b' },
-    });
-  };
-
   // === 发布函数 ===
   const handlePublish = async () => {
       setDeployLoading(true);
@@ -647,6 +541,259 @@ const PublishSettingsModal = ({
       setSlugSaving(false);
     };
 
+  // === 新增：获取域名状态信息的辅助函数 ===
+  const getDomainStatusInfo = (domain) => {
+    if (domain.verified) {
+      return { color: 'success', text: 'Verified' };
+    }
+    // 如果 configDetails 存在且 misconfigured 为 false，也视为已验证（可能 Vercel 验证逻辑稍有延迟）
+    if (domain.configDetails && !domain.configDetails.misconfigured) {
+       return { color: 'success', text: 'Verified' };
+    }
+    // 如果 configDetails 不存在（获取失败）或 misconfigured 为 true
+    return { color: 'warning', text: 'Pending DNS' };
+  };
+
+  // === 新增：处理删除子域名的函数 ===
+  const handleDeleteSubdomain = (domainName) => {
+    modal.confirm({
+      title: <span className="text-red-400">Confirm Subdomain Deletion</span>,
+      icon: <ExclamationCircleOutlined style={{ color: '#f87171' }} />,
+      content: `Are you sure you want to delete the subdomain "${domainName}"? This action cannot be undone.`,
+      okText: 'Delete',
+      okType: 'danger',
+      cancelText: 'Cancel',
+      centered: true,
+      onOk: async () => {
+        setIsDeletingSubdomain(true);
+        const projectId = VERCEL_PROJECT_ID;
+
+        try {
+          console.log(`Attempting to delete domain: ${domainName} from project ${projectId}`);
+          await apiClient.deleteVercelDomain(projectId, domainName);
+          messageApi.success(`Subdomain "${domainName}" deleted successfully.`);
+
+          // === 新增：检查并清空 selectedPublishUrl ===
+          if (selectedPublishUrl === domainName) {
+            setSelectedPublishUrl(''); // 清空选择
+          }
+
+          // === 修改：调用 loadData 刷新所有相关数据 ===
+          await loadData(); // 刷新 verifiedDomains 和 subdomains 列表
+
+        } catch (error) {
+          console.error(`Failed to delete subdomain ${domainName}:`, error);
+          messageApi.error(`Failed to delete subdomain: ${error.response?.data?.error?.message || error.message || 'Unknown error'}`);
+        } finally {
+          setIsDeletingSubdomain(false);
+        }
+      },
+      onCancel() {
+        console.log('Subdomain deletion cancelled.');
+      },
+    });
+  };
+
+  // === 新增：DNS 表格列定义 ===
+  const dnsColumns = [
+    { title: 'Type', dataIndex: 'type', key: 'type', width: '15%' },
+    { title: 'Name', dataIndex: 'name', key: 'name', width: '30%' },
+    { title: 'Value', dataIndex: 'value', key: 'value', width: '55%', render: (text) => <code className="text-xs break-all">{text}</code> },
+    // 可以添加复制按钮
+    // {
+    //   title: 'Action',
+    //   key: 'action',
+    //   render: (_, record) => (
+    //     <Button icon={<CopyOutlined />} size="small" type="text" onClick={() => copyToClipboard(record.value)} />
+    //   ),
+    // },
+  ];
+
+  // === 新增：实现添加子域名的函数 ===
+  const handleAddSubdomain = async () => {
+    if (!subdomainPrefix.trim()) {
+      messageApi.warning('Please enter a subdomain prefix.');
+      return;
+    }
+    const validPrefix = subdomainPrefix.trim().toLowerCase().replace(/[^a-z0-9-]+/g, '');
+    if (validPrefix !== subdomainPrefix.trim()) {
+        messageApi.warning('Subdomain prefix can only contain lowercase letters, numbers, and hyphens.');
+        setSubdomainPrefix(validPrefix);
+        return;
+    }
+
+    // TODO: 考虑添加子域名数量限制检查 (根据 Vercel 计划)
+    // if (subdomains.length >= ...) { ... }
+
+    setIsAddingSubdomain(true);
+    const fullDomain = `${validPrefix}.${currentProductInfo.projectWebsite}`;
+    const projectId = VERCEL_PROJECT_ID;
+
+    // 准备 Vercel API 需要的数据载荷
+    // 参考 Vue 代码中的 domainData 结构
+    const domainData = {
+      name: fullDomain,
+      gitBranch: null, // 通常子域名不需要关联 git 分支
+      // projectId: projectId, // Vercel API v9/v10 通常 projectId 在 URL 中，不在 body 里
+      redirect: null,
+      redirectStatusCode: null
+    };
+
+    try {
+      console.log(`Attempting to add domain: ${fullDomain} to project ${projectId}`);
+      console.log('Domain data payload:', domainData);
+
+      // 调用 apiClient 中的方法添加域名
+      // 注意：API 签名可能需要调整，Vercel API projectId 通常在 URL path 中
+      // 例如: POST /v10/projects/{projectId}/domains 或 POST /v9/projects/{projectId}/domains
+      // 确认 apiClient.addVercelDomain 的实现是否正确处理了 projectId
+      const response = await apiClient.addVercelDomain(projectId, domainData); // 假设此函数内部处理了正确的 Vercel API 端点
+
+      console.log('Add domain response:', response);
+      messageApi.success(`Please add the DNS records below to finish the verification of ${fullDomain} `);
+
+      // 添加成功后刷新列表并清空输入框
+      await loadData(); // 重新加载子域名列表
+      setSubdomainPrefix(''); // 清空输入框
+
+    } catch (error) {
+      console.error('Failed to add subdomain:', error);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code, // Axios 错误码
+        responseStatus: error.response?.status, // HTTP 状态码
+        responseData: error.response?.data, // Vercel 返回的错误详情
+        stack: error.stack
+      });
+
+      // 处理 Vercel 特定的错误码
+      const vercelErrorCode = error.response?.data?.error?.code;
+      if (vercelErrorCode === 'domain_already_in_use') {
+        messageApi.info('This subdomain is already associated with another Vercel project or configuration.');
+      } else if (vercelErrorCode === 'forbidden') {
+         messageApi.error('Permission denied. Check your Vercel token and project permissions.');
+      } else if (vercelErrorCode === 'invalid_domain') {
+         messageApi.error(`Invalid domain name: ${fullDomain}`);
+      } else {
+        // 通用错误消息
+        messageApi.error(`Failed to add subdomain: ${error.response?.data?.error?.message || error.message || 'Unknown error'}`);
+      }
+    } finally {
+      setIsAddingSubdomain(false); // 结束 loading 状态
+    }
+  };
+
+  // === 新增：Collapse 组件的 Panel 定义 ===
+  const getSubdomainPanel = () => {
+    if (!currentProductInfo?.projectWebsite || verifiedDomains.length === 0) {
+      return null; // 如果没有根域名或未验证，不显示子域名部分
+    }
+
+    return (
+      <Collapse.Panel
+        header={<span className="text-base font-semibold text-white">Manage Subdomains</span>}
+        key="subdomains"
+        className="subdomain-collapse-panel" // 添加自定义类名
+      >
+        <div className="flex items-center gap-2 mb-4">
+          <div className="flex flex-grow items-center rounded border border-slate-600 bg-slate-700 focus-within:border-cyan-500 focus-within:ring-1 focus-within:ring-cyan-500">
+            <Input
+              placeholder="e.g., blog"
+              value={subdomainPrefix}
+              onChange={(e) => setSubdomainPrefix(e.target.value)}
+              className="flex-grow bg-transparent border-none placeholder-gray-500 focus:ring-0 px-3 py-1.5"
+              disabled={isAddingSubdomain || subdomainLoading}
+              onPressEnter={handleAddSubdomain}
+            />
+            {currentProductInfo?.projectWebsite && (
+              <span className="px-3 py-1.5 text-sm text-gray-400 bg-slate-600 flex-shrink-0 rounded-r">
+                .{currentProductInfo.projectWebsite}
+              </span>
+            )}
+          </div>
+          <Button
+            type="primary"
+            onClick={handleAddSubdomain}
+            loading={isAddingSubdomain}
+            disabled={!subdomainPrefix.trim() || subdomainLoading}
+            className="bg-cyan-600 hover:bg-cyan-500 border-none flex-shrink-0"
+          >
+            Add Subdomain
+          </Button>
+          <Button
+            onClick={loadData}
+            loading={domainLoading && !isAddingSubdomain}
+            disabled={isAddingSubdomain || domainLoading}
+            className="text-gray-300 hover:text-white border-slate-600 bg-slate-700 hover:bg-slate-600 px-3 py-1.5 text-xs"
+          >
+            Records added, refresh
+          </Button>
+        </div>
+
+        <Spin spinning={subdomainLoading && !isAddingSubdomain} tip={<span className="text-gray-300">Loading subdomains...</span>}>
+          {subdomains.length > 0 ? (
+            <div className="space-y-3">
+              {subdomains.map(domain => {
+                const status = getDomainStatusInfo(domain);
+                const dnsData = domain.configDetails?.misconfigured ? [{
+                  type: 'CNAME',
+                  name: domain.name.replace(`.${domain.apexName}`, ''),
+                  value: 'cname.vercel-dns.com.',
+                  key: 'cname-record'
+                }] : [];
+
+                return (
+                  <div key={domain.name} className="p-4 bg-slate-700/50 rounded border border-slate-600 shadow-sm">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-base font-medium text-cyan-300 break-all">{domain.name}</span>
+                        <Tag color={status.color} className="font-mono text-xs">{status.text}</Tag>
+                      </div>
+                      <Button
+                        type="text"
+                        danger
+                        icon={isDeletingSubdomain ? <Spin size="small" /> : <DeleteOutlined className="text-red-400 hover:text-red-300"/>}
+                        size="small"
+                        onClick={() => handleDeleteSubdomain(domain.name)}
+                        className="flex-shrink-0 ml-2"
+                        disabled={isDeletingSubdomain || isAddingSubdomain || subdomainLoading}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-400 mb-3">
+                      Added on {new Date(domain.createdAt).toLocaleDateString()}
+                    </p>
+
+                    {domain.configDetails?.misconfigured && (
+                      <div className="mt-3 pt-3 border-t border-slate-600/50">
+                         <Alert
+                          message={<span className="font-semibold text-yellow-100">DNS Configuration Required</span>}
+                          description={<span className="text-yellow-200/90 text-xs">Add the following CNAME record to your domain provider (e.g., GoDaddy, Namecheap) to verify this subdomain. DNS changes can take some time to propagate.</span>}
+                          type="warning"
+                          showIcon
+                          className="bg-yellow-600/20 border-yellow-500/30 text-yellow-200 mb-3"
+                          icon={<ExclamationCircleOutlined className="text-yellow-300" />}
+                        />
+                        <Table
+                          dataSource={dnsData}
+                          columns={dnsColumns}
+                          pagination={false}
+                          size="small"
+                          className="subdomain-dns-table-override"
+                          rowKey="key"
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            !subdomainLoading && <p className="text-sm text-gray-400">No subdomains configured yet.</p>
+          )}
+        </Spin>
+      </Collapse.Panel>
+    );
+  };
 
   return (
     // 确保你的应用根组件被 <App> 包裹，或者至少 PublishSettingsModal 的某个祖先被 <App> 包裹
@@ -654,7 +801,7 @@ const PublishSettingsModal = ({
     <Modal
       open={open}
       onCancel={onClose}
-      title={<span className="text-white font-semibold text-base">Bind Your Own Domain</span>}
+      title={<span className="text-white font-semibold text-base">Publish Settings</span>}
       footer={null}
       width={650}
       centered
@@ -665,22 +812,22 @@ const PublishSettingsModal = ({
       }}
       closable={true}
       maskClosable={true}
-      destroyOnClose // 确保每次打开都是新的状态，除非依赖项控制加载
+      destroyOnClose
       closeIcon={<CloseOutlined style={{ color: 'white', fontSize: '16px' }} />}
     >
       {/* 确保 currentItem 加载完成 */}
       {currentItem ? (
-        <div className="text-gray-200">
+        <div className="text-gray-200 space-y-6">
           {/* Domain Section */}
           <Spin spinning={domainLoading} tip={<span className="text-gray-300">Loading domains...</span>}>
-            <div className="mb-5 pb-5 border-b border-slate-700">
-              <h3 className="text-lg font-semibold text-white mb-3">Domain Binding</h3>
+            <div className="pb-5 border-b border-slate-700">
+              <h3 className="text-lg font-semibold text-white mb-4">Domain Binding</h3>
               {verifiedDomains.length > 0 ? (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {currentProductInfo?.projectWebsite && (
-                    <div className="mb-3 p-2 bg-slate-700/50 rounded border border-slate-600 flex items-center justify-between">
+                    <div className="p-3 bg-slate-700/50 rounded border border-slate-600 flex items-center justify-between flex-wrap gap-2">
                       <div>
-                        <span className="text-sm font-medium text-gray-300">Currently Bound Root Domain: </span>
+                        <span className="text-sm font-medium text-gray-300">Bound Root Domain: </span>
                         <span className="text-sm font-semibold text-cyan-300">{currentProductInfo.projectWebsite}</span>
                       </div>
                       {currentProductInfo?.domainStatus && (
@@ -690,76 +837,13 @@ const PublishSettingsModal = ({
                           size="small"
                           onClick={handleDeleteDomainVerification}
                           loading={isDeletingVerification}
-                          className="text-red-400 hover:text-red-300 flex-shrink-0 ml-2"
+                          className="text-red-400 hover:text-red-300 flex-shrink-0"
                         >
-                          Remove Domain Binding
+                          Remove Binding
                         </Button>
                       )}
                     </div>
                   )}
-                  {/* === Subfolder 管理 UI (移除 publishMode 条件) === */}
-                  {currentProductInfo?.projectWebsite && ( // 只依赖根域名是否存在
-                    <Spin spinning={subfolderLoading} tip={<span className="text-gray-300">Loading subfolders...</span>}>
-                      <div className="mt-4 pt-4 border-t border-slate-700 space-y-3">
-                        <div className="flex justify-between items-center">
-                          <h4 className="text-base font-semibold text-white">Manage Subfolders</h4>
-                          <Button
-                            type="primary"
-                            size="small"
-                            onClick={handleAddSubfolderClick}
-                            className="bg-cyan-600 hover:bg-cyan-500 border-none text-white text-xs"
-                            icon={<PlusOutlined />}
-                          >
-                            Add Subfolder
-                          </Button>
-                        </div>
-                        {subfolders.length > 0 ? (
-                          <ul className="space-y-2 max-h-40 overflow-y-auto bg-slate-800/50 p-3 rounded border border-slate-700/50">
-                            {subfolders.map(sf => (
-                              <li key={sf} className="flex items-center justify-between text-sm bg-slate-700/70 px-3 py-1.5 rounded">
-                                <span className="text-gray-200 break-all mr-2">
-                                  {currentProductInfo.projectWebsite}/<span className="font-semibold text-cyan-300">{sf}</span>
-                                </span>
-                                <Button
-                                  type="text"
-                                  danger
-                                  size="small"
-                                  icon={<DeleteOutlined />}
-                                  onClick={() => handleDeleteSubfolderClick(sf)}
-                                  className="text-red-400 hover:text-red-300 flex-shrink-0"
-                                  // loading={deletingSubfolder === sf} // 如果需要精细 loading
-                                />
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="text-sm text-gray-400 italic text-center py-2">No subfolders added yet.</p>
-                        )}
-                      </div>
-                    </Spin>
-                  )}
-                  {/* === 结束 Subfolder 管理 UI === */}
-
-                  <label htmlFor="publish-url-select" className="block text-sm font-medium text-gray-300 mt-4">Select the URL you want to publish this page to:</label>
-                  <Select
-                    id="publish-url-select"
-                    value={selectedPublishUrl}
-                    onChange={(value) => setSelectedPublishUrl(value)}
-                    className="w-full domain-select-override"
-                    placeholder="Select a domain or subfolder"
-                    dropdownStyle={{ background: '#2a3a50', border: '1px solid #475569' }}
-                  >
-                    {/* 根据 publishMode 过滤选项 (这里暂时显示全部，后续可加逻辑) */}
-                    {verifiedDomains.map(url => (
-                      <Select.Option
-                        key={url}
-                        value={url}
-                        className="domain-select-option-override"
-                      >
-                        <span>{url}</span>
-                      </Select.Option>
-                    ))}
-                  </Select>
                 </div>
               ) : (
                 // 无域名：显示验证流程
@@ -777,7 +861,7 @@ const PublishSettingsModal = ({
                           setVerificationError(null);
                         }}
                         className="w-full px-3 py-2 rounded bg-slate-700 border border-slate-600 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
-                        disabled={verificationLoading || !currentProductInfo} // 如果没有产品信息也禁用
+                        disabled={verificationLoading || !currentProductInfo}
                       />
                       <Button
                         type="primary"
@@ -856,62 +940,109 @@ const PublishSettingsModal = ({
             </div>
           </Spin>
 
-          {/* Slug Section */}
-          <div className="mb-5">
-            <h3 className="text-lg font-semibold text-white mb-3">Page Slug</h3>
-            <p className="text-sm text-gray-300 mb-2">Set a unique slug for this page version (e.g., 'main-landing-page').</p>
-            {slugEditing ? (
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={slugInput}
-                  onChange={(e) => setSlugInput(e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, ''))}
-                  className="flex-grow px-3 py-1.5 rounded bg-slate-700 border border-slate-600 text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 text-sm"
-                  placeholder="e.g., main-landing-page"
-                  disabled={slugSaving}
-                />
-                <div className="flex gap-1 flex-shrink-0">
-                  <button
-                    className="px-3 py-1.5 rounded bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
-                    disabled={slugSaving || !slugInput}
-                    onClick={handleSaveSlug}
-                  >
-                    {slugSaving ? <Spin size="small" /> : 'Save Slug'}
-                  </button>
-                  <button
-                    className="px-3 py-1.5 rounded bg-slate-600 hover:bg-slate-500 text-white text-xs font-semibold transition"
-                    onClick={() => {
-                      setSlugInput(currentItem?.slug || ''); // 恢复原始 slug
-                      setSlugEditing(false);
-                    }}
-                    disabled={slugSaving}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center justify-between gap-2 bg-slate-700/60 px-3 py-2 rounded border border-slate-600 min-h-[38px]">
-                <span className="text-gray-100 text-sm break-all mr-2">{slugInput || <span className="text-gray-400 italic">No slug set</span>}</span>
-                <button
-                  className="px-3 py-1 rounded bg-slate-600 hover:bg-slate-500 text-white text-xs font-semibold transition flex-shrink-0 flex items-center gap-1"
-                  onClick={() => setSlugEditing(true)}
+          {/* === 新增：子域名管理区域 (使用 Collapse 组件) === */}
+          <Collapse
+            activeKey={activeCollapseKey}
+            onChange={(keys) => setActiveCollapseKey(keys)}
+            ghost
+            expandIcon={({ isActive }) => <CaretRightOutlined rotate={isActive ? 90 : 0} style={{ color: '#94a3b8', fontSize: '14px' }} />}
+            className="subdomain-collapse-override"
+          >
+            {getSubdomainPanel()}
+          </Collapse>
+
+          {/* === URL 选择和 Slug Section (仅在有验证域名时显示) === */}
+          {verifiedDomains.length > 0 && (
+            <div className="space-y-5">
+              {/* URL Selection */}
+              <div>
+                <label htmlFor="publish-url-select" className="block text-sm font-medium text-gray-300 mb-2">Select Publish URL</label>
+                <Select
+                  id="publish-url-select"
+                  value={selectedPublishUrl}
+                  onChange={(value) => setSelectedPublishUrl(value)}
+                  className="w-full domain-select-override"
+                  placeholder="Select a verified subdomain"
+                  dropdownStyle={{ background: '#2a3a50', border: '1px solid #475569' }}
+                  allowClear // 允许清空选择
+                  disabled={domainLoading || isDeletingSubdomain || isAddingSubdomain} // 加载或操作时禁用
                 >
-                  <EditOutlined className="text-gray-300" />
-                  Edit
-                </button>
+                  {/* === 修改：过滤掉根域名 === */}
+                  {verifiedDomains
+                    .filter(url => url !== currentProductInfo?.projectWebsite)
+                    .map(url => (
+                      <Select.Option
+                        key={url}
+                        value={url}
+                        className="domain-select-option-override"
+                      >
+                        <span>{url}</span>
+                      </Select.Option>
+                  ))}
+                </Select>
+                 {/* 添加提示，如果没有可选子域名 */}
+                 {verifiedDomains.length > 0 && verifiedDomains.filter(url => url !== currentProductInfo?.projectWebsite).length === 0 && (
+                   <p className="text-xs text-yellow-400 mt-1">No available subdomains to select. Add a subdomain below.</p>
+                 )}
               </div>
-            )}
-          </div>
+
+              {/* Slug Section */}
+              <div>
+                <h3 className="text-base font-semibold text-white mb-2">Page Slug</h3>
+                <p className="text-sm text-gray-300 mb-2">Set a unique slug for this page version (e.g., 'main-landing-page').</p>
+                {slugEditing ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={slugInput}
+                      onChange={(e) => setSlugInput(e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, ''))}
+                      className="flex-grow px-3 py-1.5 rounded bg-slate-700 border border-slate-600 text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 text-sm"
+                      placeholder="e.g., main-landing-page"
+                      disabled={slugSaving}
+                    />
+                    <div className="flex gap-1 flex-shrink-0">
+                      <button
+                        className="px-3 py-1.5 rounded bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={slugSaving || !slugInput}
+                        onClick={handleSaveSlug}
+                      >
+                        {slugSaving ? <Spin size="small" /> : 'Save Slug'}
+                      </button>
+                      <button
+                        className="px-3 py-1.5 rounded bg-slate-600 hover:bg-slate-500 text-white text-xs font-semibold transition"
+                        onClick={() => {
+                          setSlugInput(currentItem?.slug || '');
+                          setSlugEditing(false);
+                        }}
+                        disabled={slugSaving}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between gap-2 bg-slate-700/60 px-3 py-2 rounded border border-slate-600 min-h-[38px]">
+                    <span className="text-gray-100 text-sm break-all mr-2">{slugInput || <span className="text-gray-400 italic">No slug set</span>}</span>
+                    <button
+                      className="px-3 py-1 rounded bg-slate-600 hover:bg-slate-500 text-white text-xs font-semibold transition flex-shrink-0 flex items-center gap-1"
+                      onClick={() => setSlugEditing(true)}
+                    >
+                      <EditOutlined className="text-gray-300" />
+                      Edit
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Publish Button and Preview URL */}
           {verifiedDomains.length > 0 && (
-            <div className="mt-4 pt-4 flex flex-col gap-3 border-t border-slate-700">
+            <div className="mt-6 pt-6 flex flex-col gap-4 border-t border-slate-700">
                {selectedPublishUrl && slugInput && (
                 <div className="bg-slate-800/50 p-3 rounded-md border border-slate-700/50">
                   <div className="text-sm font-semibold text-cyan-300 mb-1">Publish Preview URL</div>
                   <div className="text-cyan-400 underline break-all hover:text-cyan-300 transition cursor-default text-sm">
-                    {/* 注意: Vercel 部署可能需要时间，这里显示的是预期 URL */}
                     {`https://${selectedPublishUrl}/${slugInput}`}
                   </div>
                 </div>
@@ -938,42 +1069,7 @@ const PublishSettingsModal = ({
       )}
 
       {/* === 新增：渲染 contextHolder === */}
-      {/* 它不会渲染任何可见元素，但为 modal 实例提供了上下文 */}
       {contextHolder}
-
-      {/* === 添加 Subfolder 的 Modal (放在主 Modal return 内部的末尾) === */}
-      <Modal
-        title={<span style={{ color: 'white' }}>Add New Subfolder</span>}
-        open={showAddSubfolderModal}
-        onOk={handleOkAddSubfolder}
-        onCancel={handleCancelAddSubfolder}
-        confirmLoading={isAddingSubfolder}
-        centered
-        // 确保嵌套 modal 样式正确
-        styles={{
-           body: { background: '#1e293b', padding: '24px', borderRadius: '8px', color: 'white' },
-           header: { background: '#1e293b', borderBottom: '1px solid #334155', color: 'white', padding: '16px 24px' },
-           content: { background: '#1e293b', padding: 0 },
-           footer: { background: '#1e293b', borderTop: '1px solid #334155', paddingTop: '12px', paddingBottom: '12px' },
-        }}
-        okButtonProps={{ className: 'bg-cyan-600 hover:bg-cyan-500 border-cyan-600' }}
-        cancelButtonProps={{ className: 'hover:bg-slate-600' }}
-        closeIcon={<CloseOutlined style={{ color: 'white' }} />}
-      >
-        <div className="space-y-2 py-4">
-           <p className="text-sm text-gray-300">Enter the name for the new subfolder (recommended: 'alternative-pages').</p>
-           <Input
-             placeholder="subfolder-name"
-             value={newSubfolderInput}
-             onChange={(e) => setNewSubfolderInput(e.target.value)}
-             className="bg-slate-700 border-slate-600 text-black placeholder-gray-500 focus:ring-cyan-500 focus:border-cyan-500"
-             onPressEnter={handleOkAddSubfolder}
-           />
-           <p className="text-xs text-gray-400">
-             Resulting URL: {currentProductInfo?.projectWebsite}/<span className="font-semibold text-cyan-300">{newSubfolderInput.trim().toLowerCase() || '...'}</span>
-           </p>
-        </div>
-      </Modal>
     </Modal>
     // </App> // 如果在这里添加 App 包裹
   );
@@ -1033,4 +1129,71 @@ export default PublishSettingsModal;
     width: 0;
   }
   */
+
+  /* === 自定义子域名 DNS 表格样式 === */
+  .subdomain-dns-table-override .ant-table {
+    background-color: #334155; /* 深蓝灰色背景 */
+    border: 1px solid #475569;
+    border-radius: 4px;
+  }
+  .subdomain-dns-table-override .ant-table-thead > tr > th {
+    background-color: #3e4f66; /* 表头稍深一点 */
+    color: #cbd5e1; /* 表头文字颜色 */
+    border-bottom: 1px solid #475569;
+    padding: 8px 12px; /* 调整内边距 */
+    font-size: 0.8rem;
+  }
+  .subdomain-dns-table-override .ant-table-tbody > tr > td {
+    color: #e2e8f0; /* 表格文字颜色 */
+    border-bottom: 1px solid #475569;
+    padding: 8px 12px; /* 调整内边距 */
+    font-size: 0.8rem;
+    vertical-align: top; /* 垂直对齐 */
+  }
+  .subdomain-dns-table-override .ant-table-tbody > tr:last-child > td {
+    border-bottom: none; /* 移除最后一行底边框 */
+  }
+  .subdomain-dns-table-override code {
+    background-color: #1e293b; /* 代码背景色 */
+    color: #93c5fd; /* 代码文字颜色 (浅蓝) */
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: monospace;
+  }
+
+  /* === 新增：自定义 Collapse 样式 === */
+  .subdomain-collapse-override.ant-collapse {
+    background-color: transparent; /* Collapse 背景透明 */
+    border: 1px solid #334155; /* 添加边框 */
+    border-radius: 6px; /* 添加圆角 */
+  }
+  .subdomain-collapse-override > .ant-collapse-item {
+    border-bottom: none; /* 移除 Panel 之间的默认分隔线 */
+  }
+  .subdomain-collapse-override > .ant-collapse-item > .ant-collapse-header {
+    color: #e2e8f0; /* Header 文字颜色 */
+    padding: 12px 16px; /* 调整 Header 内边距 */
+    align-items: center; /* 垂直居中图标和文字 */
+    background-color: #293548; /* Header 背景色 */
+    border-radius: 6px 6px 0 0; /* 顶部圆角 */
+  }
+   /* 当 Panel 展开时，移除 Header 底部圆角 */
+  .subdomain-collapse-override > .ant-collapse-item.ant-collapse-item-active > .ant-collapse-header {
+    border-radius: 6px 6px 0 0;
+    border-bottom: 1px solid #334155; /* 展开时添加分隔线 */
+  }
+  .subdomain-collapse-override > .ant-collapse-item > .ant-collapse-content {
+    background-color: #1e293b; /* 内容区域背景色 (与 Modal body 一致) */
+    color: #cbd5e1; /* 内容区域文字颜色 */
+    border-top: none; /* 移除内容区域顶部边框 */
+    border-radius: 0 0 6px 6px; /* 底部圆角 */
+  }
+  .subdomain-collapse-override > .ant-collapse-item > .ant-collapse-content > .ant-collapse-content-box {
+    padding: 16px; /* 内容区域内边距 */
+  }
+  /* 覆盖 Panel 内部的样式 */
+  .subdomain-collapse-panel {
+     /* 这里可以添加特定于 Panel 内部元素的样式，如果需要的话 */
+  }
+
 `}</style>

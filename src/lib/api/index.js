@@ -605,6 +605,28 @@ const updateProduct = async (productId, productData) => {
   }
 };
 
+// 新增：添加 Vercel 域名
+const addVercelDomain = async (projectId, domainData) => {
+  try {
+    const response = await vercelApiClient.post(`/v10/projects/${projectId}/domains`, domainData);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to add Vercel domain:', error);
+    throw error;
+  }
+};
+
+// 新增：删除 Vercel 域名
+const deleteVercelDomain = async (projectId, domainName) => {
+  try {
+    const response = await vercelApiClient.delete(`/v9/projects/${projectId}/domains/${domainName}`);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to delete Vercel domain:', error);
+    throw error;
+  }
+};
+
 apiClient.getCompetitorResearch = getCompetitorResearch;
 apiClient.login = login;
 apiClient.register = register;
@@ -646,5 +668,7 @@ apiClient.regenerateSection = regenerateSection;
 apiClient.createDomainWithTXT = createDomainWithTXT;
 apiClient.validateDomain = validateDomain;
 apiClient.updateProduct = updateProduct;
+apiClient.addVercelDomain = addVercelDomain;
+apiClient.deleteVercelDomain = deleteVercelDomain;
 
 export default apiClient;
