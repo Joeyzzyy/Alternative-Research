@@ -2128,7 +2128,7 @@ const ResearchTool = ({
           `}</style>
 
         {/* Ensure content is above the effects - 保持原有布局不变 */}
-        <div className={`relative z-10 w-full max-w-4xl px-8 py-12 initial-screen-content rounded-xl bg-transparent`}> {/* 移除背景和模糊 */}
+        <div className={`relative z-10 w-full max-w-8xl px-8 py-12 initial-screen-content rounded-xl bg-transparent`}> {/* 移除背景和模糊 */}
           <div className={`text-center mb-8`}> {/* 移除 text-shadow 类，将在 span 上直接应用 */}
             {/* 修改 h1：调整布局为垂直，修改内部 span 样式 */}
             <h1 className={`text-4xl font-bold mb-6 flex flex-col items-center justify-center gap-1`}> {/* 改为 flex-col, 调整 gap */}
@@ -2225,64 +2225,56 @@ const ResearchTool = ({
             </div>
           </div>
 
-          <div className="mt-12 max-w-4xl mx-auto">
-              {/* --- 修改：移除条件文本颜色，使用 text-white --- */}
-              <h3 className={`text-xl font-semibold text-white mb-6 text-center drop-shadow-lg`}>From Our Customers</h3> {/* 应用 drop-shadow */}
-              <div className="grid grid-cols-3 gap-6">
-                {/* 统一卡片样式 */}
-                {[1,2,3].map((i) => (
-                  <div
-                    key={i}
-                    onClick={() => handleExampleClick(i === 1 ? 'ranking' : i === 2 ? 'conversion' : 'sem')}
-                    className="bg-stone-800/40 border-blue-700/30 hover:border-blue-600/50 text-stone-300 backdrop-blur-sm p-5 rounded-xl border cursor-pointer hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group flex flex-col justify-between"
+          {/* --- 修改：进一步增大容器最大宽度 --- */}
+          <div className="mt-12 max-w-6xl mx-auto"> {/* 从 max-w-5xl 改为 max-w-6xl */}
+              <h3 className={`text-xl font-semibold text-white mb-6 text-center drop-shadow-lg`}>From Our Customers</h3>
+              {/* --- 修改：改为两列网格 --- */}
+              <div className="grid grid-cols-3 gap-8"> {/* 改为 grid-cols-2, 可以适当增大 gap */}
+                {[
+                  { url: 'https://altpage.ai', title: 'AltPage.ai Example' },
+                  { url: 'https://websitelm.com', title: 'WebsiteLM Example' },
+                  { url: 'https://neobund.com', title: 'Neobund Example' }
+                ].map((site, index) => (
+                  <a
+                    key={index}
+                    href={site.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    // --- 修改：移除 aspect-video, 添加 min-h-* ---
+                    className="block bg-stone-900/50 border-blue-700/30 hover:border-blue-600/50 text-stone-300 backdrop-blur-sm rounded-xl border relative overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 group hover:-translate-y-1 min-h-[260px]" // 移除 aspect-video, 添加 min-h-[300px] (可调整)
                   >
-                    <div>
-                      <div className="absolute -right-6 -top-6 w-16 h-16 bg-blue-500/10 group-hover:bg-blue-500/20 rounded-full blur-xl transition-all"></div>
-                      <div className="w-10 h-10 mb-3 flex items-center justify-center bg-white/90 rounded-lg">
-                        {/* 统一 icon 颜色 */}
-                        {i === 1 && (
-                          <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                          </svg>
-                        )}
-                        {i === 2 && (
-                          <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                          </svg>
-                        )}
-                        {i === 3 && (
-                          <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
-                          </svg>
-                        )}
+                    {/* 标题栏 */}
+                    <div className="absolute top-0 left-0 right-0 h-8 bg-slate-700/80 flex items-center px-3 z-10 pointer-events-none">
+                      <div className="flex space-x-1.5 mr-auto">
+                        <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
+                        <div className="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>
+                        <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
                       </div>
-                      {/* 统一标题颜色 */}
-                      <div className="text-blue-300 group-hover:text-blue-200 font-medium mb-1 text-base">
-                        {i === 1 && 'Improve Search Ranking'}
-                        {i === 2 && 'Maximize Conversion Rates'}
-                        {i === 3 && 'Effective PPC Landing Pages'}
-                      </div>
-                      {/* 统一描述颜色 */}
-                      <div className="text-xs text-stone-400 group-hover:text-stone-300 mb-2">
-                        {i === 1 && 'SEO-focused pages designed to rank higher.'}
-                        {i === 2 && 'Targeted content to boost user engagement.'}
-                        {i === 3 && 'Optimized pages for paid campaigns.'}
+                      <span className="text-xs text-slate-300 truncate">{site.title}</span>
+                    </div>
+                    {/* iframe 容器和缩放逻辑 */}
+                    {/* --- 注意：现在 iframe 容器需要适应新的高度 --- */}
+                    <div className="absolute top-8 bottom-0 left-0 right-0 overflow-hidden pointer-events-none">
+                       <div
+                         className="origin-top-left"
+                         style={{
+                           transform: 'scale(0.25)',
+                           transformOrigin: 'top left',
+                           width: '400%',
+                           height: '400%',
+                         }}
+                       >
+                        <iframe
+                          src={site.url}
+                          title={site.title}
+                          className="border-none w-full h-full"
+                          scrolling="no"
+                          loading="lazy"
+                          tabIndex={-1}
+                        ></iframe>
                       </div>
                     </div>
-                    <div>
-                      {/* 统一结果颜色 */}
-                      <div className="mt-1 text-xs text-blue-400/90 group-hover:text-opacity-100 transition-opacity">
-                        <span className="font-semibold">Result:</span>
-                        {i === 1 && ' +45% Traffic, Page 1 Ranking'}
-                        {i === 2 && ' +25% Conversion, Niche Ranking Up'}
-                        {i === 3 && ' +15% Lead Conversion, 8 Keywords Ranked'}
-                      </div>
-                      {/* 统一箭头颜色 */}
-                      <div className="absolute bottom-3 right-3">
-                        <ArrowRightOutlined className="text-blue-500/50 group-hover:text-blue-400 transition-all" />
-                      </div>
-                    </div>
-                  </div>
+                  </a>
                 ))}
               </div>
             </div>

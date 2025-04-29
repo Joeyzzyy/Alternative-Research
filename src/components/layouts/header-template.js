@@ -113,10 +113,6 @@ export default function Header() {
   const [googleOneTapInitialized, setGoogleOneTapInitialized] = useState(false);
   const tokenExpiredHandledRef = useRef(false);
   const [showConstructionModal, setShowConstructionModal] = useState(false);
-  // 新增：顶部banner高度
-  const TOP_BANNER_HEIGHT = 60;
-  // 新增：控制顶部横幅显示的状态
-  const [showTopBanner, setShowTopBanner] = useState(true);
 
   useEffect(() => {
     // 检查本地存储中的登录信息
@@ -361,72 +357,13 @@ export default function Header() {
 
   return (
     <>
-      {/* 新增顶部横幅，仅未登录且未关闭时显示 */}
-      {!isLoggedIn && showTopBanner && (
-        <div
-          className="fixed bottom-auto top-0 left-0 right-0 z-[60] flex justify-center items-center pr-10" // 添加右边距给关闭按钮空间
-          style={{
-            background: 'linear-gradient(90deg, #38bdf8 0%, #818cf8 60%, #a21caf 100%)',
-            boxShadow: '0 2px 8px 0 rgba(129,140,248,0.10)',
-            height: '60px', // 高度与底部banner一致
-            fontSize: '0.90rem', // 字体大小与底部一致
-            fontWeight: 500,
-            letterSpacing: '0.01em',
-            borderBottom: '1px solid rgba(255,255,255,0.10)',
-            backdropFilter: 'blur(1.5px)',
-            padding: '0 1.5rem',
-          }}
-        >
-          <span
-            style={{
-              color: '#fff',
-              fontWeight: 500,
-              fontSize: '0.92em',
-              marginRight: '1.2rem',
-              letterSpacing: '0.01em',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            We use cookies to optimize your experience. <span style={{background: 'linear-gradient(90deg,#fff,#f0abfc 80%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: 700}}>Sign up to generate 5 pages for free</span>. No credit card required, try it now!
-          </span>
-          <button
-            className="ml-2 px-4 py-1.5 rounded-md font-bold shadow transition-all duration-150"
-            style={{
-              background: 'linear-gradient(90deg, #f0abfc 0%, #fff 100%)',
-              color: '#7c3aed',
-              fontSize: '0.92em',
-              border: 'none',
-              outline: 'none',
-              cursor: 'pointer',
-              boxShadow: '0 1px 6px 0 #a21caf22',
-            }}
-            onClick={() => {
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-              setShowLoginModal(true);
-              setIsLoginForm(true);
-              setIsForgotPassword(false);
-            }}
-          >
-            Quick Start
-          </button>
-          {/* 新增关闭按钮 - 调整位置 */}
-          <button
-            onClick={() => setShowTopBanner(false)}
-            className="absolute top-1/2 right-6 transform -translate-y-1/2 text-white/70 hover:text-white transition-colors" // 将 right-4 改为 right-6
-            aria-label="Close banner"
-            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', padding: '0.5rem' }}
-          >
-            ✕
-          </button>
-        </div>
-      )}
       {/* 在根元素渲染 contextHolder */}
       {contextHolder}
       <nav
         className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-slate-950 to-black border-b border-slate-800/50"
         style={{
-          // 根据横幅是否显示来调整导航栏位置
-          top: !isLoggedIn && showTopBanner ? `${TOP_BANNER_HEIGHT}px` : '0',
+          // 导航栏始终固定在顶部
+          top: '0',
         }}
       >
         {/* 科技感背景装饰 */}
