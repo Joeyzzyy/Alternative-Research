@@ -2231,9 +2231,9 @@ const ResearchTool = ({
               {/* --- 修改：改为两列网格 --- */}
               <div className="grid grid-cols-3 gap-8"> {/* 改为 grid-cols-2, 可以适当增大 gap */}
                 {[
-                  { url: 'https://altpage.ai', title: 'AltPage.ai Example' },
-                  { url: 'https://websitelm.com', title: 'WebsiteLM Example' },
-                  { url: 'https://neobund.com', title: 'Neobund Example' }
+                  { url: 'https://altpage.ai', title: 'AltPage.ai' },
+                  { url: 'https://websitelm.com', title: 'WebsiteLM' },
+                  { url: 'https://neobund.com', title: 'Neobund' }
                 ].map((site, index) => (
                   <a
                     key={index}
