@@ -2231,19 +2231,20 @@ const ResearchTool = ({
               {/* --- 修改：改为两列网格 --- */}
               <div className="grid grid-cols-3 gap-8"> {/* 改为 grid-cols-2, 可以适当增大 gap */}
                 {[
-                  { url: 'https://altpage.ai', title: 'AltPage.ai' },
-                  { url: 'https://websitelm.com', title: 'WebsiteLM' },
-                  { url: 'https://neobund.com', title: 'Neobund' }
+                  // --- 修改：为每个站点添加 image 属性 ---
+                  { url: 'https://nytgames.top', title: 'AltPage.ai', image: '/images/preview-nytgames.png' },
+                  { url: 'https://websitelm.com', title: 'WebsiteLM', image: '/images/preview-websitelm.png' },
+                  { url: 'https://neobund.com', title: 'Neobund', image: '/images/preview-neobund.png' }
                 ].map((site, index) => (
                   <a
                     key={index}
                     href={site.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    // --- 修改：移除 aspect-video, 添加 min-h-* ---
-                    className="block bg-stone-900/50 border-blue-700/30 hover:border-blue-600/50 text-stone-300 backdrop-blur-sm rounded-xl border relative overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 group hover:-translate-y-1 min-h-[260px]" // 移除 aspect-video, 添加 min-h-[300px] (可调整)
+                    // --- 修改：调整样式以适应图片 ---
+                    className="block bg-stone-900/50 border-blue-700/30 hover:border-blue-600/50 text-stone-300 backdrop-blur-sm rounded-xl border relative overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 group hover:-translate-y-1" // 移除 min-h-*
                   >
-                    {/* 标题栏 */}
+                    {/* 标题栏 (保持不变) */}
                     <div className="absolute top-0 left-0 right-0 h-8 bg-slate-700/80 flex items-center px-3 z-10 pointer-events-none">
                       <div className="flex space-x-1.5 mr-auto">
                         <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
@@ -2252,28 +2253,16 @@ const ResearchTool = ({
                       </div>
                       <span className="text-xs text-slate-300 truncate">{site.title}</span>
                     </div>
-                    {/* iframe 容器和缩放逻辑 */}
-                    {/* --- 注意：现在 iframe 容器需要适应新的高度 --- */}
-                    <div className="absolute top-8 bottom-0 left-0 right-0 overflow-hidden pointer-events-none">
-                       <div
-                         className="origin-top-left"
-                         style={{
-                           transform: 'scale(0.25)',
-                           transformOrigin: 'top left',
-                           width: '400%',
-                           height: '400%',
-                         }}
-                       >
-                        <iframe
-                          src={site.url}
-                          title={site.title}
-                          className="border-none w-full h-full"
-                          scrolling="no"
-                          loading="lazy"
-                          tabIndex={-1}
-                        ></iframe>
-                      </div>
+                    {/* --- 修改：移除 iframe 容器和缩放逻辑，替换为 img 标签 --- */}
+                    <div className="pt-8"> {/* 添加上边距，避免图片被标题栏遮挡 */}
+                      <img
+                        src={site.image} // 使用 site 对象中的 image 路径
+                        alt={`Preview of ${site.title}`}
+                        className="w-full h-auto object-cover" // 图片宽度占满，高度自适应，保持比例
+                        loading="lazy"
+                      />
                     </div>
+                    {/* --- 结束修改 --- */}
                   </a>
                 ))}
               </div>
