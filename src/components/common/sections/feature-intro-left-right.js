@@ -1,31 +1,31 @@
 'use client';
 import React from 'react';
 
-// 定义功能列表数据
+// Define the feature list data with enhanced descriptions
 const features = [
   {
-    title: "Competitor Analysis",
-    description: "Automatically identify high-value competitors to target based on search volume and conversion potential."
+    title: "Intelligent Competitor Analysis",
+    description: "Automatically identify your most impactful competitors based on search volume and conversion potential, ensuring you target the right rivals."
   },
   {
-    title: "AI-Powered Content",
-    description: "Generate objective, fact-based comparison content that highlights your unique advantages."
+    title: "AI-Powered Content Generation",
+    description: "Generate objective, data-driven comparison content that authentically highlights your unique strengths and builds visitor trust."
   },
   {
-    title: "SEO Optimization",
-    description: "Built-in tools to optimize titles, URLs, headings and content for maximum search visibility."
+    title: "Advanced SEO Optimization",
+    description: "Utilize built-in tools to optimize titles, URLs, headings, and content for maximum search engine visibility and organic traffic growth."
   },
   {
-    title: "Comparison Tables",
-    description: "Create beautiful, responsive comparison tables that clearly show your advantages."
+    title: "Dynamic Comparison Tables",
+    description: "Create visually appealing, responsive comparison tables that clearly showcase your advantages and simplify the decision-making process for prospects."
   },
   {
-    title: "Conversion Optimization",
-    description: "Integrated A/B testing and conversion rate optimization to maximize page performance."
+    title: "Integrated Conversion Optimization",
+    description: "Leverage built-in A/B testing and conversion rate optimization features to continuously enhance page performance and maximize your ROI."
   },
   {
-    title: "Automatic Updates",
-    description: "Keep your comparison data fresh with automatic competitor monitoring and content updates."
+    title: "Automated Content Updates",
+    description: "Keep your comparison data current and accurate with automatic competitor monitoring and content refreshes, saving you valuable time."
   }
 ];
 
@@ -39,10 +39,10 @@ const AltPageFeatures = () => {
       <div className="max-w-7xl mx-auto px-4 relative z-10 text-center">
         {/* Main Title and Intro */}
         <h2 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-6 bg-gradient-to-r from-cyan-400 to-purple-500 text-transparent bg-clip-text">
-          How AltPage.ai Creates Winning Alternative Pages
+          How AltPage.ai Builds High-Converting Alternative Pages
         </h2>
         <p className="text-lg text-gray-300 leading-relaxed mb-16 max-w-3xl mx-auto">
-          Our platform makes it easy to create, optimize, and manage alternative pages that drive qualified traffic and conversions.
+          SEO oriented and perfect page structure without the hassle.
         </p>
 
         {/* Features Grid */}
