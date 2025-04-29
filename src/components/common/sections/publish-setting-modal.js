@@ -258,6 +258,8 @@ const PublishSettingsModal = ({
         setSubdomains([]); // 确保没有根域名时子域名列表为空
         setActiveCollapseKey([]); // 没有根域名则不展开
       }
+      // === 新增：设置子域名前缀默认值 ===
+      setSubdomainPrefix('alternative'); // 设置默认值
     } else {
        // 关闭时重置状态，避免下次打开残留
        setSelectedPublishUrl('');
@@ -267,7 +269,7 @@ const PublishSettingsModal = ({
        // === 新增：关闭时重置子域名状态 ===
        setSubdomains([]);
        setSubdomainLoading(false);
-       setSubdomainPrefix(''); // 关闭时也清空输入
+       setSubdomainPrefix('alternative'); // 关闭时也重置为默认值
        setIsAddingSubdomain(false);
        setActiveCollapseKey([]); // 关闭时重置 Collapse 状态
        setIsDeletingSubdomain(false); // 关闭时重置删除状态
@@ -652,9 +654,9 @@ const PublishSettingsModal = ({
       console.log('Add domain response:', response);
       messageApi.success(`Please add the DNS records below to finish the verification of ${fullDomain} `);
 
-      // 添加成功后刷新列表并清空输入框
+      // 添加成功后刷新列表并设置默认值
       await loadData(); // 重新加载子域名列表
-      setSubdomainPrefix(''); // 清空输入框
+      setSubdomainPrefix('alternative'); // <--- 修改：重置为默认值，而不是清空
 
     } catch (error) {
       console.error('Failed to add subdomain:', error);
