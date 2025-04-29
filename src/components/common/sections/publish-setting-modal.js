@@ -928,7 +928,7 @@ const PublishSettingsModal = ({
             </Collapse>
           )}
 
-          {/* === URL 选择和 Slug Section (仅在有验证域名时显示) === */}
+          {/* === URL 选择 Section (仅在有验证域名时显示) === */}
           {verifiedDomains.length > 0 && (
             <div className="space-y-5">
               {/* URL Selection */}
@@ -945,7 +945,7 @@ const PublishSettingsModal = ({
                   disabled={domainLoading || isDeletingSubdomain || isAddingSubdomain} // 加载或操作时禁用
                 >
                   {verifiedDomains
-                    .filter(url => url !== rootDomain)
+                    .filter(url => url !== rootDomain) // 仍然排除根域名本身作为可选发布 URL
                     .map(url => (
                       <Select.Option
                         key={url}
@@ -956,64 +956,68 @@ const PublishSettingsModal = ({
                       </Select.Option>
                   ))}
                 </Select>
+                 {/* 提示：当有 verifiedDomains 但过滤后没有可选子域名时 */}
                  {verifiedDomains.length > 0 && verifiedDomains.filter(url => url !== rootDomain).length === 0 && (
                    <p className="text-xs text-yellow-400 mt-1">No available subdomains to select. Add a subdomain below.</p>
                  )}
               </div>
 
-              {/* Slug Section */}
-              <div>
-                <h3 className="text-base font-semibold text-white mb-2">Page Slug</h3>
-                <p className="text-sm text-gray-300 mb-2">Set a unique slug for this page version (e.g., 'main-landing-page').</p>
-                {slugEditing ? (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={slugInput}
-                      onChange={(e) => setSlugInput(e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, ''))}
-                      className="flex-grow px-3 py-1.5 rounded bg-slate-700 border border-slate-600 text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 text-sm"
-                      placeholder="e.g., main-landing-page"
-                      disabled={slugSaving}
-                    />
-                    <div className="flex gap-1 flex-shrink-0">
-                      <button
-                        className="px-3 py-1.5 rounded bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={slugSaving || !slugInput}
-                        onClick={handleSaveSlug}
-                      >
-                        {slugSaving ? <Spin size="small" /> : 'Save Slug'}
-                      </button>
-                      <button
-                        className="px-3 py-1.5 rounded bg-slate-600 hover:bg-slate-500 text-white text-xs font-semibold transition"
-                        onClick={() => {
-                          setSlugInput(currentItem?.slug || '');
-                          setSlugEditing(false);
-                        }}
+              {/* === Slug Section (仅在绑定根域名后显示) === */}
+              {rootDomain && ( // 新增条件：只要 rootDomain 存在就显示 Slug 部分
+                <div className="mt-5"> {/* 添加一些上边距 */}
+                  <h3 className="text-base font-semibold text-white mb-2">Page Slug</h3>
+                  <p className="text-sm text-gray-300 mb-2">Set a unique slug for this page version (e.g., 'main-landing-page').</p>
+                  {slugEditing ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={slugInput}
+                        onChange={(e) => setSlugInput(e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, ''))}
+                        className="flex-grow px-3 py-1.5 rounded bg-slate-700 border border-slate-600 text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 text-sm"
+                        placeholder="e.g., main-landing-page"
                         disabled={slugSaving}
+                      />
+                      <div className="flex gap-1 flex-shrink-0">
+                        <button
+                          className="px-3 py-1.5 rounded bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                          disabled={slugSaving || !slugInput}
+                          onClick={handleSaveSlug}
+                        >
+                          {slugSaving ? <Spin size="small" /> : 'Save Slug'}
+                        </button>
+                        <button
+                          className="px-3 py-1.5 rounded bg-slate-600 hover:bg-slate-500 text-white text-xs font-semibold transition"
+                          onClick={() => {
+                            setSlugInput(currentItem?.slug || '');
+                            setSlugEditing(false);
+                          }}
+                          disabled={slugSaving}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between gap-2 bg-slate-700/60 px-3 py-2 rounded border border-slate-600 min-h-[38px]">
+                      <span className="text-gray-100 text-sm break-all mr-2">{slugInput || <span className="text-gray-400 italic">No slug set</span>}</span>
+                      <button
+                        className="px-3 py-1 rounded bg-slate-600 hover:bg-slate-500 text-white text-xs font-semibold transition flex-shrink-0 flex items-center gap-1"
+                        onClick={() => setSlugEditing(true)}
                       >
-                        Cancel
+                        <EditOutlined className="text-gray-300" />
+                        Edit
                       </button>
                     </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between gap-2 bg-slate-700/60 px-3 py-2 rounded border border-slate-600 min-h-[38px]">
-                    <span className="text-gray-100 text-sm break-all mr-2">{slugInput || <span className="text-gray-400 italic">No slug set</span>}</span>
-                    <button
-                      className="px-3 py-1 rounded bg-slate-600 hover:bg-slate-500 text-white text-xs font-semibold transition flex-shrink-0 flex items-center gap-1"
-                      onClick={() => setSlugEditing(true)}
-                    >
-                      <EditOutlined className="text-gray-300" />
-                      Edit
-                    </button>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
-          {/* Publish Button and Preview URL */}
+          {/* Publish Button and Preview URL (保持原有条件) */}
           {verifiedDomains.length > 0 && (
             <div className="mt-6 pt-6 flex flex-col gap-4 border-t border-slate-700">
+               {/* Preview URL (依赖 selectedPublishUrl 和 slugInput) */}
                {selectedPublishUrl && slugInput && (
                 <div className="bg-slate-800/50 p-3 rounded-md border border-slate-700/50">
                   <div className="text-sm font-semibold text-cyan-300 mb-1">Publish Preview URL</div>
@@ -1022,6 +1026,7 @@ const PublishSettingsModal = ({
                   </div>
                 </div>
               )}
+              {/* Publish Button (依赖 selectedPublishUrl 和 slugInput) */}
               <button
                 disabled={!selectedPublishUrl || !slugInput || deployLoading || isDeletingVerification || slugEditing || verificationLoading || domainLoading}
                 onClick={handlePublish}
