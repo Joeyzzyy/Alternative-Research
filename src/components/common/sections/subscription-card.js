@@ -314,7 +314,7 @@ const SubscriptionCard = () => {
                           : 'text-cyan-400'
                       }
                     `}>
-                      {plan.name === "Free Trial" ? '¥0' : `¥${plan.price[selectedPeriod]}`}
+                      {plan.name === "Free Trial" ? '$0' : `$${plan.price[selectedPeriod]}`}
                     </span>
                     {plan.name !== "Free Trial" && (
                       <span className="text-lg text-gray-400 font-medium">/mo</span>

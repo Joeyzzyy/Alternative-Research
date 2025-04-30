@@ -459,16 +459,17 @@ export default function Header() {
               <div className="flex items-center gap-4">
                 {isLoggedIn ? (
                   <div className="flex items-center gap-4">
-                    {/* 积分显示 */}
-                    <div className="relative flex items-center gap-2">
-                      {/* 添加用户名显示 */}
-                      <div className="mr-3 text-gray-300">
-                        <span className="text-sm">Hi, {userEmail ? userEmail.split('@')[0] : 'User'}</span>
+                    {/* 合并用户名和积分显示为一个可点击区域 */}
+                    <div
+                      className="relative flex items-center gap-2 cursor-pointer text-gray-300 hover:text-white transition-colors"
+                      onClick={() => setShowCreditsTooltip(!showCreditsTooltip)}
+                    >
+                      {/* 用户名显示 */}
+                      <div className="text-sm">
+                        Hi, {userEmail ? userEmail.split('@')[0] : 'User'}
                       </div>
-                      <div 
-                        className="flex items-center cursor-pointer text-gray-300 hover:text-white transition-colors"
-                        onClick={() => setShowCreditsTooltip(!showCreditsTooltip)}
-                      >
+                      {/* 积分图标和数量 */}
+                      <div className="flex items-center">
                         <div className="w-8 h-8 rounded-full bg-purple-500/30 flex items-center justify-center">
                           <span className="text-sm font-medium">💎</span>
                         </div>
@@ -483,12 +484,15 @@ export default function Header() {
 
                       {/* 积分工具提示 */}
                       {showCreditsTooltip && (
-                        <div className="absolute right-0 top-10 w-56 bg-gray-800 border border-gray-700 rounded-lg shadow-xl p-4 z-50 text-xs"
+                        <div className="absolute right-0 top-10 w-64 bg-gray-800 border border-gray-700 rounded-lg shadow-xl p-4 z-50 text-xs"
                              style={{animation: 'fadeIn 0.2s ease-out forwards'}}>
                           <div className="flex items-center justify-between mb-3">
                             <span className="font-medium text-purple-300">Page Generation Credits</span>
-                            <button 
-                              onClick={() => setShowCreditsTooltip(false)}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowCreditsTooltip(false);
+                              }}
                               className="text-gray-400 hover:text-white transition-colors"
                             >
                               ✕
@@ -504,8 +508,8 @@ export default function Header() {
                             </span>
                           </div>
                           <div className="h-2 bg-gray-700 rounded-full overflow-hidden mb-3">
-                            <div 
-                              className="h-full bg-gradient-to-r from-purple-500 to-blue-500" 
+                            <div
+                              className="h-full bg-gradient-to-r from-purple-500 to-blue-500"
                               style={{
                                 width: `${Math.min(100, ((userCredits.pageGeneratorLimit - userCredits.pageGeneratorUsage) / userCredits.pageGeneratorLimit) * 100)}%`
                               }}
@@ -514,20 +518,44 @@ export default function Header() {
                           <p className="mb-3 text-gray-300">Total Credits: {userCredits.pageGeneratorLimit}</p>
                           <p className="mb-3 text-gray-300">Used: {userCredits.pageGeneratorUsage}</p>
                           <p className="text-gray-400 text-xs mb-4">Note: Changing the overall color scheme or style of the page will also consume credits.</p>
-                          
+
                           {/* 添加购买更多积分按钮 */}
-                          <button 
-                            onClick={() => {
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
                               window.location.href = "/#pricing";
                               setShowCreditsTooltip(false);
                             }}
-                            className="w-full py-2 px-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-sm font-medium rounded-md transition-all duration-300 flex items-center justify-center"
+                            className="w-full py-2 px-4 mb-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-sm font-medium rounded-md transition-all duration-300 flex items-center justify-center"
                           >
                             <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                             </svg>
                             Buy More Credits
                           </button>
+
+                          {/* --- 新增：品牌颜色资产部分 --- */}
+                          <div className="border-t border-gray-700 pt-3 mt-3">
+                            <span className="font-medium text-cyan-300 block mb-2">Brand Color Assets</span>
+                            <p className="text-gray-400 text-xs mb-3">Access your saved brand colors and palettes.</p>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // 这里可以添加跳转到品牌资产页面的逻辑
+                                // 例如: window.location.href = '/brand-assets';
+                                messageApi.info({ content: 'Brand assets feature coming soon!', duration: 2 }); // 临时提示
+                                setShowCreditsTooltip(false);
+                              }}
+                              className="w-full py-2 px-4 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white text-sm font-medium rounded-md transition-all duration-300 flex items-center justify-center"
+                            >
+                              <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                              </svg>
+                              Manage Brand Colors
+                            </button>
+                          </div>
+                          {/* --- 结束：品牌颜色资产部分 --- */}
+
                         </div>
                       )}
                     </div>
