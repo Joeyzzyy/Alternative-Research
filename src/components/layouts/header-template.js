@@ -404,17 +404,18 @@ export default function Header() {
               </a>
             </div>
 
-            {/* Desktop Navigation 更新样式 */}
-            <div className="hidden md:flex items-center justify-center flex-1 px-8">
+            {/* 右侧容器 (导航菜单 + 认证按钮) */}
+            <div className="hidden md:flex items-center gap-8">
+              {/* Desktop Navigation 更新样式 */}
               <div className="flex gap-8">
                 {mainMenuItems.map(item => (
-                  <div 
+                  <div
                     key={item.label}
                     className="relative group"
                   >
                     <a
                       href={item.link}
-                      className="text-sm font-medium bg-clip-text text-transparent bg-gradient-to-r from-gray-300 to-gray-400 hover:from-cyan-400 hover:to-purple-400 transition-all duration-300"
+                      className="text-sm font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-300 to-gray-400 hover:from-cyan-400 hover:to-purple-400 transition-all duration-300"
                     >
                       {item.label}
                     </a>
@@ -422,128 +423,128 @@ export default function Header() {
                   </div>
                 ))}
               </div>
-            </div>
 
-            {/* 更新按钮样式 */}
-            <div className="hidden md:flex items-center gap-4">
-              {isLoggedIn ? (
-                <div className="flex items-center gap-4">
-                  {/* 积分显示 */}
-                  <div className="relative flex items-center gap-2">
-                    {/* 添加用户名显示 */}
-                    <div className="mr-3 text-gray-300">
-                      <span className="text-sm">Hi, {userEmail ? userEmail.split('@')[0] : 'User'}</span>
-                    </div>
-                    <div 
-                      className="flex items-center cursor-pointer text-gray-300 hover:text-white transition-colors"
-                      onClick={() => setShowCreditsTooltip(!showCreditsTooltip)}
-                    >
-                      <div className="w-8 h-8 rounded-full bg-purple-500/30 flex items-center justify-center">
-                        <span className="text-sm font-medium">💎</span>
+              {/* 更新按钮样式 */}
+              <div className="flex items-center gap-4">
+                {isLoggedIn ? (
+                  <div className="flex items-center gap-4">
+                    {/* 积分显示 */}
+                    <div className="relative flex items-center gap-2">
+                      {/* 添加用户名显示 */}
+                      <div className="mr-3 text-gray-300">
+                        <span className="text-sm">Hi, {userEmail ? userEmail.split('@')[0] : 'User'}</span>
                       </div>
-                      <span className="ml-1.5 text-sm font-medium">
-                        {userCreditsLoading ? (
-                          <Spin size="small" />
-                        ) : (
-                          `${userCredits.pageGeneratorLimit - userCredits.pageGeneratorUsage}/${userCredits.pageGeneratorLimit}`
-                        )}
-                      </span>
-                    </div>
+                      <div 
+                        className="flex items-center cursor-pointer text-gray-300 hover:text-white transition-colors"
+                        onClick={() => setShowCreditsTooltip(!showCreditsTooltip)}
+                      >
+                        <div className="w-8 h-8 rounded-full bg-purple-500/30 flex items-center justify-center">
+                          <span className="text-sm font-medium">💎</span>
+                        </div>
+                        <span className="ml-1.5 text-sm font-medium">
+                          {userCreditsLoading ? (
+                            <Spin size="small" />
+                          ) : (
+                            `${userCredits.pageGeneratorLimit - userCredits.pageGeneratorUsage}/${userCredits.pageGeneratorLimit}`
+                          )}
+                        </span>
+                      </div>
 
-                    {/* 积分工具提示 */}
-                    {showCreditsTooltip && (
-                      <div className="absolute right-0 top-10 w-56 bg-gray-800 border border-gray-700 rounded-lg shadow-xl p-4 z-50 text-xs"
-                           style={{animation: 'fadeIn 0.2s ease-out forwards'}}>
-                        <div className="flex items-center justify-between mb-3">
-                          <span className="font-medium text-purple-300">Page Generation Credits</span>
+                      {/* 积分工具提示 */}
+                      {showCreditsTooltip && (
+                        <div className="absolute right-0 top-10 w-56 bg-gray-800 border border-gray-700 rounded-lg shadow-xl p-4 z-50 text-xs"
+                             style={{animation: 'fadeIn 0.2s ease-out forwards'}}>
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="font-medium text-purple-300">Page Generation Credits</span>
+                            <button 
+                              onClick={() => setShowCreditsTooltip(false)}
+                              className="text-gray-400 hover:text-white transition-colors"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-white font-bold text-lg">
+                              {userCreditsLoading ? (
+                                <Spin size="small" />
+                              ) : (
+                                `${userCredits.pageGeneratorLimit - userCredits.pageGeneratorUsage} Available`
+                              )}
+                            </span>
+                          </div>
+                          <div className="h-2 bg-gray-700 rounded-full overflow-hidden mb-3">
+                            <div 
+                              className="h-full bg-gradient-to-r from-purple-500 to-blue-500" 
+                              style={{
+                                width: `${Math.min(100, ((userCredits.pageGeneratorLimit - userCredits.pageGeneratorUsage) / userCredits.pageGeneratorLimit) * 100)}%`
+                              }}
+                            ></div>
+                          </div>
+                          <p className="mb-3 text-gray-300">Total Credits: {userCredits.pageGeneratorLimit}</p>
+                          <p className="mb-3 text-gray-300">Used: {userCredits.pageGeneratorUsage}</p>
+                          <p className="text-gray-400 text-xs mb-4">Note: Changing the overall color scheme or style of the page will also consume credits.</p>
+                          
+                          {/* 添加购买更多积分按钮 */}
                           <button 
-                            onClick={() => setShowCreditsTooltip(false)}
-                            className="text-gray-400 hover:text-white transition-colors"
+                            onClick={() => {
+                              window.location.href = "/#pricing";
+                              setShowCreditsTooltip(false);
+                            }}
+                            className="w-full py-2 px-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-sm font-medium rounded-md transition-all duration-300 flex items-center justify-center"
                           >
-                            ✕
+                            <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                            </svg>
+                            Buy More Credits
                           </button>
                         </div>
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-white font-bold text-lg">
-                            {userCreditsLoading ? (
-                              <Spin size="small" />
-                            ) : (
-                              `${userCredits.pageGeneratorLimit - userCredits.pageGeneratorUsage} Available`
-                            )}
-                          </span>
-                        </div>
-                        <div className="h-2 bg-gray-700 rounded-full overflow-hidden mb-3">
-                          <div 
-                            className="h-full bg-gradient-to-r from-purple-500 to-blue-500" 
-                            style={{
-                              width: `${Math.min(100, ((userCredits.pageGeneratorLimit - userCredits.pageGeneratorUsage) / userCredits.pageGeneratorLimit) * 100)}%`
-                            }}
-                          ></div>
-                        </div>
-                        <p className="mb-3 text-gray-300">Total Credits: {userCredits.pageGeneratorLimit}</p>
-                        <p className="mb-3 text-gray-300">Used: {userCredits.pageGeneratorUsage}</p>
-                        <p className="text-gray-400 text-xs mb-4">Note: Changing the overall color scheme or style of the page will also consume credits.</p>
-                        
-                        {/* 添加购买更多积分按钮 */}
-                        <button 
-                          onClick={() => {
-                            window.location.href = "/#pricing";
-                            setShowCreditsTooltip(false);
-                          }}
-                          className="w-full py-2 px-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-sm font-medium rounded-md transition-all duration-300 flex items-center justify-center"
-                        >
-                          <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                          </svg>
-                          Buy More Credits
-                        </button>
-                      </div>
-                    )}
-                  </div>
+                      )}
+                    </div>
 
-                  {/* 登出按钮 */}
-                  <button
-                    onClick={handleLogout}
-                    className="px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-600/80 to-blue-600/80 text-white hover:from-cyan-500 hover:to-blue-500 transition-all duration-300 shadow-lg hover:shadow-cyan-500/20"
-                  >
-                    Log Out
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-4">
-                  <button
-                    onClick={handleRegularLoginClick}
-                    className="px-4 py-2 text-sm font-medium text-white bg-slate-800/50 backdrop-blur-sm rounded-lg hover:bg-slate-700/60 transition-all duration-300 border border-slate-700/50 hover:border-cyan-500/30"
-                  >
-                    Sign In
-                  </button>
-                  <button
-                    onClick={handleGoogleLogin}
-                    disabled={loading}
-                    className="flex items-center px-4 py-2 text-sm font-medium text-white bg-slate-800/50 backdrop-blur-sm rounded-lg hover:bg-slate-700/60 transition-all duration-300 border border-slate-700/50 hover:border-purple-500/30"
-                  >
-                    {loading ? (
-                      <span className="flex items-center justify-center">
-                        <svg className="w-5 h-5 mr-2 animate-spin" viewBox="0 0 24 24" fill="none">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Processing...
-                      </span>
-                    ) : (
-                      <>
-                        <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                        </svg>
-                        Sign in with Google
-                      </>
-                    )}
-                  </button>
-                </div>
-              )}
+                    {/* 登出按钮 */}
+                    <button
+                      onClick={handleLogout}
+                      className="px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-600/80 to-blue-600/80 text-white hover:from-cyan-500 hover:to-blue-500 transition-all duration-300 shadow-lg hover:shadow-cyan-500/20"
+                    >
+                      Log Out
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-4">
+                    <button
+                      onClick={handleRegularLoginClick}
+                      className="px-4 py-2 text-sm font-medium text-white bg-slate-800/50 backdrop-blur-sm rounded-lg hover:bg-slate-700/60 transition-all duration-300 border border-slate-700/50 hover:border-cyan-500/30"
+                    >
+                      Sign In
+                    </button>
+                    <button
+                      onClick={handleGoogleLogin}
+                      disabled={loading}
+                      className="flex items-center px-4 py-2 text-sm font-medium text-white bg-slate-800/50 backdrop-blur-sm rounded-lg hover:bg-slate-700/60 transition-all duration-300 border border-slate-700/50 hover:border-purple-500/30"
+                    >
+                      {loading ? (
+                        <span className="flex items-center justify-center">
+                          <svg className="w-5 h-5 mr-2 animate-spin" viewBox="0 0 24 24" fill="none">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Processing...
+                        </span>
+                      ) : (
+                        <>
+                          <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                          </svg>
+                          Sign in with Google
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* 移动菜单样式更新 */}
