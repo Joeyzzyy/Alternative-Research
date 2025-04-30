@@ -42,57 +42,50 @@ export default function BottomBanner({ onClick }) {
 
   return (
     <div
-      className={`fixed bottom-0 left-0 right-0 z-[60] flex justify-center items-center transition-all duration-500
-        ${show ? 'bottom-banner-float-in' : 'opacity-0 translate-y-8'}
+      className={`fixed bottom-0 left-0 right-0 z-[60] flex flex-col sm:flex-row justify-center items-center transition-all duration-500
+        ${show ? 'bottom-banner-float-in' : 'opacity-0 translate-y-full sm:translate-y-8'}
+        h-auto py-4 sm:h-20 sm:py-0 px-4 sm:px-6
       `}
       style={{
         background: 'linear-gradient(90deg, #f3f4f6 0%, #e0e7ff 100%)',
         boxShadow: '0 -2px 8px 0 rgba(129,140,248,0.08)',
-        height: '80px',
         fontSize: '0.90rem',
         fontWeight: 500,
         letterSpacing: '0.01em',
         borderTop: '1px solid rgba(120,120,120,0.08)',
         backdropFilter: 'blur(1.5px)',
-        padding: '0 1.5rem',
       }}
     >
       <button
         onClick={() => setIsVisible(false)}
-        className="mr-2 text-gray-500 hover:text-gray-700 transition-colors"
+        className="absolute top-2 right-2 sm:relative sm:top-auto sm:right-auto sm:mr-2 text-gray-500 hover:text-gray-700 transition-colors"
         style={{
-          position: 'relative',
           fontSize: '1.2rem',
           lineHeight: '1',
           background: 'none',
           border: 'none',
           cursor: 'pointer',
           padding: '0.2rem 0.5rem',
-          alignSelf: 'flex-start',
-          marginTop: '0.5rem',
         }}
         aria-label="Close Banner"
       >
         &times;
       </button>
       <span
+        className="text-center sm:text-left text-sm sm:text-[0.92em] mb-3 sm:mb-0 sm:mr-4 whitespace-normal sm:whitespace-nowrap"
         style={{
           color: '#333',
           fontWeight: 500,
-          fontSize: '0.92em',
-          marginRight: '1.2rem',
           letterSpacing: '0.01em',
-          whiteSpace: 'nowrap'
         }}
       >
         Turn competitor searches into customers - start for free.
       </span>
       <button
-        className="ml-2 px-4 py-1.5 rounded-md font-bold shadow transition-all duration-150"
+        className="mt-2 sm:mt-0 sm:ml-2 px-4 py-1.5 rounded-md font-bold shadow transition-all duration-150 text-sm sm:text-[0.92em]"
         style={{
           background: 'linear-gradient(90deg, #f0fdfa 0%, #ede9fe 100%)',
           color: '#6d28d9',
-          fontSize: '0.92em',
           border: 'none',
           outline: 'none',
           cursor: 'pointer',
@@ -102,7 +95,6 @@ export default function BottomBanner({ onClick }) {
       >
         Quick Start
       </button>
-      
     </div>
   );
 }
