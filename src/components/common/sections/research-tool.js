@@ -2159,11 +2159,10 @@ const ResearchTool = ({
               <h1 className={`text-4xl font-bold mb-6 text-right`}>
                 <div className="relative inline-block"> {/* inline-block 使其宽度适应内容 */}
                   <span className="text-6xl font-bold bg-gradient-to-b from-white via-gray-200 to-gray-400 bg-clip-text text-transparent [text-shadow:0_0_10px_rgba(255,255,255,0.4)]">
-                    Own
                     <br />
                     Every
                     <br />
-                    '[Competitor] Alternative'
+                    '<span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">[Competitor] Alternative</span>'
                     <br />
                     Search.
                   </span>
