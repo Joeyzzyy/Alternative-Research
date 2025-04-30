@@ -8,7 +8,7 @@ import CallToAction from '../common/sections/call-to-action';
 import ResearchTool from '../common/sections/research-tool';
 import SubscriptionCard from '../common/sections/subscription-card';
 import FeatureIntro from '../common/sections/feature-intro';
-import FeatureIntroLeftRight from '../common/sections/feature-intro-left-right';
+import HowItWorks from '../common/sections/how-it-works';
 import Recommendations from '../common/sections/recommendations';
 import ShowCase from '../common/sections/show-case';
 import ResultPreview from '../common/sections/result-preview';
@@ -21,10 +21,10 @@ const COMPONENT_MAP = {
   ResearchTool: ResearchTool,
   SubscriptionCard: SubscriptionCard,
   FeatureIntro: FeatureIntro,
-  FeatureIntroLeftRight: FeatureIntroLeftRight,
   Recommendations: Recommendations,
   ResultPreview: ResultPreview,
   ShowCase: ShowCase,
+  HowItWorks: HowItWorks,
 };
 
 const generateSchemaMarkup = (article) => {
