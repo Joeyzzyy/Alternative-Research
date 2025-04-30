@@ -150,7 +150,7 @@ const SubscriptionCard = () => {
         name: "Free Trial",
         price: { monthly: 0, yearly: 0 },
         description: "Start exploring with 50 free credits to get started",
-        buttonText: "Start Free Trial",
+        buttonText: "Start Generating Now",
         popular: false,
         features: [
           {
