@@ -44,7 +44,6 @@ const FAQTwoColumnsWithSmallTitle = ({ data }) => { // Remove the theme prop
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-6 bg-gradient-to-r from-cyan-400 to-purple-500 text-transparent bg-clip-text">
             Frequently asked questions
           </h2>
-          <div className="w-16 h-0.5 bg-gradient-to-r from-cyan-500 via-purple-500 to-rose-500 mx-auto"></div>
         </div>
 
         <div className="grid grid-cols-1 gap-y-6">
