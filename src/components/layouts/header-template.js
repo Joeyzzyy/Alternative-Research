@@ -200,19 +200,6 @@ export default function Header() {
 
   const mainMenuItems = [
     {
-      label: "Go Back To Top",
-      color: "#000000",
-      fontWeight: "600",
-      link: "#",
-      onClick: (e) => {
-        e.preventDefault();
-        window.scrollTo({
-          top: 0,
-          behavior: 'smooth'
-        });
-      }
-    },
-    {
       label: "Pricing",
       color: "#000000", 
       fontWeight: "600",

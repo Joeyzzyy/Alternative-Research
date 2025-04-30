@@ -64,9 +64,8 @@ const ResearchTool = ({
 
   // --- 新增：示例数据和当前索引状态 ---
   const examples = [
-    { url: 'https://nytgames.top', title: 'NYT Games Top', image: '/images/preview-nytgames.png', timestamp: 'Generated 2 hours ago' },
-    { url: 'https://websitelm.com', title: 'WebsiteLM', image: '/images/preview-websitelm.png', timestamp: 'Generated yesterday' },
-    { url: 'https://neobund.com', title: 'Neobund', image: '/images/preview-neobund.png', timestamp: 'Generated on Oct 26' }
+    { url: 'https://alternative.nytgames.top/nyt-games-original-alternative', title: 'NYT Games Top', image: '/images/preview-nytgames.png', timestamp: 'Generated 2 hours ago' },
+    { url: 'https://alternative.neobund.com/doba-alternative', title: 'Neobund', image: '/images/preview-neobund.png', timestamp: 'Generated on Oct 26' }
   ];
   const [currentExampleIndex, setCurrentExampleIndex] = useState(0);
   // --- 结束新增 ---
@@ -2205,7 +2204,9 @@ const ResearchTool = ({
               <h1 className={`text-4xl font-bold mb-6 text-right`}>
                 <div className="relative inline-block"> {/* inline-block 使其宽度适应内容 */}
                   <span className="text-6xl font-bold bg-gradient-to-b from-white via-gray-200 to-gray-400 bg-clip-text text-transparent [text-shadow:0_0_10px_rgba(255,255,255,0.4)]">
-                    Own Every
+                    Own
+                    <br />
+                    Every
                     <br />
                     '[Competitor] Alternative'
                     <br />
@@ -2295,7 +2296,6 @@ const ResearchTool = ({
 
           {/* === 右侧栏 (修改标题和时间戳位置) === */}
           <div className="w-1/2 flex flex-col items-center justify-center pt-8 relative">
-            <h3 className={`text-xl font-semibold text-white mb-2 text-center drop-shadow-lg`}>Alternative Page Showcase</h3> {/* 减少 mb */}
             <p className="text-sm text-blue-300 mb-4 text-center flex items-center justify-center gap-1.5">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-green-400 animate-pulse" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
