@@ -2086,9 +2086,18 @@ const ResearchTool = ({
                   <Input
                     placeholder={dynamicPlaceholder}
                     value={userInput}
-                    onChange={(e) => { /* ... input change ... */ }}
-                    className={`research-tool-input w-full border rounded-xl text-base bg-white/90 border-blue-600/50 focus:border-blue-500 focus:ring focus:ring-blue-500/30 text-stone-800 placeholder-stone-500/80`}
-                    style={{ color: '#433422', height: '56px' }}
+                    onChange={(e) => {
+                      setUserInput(e.target.value);
+                      localStorage.setItem('urlInput', e.target.value);
+                    }}
+                    className={`research-tool-input w-full border rounded-xl text-lg bg-white/90 border-blue-600/50 focus:border-blue-500 focus:ring focus:ring-blue-500/30 text-stone-800 placeholder-stone-500/80`}
+                    style={{
+                      color: '#433422',
+                      height: '64px', // <-- 修改：将输入框高度调整为 64px 以匹配按钮
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                    }}
                   />
                 </div>
                 <div className="w-full">
