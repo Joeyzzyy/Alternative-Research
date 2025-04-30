@@ -51,8 +51,8 @@ const SubscriptionCard = () => {
           'Standard-Monthly',
           'Professional-Annual',
           'Professional-Monthly ',
-          'Testing-Standard-Monthly' // 只加这个测试套餐
-        ].includes(pkg.packageName)
+          'Testing-Standard-Monthly'
+        ].includes(pkg.packageName.trim())
       );
 
       // 归类
@@ -63,78 +63,113 @@ const SubscriptionCard = () => {
       };
 
       filtered.forEach(pkg => {
-        if (pkg.packageName.startsWith('Standard')) {
-          if (pkg.packageName.endsWith('Monthly')) {
+        const trimmedPackageName = pkg.packageName.trim();
+        if (trimmedPackageName.startsWith('Standard')) {
+          if (trimmedPackageName.endsWith('Monthly')) {
             planMap.Standard.monthly = pkg;
           } else {
             planMap.Standard.yearly = pkg;
           }
-        } else if (pkg.packageName.startsWith('Professional')) {
-          if (pkg.packageName.endsWith('Monthly ')) {
+        } else if (trimmedPackageName.startsWith('Professional')) {
+          if (trimmedPackageName.endsWith('Monthly')) {
             planMap.Professional.monthly = pkg;
           } else {
             planMap.Professional.yearly = pkg;
           }
-        } else if (pkg.packageName === 'Testing-Standard-Monthly') {
+        } else if (trimmedPackageName === 'Testing-Standard-Monthly') {
           planMap.Testing.monthly = pkg;
         }
       });
 
-      setPlans([
-        {
-          name: "Standard",
-          price: {
-            monthly: planMap.Standard.monthly?.packagePrice ?? '-',
-            yearly: planMap.Standard.yearly?.packagePrice ?? '-'
-          },
-          description: "Everything you need to start creating alternative pages",
-          buttonText: "Choose This Plan",
-          popular: false,
-          features: [
-            {
-              title: "Features include:",
-              items: [
-                `300 credits/month (can be used for alternative page or blog generation)`,
-                `Generate up to ${planMap.Standard.monthly?.pageLimit ?? 30} pages in total /month`,
-                `Freely hosting 30 pages on our server`,
-                "Auto images grabbing and matching",
-                "Auto internal links insertion",
-                "AI page design and generation",
-                "Standard support",
-                "1 Free onboarding call"
-              ]
-            }
-          ]
+      // 定义 Standard 和 Professional 套餐对象
+      const standardPlan = {
+        name: "Standard",
+        price: {
+          monthly: planMap.Standard.monthly?.packagePrice ?? '-',
+          yearly: planMap.Standard.yearly?.packagePrice ?? '-'
         },
-        {
-          name: "Professional",
-          price: {
-            monthly: planMap.Professional.monthly?.packagePrice ?? '-',
-            yearly: planMap.Professional.yearly?.packagePrice ?? '-'
-          },
-          description: "Perfect for teams scaling alternative page production",
-          buttonText: "Choose This Plan",
-          popular: true,
-          features: [
-            {
-              title: "Everything in Standard, plus:",
-              items: [
-                `1000 credits/month (can be used for alternative page or blog generation)`,
-                `Generate up to ${planMap.Professional.monthly?.pageLimit ?? 100} pages in total /month`,
-                `Freely hosting 100 pages on our server`,
-                "Auto images grabbing and matching",
-                "Auto internal links insertion",
-                "AI page design and generation",
-                "Priority page generation",
-                "Pro features:",
-                "More alternative pages generation",
-                "Unlimited Page Section Re-generation",
-                "Priority support"
-              ]
-            }
-          ]
+        description: "Everything you need to start creating alternative pages",
+        buttonText: "Choose This Plan",
+        popular: false,
+        features: [
+          {
+            title: "Features include:",
+            items: [
+              `300 credits/month (can be used for alternative page or blog generation)`,
+              `Generate up to ${planMap.Standard.monthly?.pageLimit ?? 30} pages in total /month`,
+              `Freely hosting ${planMap.Standard.monthly?.pageLimit ?? 30} pages on our server`,
+              "Auto images grabbing and matching",
+              "Auto internal links insertion",
+              "AI page design and generation",
+              "Standard support",
+              "1 Free onboarding call"
+            ]
+          }
+        ],
+        priceId: {
+          monthly: planMap.Standard.monthly?.priceId,
+          yearly: planMap.Standard.yearly?.priceId
+        }
+      };
+
+      const professionalPlan = {
+        name: "Professional",
+        price: {
+          monthly: planMap.Professional.monthly?.packagePrice ?? '-',
+          yearly: planMap.Professional.yearly?.packagePrice ?? '-'
         },
-        {
+        description: "Perfect for teams scaling alternative page production",
+        buttonText: "Choose This Plan",
+        popular: true,
+        features: [
+          {
+            title: "Everything in Standard, plus:",
+            items: [
+              `1000 credits/month (can be used for alternative page or blog generation)`,
+              `Generate up to ${planMap.Professional.monthly?.pageLimit ?? 100} pages in total /month`,
+              `Freely hosting ${planMap.Professional.monthly?.pageLimit ?? 100} pages on our server`,
+              "Auto images grabbing and matching",
+              "Auto internal links insertion",
+              "AI page design and generation",
+              "Priority page generation",
+              "Pro features:",
+              "More alternative pages generation",
+              "Unlimited Page Section Re-generation",
+              "Priority support"
+            ]
+          }
+        ],
+        priceId: {
+          monthly: planMap.Professional.monthly?.priceId,
+          yearly: planMap.Professional.yearly?.priceId
+        }
+      };
+
+      // 定义 Free Trial 套餐对象 (复制 Standard 权益并修改)
+      const freeTrialPlan = {
+        name: "Free Trial",
+        price: { monthly: 0, yearly: 0 },
+        description: "Start exploring with 50 free credits to get started",
+        buttonText: "Start Free Trial",
+        popular: false,
+        features: [
+          {
+            title: "Features include:",
+            items: [
+              `50 credits/month (can be used for alternative page or blog generation)`,
+              `Generate up to ${Math.ceil((planMap.Standard.monthly?.pageLimit ?? 30) / 6)} pages in total /month`,
+              `Freely hosting ${Math.ceil((planMap.Standard.monthly?.pageLimit ?? 30) / 6)} pages on our server`,
+              ...(standardPlan.features[0].items.slice(3))
+            ]
+          }
+        ],
+        planId: 'free-trial'
+      };
+
+      // 定义 Test 套餐对象 (如果存在)
+      let testPlan = null;
+      if (planMap.Testing.monthly) {
+        testPlan = {
           name: "Test (0.01 USD)",
           price: {
             monthly: planMap.Testing.monthly?.packagePrice ?? '-',
@@ -156,8 +191,16 @@ const SubscriptionCard = () => {
           priceId: {
             monthly: planMap.Testing.monthly?.priceId
           }
-        }
-      ]);
+        };
+      }
+
+      // 组合最终的套餐列表: Free Trial 在最前，然后是 Standard, Professional, 最后是 Test (如果存在)
+      const combinedPlans = [freeTrialPlan, standardPlan, professionalPlan];
+      if (testPlan) {
+        combinedPlans.push(testPlan);
+      }
+
+      setPlans(combinedPlans);
     });
   }, []);
 
@@ -170,6 +213,15 @@ const SubscriptionCard = () => {
   };
 
   const handleSelectPlan = (plan) => {
+    // 检查是否是 Free Trial 套餐
+    if (plan.planId === 'free-trial') {
+      // 不再检查登录状态，直接滚动到页面顶部
+      window.scrollTo({ top: 0, behavior: 'smooth' }); // 使用平滑滚动效果
+      // 可以保留或修改提示信息
+      return; // 结束函数，不显示支付模态框
+    }
+
+    // 对于非 Free Trial 套餐，执行原有逻辑 (仍然需要检查登录)
     if (!isLoggedIn) {
       setShowLoginModal(true);
       return;
@@ -222,16 +274,18 @@ const SubscriptionCard = () => {
             </div>
 
             {/* Subscription cards */}
-            <div className="mt-12 grid gap-8 lg:grid-cols-2 max-w-4xl mx-auto">
+            <div className="mt-12 grid gap-8 lg:grid-cols-3 max-w-7xl mx-auto">
               {displayData.bottomContent.plans.map((plan) => (
                 <div
                   key={plan.name}
-                  className={`relative flex flex-col rounded-2xl p-8 transition-all duration-500 text-center 
-                    backdrop-blur-sm 
+                  className={`relative flex flex-col rounded-2xl p-8 transition-all duration-500 text-center
+                    backdrop-blur-sm
                     ${
                       plan.popular
                         ? 'bg-gradient-to-b from-slate-800/95 to-slate-900/95 border-2 border-purple-500/50 ring-4 ring-purple-500/10 scale-[1.02] shadow-xl shadow-purple-500/20'
-                        : 'bg-slate-900/70 border border-slate-700/50 shadow-lg shadow-cyan-500/5 hover:shadow-xl hover:shadow-cyan-500/10'
+                        : plan.name === "Free Trial"
+                          ? 'bg-slate-900/70 border border-slate-700/50 shadow-lg shadow-emerald-500/5 hover:shadow-xl hover:shadow-emerald-500/10'
+                          : 'bg-slate-900/70 border border-slate-700/50 shadow-lg shadow-cyan-500/5 hover:shadow-xl hover:shadow-cyan-500/10'
                     }
                     hover:translate-y-[-4px]`}
                 >
@@ -246,12 +300,19 @@ const SubscriptionCard = () => {
                   <h3 className="text-2xl font-bold text-white mt-4">{plan.name}</h3>
 
                   <div className="mt-8 mb-4 flex items-center justify-center space-x-4">
-                    <span className={`text-4xl font-extrabold tracking-tight
-                      ${plan.popular ? 'bg-gradient-to-r from-purple-400 to-rose-400 bg-clip-text text-transparent' : 'text-cyan-400'}
+                    <span className={`text-3xl font-extrabold tracking-tight
+                      ${plan.popular
+                        ? 'bg-gradient-to-r from-purple-400 to-rose-400 bg-clip-text text-transparent'
+                        : plan.name === "Free Trial"
+                          ? 'text-emerald-400'
+                          : 'text-cyan-400'
+                      }
                     `}>
-                      ¥{plan.price[selectedPeriod]}
+                      {plan.name === "Free Trial" ? '¥0' : `¥${plan.price[selectedPeriod]}`}
                     </span>
-                    <span className="text-lg text-gray-400 font-medium">/mo</span>
+                    {plan.name !== "Free Trial" && (
+                      <span className="text-lg text-gray-400 font-medium">/mo</span>
+                    )}
                     <span className="mx-2">
                       <svg className="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
@@ -264,12 +325,15 @@ const SubscriptionCard = () => {
                         </svg>
                       </span>
                       <span className={`
-                        text-5xl font-extrabold tracking-tight drop-shadow-lg animate-bounce
+                        text-4xl font-extrabold tracking-tight drop-shadow-lg animate-bounce
                         ${plan.popular
                           ? 'bg-gradient-to-r from-yellow-300 via-pink-400 to-purple-500 bg-clip-text text-transparent'
-                          : 'bg-gradient-to-r from-cyan-300 via-blue-400 to-green-400 bg-clip-text text-transparent'
+                          : plan.name === "Free Trial"
+                            ? 'bg-gradient-to-r from-emerald-300 via-green-400 to-teal-400 bg-clip-text text-transparent'
+                            : 'bg-gradient-to-r from-cyan-300 via-blue-400 to-green-400 bg-clip-text text-transparent'
                         }
                       `}>
+                        {plan.name === "Free Trial" && "50"}
                         {plan.name === "Standard" && "300"}
                         {plan.name === "Professional" && "1000"}
                       </span>
@@ -281,9 +345,11 @@ const SubscriptionCard = () => {
 
                   <div className="mt-8 relative group">
                     <div className={`absolute -inset-0.5 rounded-xl blur-sm bg-gradient-to-r ${
-                      plan.popular 
-                        ? 'from-purple-500 via-fuchsia-500 to-rose-500 opacity-70 group-hover:opacity-100' 
-                        : 'from-cyan-500 to-blue-500 opacity-50 group-hover:opacity-70'
+                      plan.popular
+                        ? 'from-purple-500 via-fuchsia-500 to-rose-500 opacity-70 group-hover:opacity-100'
+                        : plan.name === "Free Trial"
+                          ? 'from-emerald-500 to-green-500 opacity-50 group-hover:opacity-70'
+                          : 'from-cyan-500 to-blue-500 opacity-50 group-hover:opacity-70'
                       } transition duration-300`}></div>
                     <button
                       className={`relative w-full py-4 px-6 rounded-xl text-white text-base font-medium bg-slate-900
@@ -298,17 +364,32 @@ const SubscriptionCard = () => {
                   <div className="mt-8 space-y-6">
                     {plan.features.map((section, index) => (
                       <div key={index}>
-                        <h4 className={`text-sm font-semibold uppercase tracking-wide mb-4 
-                          ${plan.popular ? 'text-purple-400' : 'text-cyan-400'}`}>
+                        <h4 className={`text-sm font-semibold uppercase tracking-wide mb-4
+                          ${plan.popular
+                            ? 'text-purple-400'
+                            : plan.name === "Free Trial"
+                              ? 'text-emerald-400'
+                              : 'text-cyan-400'
+                          }`}>
                           {section.title}
                         </h4>
                         <ul className="space-y-4">
                           {section.items.map((feature, featureIndex) => (
                             <li key={featureIndex} className="flex items-start">
                               <div className={`w-5 h-5 mr-3 rounded-full flex-shrink-0 flex items-center justify-center
-                                ${plan.popular ? 'bg-purple-500/20' : 'bg-cyan-500/20'}`}>
-                                <svg className={`w-3.5 h-3.5 
-                                  ${plan.popular ? 'text-purple-400' : 'text-cyan-400'}`} 
+                                ${plan.popular
+                                  ? 'bg-purple-500/20'
+                                  : plan.name === "Free Trial"
+                                    ? 'bg-emerald-500/20'
+                                    : 'bg-cyan-500/20'
+                                }`}>
+                                <svg className={`w-3.5 h-3.5
+                                  ${plan.popular
+                                    ? 'text-purple-400'
+                                    : plan.name === "Free Trial"
+                                      ? 'text-emerald-400'
+                                      : 'text-cyan-400'
+                                  }`}
                                   fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                                 </svg>
