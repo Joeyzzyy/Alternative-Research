@@ -76,6 +76,9 @@ export default function Footer() {
       title: "Navigation", // Section Title
       links: [
         { label: "Back to Top", url: "#" }, // Internal link
+        { label: "The Problem", url: "#the-problem" }, // 修改：改为内部锚点链接
+        { label: "How It Works", url: "#how-it-works" }, // 修改：改为内部锚点链接
+        { label: "Features", url: "#features" }, // 修改：改为内部锚点链接
         { label: "Pricing", url: "#pricing" }, // 修改：改为内部锚点链接
         { label: "FAQ", url: "#faq" }, // 修改：改为内部锚点链接
       ],

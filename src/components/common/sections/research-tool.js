@@ -1935,7 +1935,7 @@ const ResearchTool = ({
 
   useEffect(() => {
     const placeholderTexts = [
-      "Enter product website URL to get started.",
+      "Enter your product website URL to get started.",
       "eg. altpage.ai or https://altpage.ai"
     ];
     const typingSpeed = 20; // milliseconds per character
@@ -2176,7 +2176,7 @@ const ResearchTool = ({
             </div>
 
             {/* 将表单和提示移到左栏 */}
-            <div className="relative max-w-xl mx-auto w-full"> {/* 确保表单容器占满左栏宽度 */}
+            <div className="relative max-w-[44rem] ml-auto w-full"> {/* 父容器，定义了最大宽度 */}
               <form onSubmit={(e) => {
                 e.preventDefault();
                 if (!validateDomain(userInput)) {
@@ -2187,35 +2187,39 @@ const ResearchTool = ({
                 const formattedInput = userInput.trim();
                 initializeChat(formattedInput);
               }}>
-                  <div className="relative">
-                    <Input
-                      placeholder={dynamicPlaceholder}
-                      value={userInput}
-                      onChange={(e) => {
-                        setUserInput(e.target.value);
-                        localStorage.setItem('urlInput', e.target.value);
-                      }}
-                      className={`research-tool-input border rounded-xl text-lg w-full bg-white/90 border-blue-600/50 focus:border-blue-500 focus:ring focus:ring-blue-500/30 text-stone-800 placeholder-stone-500/80`}
-                      style={{
-                        color: '#433422',
-                        height: '80px',
-                        paddingRight: '220px',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        maxWidth: '100%',
-                      }}
-                    />
-                    <div className="absolute right-2 top-1/2 transform -translate-y-1/2 z-10 flex gap-2">
+                  {/* --- Flex 容器：让内部元素水平排列 --- */}
+                  <div className="flex items-center gap-2">
+                    {/* --- 输入框容器：使用 flex-grow 占据剩余空间 --- */}
+                    <div className="flex-grow">
+                      <Input
+                        placeholder={dynamicPlaceholder}
+                        value={userInput}
+                        onChange={(e) => {
+                          setUserInput(e.target.value);
+                          localStorage.setItem('urlInput', e.target.value);
+                        }}
+                        className={`research-tool-input border rounded-xl text-lg bg-white/90 border-blue-600/50 focus:border-blue-500 focus:ring focus:ring-blue-500/30 text-stone-800 placeholder-stone-500/80`}
+                        style={{
+                          color: '#433422',
+                          height: '80px', // 输入框高度
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                        }}
+                      />
+                    </div>
+                    {/* --- 按钮容器：占据自身所需宽度 --- */}
+                    <div>
                       <button
                         type="submit"
-                        className={`px-6 py-4 text-base
+                        // --- 修改：减少水平内边距 (px-6 -> px-4)，移除 border 类 ---
+                        className={`px-4 py-4 text-base
                           bg-gradient-to-r from-blue-500 to-purple-700 text-white border-blue-400/50 hover:border-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.5)] hover:shadow-[0_0_25px_rgba(59,130,246,0.7)] hover:from-blue-400 hover:to-purple-600
                           rounded-xl
                           transition-all duration-300 flex items-center gap-2
-                          border hover:scale-105 shadow-lg
+                          hover:scale-105 shadow-lg
                           ${isProcessingTask ? 'opacity-70 cursor-not-allowed hover:scale-100' : 'cursor-pointer'}`}
-                        style={{ height: '64px' }}
+                        style={{ height: '64px' }} // 按钮高度，可调整以匹配输入框
                         disabled={!userInput.trim() || isProcessingTask}
                       >
                         {isProcessingTask ? (
@@ -2250,7 +2254,7 @@ const ResearchTool = ({
           {/* === 结束左侧栏 === */}
 
           {/* === 右侧栏 (修改标题和时间戳位置) === */}
-          <div className="w-1/2 flex flex-col items-center justify-center pt-8 relative">
+          <div className="w-1/2 flex flex-col items-center justify-center relative">
             <p className="text-sm text-blue-300 mb-4 text-center flex items-center justify-center gap-1.5">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-green-400 animate-pulse" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />

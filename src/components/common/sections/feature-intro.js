@@ -282,7 +282,7 @@ const AlternativePageFeature = () => {
             {/* Step 2: The Missed Opportunity (Visual Above Text) */}
             <div className="flex flex-col items-center">
               <div className="w-full flex justify-center items-center mb-8 h-72"> {/* Set consistent height h-72 */}
-                <div className="w-full max-w-md bg-white rounded-lg border border-red-500/50 transition-transform duration-300 p-4 overflow-hidden text-sm font-sans relative h-full"> {/* Added h-full to fill parent */}
+                <div className="w-full max-w-md bg-white rounded-lg border border-green-500/50 transition-transform duration-300 p-4 overflow-hidden text-sm font-sans relative h-full"> {/* Added h-full to fill parent */}
                   <div className="flex items-center border border-gray-200 rounded-full px-3 py-1.5 mb-3 bg-white opacity-70">
                     <svg className="h-4 w-4 mr-2 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                        <path d="M21.35,11.1H12.18V13.83H18.69C18.36,17.64 15.19,19.27 12.19,19.27C8.36,19.27 5.03,16.06 5.03,12C5.03,7.94 8.36,4.73 12.19,4.73C14.76,4.73 16.84,5.88 18.13,7.56L20.47,5.22C18.46,3.31 15.6,2.18 12.19,2.18C6.92,2.18 2.73,6.59 2.73,12C2.73,17.41 6.92,21.82 12.19,21.82C17.8,21.82 21.61,17.88 21.61,12.33C21.61,11.89 21.51,11.5 21.35,11.1Z"/>
@@ -292,7 +292,7 @@ const AlternativePageFeature = () => {
                   {/* Fake Results Area - Highlighted */}
                   <div className="space-y-3 opacity-80"> {/* Increased opacity slightly */}
                     {/* Result 1 - Boxed */}
-                    <div className="border border-red-400 rounded p-2 bg-red-50/50"> {/* Added red border, padding, and light red background */}
+                    <div className="border border-green-400 rounded p-2 bg-green-50/50"> {/* Added green border, padding, and light green background */}
                       <span className="text-xs text-gray-600 block truncate">https://www.competitor-a.com/</span>
                       <a href="#" onClick={(e) => e.preventDefault()} className="text-blue-700 text-base sm:text-lg hover:underline block truncate font-medium">
                         Competitor A - The Easy Website Builder
@@ -302,7 +302,7 @@ const AlternativePageFeature = () => {
                       </p>
                     </div>
                     {/* Result 2 - Boxed */}
-                    <div className="border border-red-400 rounded p-2 bg-red-50/50"> {/* Added red border, padding, and light red background */}
+                    <div className="border border-green-400 rounded p-2 bg-green-50/50"> {/* Added green border, padding, and light green background */}
                       <span className="text-xs text-gray-600 block truncate">https://www.competitor-b.io/features</span>
                       <a href="#" onClick={(e) => e.preventDefault()} className="text-blue-700 text-base sm:text-lg hover:underline block truncate font-medium">
                         Compare Competitor B vs Wix | Find Your Fit
@@ -312,7 +312,7 @@ const AlternativePageFeature = () => {
                       </p>
                     </div>
                     {/* Result 3 - Boxed */}
-                    <div className="hidden sm:block border border-red-400 rounded p-2 bg-red-50/50"> {/* Added red border, padding, and light red background */}
+                    <div className="hidden sm:block border border-green-400 rounded p-2 bg-green-50/50"> {/* Added green border, padding, and light green background */}
                       <span className="text-xs text-gray-600 block truncate">https://blog.competitor-c.dev/alternatives</span>
                       <a href="#" onClick={(e) => e.preventDefault()} className="text-blue-700 text-base sm:text-lg hover:underline block truncate font-medium">
                         Top Wix Alternatives Reviewed for 2024
@@ -327,7 +327,7 @@ const AlternativePageFeature = () => {
               </div>
               {/* Text Content Below */}
               <div className="w-full">
-                 <span className="inline-block px-3 py-1 text-xs font-semibold text-red-400 bg-red-900/50 rounded-full mb-3">Step 2</span>
+                 <span className="inline-block px-3 py-1 text-xs font-semibold text-green-400 bg-green-900/50 rounded-full mb-3">Step 2</span>
                 <h3 className="text-2xl sm:text-3xl font-bold text-white mb-4">Competitor results dominate
                 </h3>
                 <p className="text-gray-300 text-lg">

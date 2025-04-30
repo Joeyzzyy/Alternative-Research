@@ -9,7 +9,7 @@ const CustomizableResearchUI = forwardRef(({}, ref) => {
       id: 1,
       image: '/images/testimonials/customer-1.jpg', // Replace with actual image path
       quote: "AltPage.ai revolutionized our SEO strategy. The alternative pages targeting competitor weaknesses gave us the edge we needed, resulting in a 45% traffic increase.",
-      avatar: '/images/zy.jpg', // Updated avatar path
+      avatar: '/images/by.jpg', // Updated avatar path
       name: 'Jane Doe',
       role: 'Marketing Director, Tech Startup',
     },
