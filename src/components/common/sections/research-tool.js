@@ -45,7 +45,7 @@ const ResearchTool = ({
   const [resultIds, setResultIds] = useState([]);
   const lastLogCountRef = useRef(0);
   const [isProcessingTask, setIsProcessingTask] = useState(false);
-  const [dynamicPlaceholder, setDynamicPlaceholder] = useState('');
+  const [dynamicPlaceholder, setDynamicPlaceholder] = useState("Enter product website URL to get started (e.g., example.com)");
   const placeholderIntervalRef = useRef(null); 
   const placeholderTimeoutRef = useRef(null);
   const [currentStep, setCurrentStep] = useState(1);
@@ -59,8 +59,17 @@ const ResearchTool = ({
   };
   const [styleChangeCompleted, setStyleChangeCompleted] = useState(false);
   const hasTriggeredStep4Ref = useRef(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true); 
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); 
   const [isUserLoggedIn, setIsUserLoggedIn] = useState(false); 
+
+  // --- 新增：示例数据和当前索引状态 ---
+  const examples = [
+    { url: 'https://nytgames.top', title: 'AltPage.ai', image: '/images/preview-nytgames.png', timestamp: 'Generated 2 hours ago' },
+    { url: 'https://websitelm.com', title: 'WebsiteLM', image: '/images/preview-websitelm.png', timestamp: 'Generated yesterday' },
+    { url: 'https://neobund.com', title: 'Neobund', image: '/images/preview-neobund.png', timestamp: 'Generated on Oct 26' }
+  ];
+  const [currentExampleIndex, setCurrentExampleIndex] = useState(0);
+  // --- 结束新增 ---
 
   useEffect(() => {
     const lastInput = localStorage.getItem('urlInput');
@@ -2040,6 +2049,28 @@ const ResearchTool = ({
     setIsSidebarOpen(!isSidebarOpen);
   };
 
+  // --- 新增：手动切换示例的函数 ---
+  const goToNextExample = () => {
+    setCurrentExampleIndex(prevIndex => (prevIndex + 1) % examples.length);
+  };
+
+  const goToPrevExample = () => {
+    setCurrentExampleIndex(prevIndex => (prevIndex - 1 + examples.length) % examples.length);
+  };
+  // --- 结束新增 ---
+
+  // --- 自动切换示例的 useEffect (保持不变) ---
+  useEffect(() => {
+    if (!showInitialScreen) return;
+
+    const intervalId = setInterval(() => {
+      setCurrentExampleIndex(prevIndex => (prevIndex + 1) % examples.length);
+    }, 5000);
+
+    return () => clearInterval(intervalId);
+  }, [showInitialScreen, examples.length]);
+  // --- 结束 ---
+
   if (initialLoading) {
     return (
       <div className="w-full min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950
@@ -2077,8 +2108,9 @@ const ResearchTool = ({
   }
 
   if (showInitialScreen) {
+    const currentExample = examples[currentExampleIndex];
     return (
-      <div className={`w-full h-screen flex items-center justify-center relative bg-cover bg-center bg-no-repeat bg-gradient-to-br from-slate-900 via-slate-950 to-black overflow-hidden`} // Tailwind class remains for fallback/structure, style overrides
+      <div className={`w-full h-screen flex items-center justify-center relative bg-cover bg-center bg-no-repeat bg-gradient-to-br from-slate-900 via-slate-950 to-black overflow-hidden`}
            style={{
              // 降低光晕透明度
              backgroundImage: `
@@ -2142,148 +2174,176 @@ const ResearchTool = ({
           `}</style>
 
         {/* Ensure content is above the effects - 保持原有布局不变 */}
-        <div className={`relative z-10 w-full max-w-8xl px-8 py-12 initial-screen-content rounded-xl bg-transparent`}> {/* 移除背景和模糊 */}
-          <div className={`text-center mb-8`}> {/* 移除 text-shadow 类，将在 span 上直接应用 */}
-            {/* 修改 h1：调整布局为垂直，修改内部 span 样式 */}
-            <h1 className={`text-4xl font-bold mb-6 flex flex-col items-center justify-center gap-1`}> {/* 改为 flex-col, 调整 gap */}
-              {/* 1. Wrap title in a relative container for badge positioning */}
-              <div className="relative inline-block">
-                {/* 2. Update gradient and add glow text-shadow */}
-                <span className="text-6xl font-bold bg-gradient-to-b from-white via-gray-200 to-gray-400 bg-clip-text text-transparent [text-shadow:0_0_10px_rgba(255,255,255,0.4)]"> {/* 更亮的渐变 + 白色辉光阴影 */}
-                  Create Alternative Pages
-                  <br />
-                  With Our AI Agent
-                </span>
-                {/* 3. Add SEO-Friendly Badge - Refined Style */}
-                <span className="absolute top-0 -right-4 transform -translate-y-1/2 rotate-12 bg-gradient-to-r from-blue-400 to-cyan-400 text-white text-xs font-semibold px-2.5 py-px rounded shadow-lg whitespace-nowrap ring-1 ring-white/20"> {/* 调整颜色、字体、内边距、阴影、添加细边框 */}
-                  SEO-Friendly
-                </span>
-              </div>
-            </h1>
-          </div>
+        <div className={`relative z-10 w-full max-w-8xl px-8 py-12 initial-screen-content rounded-xl bg-transparent flex flex-row items-start gap-12`}>
+          {/* === 左侧栏 (恢复到之前的状态) === */}
+          <div className="w-1/2 flex flex-col"> {/* 设置左栏宽度并设为 flex 容器 */}
+            <div className={`mb-8`}>
+              {/* --- 修改：改为 items-end 实现右对齐 --- */}
+              <h1 className={`text-4xl font-bold mb-6 text-right`}>
+                <div className="relative inline-block"> {/* inline-block 使其宽度适应内容 */}
+                  <span className="text-6xl font-bold bg-gradient-to-b from-white via-gray-200 to-gray-400 bg-clip-text text-transparent [text-shadow:0_0_10px_rgba(255,255,255,0.4)]">
+                    Own Every
+                    <br />
+                    '[Competitor] Alternative'
+                    <br />
+                    Search.
+                  </span>
+                </div>
+              </h1>
+              {/* --- 段落保持右对齐 --- */}
+              <p className="text-lg text-gray-300 mt-2 mb-8 text-right">
+                AI pages that outrank, out-convert, and update themselves.
+              </p>
+            </div>
 
-          <div className="relative max-w-3xl mx-auto">
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              if (!validateDomain(userInput)) {
-                console.log('[DEBUG] Invalid domain:', userInput);
-                messageApi.error('Please enter a valid domain (e.g., example.com or https://example.com)');
-                return;
-              }
-              const formattedInput = userInput.trim();
-              initializeChat(formattedInput);
-            }}>
-                <div className="relative">
-                <Input
-                  placeholder={dynamicPlaceholder} // 使用动态 placeholder
-                  value={userInput}
-                  onChange={(e) => {
-                    setUserInput(e.target.value);
-                    // 保存输入值到 localStorage
-                    localStorage.setItem('urlInput', e.target.value);
-                  }}
-                  // --- 修改：移除条件样式，使用默认样式 ---
-                  className={`research-tool-input border rounded-xl text-lg w-full bg-white/90 border-blue-600/50 focus:border-blue-500 focus:ring focus:ring-blue-500/30 text-stone-800 placeholder-stone-500/80`}
-                  style={{
-                    color: '#433422', // 保持 DAY_GHIBLI 的颜色，因为背景是白色
-                    height: '80px',
-                    paddingRight: '220px', // 增加右侧内边距，容纳两个按钮
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    maxWidth: '100%',
-                  }}
+            {/* 将表单和提示移到左栏 */}
+            <div className="relative max-w-xl mx-auto w-full"> {/* 确保表单容器占满左栏宽度 */}
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                if (!validateDomain(userInput)) {
+                  console.log('[DEBUG] Invalid domain:', userInput);
+                  messageApi.error('Please enter a valid domain (e.g., example.com or https://example.com)');
+                  return;
+                }
+                const formattedInput = userInput.trim();
+                initializeChat(formattedInput);
+              }}>
+                  <div className="relative">
+                  <Input
+                    placeholder={dynamicPlaceholder}
+                    value={userInput}
+                    onChange={(e) => {
+                      setUserInput(e.target.value);
+                      localStorage.setItem('urlInput', e.target.value);
+                    }}
+                    className={`research-tool-input border rounded-xl text-lg w-full bg-white/90 border-blue-600/50 focus:border-blue-500 focus:ring focus:ring-blue-500/30 text-stone-800 placeholder-stone-500/80`}
+                    style={{
+                      color: '#433422',
+                      height: '80px',
+                      paddingRight: '220px',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      maxWidth: '100%',
+                    }}
+                  />
+                  <div className="absolute right-2 top-1/2 transform -translate-y-1/2 z-10 flex gap-2">
+                    <button
+                      type="submit"
+                      className={`px-6 py-4 text-base
+                        bg-gradient-to-r from-blue-600 to-indigo-700 text-white border-blue-400/50 hover:border-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.5)] hover:shadow-[0_0_25px_rgba(59,130,246,0.7)] hover:from-blue-500 hover:to-indigo-600
+                        rounded-xl
+                        transition-all duration-300 flex items-center gap-2
+                        border hover:scale-105 shadow-lg
+                        ${isProcessingTask ? 'opacity-70 cursor-not-allowed hover:scale-100' : 'cursor-pointer'}`}
+                      style={{ height: '64px' }}
+                      disabled={!userInput.trim() || isProcessingTask}
+                    >
+                      {isProcessingTask ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <span className="relative z-10">Processing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <ArrowRightOutlined className="w-6 h-6" />
+                          <span className="relative z-10">Start Creating!</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  </div>
+              </form>
+            </div>
+
+            <div className="mt-4 text-center mb-8">
+              <div
+                className="inline-flex items-center px-2.5 py-1.5 rounded border border-yellow-200 bg-yellow-50 text-yellow-700 text-xs"
+                style={{ minWidth: 0, fontWeight: 400 }}
+              >
+                <svg className="w-4 h-4 mr-1 text-yellow-400" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm-1.06 13.54L7.4 12l1.41-1.41 2.12 2.12 4.24-4.24 1.41 1.41-5.64 5.66z"/>
+                </svg>
+                Generate and deploy <span className="mx-1 underline decoration-wavy decoration-yellow-200">5 free alternative pages</span> – no credit card required.
+              </div>
+            </div>
+          </div>
+          {/* === 结束左侧栏 === */}
+
+          {/* === 右侧栏 (修改标题和时间戳位置) === */}
+          <div className="w-1/2 flex flex-col items-center justify-center pt-8 relative">
+            {/* --- 修改：更新标题文本 --- */}
+            <h3 className={`text-xl font-semibold text-white mb-2 text-center drop-shadow-lg`}>Alternative Page Showcase</h3> {/* 减少 mb */}
+            {/* --- 新增：在标题下方显示时间戳 --- */}
+            <p className="text-xs text-slate-400 mb-4 text-center">{currentExample.timestamp}</p> {/* 增加 mb */}
+            {/* --- 结束新增 --- */}
+
+            <div className="relative w-full max-w-lg">
+              {/* --- 左切换按钮 (保持不变) --- */}
+              <button
+                onClick={goToPrevExample}
+                className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-full z-20 p-2 bg-slate-700/50 hover:bg-slate-600/70 rounded-full text-white transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                aria-label="Previous example"
+              >
+                <LeftOutlined />
+              </button>
+
+              <a
+                key={currentExampleIndex}
+                href={currentExample.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full mx-auto bg-stone-900/50 border-blue-700/30 hover:border-blue-600/50 text-stone-300 backdrop-blur-sm rounded-xl border relative overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 group hover:-translate-y-1 animate-fadeIn"
+              >
+                {/* --- 修改：移除卡片标题栏中的时间戳 --- */}
+                <div className="absolute top-0 left-0 right-0 h-8 bg-slate-700/80 flex items-center justify-between px-3 z-10 pointer-events-none">
+                  <div className="flex space-x-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
+                    <div className="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>
+                    <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
+                  </div>
+                  <span className="text-xs text-slate-300 truncate">{currentExample.title}</span>
+                  {/* 时间戳已从此移除 */}
+                </div>
+                {/* --- 结束修改 --- */}
+                <div className="pt-8">
+                  <img
+                    src={currentExample.image}
+                    alt={`Preview of ${currentExample.title}`}
+                    className="w-full h-auto object-cover"
+                    loading="lazy"
+                  />
+                </div>
+              </a>
+
+              {/* --- 右切换按钮 (保持不变) --- */}
+              <button
+                onClick={goToNextExample}
+                className="absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-full z-20 p-2 bg-slate-700/50 hover:bg-slate-600/70 rounded-full text-white transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                aria-label="Next example"
+              >
+                <RightOutlined />
+              </button>
+            </div>
+            {/* --- 指示点 (保持不变) --- */}
+            <div className="flex justify-center space-x-2 mt-6">
+              {examples.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentExampleIndex(index)}
+                  className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                    index === currentExampleIndex ? 'bg-blue-500 scale-125' : 'bg-slate-600 hover:bg-slate-500'
+                  }`}
+                  aria-label={`Go to example ${index + 1}`}
                 />
-                {/* 按钮区：用flex包裹两个按钮，绝对定位到输入框右侧 */}
-                <div className="absolute right-2 top-1/2 transform -translate-y-1/2 z-10 flex gap-2">
-                  <button
-                    type="submit"
-                    // --- 修改：移除条件样式，使用默认样式 ---
-                    className={`px-6 py-4 text-base
-                      bg-gradient-to-r from-blue-600 to-indigo-700 text-white border-blue-400/50 hover:border-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.5)] hover:shadow-[0_0_25px_rgba(59,130,246,0.7)] hover:from-blue-500 hover:to-indigo-600
-                      rounded-xl
-                      transition-all duration-300 flex items-center gap-2
-                      border hover:scale-105 shadow-lg
-                      ${isProcessingTask ? 'opacity-70 cursor-not-allowed hover:scale-100' : 'cursor-pointer'}`}
-                    style={{ height: '64px' }}
-                    disabled={!userInput.trim() || isProcessingTask}
-                  >
-                    {isProcessingTask ? (
-                      <>
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                        <span className="relative z-10">Processing...</span>
-                      </>
-                    ) : (
-                      <>
-                        <ArrowRightOutlined className="w-6 h-6" />
-                        <span className="relative z-10">Start Creating!</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-                </div>
-            </form>
-  
+              ))}
             </div>
-
-          {/* 添加免费credits提示 - 样式更加醒目 */}
-          <div className="mt-4 text-center mb-8">
-            <div
-              className="inline-flex items-center px-2.5 py-1.5 rounded border border-yellow-200 bg-yellow-50 text-yellow-700 text-xs"
-              style={{ minWidth: 0, fontWeight: 400 }}
-            >
-              <svg className="w-4 h-4 mr-1 text-yellow-400" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm-1.06 13.54L7.4 12l1.41-1.41 2.12 2.12 4.24-4.24 1.41 1.41-5.64 5.66z"/>
-              </svg>
-              Generate and deploy <span className="mx-1 underline decoration-wavy decoration-yellow-200">5 free alternative pages</span> – no credit card required.
-            </div>
+            {/* --- 结束指示点 --- */}
           </div>
+          {/* === 结束右侧栏 === */}
 
-          {/* --- 修改：进一步增大容器最大宽度 --- */}
-          <div className="mt-12 max-w-6xl mx-auto"> {/* 从 max-w-5xl 改为 max-w-6xl */}
-              <h3 className={`text-xl font-semibold text-white mb-6 text-center drop-shadow-lg`}>Check Alternative Pages We Have Created For Our Customers</h3>
-              {/* --- 修改：改为两列网格 --- */}
-              <div className="grid grid-cols-3 gap-8"> {/* 改为 grid-cols-2, 可以适当增大 gap */}
-                {[
-                  // --- 修改：为每个站点添加 image 属性 ---
-                  { url: 'https://nytgames.top', title: 'AltPage.ai', image: '/images/preview-nytgames.png' },
-                  { url: 'https://websitelm.com', title: 'WebsiteLM', image: '/images/preview-websitelm.png' },
-                  { url: 'https://neobund.com', title: 'Neobund', image: '/images/preview-neobund.png' }
-                ].map((site, index) => (
-                  <a
-                    key={index}
-                    href={site.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    // --- 修改：调整样式以适应图片 ---
-                    className="block bg-stone-900/50 border-blue-700/30 hover:border-blue-600/50 text-stone-300 backdrop-blur-sm rounded-xl border relative overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 group hover:-translate-y-1" // 移除 min-h-*
-                  >
-                    {/* 标题栏 (保持不变) */}
-                    <div className="absolute top-0 left-0 right-0 h-8 bg-slate-700/80 flex items-center px-3 z-10 pointer-events-none">
-                      <div className="flex space-x-1.5 mr-auto">
-                        <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
-                        <div className="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>
-                        <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
-                      </div>
-                      <span className="text-xs text-slate-300 truncate">{site.title}</span>
-                    </div>
-                    {/* --- 修改：移除 iframe 容器和缩放逻辑，替换为 img 标签 --- */}
-                    <div className="pt-8"> {/* 添加上边距，避免图片被标题栏遮挡 */}
-                      <img
-                        src={site.image} // 使用 site 对象中的 image 路径
-                        alt={`Preview of ${site.title}`}
-                        className="w-full h-auto object-cover" // 图片宽度占满，高度自适应，保持比例
-                        loading="lazy"
-                      />
-                    </div>
-                    {/* --- 结束修改 --- */}
-                  </a>
-                ))}
-              </div>
-            </div>
-
-          </div>
         </div>
+      </div>
     );
   }
 
