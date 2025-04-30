@@ -2111,13 +2111,13 @@ const ResearchTool = ({
     const currentExample = examples[currentExampleIndex];
     return (
       <div className={`w-full h-screen flex items-center justify-center relative bg-cover bg-center bg-no-repeat bg-gradient-to-br from-slate-900 via-slate-950 to-black overflow-hidden`}>
-          <div className="absolute inset-0 animate-shimmer pointer-events-none z-0"></div>
+          <div className="absolute top-1/4 left-0 right-0 h-1/2 -translate-y-1/2 animate-shimmer pointer-events-none z-0"></div>
           {contextHolder}
           {isUserLoggedIn && (
           <div className={`fixed top-[80px] left-4 bottom-4 z-50 bg-slate-900/60 backdrop-blur-md rounded-lg shadow-xl border border-slate-700/50 flex flex-col transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-72' : 'w-16'} overflow-visible`}> {/* 修改宽度 w-12 -> w-10 */}
             <button
               onClick={toggleSidebar}
-              className="absolute top-1/2 -right-2 transform -translate-y-1/2 z-[51] bg-slate-700 hover:bg-slate-600 text-white w-6 h-10 rounded-r-md flex items-center justify-center transition-colors shadow-md" // 修改 -right-3 -> -right-2
+              className="absolute top-1/3 -right-2 transform -translate-y-1/2 z-[51] bg-slate-700 hover:bg-slate-600 text-white w-6 h-10 rounded-r-md flex items-center justify-center transition-colors shadow-md" // 修改 -right-3 -> -right-2
               title={isSidebarOpen ? "Collapse History" : "Expand History"}
               style={{ outline: 'none' }} // 移除默认 outline
             >
@@ -2159,28 +2159,28 @@ const ResearchTool = ({
             }
             @keyframes shimmer {
               0% {
-                opacity: 0.8; /* 略微提高基础不透明度以补偿模糊效果 */
+                opacity: 0.6; /* 保持之前的设置 */
                 transform: translateX(-100%) rotate(-12deg);
-                /* 修改渐变：更宽、更柔和的过渡 */
+                /* 保持之前的柔和渐变 */
                 background: linear-gradient(90deg,
                   transparent 0%,
-                  rgba(130, 100, 255, 0.05) 20%, /* 蓝紫色开始得更早，更淡 */
-                  rgba(255, 255, 255, 0.4) 50%,   /* 白色中心不透明度降低 */
-                  rgba(130, 100, 255, 0.05) 80%, /* 蓝紫色结束得更晚，更淡 */
+                  rgba(130, 100, 255, 0.05) 20%,
+                  rgba(255, 255, 255, 0.3) 50%,
+                  rgba(130, 100, 255, 0.05) 80%,
                   transparent 100%
                 );
               }
               50% {
-                opacity: 1.0; /* 中间状态可以更亮 */
+                opacity: 0.8; /* 保持之前的设置 */
               }
               100% {
-                opacity: 0.8; /* 略微提高基础不透明度 */
+                opacity: 0.6; /* 保持之前的设置 */
                 transform: translateX(100%) rotate(12deg);
                 /* 保持渐变一致 */
                  background: linear-gradient(90deg,
                   transparent 0%,
                   rgba(130, 100, 255, 0.05) 20%,
-                  rgba(255, 255, 255, 0.4) 50%,
+                  rgba(255, 255, 255, 0.3) 50%,
                   rgba(130, 100, 255, 0.05) 80%,
                   transparent 100%
                 );
@@ -2188,9 +2188,11 @@ const ResearchTool = ({
             }
             .animate-shimmer {
               animation: shimmer 7s infinite linear;
-              filter: blur(20px); /* 添加模糊效果，数值可调整 */
-              /* 可选：稍微放大元素以补偿模糊导致的边缘收缩 */
-              transform: scale(1.1); 
+              filter: blur(100px); /* 保持强模糊 */
+              transform: scale(1.1); /* ★★★ 恢复并设置缩放 ★★★ */
+              /* 保持之前的遮罩 */
+              mask-image: radial-gradient(ellipse at center, black 5%, transparent 75%);
+              -webkit-mask-image: radial-gradient(ellipse at center, black 5%, transparent 75%);
             }
           `}</style>
 
