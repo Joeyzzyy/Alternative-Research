@@ -167,7 +167,7 @@ async function getPageData() {
   const mockData = {
     data: {
       title: "AltPage.ai - AI-Driven Competitor Alternative Pages",
-      description: "AI pages that outrank, out-convert, and update themselves.",
+      description: "Generate AI-powered pages that outrank competitors, boost conversions, and update automatically. Start with 5 free pages today.",
       author: "Team altpage.ai",
       updatedAt: "2024-03-20T08:00:00.000Z",
       createdAt: "2024-03-20T08:00:00.000Z",
