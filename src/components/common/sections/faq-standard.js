@@ -78,20 +78,10 @@ const FAQTwoColumnsWithSmallTitle = ({ data }) => { // Remove the theme prop
         </div>
         
         <div className="mt-16 text-center">
-          <a 
-            href="#" 
-            onClick={scrollToTop}
-            className="px-8 py-3 rounded-full relative overflow-hidden inline-flex items-center group"
-          >
-            <span className="absolute inset-0 bg-gradient-to-r from-cyan-500 via-purple-500 to-rose-500 animate-gradient-x"></span>
-            <span className="absolute inset-0.5 rounded-full bg-slate-900 group-hover:bg-slate-800 transition-colors duration-300"></span>
-            <span className="relative text-white font-medium flex items-center gap-2">
-              Back to Top
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-              </svg>
-            </span>
-          </a>
+          {/* Lark Scheduler Inline Embed Begin */}
+          <div className="scheduler-inline-widget" data-url="https://janzlz0n1f.feishu.cn/scheduler/embed/38f6c06bfc07c525" style={{width:'100%', height:'626px'}}></div>
+          <script type="text/javascript" src="https://janzlz0n1f.feishu.cn/scheduler/embed/scheduler-widget.js" async></script>
+          {/* Lark Scheduler Inline Embed End */}
         </div>
       </div>
     </div>

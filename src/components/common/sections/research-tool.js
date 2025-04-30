@@ -2187,49 +2187,49 @@ const ResearchTool = ({
                 initializeChat(formattedInput);
               }}>
                   <div className="relative">
-                  <Input
-                    placeholder={dynamicPlaceholder}
-                    value={userInput}
-                    onChange={(e) => {
-                      setUserInput(e.target.value);
-                      localStorage.setItem('urlInput', e.target.value);
-                    }}
-                    className={`research-tool-input border rounded-xl text-lg w-full bg-white/90 border-blue-600/50 focus:border-blue-500 focus:ring focus:ring-blue-500/30 text-stone-800 placeholder-stone-500/80`}
-                    style={{
-                      color: '#433422',
-                      height: '80px',
-                      paddingRight: '220px',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      maxWidth: '100%',
-                    }}
-                  />
-                  <div className="absolute right-2 top-1/2 transform -translate-y-1/2 z-10 flex gap-2">
-                    <button
-                      type="submit"
-                      className={`px-6 py-4 text-base
-                        bg-gradient-to-r from-blue-600 to-indigo-700 text-white border-blue-400/50 hover:border-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.5)] hover:shadow-[0_0_25px_rgba(59,130,246,0.7)] hover:from-blue-500 hover:to-indigo-600
-                        rounded-xl
-                        transition-all duration-300 flex items-center gap-2
-                        border hover:scale-105 shadow-lg
-                        ${isProcessingTask ? 'opacity-70 cursor-not-allowed hover:scale-100' : 'cursor-pointer'}`}
-                      style={{ height: '64px' }}
-                      disabled={!userInput.trim() || isProcessingTask}
-                    >
-                      {isProcessingTask ? (
-                        <>
-                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                          <span className="relative z-10">Processing...</span>
-                        </>
-                      ) : (
-                        <>
-                          <ArrowRightOutlined className="w-6 h-6" />
-                          <span className="relative z-10">Start Creating!</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
+                    <Input
+                      placeholder={dynamicPlaceholder}
+                      value={userInput}
+                      onChange={(e) => {
+                        setUserInput(e.target.value);
+                        localStorage.setItem('urlInput', e.target.value);
+                      }}
+                      className={`research-tool-input border rounded-xl text-lg w-full bg-white/90 border-blue-600/50 focus:border-blue-500 focus:ring focus:ring-blue-500/30 text-stone-800 placeholder-stone-500/80`}
+                      style={{
+                        color: '#433422',
+                        height: '80px',
+                        paddingRight: '220px',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        maxWidth: '100%',
+                      }}
+                    />
+                    <div className="absolute right-2 top-1/2 transform -translate-y-1/2 z-10 flex gap-2">
+                      <button
+                        type="submit"
+                        className={`px-6 py-4 text-base
+                          bg-gradient-to-r from-blue-500 to-purple-700 text-white border-blue-400/50 hover:border-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.5)] hover:shadow-[0_0_25px_rgba(59,130,246,0.7)] hover:from-blue-400 hover:to-purple-600
+                          rounded-xl
+                          transition-all duration-300 flex items-center gap-2
+                          border hover:scale-105 shadow-lg
+                          ${isProcessingTask ? 'opacity-70 cursor-not-allowed hover:scale-100' : 'cursor-pointer'}`}
+                        style={{ height: '64px' }}
+                        disabled={!userInput.trim() || isProcessingTask}
+                      >
+                        {isProcessingTask ? (
+                          <>
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            <span className="relative z-10">Processing...</span>
+                          </>
+                        ) : (
+                          <>
+                            <ArrowRightOutlined className="w-6 h-6" />
+                            <span className="relative z-10">Start Creating!</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
               </form>
             </div>
