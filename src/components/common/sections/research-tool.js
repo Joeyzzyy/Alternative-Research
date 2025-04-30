@@ -2041,7 +2041,7 @@ const ResearchTool = ({
             <h1 className={`text-3xl font-bold mb-4`}>
               <div className="relative inline-block">
                 <span className="text-5xl font-bold bg-gradient-to-b from-white via-gray-200 to-gray-400 bg-clip-text text-transparent [text-shadow:0_0_10px_rgba(255,255,255,0.4)]">
-                <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">Get Found</span> <br /> When People Search <br /> '[Competitor] Alternative'
+                <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">Get Found</span> <br /> When People Search <br /> Your Competitor
                 </span>
               </div>
             </h1>
@@ -2289,15 +2289,13 @@ const ResearchTool = ({
                   <span className="text-6xl font-bold bg-gradient-to-b from-white via-gray-200 to-gray-400 bg-clip-text text-transparent [text-shadow:0_0_10px_rgba(255,255,255,0.4)]">
                     <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">Get Found</span> 
                     <br/>
-                    When People Search
-                    <br/>
-                    '[Competitor] Alternative'
+                    <span className="text-4xl font-semibold">When People Search Your Competitor</span>
                   </span>
                 </div>
               </h1>
               {/* --- 段落保持右对齐 --- */}
               <p className="text-lg text-gray-300 mt-2 mb-8 text-right">
-                AI pages that outrank, out-convert, and update themselves.
+                Own all your competitor's brand search traffic with AI-generated pages that outrank.
               </p>
             </div>
 
