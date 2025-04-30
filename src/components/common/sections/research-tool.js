@@ -2297,11 +2297,12 @@ const ResearchTool = ({
                   </div>
                   <span className="text-xs text-slate-300 truncate">{currentExample.title}</span>
                 </div>
-                <div className="pt-8">
-                  <img
+                {/* --- 修改：给图片容器添加固定高度和 overflow-hidden --- */}
+                <div className="pt-8 h-[400px] overflow-hidden"> {/* 你可以根据需要调整这个高度，例如 h-[350px] 或 h-[450px] */}
+                <img
                     src={currentExample.image}
                     alt={`Preview of ${currentExample.title}`}
-                    className="w-full h-auto object-cover"
+                    className="w-full h-full object-contain"
                     loading="lazy"
                   />
                 </div>
