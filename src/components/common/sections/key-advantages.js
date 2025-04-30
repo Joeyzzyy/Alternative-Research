@@ -38,6 +38,12 @@ const advantagesData = [
 ];
 
 const KeyAdvantages = forwardRef((props, ref) => {
+    const scrollToTop = () => {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth' // Use smooth scrolling
+        });
+    };
   const [flippedCards, setFlippedCards] = useState({});
 
   const handleMouseEnter = (id) => {
@@ -125,7 +131,10 @@ const KeyAdvantages = forwardRef((props, ref) => {
 
         {/* CTA Section */}
         <div className="text-center">
-          <button className="bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 text-white font-semibold py-3 px-8 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+        <button 
+            onClick={scrollToTop} // Add onClick handler
+            className="bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 text-white font-semibold py-3 px-8 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105"
+          >
             Generate Your First Page
           </button>
           <p className="text-gray-400 text-sm mt-3">

@@ -64,7 +64,7 @@ const ResearchTool = ({
 
   // --- 新增：示例数据和当前索引状态 ---
   const examples = [
-    { url: 'https://nytgames.top', title: 'AltPage.ai', image: '/images/preview-nytgames.png', timestamp: 'Generated 2 hours ago' },
+    { url: 'https://nytgames.top', title: 'NYT Games Top', image: '/images/preview-nytgames.png', timestamp: 'Generated 2 hours ago' },
     { url: 'https://websitelm.com', title: 'WebsiteLM', image: '/images/preview-websitelm.png', timestamp: 'Generated yesterday' },
     { url: 'https://neobund.com', title: 'Neobund', image: '/images/preview-neobund.png', timestamp: 'Generated on Oct 26' }
   ];
