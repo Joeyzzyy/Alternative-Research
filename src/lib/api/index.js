@@ -651,6 +651,53 @@ const deleteDomain = async (domainId) => {
   }
 };
 
+// 新增：通过客户ID获取品牌资产
+const getBrandAssets = async () => {
+  try {
+    // 发送 GET 请求到 /customer/brand-assets/current
+    // Authorization 头已由拦截器自动添加
+    const response = await apiClient.get('/customer/brand-assets/current');
+    // 返回响应数据
+    return response.data;
+  } catch (error) {
+    // 记录错误信息并返回 null 或根据需要抛出错误
+    console.error('Failed to get brand assets:', error);
+    return null; // 或者 throw error;
+  }
+};
+
+// 更新：创建或更新品牌资产 (现在使用 PUT 方法并包含 brandId)
+const upsertBrandAssets = async (brandId, brandAssetData) => {
+  try {
+    // 发送 PUT 请求到 /customer/brand-assets/{brandId}
+    // Authorization 头已由拦截器自动添加
+    // brandAssetData 是包含品牌资产信息的对象
+    const response = await apiClient.put(`/customer/brand-assets/${brandId}`, brandAssetData);
+    // 返回响应数据
+    return response.data;
+  } catch (error) {
+    // 记录错误信息并返回 null 或根据需要抛出错误
+    console.error('Failed to upsert brand assets:', error);
+    return null; // 或者 throw error;
+  }
+};
+
+// 新增：创建品牌资产
+const createBrandAssets = async (brandAssetData) => {
+  try {
+    // 发送 POST 请求到 /customer/brand-assets
+    // Authorization 头已由拦截器自动添加
+    // brandAssetData 是包含品牌资产信息的对象
+    const response = await apiClient.post('/customer/brand-assets', brandAssetData);
+    // 返回响应数据
+    return response.data;
+  } catch (error) {
+    // 记录错误信息并返回 null 或根据需要抛出错误
+    console.error('Failed to create brand assets:', error);
+    return null; // 或者 throw error;
+  }
+};
+
 apiClient.getCompetitorResearch = getCompetitorResearch;
 apiClient.login = login;
 apiClient.register = register;
@@ -696,5 +743,8 @@ apiClient.addVercelDomain = addVercelDomain;
 apiClient.deleteVercelDomain = deleteVercelDomain;
 apiClient.getDomain = getDomain;
 apiClient.deleteDomain = deleteDomain;
+apiClient.getBrandAssets = getBrandAssets;
+apiClient.upsertBrandAssets = upsertBrandAssets;
+apiClient.createBrandAssets = createBrandAssets;
 
 export default apiClient;

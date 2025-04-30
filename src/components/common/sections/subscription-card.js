@@ -4,7 +4,7 @@ import apiClient from '../../../lib/api/index.js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
 import { Modal, Button, Input, message as antdMessage } from 'antd';
-import LoginModal from './LoginModal';
+import LoginModal from './login-modal.js';
 
 const stripePromise = loadStripe('pk_live_51QzBUgG7uNS0P061vxzgyNH6xBkE2jb3R8myNWI61y288DupEs9W0asrS5gtlIubp6sCCEaIrXSVvyVG3z4DjBAU00ISuF1DvJ');
 

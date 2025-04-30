@@ -1,15 +1,13 @@
 "use client";
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useEffect } from 'react';
 import { useState } from "react";
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import apiClient from '../../lib/api/index.js';
-import { Dropdown, Modal, Button, Spin, Menu, Pagination, message } from 'antd';
+import { Spin, message } from 'antd';
 import { useUser } from '../../contexts/UserContext';
-import { useToolContext } from '../../contexts/ToolContext';
 
-// Add import for the login modal component
-import LoginModal from '../common/sections/LoginModal';
+import LoginModal from '../common/sections/login-modal.js';
+import BrandAssetsModal from '../common/sections/brand-assets.js';
 
 const animationStyles = `
   @keyframes fadeIn {
@@ -100,7 +98,8 @@ export default function Header() {
   const [showCreditsTooltip, setShowCreditsTooltip] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [googleOneTapInitialized, setGoogleOneTapInitialized] = useState(false);;
+  const [googleOneTapInitialized, setGoogleOneTapInitialized] = useState(false);
+  const [showBrandAssetsModal, setShowBrandAssetsModal] = useState(false);
 
   useEffect(() => {
     // 检查本地存储中的登录信息
@@ -369,7 +368,6 @@ export default function Header() {
     }
   }, []);
 
-  // 添加切换移动菜单的函数
   const toggleMobileMenu = () => {
     setState(prevState => ({ ...prevState, isOpen: !prevState.isOpen }));
   };
@@ -541,9 +539,9 @@ export default function Header() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                // 这里可以添加跳转到品牌资产页面的逻辑
-                                // 例如: window.location.href = '/brand-assets';
-                                messageApi.info({ content: 'Brand assets feature coming soon!', duration: 2 }); // 临时提示
+                                // 修改：点击时显示 BrandAssetsModal
+                                setShowBrandAssetsModal(true);
+                                // 关闭积分提示框
                                 setShowCreditsTooltip(false);
                               }}
                               className="w-full py-2 px-4 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white text-sm font-medium rounded-md transition-all duration-300 flex items-center justify-center"
@@ -551,7 +549,7 @@ export default function Header() {
                               <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
                               </svg>
-                              Manage Brand Colors
+                              Manage Brand Assets
                             </button>
                           </div>
                           {/* --- 结束：品牌颜色资产部分 --- */}
@@ -795,6 +793,14 @@ export default function Header() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 新增：Brand Assets Modal */}
+      {showBrandAssetsModal && (
+        <BrandAssetsModal
+          showBrandAssetsModal={showBrandAssetsModal}
+          setShowBrandAssetsModal={setShowBrandAssetsModal}
+        />
       )}
 
       <style>{animationStyles}</style>
