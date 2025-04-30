@@ -206,98 +206,146 @@ const AlternativePageFeature = () => {
       `}</style>
 
       <div className="bg-gradient-to-b from-slate-950 via-slate-900 to-black py-24 sm:py-32 relative overflow-hidden">
-        {/* Enhanced AI-style background decorations */}
+      {/* Enhanced AI-style background decorations */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_#22d3ee20_0%,_transparent_50%)] opacity-70"></div>
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_#a78bfa25_0%,_transparent_55%)] opacity-70"></div>
         {/* Optional: Add more subtle background elements */}
         <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-purple-600/10 rounded-full filter blur-3xl opacity-40 animate-pulse"></div>
         <div className="absolute bottom-1/4 right-1/4 w-72 h-72 bg-cyan-600/10 rounded-full filter blur-3xl opacity-40 animate-pulse animation-delay-2000"></div>
 
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-8 bg-gradient-to-r from-cyan-400 to-purple-500 text-transparent bg-clip-text">
-            What is an Alternative Page?
+            Missing on 'Alternative' keywords? You're invisible.
           </h2>
           <p className="text-2xl font-medium text-slate-300 text-center mb-12 underline decoration-slate-500 underline-offset-4"> {/* Changed text-cyan-300 to text-slate-300 and decoration-cyan-500 to decoration-slate-500 */}
-            Let's follow a user's Google search journey to see exactly what an Alternative Page is and why it's crucial for you! ✨
+            Every day, potential customers search for alternatives to your competitors. Without optimized comparison pages, you're missing out on high-intent traffic.
           </p>
 
-          {/* Step-by-step User Journey */}
-          <div className="space-y-16">
+          {/* Step-by-step User Journey - Grid Layout */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-8 lg:gap-12 text-left">
 
-            {/* Step 1: The Search */}
-            <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12 text-left">
-              <div className="md:w-1/2 flex justify-center items-center">
-                {/* --- Start: Simulated Google Search Results --- */}
-                <div className="w-full h-64 bg-white rounded-lg border border-slate-700 shadow-lg shadow-cyan-500/10 transform rotate-[-2deg] transition-transform duration-300 hover:rotate-[-1deg] p-4 overflow-hidden text-sm font-sans">
-                  {/* Search Bar Area */}
-                  <div className="flex items-center border border-gray-200 rounded-full px-3 py-1.5 mb-3 shadow-sm bg-white">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                    <input type="text" value="wix alternative" className="flex-grow outline-none text-gray-800 text-xs sm:text-sm" readOnly />
-                    {/* Optional: Add fake mic/camera icons if needed */}
+            {/* Step 1: The Search (Visual Above Text) */}
+            <div className="flex flex-col items-center">
+              {/* Visual Element First - Added consistent height */}
+              <div className="w-full flex justify-center items-center mb-8 h-72"> {/* Set consistent height h-72 */}
+                {/* --- Start: Simplified Google Search Bar --- */}
+                {/* Updated border, shadow, and padding for a cleaner look */}
+                {/* Added subtle UI elements to fill space */}
+                <div className="w-full max-w-md bg-white rounded-lg border border-slate-300 shadow-xl transition-transform duration-300 p-6 sm:p-8 overflow-hidden text-sm font-sans flex flex-col justify-center h-full"> {/* Changed to flex-col */}
+
+                  {/* Subtle Top Bar Simulation */}
+                  <div className="flex items-center justify-between w-full mb-4 pb-2 border-b border-slate-200">
+                    <div className="flex space-x-2">
+                      <div className="w-3 h-3 bg-red-400 rounded-full opacity-70"></div>
+                      <div className="w-3 h-3 bg-yellow-400 rounded-full opacity-70"></div>
+                      <div className="w-3 h-3 bg-green-400 rounded-full opacity-70"></div>
+                    </div>
+                    <div className="w-1/3 h-2 bg-slate-200 rounded-sm opacity-70"></div> {/* Address bar placeholder */}
                   </div>
 
-                  {/* Fake Results Area */}
-                  <div className="space-y-3">
-                    {/* Result 1 */}
-                    <div>
-                      <span className="text-xs text-gray-600 block truncate">https://www.example-competitor.com/alternatives</span>
-                      <a href="#" onClick={(e) => e.preventDefault()} className="text-blue-700 text-base sm:text-lg hover:underline block truncate font-medium">
-                        Your Best Wix Alternative, EZsite!
-                      </a>
-                      <p className="text-gray-600 text-xs leading-tight mt-0.5">
-                        Tired of Wix limitations? Discover EZsite, the intuitive and powerful website builder designed for growth. See why we're the top choice...
-                      </p>
-                    </div>
-                    {/* Result 2 */}
-                    <div>
-                      <span className="text-xs text-gray-600 block truncate">https://www.another-site.io/blog/wix-vs-others</span>
-                      <a href="#" onClick={(e) => e.preventDefault()} className="text-blue-700 text-base sm:text-lg hover:underline block truncate font-medium">
-                        Looking For Wix Alternative? Try Lovable
-                      </a>
-                      <p className="text-gray-600 text-xs leading-tight mt-0.5">
-                        Explore Lovable, the flexible platform loved by creators. If Wix isn't cutting it, find out if Lovable is the perfect fit for your project...
-                      </p>
-                    </div>
-                     {/* Result 3 (Optional) */}
-                     <div className="hidden sm:block"> {/* Hide on very small screens */}
-                      <span className="text-xs text-gray-600 block truncate">https://www.yetanotherplatform.dev/wix-alternative</span>
-                      <a href="#" onClick={(e) => e.preventDefault()} className="text-blue-700 text-base sm:text-lg hover:underline block truncate font-medium">
-                        The Ultimate Wix Alternative Guide for 2024
-                      </a>
-                      <p className="text-gray-600 text-xs leading-tight mt-0.5">
-                        Comprehensive review of website builders that serve as great alternatives to Wix, focusing on flexibility and developer tools...
-                      </p>
-                    </div>
+                  {/* Slightly refined inner search bar */}
+                  <div className="flex items-center border border-gray-300 rounded-full px-4 py-2.5 shadow-sm bg-white w-full hover:shadow-md transition-shadow duration-200"> {/* Adjusted padding and added hover effect */}
+                    <svg className="h-5 w-5 mr-3 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"> {/* Adjusted icon size/color */}
+                      <path fill="#4285F4" d="M21.35 11.1h-9.17v2.73h5.21c-.23 1.65-1.68 2.86-3.58 2.86-2.18 0-3.95-1.78-3.95-3.98s1.77-3.98 3.95-3.98c1.2 0 2.1.5 2.78 1.13l1.9-1.83C16.84 5.88 14.76 4.73 12.18 4.73 8.36 4.73 5.03 7.94 5.03 12s3.33 7.27 7.15 7.27c3.98 0 6.83-2.8 6.83-6.97 0-.46-.04-.9-.12-1.33z"/>
+                      <path fill="#34A853" d="M12.18 19.27c1.94 0 3.6-.83 4.8-2.18l-2.2-1.7c-.65.44-1.5.7-2.6.7-2.03 0-3.74-1.37-4.35-3.2H5.18v2.1C6.5 17.9 9.1 19.27 12.18 19.27z"/>
+                      <path fill="#FBBC05" d="M7.83 14.39c-.18-.54-.28-1.1-.28-1.69s.1-1.15.28-1.69V8.9H5.18C4.8 9.8 4.6 10.88 4.6 12s.2 2.2.6 3.1l2.65-2.01z"/>
+                      <path fill="#EA4335" d="M12.18 7.58c1.04 0 1.95.36 2.67 1.05l2.06-2.06C15.78 5.01 14.03 4.1 12.18 4.1c-3.08 0-5.7 1.37-7 3.7l2.65 2.01c.6-1.83 2.32-3.23 4.35-3.23z"/>
+                      <path fill="none" d="M0 0h24v24H0z"/>
+                    </svg>
+                    {/* Input field */}
+                    <input type="text" value="wix alternative" className="flex-grow outline-none text-gray-800 text-sm sm:text-base" readOnly />
+                    {/* Optional Icons */}
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-400 ml-3 cursor-pointer hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v3a3 3 0 01-3 3z" />
+                    </svg>
+                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-400 ml-2 cursor-pointer hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                     </svg>
                   </div>
                 </div>
-                {/* --- End: Simulated Google Search Results --- */}
               </div>
-              <div className="md:w-1/2">
+              {/* Text Content Below */}
+              <div className="w-full">
+                {/* ... text content for step 1 ... */}
                 <span className="inline-block px-3 py-1 text-xs font-semibold text-cyan-300 bg-cyan-900/50 rounded-full mb-3">Step 1</span>
-                <h3 className="text-2xl sm:text-3xl font-bold text-white mb-4">The Search Begins</h3>
+                <h3 className="text-2xl sm:text-3xl font-bold text-white mb-4">User searches for alternatives
+                </h3>
                 <p className="text-gray-300 text-lg">
-                  Let's say users are just starting their website journey. They might not know about options beyond well-known tools like Wix. So, they might search for something like <code className="bg-slate-700 px-1.5 py-0.5 rounded text-cyan-300 text-base">wix alternative</code>.
+                High-intent prospects actively seeking options beyond your competitors
                 </p>
               </div>
             </div>
 
-            {/* Step 2: The Missed Opportunity */}
-            <div className="flex flex-col md:flex-row-reverse items-center gap-8 md:gap-12 text-left">
-              <div className="md:w-1/2 flex justify-center items-center">
-                {/* --- Start: Simulated Search Results - Missed Opportunity --- */}
-                <div className="w-full h-64 bg-white rounded-lg border border-slate-700 shadow-lg shadow-red-500/10 transform rotate-[2deg] transition-transform duration-300 hover:rotate-[1deg] p-4 overflow-hidden text-sm font-sans relative">
-                  {/* Search Bar Area (same as step 1) */}
-                  <div className="flex items-center border border-gray-200 rounded-full px-3 py-1.5 mb-3 shadow-sm bg-white">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            {/* Step 2: The Missed Opportunity (Visual Above Text) */}
+            <div className="flex flex-col items-center">
+              <div className="w-full flex justify-center items-center mb-8 h-72"> {/* Set consistent height h-72 */}
+                <div className="w-full max-w-md bg-white rounded-lg border border-red-500/50 transition-transform duration-300 p-4 overflow-hidden text-sm font-sans relative h-full"> {/* Added h-full to fill parent */}
+                  <div className="flex items-center border border-gray-200 rounded-full px-3 py-1.5 mb-3 bg-white opacity-70">
+                    <svg className="h-4 w-4 mr-2 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                       <path d="M21.35,11.1H12.18V13.83H18.69C18.36,17.64 15.19,19.27 12.19,19.27C8.36,19.27 5.03,16.06 5.03,12C5.03,7.94 8.36,4.73 12.19,4.73C14.76,4.73 16.84,5.88 18.13,7.56L20.47,5.22C18.46,3.31 15.6,2.18 12.19,2.18C6.92,2.18 2.73,6.59 2.73,12C2.73,17.41 6.92,21.82 12.19,21.82C17.8,21.82 21.61,17.88 21.61,12.33C21.61,11.89 21.51,11.5 21.35,11.1Z"/>
                     </svg>
-                    <input type="text" value="wix alternative" className="flex-grow outline-none text-gray-800 text-xs sm:text-sm" readOnly />
+                    <input type="text" value="wix alternative" className="flex-grow outline-none text-gray-600 text-xs" readOnly />
                   </div>
+                  {/* Fake Results Area - Highlighted */}
+                  <div className="space-y-3 opacity-80"> {/* Increased opacity slightly */}
+                    {/* Result 1 - Boxed */}
+                    <div className="border border-red-400 rounded p-2 bg-red-50/50"> {/* Added red border, padding, and light red background */}
+                      <span className="text-xs text-gray-600 block truncate">https://www.competitor-a.com/</span>
+                      <a href="#" onClick={(e) => e.preventDefault()} className="text-blue-700 text-base sm:text-lg hover:underline block truncate font-medium">
+                        Competitor A - The Easy Website Builder
+                      </a>
+                      <p className="text-gray-600 text-xs leading-tight mt-0.5">
+                        Build stunning websites quickly with Competitor A. Perfect for small businesses looking for a Wix alternative...
+                      </p>
+                    </div>
+                    {/* Result 2 - Boxed */}
+                    <div className="border border-red-400 rounded p-2 bg-red-50/50"> {/* Added red border, padding, and light red background */}
+                      <span className="text-xs text-gray-600 block truncate">https://www.competitor-b.io/features</span>
+                      <a href="#" onClick={(e) => e.preventDefault()} className="text-blue-700 text-base sm:text-lg hover:underline block truncate font-medium">
+                        Compare Competitor B vs Wix | Find Your Fit
+                      </a>
+                      <p className="text-gray-600 text-xs leading-tight mt-0.5">
+                        See how Competitor B stacks up against Wix. More design freedom and better pricing options available...
+                      </p>
+                    </div>
+                    {/* Result 3 - Boxed */}
+                    <div className="hidden sm:block border border-red-400 rounded p-2 bg-red-50/50"> {/* Added red border, padding, and light red background */}
+                      <span className="text-xs text-gray-600 block truncate">https://blog.competitor-c.dev/alternatives</span>
+                      <a href="#" onClick={(e) => e.preventDefault()} className="text-blue-700 text-base sm:text-lg hover:underline block truncate font-medium">
+                        Top Wix Alternatives Reviewed for 2024
+                      </a>
+                      <p className="text-gray-600 text-xs leading-tight mt-0.5">
+                        Our experts review the leading alternatives to Wix, helping you choose the right platform...
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                {/* --- End: Simulated Search Results - Missed Opportunity --- */}
+              </div>
+              {/* Text Content Below */}
+              <div className="w-full">
+                 <span className="inline-block px-3 py-1 text-xs font-semibold text-red-400 bg-red-900/50 rounded-full mb-3">Step 2</span>
+                <h3 className="text-2xl sm:text-3xl font-bold text-white mb-4">Competitor results dominate
+                </h3>
+                <p className="text-gray-300 text-lg">
+                  Your competitors control the narrative and capture these valuable leads
+                </p>
+              </div>
+            </div>
 
-                  {/* Fake Results Area (generic competitors, user's site is missing) */}
-                  <div className="space-y-3 opacity-40 blur-[2px]"> {/* Make results less prominent */}
+            {/* Step 3: The Solution (Visual Above Text) */}
+            <div className="flex flex-col items-center">
+            <div className="w-full flex justify-center items-center mb-8 h-72"> {/* Set consistent height h-72 */}
+                <div className="w-full max-w-md bg-white rounded-lg border border-red-500/50 shadow-lg shadow-red-500/10 transition-transform duration-300 p-4 overflow-hidden text-sm font-sans relative h-full"> {/* Added h-full to fill parent */}
+                  <div className="flex items-center border border-gray-200 rounded-full px-3 py-1.5 mb-3 shadow-sm bg-white opacity-70">
+                    <svg className="h-4 w-4 mr-2 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                       <path d="M21.35,11.1H12.18V13.83H18.69C18.36,17.64 15.19,19.27 12.19,19.27C8.36,19.27 5.03,16.06 5.03,12C5.03,7.94 8.36,4.73 12.19,4.73C14.76,4.73 16.84,5.88 18.13,7.56L20.47,5.22C18.46,3.31 15.6,2.18 12.19,2.18C6.92,2.18 2.73,6.59 2.73,12C2.73,17.41 6.92,21.82 12.19,21.82C17.8,21.82 21.61,17.88 21.61,12.33C21.61,11.89 21.51,11.5 21.35,11.1Z"/>
+                    </svg>
+                    <input type="text" value="wix alternative" className="flex-grow outline-none text-gray-600 text-xs" readOnly />
+                  </div>
+                  {/* Fake Results Area */}
+                  <div className="space-y-3 opacity-40 blur-[2px]">
                     {/* Result 1 */}
                     <div>
                       <span className="text-xs text-gray-600 block truncate">https://www.competitor-a.com/</span>
@@ -318,7 +366,7 @@ const AlternativePageFeature = () => {
                         See how Competitor B stacks up against Wix. More design freedom and better pricing options available...
                       </p>
                     </div>
-                    {/* Result 3 (Optional) */}
+                    {/* Result 3 */}
                     <div className="hidden sm:block">
                       <span className="text-xs text-gray-600 block truncate">https://blog.competitor-c.dev/alternatives</span>
                       <a href="#" onClick={(e) => e.preventDefault()} className="text-blue-700 text-base sm:text-lg hover:underline block truncate font-medium">
@@ -329,200 +377,31 @@ const AlternativePageFeature = () => {
                       </p>
                     </div>
                   </div>
-
                   {/* Missed Opportunity Overlay Message */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-red-900/20 to-transparent flex items-center justify-center p-4">
                       <div className="text-center p-4 bg-white/90 backdrop-blur-sm rounded-lg shadow-xl border border-red-300 max-w-xs">
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-red-600 mx-auto mb-2 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                             <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /> {/* Info circle */}
-                             <path strokeLinecap="round" strokeLinejoin="round" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" transform="rotate(180 12 12) scale(0.6)" /> {/* Sad face inside */}
+                             <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                           <p className="text-red-700 font-semibold text-base">You're Invisible Here!</p>
-                          <p className="text-xs text-gray-700 mt-1">Without an Alternative Page, you miss out on these high-intent searches.</p>
+                          <p className="text-xs text-gray-700 mt-1">Competitors rank, but without an Alternative Page, you miss out.</p>
                       </div>
                   </div>
                 </div>
                 {/* --- End: Simulated Search Results - Missed Opportunity --- */}
               </div>
-              <div className="md:w-1/2">
-                <span className="inline-block px-3 py-1 text-xs font-semibold text-red-400 bg-red-900/50 rounded-full mb-3">Step 2</span>
-                <h3 className="text-2xl sm:text-3xl font-bold text-white mb-4">The Void</h3>
-                <p className="text-gray-300 text-lg">
-                  Without a dedicated "Alternative Page" targeting that competitor keyword, you're invisible. You lose the chance to capture this high-intent traffic looking for exactly what you offer.
-                </p>
-              </div>
-            </div>
-
-            {/* Step 3: The Solution */}
-            <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12 text-left">
-              <div className="md:w-1/2 flex justify-center items-center">
-                {/* --- Start: Animated Page Carousel --- */}
-                <div className="w-full h-64 bg-gradient-to-br from-slate-800/60 via-slate-900/50 to-slate-800/60 rounded-lg border border-slate-700 shadow-lg shadow-purple-500/10 p-6 relative overflow-hidden flex items-center justify-center perspective">
-                  {/* Stacked Pages Simulation Container */}
-                  <div className="relative w-full h-full"> {/* Use full container size */}
-                    {/* Map over the pages and apply dynamic classes */}
-                    {competitorPages.map((page, index) => (
-                      <div key={page.id} className={`${getCardClass(index)} p-3 flex flex-col space-y-2`}>
-                        {/* Real Title */}
-                        <p className="font-semibold text-sm mb-1 card-title truncate"> {/* Added card-title class */}
-                          Alternative to {page.competitor}
-                        </p>
-
-                        {/* Skeleton Content */}
-                        {/* Subtitle Placeholder */}
-                        <div className="skeleton h-3 w-full"></div>
-                        <div className="skeleton h-3 w-2/3"></div>
-                        {/* Feature List Placeholder */}
-                        <div className="flex-grow space-y-1.5 pt-2">
-                          <div className="flex items-center space-x-1.5">
-                            <div className="skeleton w-3 h-3 rounded-full"></div>
-                            <div className="skeleton h-2.5 w-3/4"></div>
-                          </div>
-                           <div className="flex items-center space-x-1.5">
-                            <div className="skeleton w-3 h-3 rounded-full"></div>
-                            <div className="skeleton h-2.5 w-1/2"></div>
-                          </div>
-                           <div className="flex items-center space-x-1.5">
-                            <div className="skeleton w-3 h-3 rounded-full"></div>
-                            <div className="skeleton h-2.5 w-5/6"></div>
-                          </div>
-                           <div className="flex items-center space-x-1.5"> {/* Added one more skeleton line */}
-                            <div className="skeleton w-3 h-3 rounded-full"></div>
-                            <div className="skeleton h-2.5 w-1/3"></div>
-                          </div>
-                        </div>
-                        {/* Button Placeholder */}
-                        <div className="skeleton h-6 w-1/2 self-start rounded-md"></div>
-                      </div>
-                    ))}
-                  </div>
-
-                   {/* Optimization Icon (optional) */}
-                   <svg xmlns="http://www.w3.org/2000/svg" className="absolute bottom-3 right-3 h-6 w-6 text-purple-400/70 animate-spin animation-delay-1000 z-20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-                     <path strokeLinecap="round" strokeLinejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527c.47-.336 1.06-.336 1.53 0l.774.55c.47.336.696.916.55 1.442l-.15.9c-.07.424-.384.764-.78.93-.398.164-.855.142-1.205-.108l-.737-.527c-.47-.336-1.06-.336-1.53 0l-.774.55c-.47-.336-.696.916-.55 1.442l.15.9c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737.527c.47-.336 1.06-.336 1.53 0l.774.55c.47.336.696.916.55 1.442l-.15.9c-.07.424-.384.764-.78.93-.398.164-.855.142-1.205-.108l-.737-.527c-.47-.336-1.06-.336-1.53 0l-.774.55c-.47-.336-.696.916-.55 1.442l.15.9c.09.542.56.94 1.11.94h1.093c.55 0 1.02-.398 1.11.94l.149-.894c.07-.424.384-.764.78-.93.398.164.855.142 1.205.108l.737.527c.47-.336 1.06.336 1.53 0l.774-.55c.47-.336.696.916.55-1.442l-.15-.9c-.07-.424-.384-.764-.78-.93-.398-.164-.855-.142-1.205.108l-.737.527c-.47-.336-1.06-.336-1.53 0l-.774-.55c-.47-.336-.696.916-.55-1.442l.15-.9c.07-.424.384.764.78-.93.398-.164.855.142 1.205.108l.737.527c.47-.336 1.06.336 1.53 0l.774-.55c.47-.336.696.916.55-1.442l-.15-.9c-.09-.542-.56-.94-1.11-.94h-1.093c-.55 0-1.02.398-1.11.94l-.149.894c-.07.424-.384.764-.78.93-.398.164-.855.142-1.205-.108l-.737-.527c-.47-.336-1.06-.336-1.53 0l-.774-.55c-.47-.336-.696.916-.55-1.442l.15-.9c.07-.424.384.764.78-.93.398-.164.855.142 1.205.108l.737.527c.47-.336 1.06.336 1.53 0l.774-.55c.47-.336.696.916.55-1.442l-.15-.9c-.09-.542-.56-.94-1.11-.94h-1.093c-.55 0-1.02.398-1.11.94l-.149.894c-.07.424-.384.764-.78.93-.398.164-.855.142-1.205-.108l-.737-.527c-.47-.336-1.06-.336-1.53 0l-.774-.55c-.47-.336-.696.916-.55-1.442l.15-.9c.09.542.56.94 1.11.94h1.093c.55 0 1.02-.398 1.11.94l.149-.894c.07-.424.384-.764.78-.93.398.164.855.142 1.205-.108l.737.527c.47-.336 1.06.336 1.53 0l.774-.55c.47-.336.696.916.55-1.442l-.15-.9c-.07-.424-.384-.764-.78-.93-.398-.164-.855-.142-1.205.108l-.737.527c-.47-.336-1.06-.336-1.53 0l-.774-.55c-.47-.336-.696.916-.55-1.442l.15-.9c.07-.424.384.764.78-.93.398-.164.855.142 1.205.108l.737.527c.47-.336 1.06.336 1.53 0l.774-.55c.47-.336.696.916.55-1.442l-.15-.9c-.09-.542-.56-.94-1.11-.94h-1.093c-.55 0-1.02.398-1.11.94l-.149.894c-.07.424-.384.764-.78.93-.398.164-.855.142-1.205-.108l-.737-.527c-.47-.336-1.06-.336-1.53 0l-.774-.55c-.47-.336-.696.916-.55-1.442l.15-.9c.09.542.56.94 1.11.94h1.093c.55 0 1.02-.398 1.11.94l.149-.894c.07-.424.384-.764.78-.93.398.164.855.142 1.205.108l.737.527c.47-.336 1.06.336 1.53 0l.774-.55c.47-.336.696.916.55-1.442l-.15-.9c-.07-.424-.384-.764-.78-.93-.398-.164-.855-.142-1.205.108l-.737.527c-.47-.336-1.06-.336-1.53 0l-.774-.55c-.47-.336-.696.916-.55-1.442l.15-.9c.09.542.56.94 1.11.94h1.093c.55 0 1.02-.398 1.11.94l.149-.894c.07-.424.384-.764.78-.93.398.164.855.142 1.205.108l.737.527c.47-.336 1.06.336 1.53 0l.774-.55c.47-.336.696.916.55-1.442l-.15-.9c-.09-.542-.56-.94-1.11-.94h-1.093c-.55 0-1.02.398-1.11.94l-.149.894c-.07.424-.384.764-.78.93-.398.164-.855.142-1.205-.108l-.737-.527c-.47-.336-1.06-.336-1.53 0l-.774-.55c-.47-.336-.696.916-.55-1.442l.15-.9c.07-.424.384.764.78-.93.398-.164.855.142 1.205.108l.737.527c.47-.336 1.06.336 1.53 0l.774-.55c.47-.336.696.916.55-1.442l-.15-.9c-.09-.542-.56-.94-1.11-.94h-1.093c-.55 0-1.02.398-1.11.94l-.149.894c-.07.424-.384.764-.78.93-.398.164-.855.142-1.205-.108l-.737-.527c-.47-.336-1.06-.336-1.53 0l-.774-.55c-.47-.336-.696.916-.55-1.442l.15-.9c.09.542.56.94 1.11.94h1.093c.55 0 1.02-.398 1.11.94l.149-.894c.07-.424.384-.764.78-.93.398.164.855.142 1.205-.108l.737.527c.47-.336 1.06.336 1.53 0l.774-.55c.47-.336.696.916.55-1.442l-.15-.9c-.09-.542-.56-.94-1.11-.94h-1.093c-.55 0-1.02.398-1.11.94l-.149.894c-.07.424-.384.764-.78.93-.398.164-.855.142-1.205-.108l-.737-.527c-.47-.336-1.06-.336-1.53 0l-.774-.55c-.47-.336-.696.916-.55-1.442l.15-.9c.09.542.56.94 1.11.94h1.093c.55 0 1.02-.398 1.11.94l.149-.894c.07-.424.384-.764.78-.93.398.164.855.142 1.205.108l.737.527c.47-.336 1.06.336 1.53 0l.774-.55c.47-.336.696.916.55-1.442l-.15-.9c-.09-.542-.56-.94-1.11-.94h-1.093c-.55 0-1.02.398-1.11.94l-.149.894c-.07.424-.384.764-.78.93-.398.164-.855.142-1.205-.108l-.737-.527c-.47-.336-1.06-.336-1.53 0l-.774-.55c-.47-.336-.696.916-.55-1.442l.15-.9c.09.542.56.94 1.11.94h1.093c.55 0 1.02-.398 1.11.94l.149-.894c.07-.424.384-.764.78-.93.398.164.855.142 1.205.108l.737.527c.47-.336 1.06.336 1.53 0l.774-.55c.47-.336.696.916.55-1.442l-.15-.9c-.09-.542-.56-.94-1.11-.94h-1.093c-.55 0-1.02.398-1.11.94l-.149.894c-.07.424-.384.764-.78.93-.398.164-.855.142-1.205-.108l-.737-.527c-.47-.336-1.06-.336-1.53 0l-.774-.55c-.47-.336-.696.916-.55-1.442l.15-.9c.09.542.56.94 1.11.94h1.093c.55 0 1.02-.398 1.11.94l.149-.894c.07-.424.384-.764.78-.93.398.164.855.142 1.205-.108l.737.527c.47-.336 1.06.336 1.53 0l.774-.55c.47-.336.696.916.55-1.442l-.15-.9c-.09-.542-.56-.94-1.11-.94h-1.093c-.55 0-1.02.398-1.11.94l-.149.894c-.07.424-.384.764-.78.93-.398.164-.855.142-1.205-.108l-.737-.527c-.47-.336-1.06-.336-1.53 0l-.774-.55c-.47-.336-.696.916-.55-1.442l.15-.9z" />
-                   </svg>
-                </div>
-                {/* --- End: Animated Page Carousel --- */}
-              </div>
-              <div className="md:w-1/2">
+              <div className="w-full">
+                {/* ... text content for step 3 ... */}
                 <span className="inline-block px-3 py-1 text-xs font-semibold text-purple-300 bg-purple-900/50 rounded-full mb-3">Step 3</span>
-                <h3 className="text-2xl sm:text-3xl font-bold text-white mb-4">Strategy: Maximize Coverage</h3>
+                <h3 className="text-2xl sm:text-3xl font-bold text-white mb-4">Your opportunity vanishes
+                </h3>
                 <p className="text-gray-300 text-lg">
-                  The core strategy is to create dedicated "Alternative Pages" targeting each of your relevant competitors. By building and optimizing these pages, you significantly increase your visibility when potential customers search for alternatives, capturing high-intent traffic you'd otherwise miss.
+                  Without targeted alternative pages, you miss these conversion-ready prospects
                 </p>
               </div>
             </div>
 
-            {/* Step 4: Gaining Visibility */}
-            <div className="flex flex-col md:flex-row-reverse items-center gap-8 md:gap-12 text-left">
-              <div className="md:w-1/2 flex justify-center items-center">
-                {/* --- Start: Search Ranking Improvement Diagram --- */}
-                <div className="w-full h-64 bg-slate-800/50 rounded-lg border border-slate-700 flex flex-col items-center justify-center p-4 text-gray-400 text-sm font-sans shadow-lg shadow-green-500/10 transform rotate-[2deg] transition-transform duration-300 hover:rotate-[1deg] overflow-hidden">
-                  {/* Diagram Title */}
-                  <p className="font-semibold mb-3 text-center text-green-300">Search: "Competitor X Alternative"</p>
-
-                  {/* Diagram Content Area */}
-                  <div className="flex items-center justify-center space-x-4 h-40 w-full relative"> {/* Adjusted height and centering */}
-
-                    {/* Initial State (Lower Rank) */}
-                    <div className="flex flex-col items-center opacity-60">
-                      <p className="text-xs mb-1 text-gray-500">Before</p>
-                      <div className="space-y-1.5">
-                        <div className="h-4 w-24 bg-slate-600 rounded-sm"></div>
-                        <div className="h-4 w-24 bg-slate-600 rounded-sm"></div>
-                        <div className="h-4 w-24 bg-slate-600 rounded-sm"></div>
-                        <div className="h-4 w-24 bg-slate-600 rounded-sm"></div>
-                        {/* Your Page (Lower) */}
-                        <div className="h-4 w-24 bg-green-800/80 rounded-sm border border-green-600/50 flex items-center justify-center text-[9px] text-green-200/80">Your Page</div>
-                      </div>
-                    </div>
-
-                    {/* Arrow Indicating Progress */}
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-green-400 self-center mx-1 sm:mx-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3" />
-                    </svg>
-
-                    {/* Final State (Higher Rank) */}
-                    <div className="flex flex-col items-center">
-                       <p className="text-xs mb-1 text-white">After Optimization</p>
-                       <div className="space-y-1.5">
-                        {/* Your Page (Top) */}
-                        <div className="h-4 w-24 bg-green-500 rounded-sm border-2 border-green-300 shadow-md shadow-green-500/30 flex items-center justify-center text-[9px] text-white font-bold">Your Page</div>
-                        <div className="h-4 w-24 bg-slate-600 rounded-sm"></div>
-                        <div className="h-4 w-24 bg-slate-600 rounded-sm"></div>
-                        <div className="h-4 w-24 bg-slate-600 rounded-sm"></div>
-                        <div className="h-4 w-24 bg-slate-600 rounded-sm"></div>
-                      </div>
-                    </div>
-
-                  </div>
-                   <p className="text-xs mt-3 text-center text-gray-500">Your page climbs the search rankings!</p>
-                </div>
-                {/* --- End: Search Ranking Improvement Diagram --- */}
-              </div>
-              <div className="md:w-1/2">
-                <span className="inline-block px-3 py-1 text-xs font-semibold text-green-400 bg-green-900/50 rounded-full mb-3">Step 4</span>
-                <h3 className="text-2xl sm:text-3xl font-bold text-white mb-4">Climbing the Ranks</h3>
-                <p className="text-gray-300 text-lg">
-                  Optimized Alternative Pages rank highly in search results for competitor alternative keywords. Suddenly, users searching for options see *your* solution prominently displayed.
-                </p>
-              </div>
-            </div>
-
-            {/* Step 5: Conversion */}
-            <div className="flex flex-col md:flex-row items-center gap-8 md:gap-12 text-left">
-              <div className="md:w-1/2 flex justify-center items-center">
-                {/* --- Start: User Click & Conversion Simulation --- */}
-                <div className="w-full h-64 bg-slate-800/50 rounded-lg border border-slate-700 flex flex-col items-center justify-center p-4 text-gray-400 text-sm font-sans shadow-lg shadow-yellow-500/10 transform rotate-[-2deg] transition-transform duration-300 hover:rotate-[-1deg] overflow-hidden relative">
-
-                  {/* Simulated Search Result Snippet */}
-                  <div className="bg-white/90 p-3 rounded-md shadow-md border border-slate-300 w-11/12 max-w-sm relative z-10 mb-4">
-                    <span className="text-xs text-gray-600 block truncate">https://www.yoursite.com/alternative-to-competitor-x</span>
-                    <a href="#" onClick={(e) => e.preventDefault()} className="text-blue-700 text-base sm:text-lg hover:underline block truncate font-medium text-yellow-600"> {/* Highlighted link */}
-                      YourSite: The Best Alternative to Competitor X!
-                    </a>
-                    <p className="text-gray-600 text-xs leading-tight mt-0.5">
-                      Discover why YourSite outperforms Competitor X. Better features, easier to use, and great pricing. Click here to learn more...
-                    </p>
-                  </div>
-
-                  {/* Click Action & Success Indication */}
-                  <div className="flex items-center justify-center space-x-3 mt-2 relative">
-                     {/* Multiple Click Arrows */}
-                     <div className="absolute -left-10 -top-2 flex flex-col space-y-1 opacity-80">
-                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-400 transform rotate-[20deg] animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                         <path strokeLinecap="round" strokeLinejoin="round" d="M15 15l-6 6m0 0l-6-6m6 6V9a6 6 0 0112 0v3" /> {/* Down arrow variant */}
-                       </svg>
-                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-400 transform rotate-[5deg] animate-pulse animation-delay-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                         <path strokeLinecap="round" strokeLinejoin="round" d="M15 15l-6 6m0 0l-6-6m6 6V9a6 6 0 0112 0v3" />
-                       </svg>
-                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-400 transform rotate-[-10deg] animate-pulse animation-delay-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                         <path strokeLinecap="round" strokeLinejoin="round" d="M15 15l-6 6m0 0l-6-6m6 6V9a6 6 0 0112 0v3" />
-                       </svg>
-                     </div>
-
-                     {/* Success Text/Icon */}
-                     <span className="text-lg font-semibold text-yellow-300 bg-yellow-900/60 px-3 py-1 rounded-md shadow z-10">
-                       Click! <span className="text-xl ml-1">🎉</span> Traffic Acquired!
-                     </span>
-                  </div>
-                   {/* Subtle background elements */}
-                   <div className="absolute inset-0 bg-gradient-to-t from-yellow-900/10 via-transparent to-transparent opacity-50 z-0"></div>
-
-                </div>
-                {/* --- End: User Click & Conversion Simulation --- */}
-              </div>
-              <div className="md:w-1/2">
-                <span className="inline-block px-3 py-1 text-xs font-semibold text-yellow-300 bg-yellow-900/50 rounded-full mb-3">Step 5</span>
-                <h3 className="text-2xl sm:text-3xl font-bold text-white mb-4">Winning the Conversion</h3>
-                <p className="text-gray-300 text-lg">
-                  They click! Your Alternative Page clearly showcases your advantages over the competitor, addressing their needs directly and persuading them to choose you. This leads to higher conversions!
-                </p>
-              </div>
-            </div>
-
-          </div> {/* End of steps */}
-
+          </div> {/* End of grid */}
         </div>
       </div>
     </>

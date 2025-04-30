@@ -2272,22 +2272,16 @@ const ResearchTool = ({
 
           {/* === 右侧栏 (修改标题和时间戳位置) === */}
           <div className="w-1/2 flex flex-col items-center justify-center pt-8 relative">
-            {/* --- 修改：更新标题文本 --- */}
             <h3 className={`text-xl font-semibold text-white mb-2 text-center drop-shadow-lg`}>Alternative Page Showcase</h3> {/* 减少 mb */}
-            {/* --- 新增：在标题下方显示时间戳 --- */}
             <p className="text-xs text-slate-400 mb-4 text-center">{currentExample.timestamp}</p> {/* 增加 mb */}
-            {/* --- 结束新增 --- */}
-
-            <div className="relative w-full max-w-lg">
-              {/* --- 左切换按钮 (保持不变) --- */}
+            <div className="relative w-full max-w-xxl px-12">
               <button
                 onClick={goToPrevExample}
-                className="absolute left-0 top-1/2 transform -translate-y-1/2 -translate-x-full z-20 p-2 bg-slate-700/50 hover:bg-slate-600/70 rounded-full text-white transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 z-20 p-1 bg-slate-700/50 hover:bg-slate-600/70 rounded-full text-white transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
                 aria-label="Previous example"
               >
                 <LeftOutlined />
               </button>
-
               <a
                 key={currentExampleIndex}
                 href={currentExample.url}
@@ -2295,7 +2289,6 @@ const ResearchTool = ({
                 rel="noopener noreferrer"
                 className="block w-full mx-auto bg-stone-900/50 border-blue-700/30 hover:border-blue-600/50 text-stone-300 backdrop-blur-sm rounded-xl border relative overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 group hover:-translate-y-1 animate-fadeIn"
               >
-                {/* --- 修改：移除卡片标题栏中的时间戳 --- */}
                 <div className="absolute top-0 left-0 right-0 h-8 bg-slate-700/80 flex items-center justify-between px-3 z-10 pointer-events-none">
                   <div className="flex space-x-1.5">
                     <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
@@ -2303,9 +2296,7 @@ const ResearchTool = ({
                     <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
                   </div>
                   <span className="text-xs text-slate-300 truncate">{currentExample.title}</span>
-                  {/* 时间戳已从此移除 */}
                 </div>
-                {/* --- 结束修改 --- */}
                 <div className="pt-8">
                   <img
                     src={currentExample.image}
@@ -2316,10 +2307,10 @@ const ResearchTool = ({
                 </div>
               </a>
 
-              {/* --- 右切换按钮 (保持不变) --- */}
+              {/* --- 修改：调整右按钮位置，移除 translate-x --- */}
               <button
                 onClick={goToNextExample}
-                className="absolute right-0 top-1/2 transform -translate-y-1/2 translate-x-full z-20 p-2 bg-slate-700/50 hover:bg-slate-600/70 rounded-full text-white transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 z-20 p-1 bg-slate-700/50 hover:bg-slate-600/70 rounded-full text-white transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
                 aria-label="Next example"
               >
                 <RightOutlined />
