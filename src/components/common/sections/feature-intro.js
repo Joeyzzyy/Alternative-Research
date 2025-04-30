@@ -404,6 +404,25 @@ const AlternativePageFeature = () => {
             </div>
 
           </div> {/* End of grid */}
+
+          {/* Call to Action Section */}
+          <div className="mt-16 text-center"> {/* Added margin-top for spacing */}
+            <p className="text-xl font-medium text-slate-300 mb-6"> {/* Adjusted text size and margin-bottom */}
+              Don't let competitors steal your potential customers.
+            </p>
+            {/* Enhanced Button */}
+            <button
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              className="inline-flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md shadow-lg text-white bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-cyan-500 transition-all duration-300 ease-in-out transform hover:scale-105 hover:shadow-cyan-500/30"
+            >
+              Generate Alternative Pages Now
+              {/* Arrow Icon */}
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 ml-2 -mr-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </button>
+          </div>
+
         </div>
       </div>
     </>
