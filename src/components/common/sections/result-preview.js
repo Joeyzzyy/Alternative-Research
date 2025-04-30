@@ -462,7 +462,6 @@ const HistoryCardList = () => {
                         <div className="text-[10px] text-gray-500">
                           End: {item.generatedEnd ? new Date(item.generatedEnd).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
                         </div>
-                        {/* finished 状态小预览 */}
                         {item.generatorStatus === 'finished' && item.resultId && (
                           <div className="w-full h-16 rounded-md overflow-hidden border border-white/10 mb-2">
                             <iframe

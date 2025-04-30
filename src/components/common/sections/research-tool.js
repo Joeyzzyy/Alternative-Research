@@ -996,7 +996,6 @@ const ResearchTool = ({
         if (rawAnswer.includes('[URL_GET]')) {
           setInputDisabledDueToUrlGet(true);
           messageHandler.updateAgentMessage(rawAnswer, thinkingMessageId);
-          // 在chat接口成功接收URL后，发送URL给search接口进行任务初始化
           const searchResponse = await apiClient.searchCompetitor(
             formattedInput,
             false,

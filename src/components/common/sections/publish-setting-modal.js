@@ -897,7 +897,6 @@ const PublishSettingsModal = ({
                   )}
                   {verificationStatus === 'failed' && (
                      <div className="space-y-3">
-                       <p className="text-red-400 text-sm">{verificationError || 'Verification process failed.'}</p>
                        <Button
                          type="primary"
                          onClick={() => {
