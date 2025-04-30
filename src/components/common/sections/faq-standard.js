@@ -77,11 +77,23 @@ const FAQTwoColumnsWithSmallTitle = ({ data }) => { // Remove the theme prop
           ))}
         </div>
         
-        <div className="mt-16 text-center">
-          {/* Lark Scheduler Inline Embed Begin */}
-          <div className="scheduler-inline-widget" data-url="https://janzlz0n1f.feishu.cn/scheduler/embed/38f6c06bfc07c525" style={{width:'100%', height:'626px'}}></div>
-          <script type="text/javascript" src="https://janzlz0n1f.feishu.cn/scheduler/embed/scheduler-widget.js" async></script>
-          {/* Lark Scheduler Inline Embed End */}
+        <div className="mt-16 text-center border-t border-slate-700/30 pt-16">
+          <h3 className="text-2xl font-semibold text-white mb-4">
+            Still have questions?
+          </h3>
+          <p className="text-gray-400 mb-8 max-w-xl mx-auto">
+            Our team is ready to help you get started with alternative pages that drive results.
+          </p>
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
+            <a
+              href="https://calendly.com/joey-techacc/30min"
+              className="inline-block px-8 py-3 bg-gradient-to-r from-cyan-500 to-purple-600 text-white font-semibold rounded-lg shadow-md hover:from-cyan-600 hover:to-purple-700 transition duration-300"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Schedule a Demo
+            </a>
+          </div>
         </div>
       </div>
     </div>

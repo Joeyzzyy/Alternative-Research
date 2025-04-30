@@ -294,15 +294,15 @@ async function getPageData() {
         },
         {
           componentName: "FeatureIntro",
-          sectionId: "feature-intro-1"
+          sectionId: "the-problem"
         },
         {
           componentName: "HowItWorks",
-          sectionId: "how-it-works-1"
+          sectionId: "how-it-works"
         },
         {
           componentName: "KeyAdvantages",
-          sectionId: "key-advantages-1"
+          sectionId: "features"
         },
         {
           componentName: "CompareTable",

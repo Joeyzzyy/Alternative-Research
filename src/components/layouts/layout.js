@@ -4,7 +4,6 @@ import Header from './header-template';
 import Footer from './footer-template';
 /* divider */
 import FAQ from '../common/sections/faq-standard';
-import CallToAction from '../common/sections/call-to-action';
 import ResearchTool from '../common/sections/research-tool';
 import SubscriptionCard from '../common/sections/subscription-card';
 import FeatureIntro from '../common/sections/feature-intro';
@@ -19,7 +18,6 @@ import KeyAdvantages from '../common/sections/key-advantages';
 
 const COMPONENT_MAP = {
   Faqs: FAQ,
-  CallToAction: CallToAction,
   ResearchTool: ResearchTool,
   SubscriptionCard: SubscriptionCard,
   FeatureIntro: FeatureIntro,

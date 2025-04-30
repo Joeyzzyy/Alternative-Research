@@ -64,7 +64,7 @@ const ResearchTool = ({
   // --- 新增：示例数据和当前索引状态 ---
   const examples = [
     { url: 'https://alternative.nytgames.top/nyt-games-original-alternative', title: 'Play NYT Games Free: The Ultimate Word Puzzle Collection Without Subscriptions', image: '/images/preview-nytgames.png', timestamp: 'Generated 2 hours ago' },
-    { url: 'https://alternative.neobund.com/doba-alternative', title: 'NeoBund: The Smarter Alternative to Doba with Guaranteed 2-Day US Shipping', image: '/images/preview-neobund.png', timestamp: 'Generated on Oct 26' }
+    { url: 'https://alternative.neobund.com/doba-alternative', title: 'NeoBund: The Smarter Alternative to Doba with Guaranteed 2-Day US Shipping', image: '/images/preview-neobund.png', timestamp: 'Generated on April 26' }
   ];
   const [currentExampleIndex, setCurrentExampleIndex] = useState(0);
   // --- 结束新增 ---
@@ -2159,6 +2159,7 @@ const ResearchTool = ({
               <h1 className={`text-4xl font-bold mb-6 text-right`}>
                 <div className="relative inline-block"> {/* inline-block 使其宽度适应内容 */}
                   <span className="text-6xl font-bold bg-gradient-to-b from-white via-gray-200 to-gray-400 bg-clip-text text-transparent [text-shadow:0_0_10px_rgba(255,255,255,0.4)]">
+                    Own 
                     <br />
                     Every
                     <br />

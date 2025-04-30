@@ -114,18 +114,26 @@ const KeyAdvantages = forwardRef((props, ref) => {
         {/* Additional Features Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-16 pt-16 border-t border-slate-700/50">
           <div className="bg-slate-800/40 p-6 rounded-lg border border-slate-700/30">
-            <BoltIcon className="h-8 w-8 text-purple-400 mb-3" />
-            <h3 className="text-xl font-semibold text-white mb-2">Lightning Fast Implementation</h3>
-            <p className="text-sm text-gray-400">
-              Deploy your first alternative page in under 10 minutes. Our platform handles everything from research to publishing, with no coding or design work required.
-            </p>
+            <div className="flex items-start space-x-4">
+              <BoltIcon className="h-8 w-8 text-purple-400 flex-shrink-0 mt-1" />
+              <div>
+                <h3 className="text-xl font-semibold text-white mb-2">Lightning Fast Implementation</h3>
+                <p className="text-sm text-gray-400">
+                  Deploy your first alternative page in under 10 minutes. Our platform handles everything from research to publishing, with no coding or design work required.
+                </p>
+              </div>
+            </div>
           </div>
           <div className="bg-slate-800/40 p-6 rounded-lg border border-slate-700/30">
-            <PresentationChartLineIcon className="h-8 w-8 text-purple-400 mb-3" />
-            <h3 className="text-xl font-semibold text-white mb-2">Results-Driven Analytics</h3>
-            <p className="text-sm text-gray-400">
-              Track rankings, traffic, and conversions with our built-in analytics dashboard. See exactly how your alternative pages are performing and generating ROI.
-            </p>
+            <div className="flex items-start space-x-4">
+              <PresentationChartLineIcon className="h-8 w-8 text-purple-400 flex-shrink-0 mt-1" />
+              <div>
+                <h3 className="text-xl font-semibold text-white mb-2">Results-Driven Analytics</h3>
+                <p className="text-sm text-gray-400">
+                  Track rankings, traffic, and conversions with our built-in analytics dashboard. See exactly how your alternative pages are performing and generating ROI.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 

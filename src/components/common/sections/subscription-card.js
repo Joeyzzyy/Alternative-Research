@@ -211,7 +211,7 @@ const SubscriptionCard = () => {
   }, []);
 
   const displayData = {
-    title: "Pricing",
+    title: "Simple, Transparent Pricing",
     subTitle: "Choose the plan that's right for you",
     bottomContent: {
       plans: plans

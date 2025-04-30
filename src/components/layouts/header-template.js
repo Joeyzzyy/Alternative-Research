@@ -200,6 +200,45 @@ export default function Header() {
 
   const mainMenuItems = [
     {
+      label: "The Problem",
+      color: "#000000", 
+      fontWeight: "600",
+      link: "#the-problem",
+      onClick: (e) => {
+        e.preventDefault();
+        const element = document.getElementById('the-problem');
+        if (element) {
+          element.scrollIntoView();
+        }
+      }
+    },
+    {
+      label: "How It Works",
+      color: "#000000", 
+      fontWeight: "600",
+      link: "#how-it-works",
+      onClick: (e) => {
+        e.preventDefault();
+        const element = document.getElementById('how-it-works');
+        if (element) {
+          element.scrollIntoView();
+        }
+      }
+    },
+    {
+      label: "Features",
+      color: "#000000", 
+      fontWeight: "600",
+      link: "#features",
+      onClick: (e) => {
+        e.preventDefault();
+        const element = document.getElementById('features');
+        if (element) {
+          element.scrollIntoView();
+        }
+      }
+    },
+    {
       label: "Pricing",
       color: "#000000", 
       fontWeight: "600",
