@@ -2041,7 +2041,7 @@ const ResearchTool = ({
             <h1 className={`text-3xl font-bold mb-4`}>
               <div className="relative inline-block">
                 <span className="text-5xl font-bold bg-gradient-to-b from-white via-gray-200 to-gray-400 bg-clip-text text-transparent [text-shadow:0_0_10px_rgba(255,255,255,0.4)]">
-                **Get Found** <br /> When People Search <br /> '<span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">[Competitor] Alternative</span>'
+                <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">Get Found</span> <br /> When People Search <br /> '[Competitor] Alternative'
                 </span>
               </div>
             </h1>
@@ -2287,11 +2287,11 @@ const ResearchTool = ({
               <h1 className={`text-4xl font-bold mb-6 text-right`}>
                 <div className="relative inline-block"> {/* inline-block 使其宽度适应内容 */}
                   <span className="text-6xl font-bold bg-gradient-to-b from-white via-gray-200 to-gray-400 bg-clip-text text-transparent [text-shadow:0_0_10px_rgba(255,255,255,0.4)]">
-                    **Get Found** 
-                    <br />
+                    <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">Get Found</span> 
+                    <br/>
                     When People Search
-                    <br />
-                    '<span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">[Competitor] Alternative</span>'
+                    <br/>
+                    '[Competitor] Alternative'
                   </span>
                 </div>
               </h1>
