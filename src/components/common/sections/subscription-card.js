@@ -21,12 +21,10 @@ const SubscriptionCard = () => {
     { id: 'monthly', label: 'Monthly' }
   ];
 
-  // 用于刷新登录状态
   const [isLoggedIn, setIsLoggedIn] = React.useState(
     typeof window !== 'undefined' && !!localStorage.getItem('alternativelyAccessToken')
   );
 
-  // 登录成功回调
   const handleLoginSuccess = (userInfo) => {
     localStorage.setItem('alternativelyAccessToken', userInfo.accessToken);
     localStorage.setItem('alternativelyIsLoggedIn', 'true');
@@ -36,7 +34,6 @@ const SubscriptionCard = () => {
     setIsLoggedIn(true);
     setShowLoginModal(false);
     messageApi.success('Login successful!');
-    // 通知 header 刷新
     window.dispatchEvent(new CustomEvent('alternativelyLoginSuccess'));
   };
 
@@ -44,7 +41,6 @@ const SubscriptionCard = () => {
     apiClient.getPackageFeatures().then(res => {
       if (!res || !Array.isArray(res.data)) return;
 
-      // 只保留正式套餐和测试套餐
       const filtered = res.data.filter(pkg =>
         [
           'Standard-Annual',
@@ -81,7 +77,6 @@ const SubscriptionCard = () => {
         }
       });
 
-      // 定义 Standard 和 Professional 套餐对象
       const standardPlan = {
         name: "Standard",
         price: {
@@ -219,16 +214,12 @@ const SubscriptionCard = () => {
   };
 
   const handleSelectPlan = (plan) => {
-    // 检查是否是 Free Trial 套餐
     if (plan.planId === 'free-trial') {
-      // 不再检查登录状态，直接滚动到页面顶部
       window.scrollTo({ top: 0, behavior: 'smooth' }); // 使用平滑滚动效果
-      // 可以保留或修改提示信息
-      return; // 结束函数，不显示支付模态框
+      return; 
     }
 
-    // 对于非 Free Trial 套餐，执行原有逻辑 (仍然需要检查登录)
-    if (!isLoggedIn) {
+    if (localStorage.getItem('alternativelyIsLoggedIn') !== 'true') {
       setShowLoginModal(true);
       return;
     }
