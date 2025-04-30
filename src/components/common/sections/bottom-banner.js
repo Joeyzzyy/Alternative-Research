@@ -57,6 +57,24 @@ export default function BottomBanner({ onClick }) {
         padding: '0 1.5rem',
       }}
     >
+      <button
+        onClick={() => setIsVisible(false)}
+        className="mr-2 text-gray-500 hover:text-gray-700 transition-colors"
+        style={{
+          position: 'relative',
+          fontSize: '1.2rem',
+          lineHeight: '1',
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          padding: '0.2rem 0.5rem',
+          alignSelf: 'flex-start',
+          marginTop: '0.5rem',
+        }}
+        aria-label="Close Banner"
+      >
+        &times;
+      </button>
       <span
         style={{
           color: '#333',
@@ -84,21 +102,7 @@ export default function BottomBanner({ onClick }) {
       >
         Quick Start
       </button>
-      <button
-        onClick={() => setIsVisible(false)}
-        className="ml-6 text-gray-500 hover:text-gray-700 transition-colors"
-        style={{
-          fontSize: '1.5rem',
-          lineHeight: '1',
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          padding: '0.2rem 0.5rem'
-        }}
-        aria-label="Close Banner"
-      >
-        &times;
-      </button>
+      
     </div>
   );
 }
