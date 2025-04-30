@@ -2110,20 +2110,8 @@ const ResearchTool = ({
   if (showInitialScreen) {
     const currentExample = examples[currentExampleIndex];
     return (
-      <div className={`w-full h-screen flex items-center justify-center relative bg-cover bg-center bg-no-repeat bg-gradient-to-br from-slate-900 via-slate-950 to-black overflow-hidden`}
-           style={{
-             // 降低光晕透明度
-             backgroundImage: `
-               radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.12) 0%, transparent 20%), /* 将 40% 改为 30%，使光晕更聚焦 */
-               radial-gradient(circle at 90% 80%, rgba(167, 139, 250, 0.1) 0%, transparent 50%), /* 保持不变 */
-               radial-gradient(ellipse at center, rgba(255, 255, 255, 0.02) 0%, transparent 70%), /* 保持不变 */
-               linear-gradient(to bottom right, #475569, #0f172a, #000000) /* 保持上次修改 */
-             `,
-             backgroundSize: 'cover',
-             backgroundPosition: 'center',
-             backgroundRepeat: 'no-repeat'
-           }}
-           >
+      <div className={`w-full h-screen flex items-center justify-center relative bg-cover bg-center bg-no-repeat bg-gradient-to-br from-slate-900 via-slate-950 to-black overflow-hidden`}>
+          <div className="absolute inset-0 animate-shimmer pointer-events-none z-0"></div>
           {contextHolder}
           {isUserLoggedIn && (
           <div className={`fixed top-[80px] left-4 bottom-4 z-50 bg-slate-900/60 backdrop-blur-md rounded-lg shadow-xl border border-slate-700/50 flex flex-col transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-72' : 'w-16'} overflow-visible`}> {/* 修改宽度 w-12 -> w-10 */}
@@ -2156,9 +2144,7 @@ const ResearchTool = ({
             </div>
 
             {/* 内容容器，根据状态控制透明度和交互 */}
-            {/* --- 保持内容隐藏逻辑不变 --- */}
             <div className={`flex-1 overflow-y-auto transition-opacity duration-200 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-              {/* 条件渲染或始终渲染但隐藏 */}
               {isSidebarOpen && <HistoryCardList />}
             </div>
           </div>
@@ -2170,6 +2156,41 @@ const ResearchTool = ({
               writing-mode: vertical-rl;
               text-orientation: mixed;
               transform: rotate(180deg);
+            }
+            @keyframes shimmer {
+              0% {
+                opacity: 0.8; /* 略微提高基础不透明度以补偿模糊效果 */
+                transform: translateX(-100%) rotate(-12deg);
+                /* 修改渐变：更宽、更柔和的过渡 */
+                background: linear-gradient(90deg,
+                  transparent 0%,
+                  rgba(130, 100, 255, 0.05) 20%, /* 蓝紫色开始得更早，更淡 */
+                  rgba(255, 255, 255, 0.4) 50%,   /* 白色中心不透明度降低 */
+                  rgba(130, 100, 255, 0.05) 80%, /* 蓝紫色结束得更晚，更淡 */
+                  transparent 100%
+                );
+              }
+              50% {
+                opacity: 1.0; /* 中间状态可以更亮 */
+              }
+              100% {
+                opacity: 0.8; /* 略微提高基础不透明度 */
+                transform: translateX(100%) rotate(12deg);
+                /* 保持渐变一致 */
+                 background: linear-gradient(90deg,
+                  transparent 0%,
+                  rgba(130, 100, 255, 0.05) 20%,
+                  rgba(255, 255, 255, 0.4) 50%,
+                  rgba(130, 100, 255, 0.05) 80%,
+                  transparent 100%
+                );
+              }
+            }
+            .animate-shimmer {
+              animation: shimmer 7s infinite linear;
+              filter: blur(20px); /* 添加模糊效果，数值可调整 */
+              /* 可选：稍微放大元素以补偿模糊导致的边缘收缩 */
+              transform: scale(1.1); 
             }
           `}</style>
 
