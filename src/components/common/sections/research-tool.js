@@ -2296,7 +2296,12 @@ const ResearchTool = ({
           {/* === 右侧栏 (修改标题和时间戳位置) === */}
           <div className="w-1/2 flex flex-col items-center justify-center pt-8 relative">
             <h3 className={`text-xl font-semibold text-white mb-2 text-center drop-shadow-lg`}>Alternative Page Showcase</h3> {/* 减少 mb */}
-            <p className="text-xs text-slate-400 mb-4 text-center">{currentExample.timestamp}</p> {/* 增加 mb */}
+            <p className="text-sm text-blue-300 mb-4 text-center flex items-center justify-center gap-1.5">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-green-400 animate-pulse" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <span className="[text-shadow:0_0_8px_rgba(59,130,246,0.5)]">{currentExample.timestamp}</span>
+            </p>
             <div className="relative w-full max-w-xxl px-12">
               <button
                 onClick={goToPrevExample}
