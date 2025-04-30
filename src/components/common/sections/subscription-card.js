@@ -410,6 +410,7 @@ function PaymentModal({ visible, onClose, plan, period, onSuccess }) {
   const [email, setEmail] = React.useState('');
   const [postalCode, setPostalCode] = React.useState('');
   const [cardError, setCardError] = React.useState('');
+  const [messageApi, contextHolder] = antdMessage.useMessage();
 
   const handleSubmit = async () => {
     if (!stripe || !elements) return;
