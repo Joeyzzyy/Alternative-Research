@@ -414,6 +414,7 @@ function PaymentModal({ visible, onClose, plan, period, onSuccess }) {
   const handleSubmit = async () => {
     if (!stripe || !elements) return;
     setProcessing(true);
+    setCardError('');
     try {
       const cardElement = elements.getElement(CardElement);
       const { paymentMethod, error } = await stripe.createPaymentMethod({
@@ -430,7 +431,8 @@ function PaymentModal({ visible, onClose, plan, period, onSuccess }) {
         setProcessing(false);
         return;
       }
-      // Call backend to create subscription
+
+      // 调用后端创建订阅
       const res = await apiClient.createSubscription({
         email,
         name,
@@ -438,28 +440,51 @@ function PaymentModal({ visible, onClose, plan, period, onSuccess }) {
         paymentMethodId: paymentMethod.id,
         billingAddress: { postalCode }
       });
+
+      // --- 修改后的成功/失败判断逻辑 ---
+
+      // 1. 检查业务逻辑是否完全成功 (body code 为 200)
       if (res?.code === 200) {
         messageApi.success('Subscription successful!');
         onSuccess();
         onClose();
-      } else {
-        messageApi.error(res?.message || 'Subscription failed, please try again later.');
+        // 成功关闭，无需设置 processing
       }
+      // 2. 明确处理业务逻辑失败，body code 为 400 的情况
+      else if (res?.code === 400) {
+        console.error('Subscription failed (body code 400):', res);
+        // 使用后端返回的具体错误信息
+        messageApi.error(res?.message || 'Invalid request. Please check your input and try again.');
+        setProcessing(false); // 停止处理，允许用户修改
+      }
+      // 3. 处理其他未预期的 body code (如果 HTTP 是 200)
+      else {
+        console.error('Subscription failed (unexpected body code):', res);
+        messageApi.error(res?.message || 'An unexpected error occurred during subscription. Please try again later.');
+        setProcessing(false); // 停止处理
+      }
+      // --- 结束修改 ---
+
     } catch (err) {
-      messageApi.error('Payment failed: ' + err.message);
+      // 处理网络错误、请求本身失败 (非 200 HTTP 状态码) 或其他意外异常
+      console.error('Payment submission failed (network/HTTP error):', err);
+      const errorMessage = err?.response?.data?.message || err?.message || 'An unexpected error occurred.';
+      messageApi.error(`Payment failed: ${errorMessage}`);
+      setProcessing(false); // 停止处理
     }
-    setProcessing(false);
   };
 
   return (
     <Modal
       open={visible}
-      onCancel={onClose}
+      onCancel={() => !processing && onClose()}
       footer={null}
       title="Complete Your Subscription"
       centered
       width={520}
+      maskClosable={!processing}
     >
+      {contextHolder}
       <div style={{
         padding: 0,
         background: "#fff",
@@ -577,6 +602,7 @@ function PaymentModal({ visible, onClose, plan, period, onSuccess }) {
               type="primary"
               loading={processing}
               onClick={handleSubmit}
+              disabled={!stripe || !elements || processing}
               style={{ minWidth: 160, fontWeight: 700, fontSize: 16 }}
             >
               {processing ? 'Processing Payment...' : 'Confirm & Subscribe'}
