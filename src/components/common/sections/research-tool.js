@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Input, Button, Spin, message, Tooltip, Avatar, Modal } from 'antd';
-import { ArrowRightOutlined, InfoCircleOutlined, UserOutlined, LeftOutlined, RightOutlined } from '@ant-design/icons';
+import { ArrowRightOutlined, InfoCircleOutlined, UserOutlined, LeftOutlined, RightOutlined, MenuOutlined } from '@ant-design/icons';
 import apiClient from '../../../lib/api/index.js';
 import { EventSourcePolyfill } from 'event-source-polyfill';
 import MessageHandler from '../../../utils/MessageHandler';
@@ -2068,16 +2068,16 @@ const ResearchTool = ({
           <div className="absolute top-1/4 left-0 right-0 h-1/2 -translate-y-1/2 animate-shimmer pointer-events-none z-0"></div>
           {contextHolder}
           {isUserLoggedIn && (
-          <div className={`fixed top-[80px] left-4 bottom-4 z-50 bg-slate-900/60 backdrop-blur-md rounded-lg shadow-xl border border-slate-700/50 flex flex-col transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-72' : 'w-16'} overflow-visible`}> {/* 修改宽度 w-12 -> w-10 */}
+          <div className={`fixed top-[80px] left-4 bottom-4 z-50 bg-slate-900/60 backdrop-blur-md rounded-lg shadow-xl border border-slate-700/50 flex flex-col transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-72' : 'w-12'} overflow-visible`}> {/* 修改宽度 w-12 -> w-10 */}
             <button
               onClick={toggleSidebar}
-              className="absolute top-1/3 -right-2 transform -translate-y-1/2 z-[51] bg-slate-700 hover:bg-slate-600 text-white w-6 h-10 rounded-r-md flex items-center justify-center transition-colors shadow-md" // 修改 -right-3 -> -right-2
+              className="absolute top-2 right-2 z-[51] bg-slate-700 hover:bg-slate-600 text-white w-8 h-8 rounded-full flex items-center justify-center transition-colors shadow-md" // 将 left-2 改为 right-2
               title={isSidebarOpen ? "Collapse History" : "Expand History"}
-              style={{ outline: 'none' }} // 移除默认 outline
+              style={{ outline: 'none' }}
             >
-              {isSidebarOpen ? <LeftOutlined style={{ fontSize: '12px' }} /> : <RightOutlined style={{ fontSize: '12px' }} />}
+              {/* 保持图标逻辑不变 */}
+              {isSidebarOpen ? <LeftOutlined style={{ fontSize: '14px' }} /> : <MenuOutlined style={{ fontSize: '14px' }} />}
             </button>
-
             <div
               className={`absolute inset-0 flex items-center justify-center transition-opacity duration-200 ease-in-out pointer-events-none ${
                 isSidebarOpen ? 'opacity-0' : 'opacity-100'
