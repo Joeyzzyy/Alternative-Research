@@ -1946,7 +1946,7 @@ const ResearchTool = ({
   useEffect(() => {
     const placeholderTexts = [
       "Enter product website URL to get started.",
-      "For example: altpage.ai or https://altpage.ai"
+      "eg. altpage.ai or https://altpage.ai"
     ];
     const typingSpeed = 20; // milliseconds per character
     const deletingSpeed = 10;
