@@ -1,204 +1,56 @@
 'use client';
-import React, { useState, useEffect, forwardRef } from 'react';
-import { Tabs } from 'antd';
-import { LineChartOutlined, ShoppingCartOutlined, AimOutlined } from '@ant-design/icons';
+import React, { forwardRef, useState } from 'react';
+import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
 
-const CustomizableResearchUI = forwardRef(({ initialActiveKey = 'ranking', targetKey }, ref) => {
-  const [activeTabKey, setActiveTabKey] = useState(initialActiveKey || 'ranking');
-  const validTabKeys = ['ranking', 'conversion', 'sem'];
-  const getValidKey = (key) => validTabKeys.includes(key) ? key : 'ranking';
-
-  useEffect(() => {
-    setActiveTabKey(getValidKey(initialActiveKey));
-  }, [initialActiveKey]);
-
-  useEffect(() => {
-    if (targetKey && targetKey !== activeTabKey) {
-      setActiveTabKey(targetKey);
-    }
-  }, [targetKey]);
-
-  const items = [
+const CustomizableResearchUI = forwardRef(({}, ref) => {
+  // Define testimonial data (Example data, replace with real data)
+  const testimonials = [
     {
-      key: 'ranking',
-      label: 'Case Study: SEO Ranking',
-      children: (
-        <div className="grid md:grid-cols-2 gap-16 items-center">
-          <div className="py-12 space-y-8">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="h-10 w-10 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-lg flex items-center justify-center text-white text-xl">
-                <LineChartOutlined />
-              </div>
-              <h3 className="text-2xl font-bold text-white">Ranking Improvement Case</h3>
-            </div>
-            
-            <h2 className="text-3xl font-bold text-white mb-6">
-              Breaking Through SEO Plateaus
-            </h2>
-            
-            <p className="text-gray-300 leading-relaxed mb-8">
-              A tech company struggled with slow organic growth despite SEO efforts. By deploying AI-generated alternative pages targeting specific competitor weaknesses, they achieved significant ranking improvements for high-value keywords within weeks, capturing previously inaccessible organic traffic.
-            </p>
-            
-            <div className="flex items-center space-x-2 text-cyan-400 mb-8">
-              <span className="font-medium">Key Results:</span>
-              <span className="px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-400 text-sm">+45% Organic Traffic</span>
-              <span className="px-3 py-1 rounded-full bg-cyan-500/10 text-cyan-400 text-sm">Page 1 Ranking for Target Keywords</span>
-            </div>
-            
-            <button 
-              className="px-6 py-3 rounded-full relative overflow-hidden group"
-              onClick={() => {
-                window.scrollTo({
-                  top: 0,
-                  behavior: 'smooth'
-                });
-              }}
-            >
-              <span className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-blue-500"></span>
-              <span className="absolute inset-0.5 rounded-full bg-slate-900 group-hover:bg-slate-800 transition-colors duration-300"></span>
-              <span className="relative text-white font-medium">Try 5 Free Alternative Pages</span>
-            </button>
-          </div>
-          
-          <div className="flex justify-center">
-            <div className="aspect-w-16 aspect-h-9 w-full rounded-lg shadow-2xl shadow-slate-900/70 border border-slate-800/50 bg-slate-800 flex flex-col p-4 overflow-hidden">
-              <div className="flex items-center space-x-1.5 mb-3">
-                <div className="w-3 h-3 rounded-full bg-red-500/70"></div>
-                <div className="w-3 h-3 rounded-full bg-yellow-500/70"></div>
-                <div className="w-3 h-3 rounded-full bg-green-500/70"></div>
-              </div>
-              <div className="flex-grow bg-slate-700 rounded p-3 space-y-2">
-                <div className="h-4 bg-slate-600 rounded w-3/4"></div>
-                <div className="h-3 bg-slate-600/80 rounded w-full"></div>
-                <div className="h-3 bg-slate-600/80 rounded w-5/6"></div>
-                <div className="h-3 bg-slate-600/80 rounded w-1/2"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      ),
+      id: 1,
+      image: '/images/testimonials/customer-1.jpg', // Replace with actual image path
+      quote: "AltPage.ai revolutionized our SEO strategy. The alternative pages targeting competitor weaknesses gave us the edge we needed, resulting in a 45% traffic increase.",
+      avatar: '/images/zy.jpg', // Updated avatar path
+      name: 'Jane Doe',
+      role: 'Marketing Director, Tech Startup',
     },
     {
-      key: 'conversion',
-      label: 'Case Study: Conversion Lift',
-      children: (
-        <div className="grid md:grid-cols-2 gap-16 items-center">
-          <div className="flex justify-center order-2 md:order-1">
-            <div className="aspect-w-16 aspect-h-9 w-full rounded-lg shadow-2xl shadow-slate-900/70 border border-slate-800/50 bg-slate-800 flex flex-col p-4 overflow-hidden">
-              <div className="flex items-center space-x-1.5 mb-3">
-                <div className="w-3 h-3 rounded-full bg-red-500/70"></div>
-                <div className="w-3 h-3 rounded-full bg-yellow-500/70"></div>
-                <div className="w-3 h-3 rounded-full bg-green-500/70"></div>
-              </div>
-              <div className="flex-grow bg-slate-700 rounded p-3 space-y-2">
-                <div className="h-4 bg-purple-500/30 rounded w-1/2"></div>
-                <div className="h-3 bg-slate-600/80 rounded w-full"></div>
-                <div className="h-3 bg-slate-600/80 rounded w-full"></div>
-                <div className="h-3 bg-slate-600/80 rounded w-3/4"></div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="py-12 space-y-8 order-1 md:order-2">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="h-10 w-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center text-white text-xl">
-                <ShoppingCartOutlined />
-              </div>
-              <h3 className="text-2xl font-bold text-white">Conversion Optimization Case</h3>
-            </div>
-            
-            <h2 className="text-3xl font-bold text-white mb-6">
-              Turning Clicks into Customers
-            </h2>
-            
-            <p className="text-gray-300 leading-relaxed mb-8">
-              An e-commerce startup faced challenges converting visitors from comparison searches. Alternative pages highlighting their unique selling points and addressing specific user intents led to a measurable increase in conversion rates, particularly for high-intent traffic segments.
-            </p>
-            
-            <div className="flex items-center space-x-2 text-purple-400 mb-8">
-              <span className="font-medium">Key Results:</span>
-              <span className="px-3 py-1 rounded-full bg-purple-500/10 text-purple-400 text-sm">+25% Registration Conversion</span>
-              <span className="px-3 py-1 rounded-full bg-purple-500/10 text-purple-400 text-sm">Improved Ranking for Niche Keywords</span>
-            </div>
-            
-            <button 
-              className="px-6 py-3 rounded-full relative overflow-hidden group"
-              onClick={() => {
-                window.scrollTo({
-                  top: 0,
-                  behavior: 'smooth'
-                });
-              }}
-            >
-              <span className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500"></span>
-              <span className="absolute inset-0.5 rounded-full bg-slate-900 group-hover:bg-slate-800 transition-colors duration-300"></span>
-              <span className="relative text-white font-medium">Try 5 Free Alternative Pages</span>
-            </button>
-          </div>
-        </div>
-      ),
+      id: 2,
+      image: '/images/testimonials/customer-2.jpg', // Replace with actual image path
+      quote: "We struggled with converting comparison shoppers. AltPage.ai's tailored landing pages significantly boosted our sign-up rate by 25%. Highly recommended!",
+      avatar: '/images/zy.jpg', // Updated avatar path
+      name: 'John Smith',
+      role: 'Founder, E-commerce Brand',
     },
     {
-      key: 'sem',
-      label: 'Case Study: SEM Landing Pages',
-      children: (
-        <div className="grid md:grid-cols-2 gap-16 items-center">
-          <div className="py-12 space-y-8">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="h-10 w-10 bg-gradient-to-r from-amber-500 to-rose-500 rounded-lg flex items-center justify-center text-white text-xl">
-                <AimOutlined />
-              </div>
-              <h3 className="text-2xl font-bold text-white">High-ROI SEM Case</h3>
-            </div>
-            
-            <h2 className="text-3xl font-bold text-white mb-6">
-              Maximizing Paid Ad Spend
-            </h2>
-            
-            <p className="text-gray-300 leading-relaxed mb-8">
-              A marketing agency sought better ROI from SEM campaigns. By using AI-generated alternative pages as highly targeted landing destinations, they significantly improved lead quality and conversion rates from paid traffic, leading to a better return on ad spend compared to generic landing pages.
-            </p>
-            
-            <div className="flex items-center space-x-2 text-amber-400 mb-8">
-              <span className="font-medium">Key Results:</span>
-              <span className="px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 text-sm">+15% Lead Conversion Rate</span>
-              <span className="px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 text-sm">Ranked for 8 High-Intent Keywords</span>
-            </div>
-            
-            <button 
-              className="px-6 py-3 rounded-full relative overflow-hidden group"
-              onClick={() => {
-                window.scrollTo({
-                  top: 0,
-                  behavior: 'smooth'
-                });
-              }}
-            >
-              <span className="absolute inset-0 bg-gradient-to-r from-amber-500 to-rose-500"></span>
-              <span className="absolute inset-0.5 rounded-full bg-slate-900 group-hover:bg-slate-800 transition-colors duration-300"></span>
-              <span className="relative text-white font-medium">Try 5 Free Alternative Pages</span>
-            </button>
-          </div>
-          
-          <div className="flex justify-center">
-            <div className="aspect-w-16 aspect-h-9 w-full rounded-lg shadow-2xl shadow-slate-900/70 border border-slate-800/50 bg-slate-800 flex flex-col p-4 overflow-hidden">
-              <div className="flex items-center space-x-1.5 mb-3">
-                <div className="w-3 h-3 rounded-full bg-red-500/70"></div>
-                <div className="w-3 h-3 rounded-full bg-yellow-500/70"></div>
-                <div className="w-3 h-3 rounded-full bg-green-500/70"></div>
-              </div>
-              <div className="flex-grow bg-slate-700 rounded p-3 space-y-2">
-                <div className="h-4 bg-amber-500/30 rounded w-1/3"></div>
-                <div className="h-3 bg-slate-600/80 rounded w-full"></div>
-                <div className="h-3 bg-slate-600/80 rounded w-4/5"></div>
-                <div className="h-3 bg-slate-600/80 rounded w-5/6"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      ),
+      id: 3,
+      image: '/images/testimonials/customer-3.jpg', // Replace with actual image path
+      quote: "Our SEM campaigns saw a dramatic improvement in lead quality and ROI after using AltPage.ai for landing pages. The +15% conversion lift speaks for itself.",
+      avatar: '/images/zy.jpg', // Updated avatar path
+      name: 'Alex Johnson',
+      role: 'PPC Manager, Marketing Agency',
     },
+    // Add more testimonials as needed (remember to update their avatar path too)
+  ];
+
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const goToPrevious = () => {
+    const isFirstSlide = currentIndex === 0;
+    const newIndex = isFirstSlide ? testimonials.length - 1 : currentIndex - 1;
+    setCurrentIndex(newIndex);
+  };
+
+  const goToNext = () => {
+    const isLastSlide = currentIndex === testimonials.length - 1;
+    const newIndex = isLastSlide ? 0 : currentIndex + 1;
+    setCurrentIndex(newIndex);
+  };
+
+  // Define stats data
+  const stats = [
+    { value: '350+', label: 'Companies using AltPage.ai' },
+    { value: '5,200+', label: 'Alternative pages generated' },
+    { value: '14,500+', label: 'Monthly conversions' },
   ];
 
   return (
@@ -209,43 +61,100 @@ const CustomizableResearchUI = forwardRef(({ initialActiveKey = 'ranking', targe
       <div className="max-w-7xl mx-auto px-4 relative z-10">
         <div className="text-center mb-16">
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-6 bg-gradient-to-r from-cyan-400 to-purple-500 text-transparent bg-clip-text">
-            Our Customers See Real Results
+            Results That Speak Volumes
           </h2>
           <p className="text-gray-300 max-w-3xl mx-auto">
-            Here's what our customers are saying about their alternative page strategy.
+            Hear directly from customers who achieved remarkable growth with AltPage.ai.
           </p>
         </div>
 
-        <Tabs
-          activeKey={activeTabKey}
-          onChange={setActiveTabKey}
-          items={items}
-          centered
-          className="showcase-tabs"
-        />
-      </div>
+        {/* Testimonial Carousel Container */}
+        <div className="relative max-w-3xl mx-auto">
+          {/* Carousel Inner Container - Handles Sliding */}
+          <div className="overflow-hidden">
+            <div 
+              className="flex transition-transform ease-out duration-300" 
+              style={{ transform: `translateX(-${currentIndex * 100}%)` }}
+            >
+              {testimonials.map((testimonial) => (
+                <div key={testimonial.id} className="flex-shrink-0 w-full">
+                  <div className="bg-slate-800/50 rounded-xl shadow-lg overflow-hidden border border-slate-700/50 mx-2">
+                    {/* Removed the outer md:flex container as it's less necessary without the image */}
+                    {/* Removed Left Side: Image div */}
+                    {/* <div className="md:flex-shrink-0"> ... </div> */}
+                    
+                    {/* Right Side: Content - Now takes full width */}
+                    <div className="p-6 md:p-8 flex flex-col justify-between"> {/* Kept padding */}
+                      {/* Top: Quote */}
+                      <blockquote className="text-xl text-gray-300 mb-6 italic">
+                        "{testimonial.quote}"
+                      </blockquote>
+                      {/* Bottom: Avatar, Name, Role */}
+                      <div className="flex items-center mt-4"> {/* Added top margin for spacing */}
+                        <img 
+                          className="h-12 w-12 rounded-full mr-4 border-2 border-cyan-500/50" 
+                          src={testimonial.avatar} 
+                          alt={testimonial.name} 
+                        />
+                        <div>
+                          <p className="font-semibold text-white">{testimonial.name}</p>
+                          <p className="text-sm text-cyan-400">{testimonial.role}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
 
-      <style jsx global>{`
-        .showcase-tabs .ant-tabs-nav {
-          margin-bottom: 40px !important;
-        }
-        .showcase-tabs .ant-tabs-tab {
-          padding: 12px 20px !important;
-          font-size: 1rem !important;
-          color: #94a3b8 !important;
-        }
-        .showcase-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
-          color: #67e8f9 !important;
-          font-weight: 600 !important;
-        }
-        .showcase-tabs .ant-tabs-ink-bar {
-          background: linear-gradient(to right, #22d3ee, #a78bfa) !important;
-          height: 3px !important;
-        }
-        .showcase-tabs .ant-tabs-tab:hover {
-          color: #cbd5e1 !important;
-        }
-      `}</style>
+          {/* Left Arrow */}
+          <button 
+            onClick={goToPrevious} 
+            className="absolute top-1/2 left-[-20px] md:left-[-40px] transform -translate-y-1/2 bg-slate-700/50 hover:bg-slate-600/70 text-white p-2 rounded-full z-20 transition-colors"
+            aria-label="Previous testimonial"
+          >
+            <ChevronLeftIcon className="h-6 w-6" />
+          </button>
+
+          {/* Right Arrow */}
+          <button 
+            onClick={goToNext} 
+            className="absolute top-1/2 right-[-20px] md:right-[-40px] transform -translate-y-1/2 bg-slate-700/50 hover:bg-slate-600/70 text-white p-2 rounded-full z-20 transition-colors"
+            aria-label="Next testimonial"
+          >
+            <ChevronRightIcon className="h-6 w-6" />
+          </button>
+
+          {/* Optional: Dots Indicator */}
+          <div className="flex justify-center mt-8 space-x-2">
+            {testimonials.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentIndex(index)}
+                className={`h-2 w-2 rounded-full ${currentIndex === index ? 'bg-cyan-400' : 'bg-slate-600/50 hover:bg-slate-500/50'} transition-colors`}
+                aria-label={`Go to testimonial ${index + 1}`}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Stats Section */}
+        <div className="mt-20 pt-16 border-t border-slate-700/50">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+            {stats.map((stat, index) => (
+              <div key={index}>
+                <p className="text-4xl font-bold bg-gradient-to-r from-cyan-400 to-purple-500 text-transparent bg-clip-text mb-2">
+                  {stat.value}
+                </p>
+                <p className="text-gray-400 text-sm">
+                  {stat.label}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 });

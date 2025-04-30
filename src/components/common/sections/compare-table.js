@@ -30,11 +30,11 @@ const CompareTable = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="text-center mb-12 md:mb-16">
-          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-6 bg-gradient-to-r from-purple-400 via-cyan-400 to-purple-400 text-transparent bg-clip-text">
-            Manual vs. Generic AI vs. AltPage.ai
+          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-6 text-white">
+            <span className="text-cyan-400">Automation</span> vs. <span className="text-slate-400">Manual</span> Process
           </h2>
           <p className="text-xl sm:text-2xl font-medium text-slate-300 max-w-3xl mx-auto">
-            Stop wasting time on manual page building or generic AI outputs. See how AltPage.ai delivers targeted results, faster.
+            See how AltPage.ai transforms weeks of work into minutes.
           </p>
         </div>
 
