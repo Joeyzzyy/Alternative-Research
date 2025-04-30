@@ -2187,9 +2187,7 @@ const ResearchTool = ({
                 const formattedInput = userInput.trim();
                 initializeChat(formattedInput);
               }}>
-                  {/* --- Flex 容器：让内部元素水平排列 --- */}
                   <div className="flex items-center gap-2">
-                    {/* --- 输入框容器：使用 flex-grow 占据剩余空间 --- */}
                     <div className="flex-grow">
                       <Input
                         placeholder={dynamicPlaceholder}
@@ -2198,7 +2196,7 @@ const ResearchTool = ({
                           setUserInput(e.target.value);
                           localStorage.setItem('urlInput', e.target.value);
                         }}
-                        className={`research-tool-input border rounded-xl text-lg bg-white/90 border-blue-600/50 focus:border-blue-500 focus:ring focus:ring-blue-500/30 text-stone-800 placeholder-stone-500/80`}
+                        className={`research-tool-input w-full border rounded-xl text-lg bg-white/90 border-blue-600/50 focus:border-blue-500 focus:ring focus:ring-blue-500/30 text-stone-800 placeholder-stone-500/80`}
                         style={{
                           color: '#433422',
                           height: '80px', // 输入框高度
@@ -2208,7 +2206,6 @@ const ResearchTool = ({
                         }}
                       />
                     </div>
-                    {/* --- 按钮容器：占据自身所需宽度 --- */}
                     <div>
                       <button
                         type="submit"
