@@ -475,7 +475,7 @@ export default function Header() {
                           {userCreditsLoading ? (
                             <Spin size="small" />
                           ) : (
-                            `${userCredits.pageGeneratorLimit - userCredits.pageGeneratorUsage}/${userCredits.pageGeneratorLimit}`
+                            `${(userCredits.pageGeneratorLimit - userCredits.pageGeneratorUsage) * 10}/${userCredits.pageGeneratorLimit * 10}`
                           )}
                         </span>
                       </div>
@@ -501,7 +501,7 @@ export default function Header() {
                               {userCreditsLoading ? (
                                 <Spin size="small" />
                               ) : (
-                                `${userCredits.pageGeneratorLimit - userCredits.pageGeneratorUsage} Available`
+                                `${(userCredits.pageGeneratorLimit - userCredits.pageGeneratorUsage) * 10} Available`
                               )}
                             </span>
                           </div>
@@ -513,8 +513,8 @@ export default function Header() {
                               }}
                             ></div>
                           </div>
-                          <p className="mb-3 text-gray-300">Total Credits: {userCredits.pageGeneratorLimit}</p>
-                          <p className="mb-3 text-gray-300">Used: {userCredits.pageGeneratorUsage}</p>
+                          <p className="mb-3 text-gray-300">Total Credits: {userCredits.pageGeneratorLimit * 10}</p>
+                          <p className="mb-3 text-gray-300">Used: {userCredits.pageGeneratorUsage * 10}</p>
                           <p className="text-gray-400 text-xs mb-4">Note: Changing the overall color scheme or style of the page will also consume credits.</p>
 
                           {/* 添加购买更多积分按钮 */}
@@ -676,7 +676,7 @@ export default function Header() {
                           {userCreditsLoading ? (
                             <Spin size="small" />
                           ) : (
-                            `${userCredits.pageGeneratorLimit - userCredits.pageGeneratorUsage}/${userCredits.pageGeneratorLimit}`
+                            `${(userCredits.pageGeneratorLimit - userCredits.pageGeneratorUsage) * 10}/${userCredits.pageGeneratorLimit * 10}`
                           )} Credits
                         </span>
                       </div>
