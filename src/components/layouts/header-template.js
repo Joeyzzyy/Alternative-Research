@@ -88,7 +88,6 @@ export default function Header() {
   // 初始化 messageApi 和 contextHolder
   const [messageApi, contextHolder] = message.useMessage();
   const { userCredits, loading: userCreditsLoading } = useUser();
-  const router = useRouter();
   const [state, setState] = useState({
     isOpen: false,
     activeDropdown: null
@@ -99,20 +98,9 @@ export default function Header() {
   const [isLoginForm, setIsLoginForm] = useState(true); // true for login form, false for register form
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [showCreditsTooltip, setShowCreditsTooltip] = useState(false);
-  const [showResultIdsModal, setShowResultIdsModal] = useState(false);
-  const [resultIds, setResultIds] = useState([]);
-  const [selectedPreviewUrl, setSelectedPreviewUrl] = useState('');
-  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
-  const [activePreviewTab, setActivePreviewTab] = useState(0);
-  const [loadingResultIds, setLoadingResultIds] = useState(false);
-  const [currentWebsiteId, setCurrentWebsiteId] = useState(null);
-  const { currentTool, setCurrentTool } = useToolContext();
   const [loading, setLoading] = useState(false);
-  const initialLoadRef = useRef(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [googleOneTapInitialized, setGoogleOneTapInitialized] = useState(false);
-  const tokenExpiredHandledRef = useRef(false);
-  const [showConstructionModal, setShowConstructionModal] = useState(false);
+  const [googleOneTapInitialized, setGoogleOneTapInitialized] = useState(false);;
 
   useEffect(() => {
     // 检查本地存储中的登录信息
