@@ -86,7 +86,47 @@ export default function Footer() {
     {
       title: "Resources", // Section Title from page.js
       links: [
-        { label: "Generate SEO Blogs", url: "https://websitelm.com/" }, // External link
+        { label: "Generate SEO Blogs", url: "https://websitelm.com/" }, // 旧的链接，已被下方列表替换
+        {
+            "label": "How to Write the Best SEO Blogs - A Complete Guide",
+            "url": "https://websitelm.com/blog/best-seo-blogs-writing-guide"
+        },
+        {
+            "label": "AI SEO Tools Scale Agile Solutions: Boost Your SEO with AI",
+            "url": "https://websitelm.com/blog/ai-seo-tools-agile-solutions"
+        },
+        {
+            "label": "B2B SaaS SEO in 2025: The Ultimate Guide to Dominate Search Rankings",
+            "url": "https://websitelm.com/blog/b2b-saas-seo-strategies-2025"
+        },
+        {
+            "label": "Is SEO DEAD in 2025? The Truth Behind the Myth",
+            "url": "https://websitelm.com/blog/seo-dead-2025-myths-truth"
+        },
+        {
+            "label": "How to Do an Enterprise SEO Audit: 7 Must-Check Areas for Success",
+            "url": "https://websitelm.com/blog/enterprise-seo-audit-guide"
+        },
+        {
+            "label": "5 Advanced Keyword Research Techniques for 2025",
+            "url": "https://websitelm.com/blog/advanced-keyword-research-techniques-2025"
+        },
+        {
+            "label": "Building Authority Backlinks: A Step-by-Step Guide for Beginners",
+            "url": "https://websitelm.com/blog/building-authority-backlinks-guide"
+        },
+        {
+            "label": "Advantages and Disadvantages of SEO: What You Need to Know",
+            "url": "https://websitelm.com/blog/advantages-disadvantages-seo-guide"
+        },
+        {
+            "label": "What is Local Search Intent and How to Optimize for It",
+            "url": "https://websitelm.com/blog/local-search-intent-optimization"
+        },
+        {
+            "label": "SaaS Technical SEO - The Complete Guide of 2025",
+            "url": "https://websitelm.com/blog/saas-technical-seo-guide-2025"
+        }
       ],
     }
     // 如果需要，可以在这里添加更多 section
@@ -140,7 +180,13 @@ export default function Footer() {
           
           {/* Footer Sections (使用更新后的 footerSections) */}
           {footerSections.map((section, sectionIndex) => (
-            <div key={sectionIndex} className="space-y-4">
+            <div 
+              key={sectionIndex} 
+              className={`space-y-4 ${
+                // 如果是 "Resources" 部分，在大屏幕上让它占据两列
+                section.title === "Resources" ? 'lg:col-span-2' : '' 
+              }`}
+            >
               <h4 className="text-sm font-semibold text-white uppercase tracking-wider">
                 {section.title}
               </h4>
