@@ -6,6 +6,7 @@ import apiClient from '../../../lib/api/index.js';
 import { EventSourcePolyfill } from 'event-source-polyfill';
 import MessageHandler from '../../../utils/MessageHandler';
 import HistoryCardList from './result-preview.js';
+import { useMediaQuery } from 'react-responsive';
 
 const TAG_FILTERS = {
   '\\[URL_GET\\]': '',  
@@ -66,6 +67,9 @@ const ResearchTool = ({
     { url: 'https://alternative.nytgames.top/nyt-games-original-alternative', title: 'Play NYT Games Free: The Ultimate Word Puzzle Collection Without Subscriptions', image: '/images/preview-nytgames.png', timestamp: 'Generated 2 hours ago' },
     { url: 'https://alternative.neobund.com/doba-alternative', title: 'NeoBund: The Smarter Alternative to Doba with Guaranteed 2-Day US Shipping', image: '/images/preview-neobund.png', timestamp: 'Generated on April 26' }
   ];
+
+  const isMobile = useMediaQuery({ query: '(max-width: 767px)' });
+
   const [currentExampleIndex, setCurrentExampleIndex] = useState(0);
   // --- 结束新增 ---
 
@@ -1910,23 +1914,6 @@ const ResearchTool = ({
     };
   }, []);
 
-  const handleExampleClick = (exampleKey) => { // 参数名改为 exampleKey 以示清晰
-    // 1. 调用从父组件传入的函数，设置目标 Tab Key
-    if (setTargetShowcaseTab) {
-      // --- 修改：传递新的 key ('ranking', 'conversion', 'sem') ---
-      setTargetShowcaseTab(exampleKey);
-    } else {
-      console.warn("setTargetShowcaseTab prop is missing in ResearchTool");
-    }
-
-    // 2. 滚动到 showcase 组件的容器
-    const showcaseSection = document.getElementById('showcase-section');
-    if (showcaseSection) {
-      showcaseSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } else {
-      console.warn("Element with ID 'showcase-section' not found for scrolling.");
-    }
-  };
   const currentTextIndexRef = useRef(0); // Track which sentence to display
   const isDeletingRef = useRef(false); // Track if currently deleting
   const charIndexRef = useRef(0); // Track character index within the sentence
@@ -2061,7 +2048,150 @@ const ResearchTool = ({
   }, [showInitialScreen, examples.length]);
   // --- 结束 ---
 
-  if (showInitialScreen) {
+  const renderMobileInitialScreen = () => {
+    const currentExample = examples[currentExampleIndex];
+    return (
+      <div className={`w-full min-h-screen flex flex-col items-center justify-center relative bg-cover bg-center bg-no-repeat bg-gradient-to-br from-slate-900 via-slate-950 to-black overflow-y-auto px-4 py-16`}>
+        {/* 移动端特定的背景效果或元素 */}
+        <div className="absolute top-1/4 left-0 right-0 h-1/2 -translate-y-1/2 animate-shimmer pointer-events-none z-0 opacity-50"></div>
+        {contextHolder}
+
+        {/* 移动端布局: 文本和表单在上方 */}
+        <div className="w-full flex flex-col items-center mb-8 mt-8">
+          <div className={`mb-6 text-center`}>
+            <h1 className={`text-3xl font-bold mb-4`}>
+              <div className="relative inline-block">
+                <span className="text-5xl font-bold bg-gradient-to-b from-white via-gray-200 to-gray-400 bg-clip-text text-transparent [text-shadow:0_0_10px_rgba(255,255,255,0.4)]">
+                  Own <br /> Every <br /> '<span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">[Competitor] Alternative</span>' <br /> Search.
+                </span>
+              </div>
+            </h1>
+            <p className="text-base text-gray-300 mt-1 mb-6">
+              AI pages that outrank, out-convert, and update themselves.
+            </p>
+          </div>
+
+          <div className="relative max-w-md w-full mx-auto">
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              if (!validateDomain(userInput)) {
+                messageApi.error('Please enter a valid domain (e.g., example.com or https://example.com)');
+                return;
+              }
+              const formattedInput = userInput.trim();
+              initializeChat(formattedInput);
+            }}>
+              <div className="flex flex-col items-stretch gap-2">
+                <div className="w-full">
+                  <Input
+                    placeholder={dynamicPlaceholder}
+                    value={userInput}
+                    onChange={(e) => { /* ... input change ... */ }}
+                    className={`research-tool-input w-full border rounded-xl text-base bg-white/90 border-blue-600/50 focus:border-blue-500 focus:ring focus:ring-blue-500/30 text-stone-800 placeholder-stone-500/80`}
+                    style={{ color: '#433422', height: '56px' }}
+                  />
+                </div>
+                <div className="w-full">
+                  <button
+                    type="submit"
+                    className={`px-4 py-4 text-base
+                      bg-gradient-to-r from-blue-500 to-purple-700 text-white border-blue-400/50 hover:border-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.5)] hover:shadow-[0_0_25px_rgba(59,130,246,0.7)] hover:from-blue-400 hover:to-purple-600
+                      rounded-xl
+                      transition-all duration-300 flex items-center justify-center gap-2 w-full {/* <-- 修改：添加 w-full 和 justify-center */}
+                      hover:scale-105 shadow-lg
+                      ${isProcessingTask ? 'opacity-70 cursor-not-allowed hover:scale-100' : 'cursor-pointer'}`}
+                    style={{ height: '64px' }} // 按钮高度，可调整以匹配输入框
+                    disabled={!userInput.trim() || isProcessingTask}
+                  >
+                    {isProcessingTask ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span className="relative z-10">Processing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <ArrowRightOutlined className="w-6 h-6" />
+                        <span className="relative z-10">Start Creating!</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+
+          <div className="mb-6 mx-auto w-fit">
+            <div className="inline-flex items-center px-2.5 py-1.5 rounded text-yellow-400 text-xs" style={{ minWidth: 0, fontWeight: 400 }}>
+              <svg className="w-4 h-4 mr-1 text-yellow-400" viewBox="0 0 24 24" fill="currentColor"> <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm-1.06 13.54L7.4 12l1.41-1.41 2.12 2.12 4.24-4.24 1.41 1.41-5.64 5.66z"/> </svg>
+              Generate and deploy 5 free alternative pages – no credit card required.
+            </div>
+          </div>
+        </div>
+
+        <div className="w-full flex flex-col items-center justify-center relative"> {/* 移除 mb-8 */}
+          <p className="text-sm text-blue-300 mb-3 text-center flex items-center justify-center gap-1.5">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-green-400 animate-pulse" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            </svg>
+            <span className="[text-shadow:0_0_8px_rgba(59,130,246,0.5)]">{currentExample.timestamp}</span>
+          </p>
+          <div className="relative w-full max-w-md"> {/* 调整最大宽度 */}
+            <button
+              onClick={goToPrevExample}
+              className="absolute left-1 top-1/2 transform -translate-y-1/2 z-20 p-0.5 bg-slate-700/50 hover:bg-slate-600/70 rounded-full text-white transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+              aria-label="Previous example"
+            >
+              <LeftOutlined style={{ fontSize: '16px' }} />
+            </button>
+            <a
+              key={currentExampleIndex}
+              href={currentExample.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block w-full mx-auto bg-stone-900/50 border-blue-700/30 hover:border-blue-600/50 text-stone-300 backdrop-blur-sm rounded-xl border relative overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 group animate-fadeIn"
+            >
+              <div className="absolute top-0 left-0 right-0 h-8 bg-slate-700/80 flex items-center px-3 z-10 pointer-events-none">
+                 <div className="flex space-x-1.5">
+                   <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
+                   <div className="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>
+                   <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
+                 </div>
+                 <div className="flex-grow text-center">
+                   <span className="text-xs text-slate-300 truncate">{currentExample.title}</span>
+                 </div>
+                 <div className="flex space-x-1.5 invisible">
+                   <div className="w-2.5 h-2.5"></div><div className="w-2.5 h-2.5"></div><div className="w-2.5 h-2.5"></div>
+                 </div>
+              </div>
+              <div className="pt-8 h-[250px] overflow-hidden"> {/* 移动端高度 */}
+                <img
+                  src={currentExample.image}
+                  alt={`Preview of ${currentExample.title}`}
+                  className="w-full h-full object-cover" /* 移动端使用 cover */
+                  loading="lazy"
+                />
+              </div>
+            </a>
+            <button
+              onClick={goToNextExample}
+              className="absolute right-1 top-1/2 transform -translate-y-1/2 z-20 p-0.5 bg-slate-700/50 hover:bg-slate-600/70 rounded-full text-white transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+              aria-label="Next example"
+            >
+              <RightOutlined style={{ fontSize: '16px' }} />
+            </button>
+          </div>
+          <div className="flex justify-center space-x-2 mt-4">
+            {examples.map((_, index) => (
+              <button key={index} onClick={() => setCurrentExampleIndex(index)} className={`w-2 h-2 rounded-full transition-all duration-300 ${index === currentExampleIndex ? 'bg-blue-500 scale-125' : 'bg-slate-600 hover:bg-slate-500'}`} aria-label={`Go to example ${index + 1}`} />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // --- 桌面端布局 ---
+  const renderDesktopInitialScreen = () => {
     const currentExample = examples[currentExampleIndex];
     return (
       <div className={`w-full h-screen flex items-center justify-center relative bg-cover bg-center bg-no-repeat bg-gradient-to-br from-slate-900 via-slate-950 to-black overflow-hidden`}>
@@ -2209,7 +2339,6 @@ const ResearchTool = ({
                     <div>
                       <button
                         type="submit"
-                        // --- 修改：减少水平内边距 (px-6 -> px-4)，移除 border 类 ---
                         className={`px-4 py-4 text-base
                           bg-gradient-to-r from-blue-500 to-purple-700 text-white border-blue-400/50 hover:border-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.5)] hover:shadow-[0_0_25px_rgba(59,130,246,0.7)] hover:from-blue-400 hover:to-purple-600
                           rounded-xl
@@ -2322,13 +2451,14 @@ const ResearchTool = ({
                 />
               ))}
             </div>
-            {/* --- 结束指示点 --- */}
           </div>
-          {/* === 结束右侧栏 === */}
-
         </div>
       </div>
     );
+  };
+
+  if (showInitialScreen) {
+    return isMobile ? renderMobileInitialScreen() : renderDesktopInitialScreen();
   }
 
   return (
