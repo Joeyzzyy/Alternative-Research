@@ -2046,7 +2046,7 @@ const ResearchTool = ({
               </div>
             </h1>
             <p className="text-base text-gray-300 mt-1 mb-6">
-              AI pages that outrank, out-convert, and update themselves.
+            Own all your competitor's brand search traffic with AI-generated pages that outrank.
             </p>
           </div>
 
