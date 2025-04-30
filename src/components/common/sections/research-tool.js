@@ -2199,7 +2199,7 @@ const ResearchTool = ({
                         className={`research-tool-input w-full border rounded-xl text-lg bg-white/90 border-blue-600/50 focus:border-blue-500 focus:ring focus:ring-blue-500/30 text-stone-800 placeholder-stone-500/80`}
                         style={{
                           color: '#433422',
-                          height: '80px', // 输入框高度
+                          height: '64px', // <-- 修改：将输入框高度调整为 64px 以匹配按钮
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
@@ -2236,9 +2236,10 @@ const ResearchTool = ({
               </form>
             </div>
 
-            <div className="mt-4 text-center mb-8">
+            <div className="mt-4 mb-8 ml-auto w-fit">
+              {/* --- 修改：移除 bg-yellow-50, border, border-yellow-200, 修改 text-gray-300 为 text-yellow-400 --- */}
               <div
-                className="inline-flex items-center px-2.5 py-1.5 rounded border border-yellow-200 bg-yellow-50 text-yellow-700 text-xs"
+                className="inline-flex items-center px-2.5 py-1.5 rounded text-yellow-400 text-xs"
                 style={{ minWidth: 0, fontWeight: 400 }}
               >
                 <svg className="w-4 h-4 mr-1 text-yellow-400" viewBox="0 0 24 24" fill="currentColor">
