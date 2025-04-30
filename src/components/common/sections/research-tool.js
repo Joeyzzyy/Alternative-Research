@@ -2289,7 +2289,9 @@ const ResearchTool = ({
                   <span className="text-6xl font-bold bg-gradient-to-b from-white via-gray-200 to-gray-400 bg-clip-text text-transparent [text-shadow:0_0_10px_rgba(255,255,255,0.4)]">
                     <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">Get Found</span> 
                     <br/>
-                    <span className="text-4xl font-semibold">When People Search Your Competitor</span>
+                    When People Search 
+                    <br/>
+                    Your Competitor
                   </span>
                 </div>
               </h1>
