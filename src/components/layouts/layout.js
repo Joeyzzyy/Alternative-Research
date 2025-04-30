@@ -15,6 +15,7 @@ import ResultPreview from '../common/sections/result-preview';
 import { useToolContext } from '../../contexts/ToolContext';
 import BottomBanner from '../common/sections/bottom-banner';
 import CompareTable from '../common/sections/compare-table';
+import KeyAdvantages from '../common/sections/key-advantages';
 
 const COMPONENT_MAP = {
   Faqs: FAQ,
@@ -27,6 +28,7 @@ const COMPONENT_MAP = {
   ShowCase: ShowCase,
   HowItWorks: HowItWorks,
   CompareTable: CompareTable,
+  KeyAdvantages: KeyAdvantages,
 };
 
 const generateSchemaMarkup = (article) => {

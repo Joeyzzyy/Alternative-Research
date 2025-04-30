@@ -301,6 +301,10 @@ async function getPageData() {
           sectionId: "how-it-works-1"
         },
         {
+          componentName: "KeyAdvantages",
+          sectionId: "key-advantages-1"
+        },
+        {
           componentName: "CompareTable",
           sectionId: "compare-table-1"
         },
