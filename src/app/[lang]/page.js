@@ -323,39 +323,10 @@ async function getPageData() {
         {
           componentName: "Faqs",
           sectionId: "faq",
-          topContent: [
-            {
-              question: "How does your AI SaaS comparison tool work?",
-              answer: "Our platform uses advanced algorithms to analyze and compare different AI SaaS solutions based on features, pricing, user reviews, and performance metrics. We continuously update our database to provide you with the most accurate and current information for making informed decisions."
-            },
-            {
-              question: "What criteria do you use to evaluate AI tools?",
-              answer: "We evaluate AI tools across multiple dimensions including:\n• Functionality and feature set\n• Pricing and value for money\n• Integration capabilities\n• Ease of use and learning curve\n• Customer support quality\n• Security and compliance\n• Performance and reliability"
-            },
-            {
-              question: "How often is your comparison data updated?",
-              answer: "Our database is updated daily through automated monitoring systems and manual verification. We track changes in features, pricing, and user feedback to ensure you always have access to the most current information about AI SaaS alternatives."
-            },
-            {
-              question: "Can I compare specific AI tools side by side?",
-              answer: "Yes! Our platform allows you to select multiple AI tools and compare them side by side across all relevant criteria. You can customize the comparison parameters to focus on the aspects that matter most to your needs."
-            }
-          ],
-          bottomContent: {
-            showButton: true,
-            buttonText: "View All FAQs",
-            buttonLink: "https://alternatively.websitelm.com/faq"
-          }
         },
         {
           componentName: "CallToAction",
           sectionId: "cta-1",
-          title: "Stay Updated with the Latest AI Tool Comparisons",
-          bottomContent: {
-            inputPlaceholder: "Enter your work email",
-            smallText: "Join 5,000+ professionals receiving our weekly AI tool insights",
-            buttonText: "Subscribe Now"
-          }
         },
       ]
     }

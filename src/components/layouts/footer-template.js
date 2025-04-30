@@ -76,9 +76,8 @@ export default function Footer() {
       title: "Navigation", // Section Title
       links: [
         { label: "Back to Top", url: "#" }, // Internal link
-        // 从 page.js 的 Features 部分获取
-        { label: "Pricing", url: "https://altpage.ai/pricing" }, // External link from page.js
-        { label: "FAQ", url: "https://altpage.ai/faq" }, // External link from page.js
+        { label: "Pricing", url: "#pricing" }, // 修改：改为内部锚点链接
+        { label: "FAQ", url: "#faq" }, // 修改：改为内部锚点链接
       ],
     },
     {

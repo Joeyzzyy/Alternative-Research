@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 
-const CallToAction = ({ data, theme = 'normal' }) => {
+const CallToAction = () => {
   return (
     <div className="bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 py-24 relative overflow-hidden">
       {/* AI-style background decorations */}
@@ -30,11 +30,11 @@ const CallToAction = ({ data, theme = 'normal' }) => {
 
       <div className="max-w-3xl mx-auto px-4 text-center relative z-10">
         <h2 className="text-3xl md:text-4xl font-bold mb-6 text-white">
-          {data.title}
+          Stay Updated with the Latest AI Tool Comparisons
         </h2>
         
         <p className="text-gray-300 mb-10 max-w-2xl mx-auto leading-relaxed">
-          {data.subTitle}
+          Join 5,000+ professionals receiving our weekly AI tool insights
         </p>
         
         <div className="relative group">
@@ -49,7 +49,7 @@ const CallToAction = ({ data, theme = 'normal' }) => {
           >
             <span className="absolute inset-0 w-full h-full bg-gradient-to-br from-cyan-500 via-purple-600 to-rose-500 opacity-0 group-hover:opacity-10 transition-opacity duration-300 rounded-xl"></span>
             <span className="flex items-center justify-center gap-2">
-              Get it now
+              Subscribe Now
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 group-hover:translate-x-0.5 transition-transform duration-300" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
               </svg>

@@ -4,24 +4,24 @@ import React from 'react';
 // Define the new FAQ data in English
 const faqData = [
   {
-    question: "What exactly is an alternative page?",
-    answer: "An alternative page is a specialized landing page that compares your product or service to a popular competitor. These pages target users who are actively searching for alternatives to that competitor, capturing high-intent traffic."
+    question: "How accurate is the AI content?",
+    answer: "Our AI generates factual, data-backed comparisons using verified product information. All content is review-ready before publishing, ensuring maximum accuracy."
   },
   {
-    question: "Are alternative pages ethical?",
-    answer: "Yes, when done properly. AltPage.ai creates objective, fact-based comparison content that highlights your unique advantages without resorting to negative marketing or false claims about competitors."
+    question: "How quickly will my alternative pages start ranking?",
+    answer: "Most clients see first-page rankings within 4-6 weeks for mid-competition keywords. Our SEO-optimized structure accelerates indexing and ranking."
   },
   {
-    question: "How long does it take to see results?",
-    answer: "Most customers start seeing traffic and conversions within 30-60 days, depending on the competitiveness of the keywords targeted. Our SEO optimization helps your pages rank faster for relevant search terms."
+    question: "Do I need technical skills to use AltPage.ai?",
+    answer: "No technical skills required. Our platform handles everything from research to publishing. Simple integrations available for all major CMS platforms."
   },
   {
-    question: "Can I integrate AltPage.ai with my existing website?",
-    answer: "Of course, we can deploy to your subdomain or subdirectory."
+    question: "How do you ensure the content is unique?",
+    answer: "Every page is generated with unique, original content tailored to your specific product. Our AI avoids template language and creates truly custom comparisons."
   },
   {
-    question: "What if I need help creating my alternative pages?",
-    answer: "You can contact us via Intercom in the bottom right corner of the page or email us at contact@intelick.com. We will reply within 12 hours."
+    question: "Can I customize the page designs?",
+    answer: "Yes, you can choose from multiple templates and customize colors, fonts, and layouts to match your brand. Pro plans include advanced customization options."
   }
 ];
 
