@@ -215,11 +215,11 @@ const AlternativePageFeature = () => {
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-8 bg-gradient-to-r from-cyan-400 to-purple-500 text-transparent bg-clip-text">
-            Missing on 'Alternative' keywords? 
+            Missing on 'Alternative' keywords?
             <br />
             You're invisible.
           </h2>
-          <p className="text-2xl font-medium text-slate-300 text-center mb-12 underline decoration-slate-500 underline-offset-4"> {/* Changed text-cyan-300 to text-slate-300 and decoration-cyan-500 to decoration-slate-500 */}
+          <p className="text-lg text-gray-300 leading-relaxed mb-16 max-w-3xl mx-auto text-center">
             Every day, potential customers search for alternatives to your competitors. Without optimized comparison pages, you're missing out on high-intent traffic.
           </p>
 

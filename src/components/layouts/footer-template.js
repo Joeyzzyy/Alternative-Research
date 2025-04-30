@@ -5,7 +5,7 @@ import { FaFacebook, FaDiscord, FaXTwitter, FaYoutube, FaLinkedin, FaInstagram, 
 
 export default function Footer() {
   // 硬编码公司信息和版权
-  const description = "The Best AI Alternative Research Tool.";
+  const description = "AI pages that outrank, out-convert, and update themselves.";
   const copyright = "© 2025 AltPage.ai. All rights reserved.";
 
   // 硬编码社交媒体链接

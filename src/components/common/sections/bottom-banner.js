@@ -85,7 +85,7 @@ export default function BottomBanner({ onClick }) {
           whiteSpace: 'nowrap'
         }}
       >
-        We use cookies to optimize your experience. <span style={{background: 'linear-gradient(90deg,#6366f1,#f0abfc 80%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontWeight: 700}}>Sign up to generate 5 pages for free</span>. No credit card required, try it now!
+        Turn competitor searches into customers - start for free.
       </span>
       <button
         className="ml-2 px-4 py-1.5 rounded-md font-bold shadow transition-all duration-150"

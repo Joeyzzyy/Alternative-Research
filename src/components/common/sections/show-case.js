@@ -17,7 +17,7 @@ const CustomizableResearchUI = forwardRef(({}, ref) => {
       id: 2,
       image: '/images/testimonials/customer-2.jpg', // Replace with actual image path
       quote: "We struggled with converting comparison shoppers. AltPage.ai's tailored landing pages significantly boosted our sign-up rate by 25%. Highly recommended!",
-      avatar: '/images/zy.jpg', // Updated avatar path
+      avatar: '/images/youssef.jpg', // Updated avatar path
       name: 'John Smith',
       role: 'Founder, E-commerce Brand',
     },
@@ -25,7 +25,7 @@ const CustomizableResearchUI = forwardRef(({}, ref) => {
       id: 3,
       image: '/images/testimonials/customer-3.jpg', // Replace with actual image path
       quote: "Our SEM campaigns saw a dramatic improvement in lead quality and ROI after using AltPage.ai for landing pages. The +15% conversion lift speaks for itself.",
-      avatar: '/images/zy.jpg', // Updated avatar path
+      avatar: '/images/hy.jpg', // Updated avatar path
       name: 'Alex Johnson',
       role: 'PPC Manager, Marketing Agency',
     },
@@ -91,10 +91,10 @@ const CustomizableResearchUI = forwardRef(({}, ref) => {
                       </blockquote>
                       {/* Bottom: Avatar, Name, Role */}
                       <div className="flex items-center mt-4"> {/* Added top margin for spacing */}
-                        <img 
-                          className="h-12 w-12 rounded-full mr-4 border-2 border-cyan-500/50" 
-                          src={testimonial.avatar} 
-                          alt={testimonial.name} 
+                        <img
+                          className="h-12 w-12 rounded-full mr-4 border-2 border-cyan-500/50 object-cover"
+                          src={testimonial.avatar}
+                          alt={testimonial.name}
                         />
                         <div>
                           <p className="font-semibold text-white">{testimonial.name}</p>
