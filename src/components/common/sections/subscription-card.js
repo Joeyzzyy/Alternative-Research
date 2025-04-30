@@ -50,7 +50,7 @@ const SubscriptionCard = () => {
           'Standard-Annual',
           'Standard-Monthly',
           'Professional-Annual',
-          'Professional-Monthly ',
+          'Professional-Monthly',
           'Testing-Standard-Monthly'
         ].includes(pkg.packageName.trim())
       );
@@ -95,7 +95,9 @@ const SubscriptionCard = () => {
           {
             title: "Features include:",
             items: [
-              `300 credits/month (can be used for alternative page or blog generation)`,
+              <>
+                <span className="font-bold text-2xl text-cyan-400 inline-block animate-bounce-subtle">300</span> credits/month (approx. <span className="font-bold text-2xl text-cyan-400 inline-block animate-bounce-subtle">30</span> pages for alternative page or blog generation)
+              </>,
               `Generate up to ${planMap.Standard.monthly?.pageLimit ?? 30} pages in total /month`,
               `Freely hosting ${planMap.Standard.monthly?.pageLimit ?? 30} pages on our server`,
               "Auto images grabbing and matching",
@@ -125,7 +127,9 @@ const SubscriptionCard = () => {
           {
             title: "Everything in Standard, plus:",
             items: [
-              `1000 credits/month (can be used for alternative page or blog generation)`,
+              <>
+                <span className="font-bold text-2xl text-purple-400 inline-block animate-bounce-subtle">1000</span> credits/month (approx. <span className="font-bold text-2xl text-purple-400 inline-block animate-bounce-subtle">100</span> pages for alternative page or blog generation)
+              </>,
               `Generate up to ${planMap.Professional.monthly?.pageLimit ?? 100} pages in total /month`,
               `Freely hosting ${planMap.Professional.monthly?.pageLimit ?? 100} pages on our server`,
               "Auto images grabbing and matching",
@@ -156,7 +160,9 @@ const SubscriptionCard = () => {
           {
             title: "Features include:",
             items: [
-              `50 credits/month (can be used for alternative page or blog generation)`,
+              <>
+                <span className="font-bold text-2xl text-emerald-400 inline-block animate-bounce-subtle">50</span> credits/month (approx. <span className="font-bold text-2xl text-emerald-400 inline-block animate-bounce-subtle">5</span> pages for alternative page or blog generation)
+              </>,
               `Generate up to ${Math.ceil((planMap.Standard.monthly?.pageLimit ?? 30) / 6)} pages in total /month`,
               `Freely hosting ${Math.ceil((planMap.Standard.monthly?.pageLimit ?? 30) / 6)} pages on our server`,
               ...(standardPlan.features[0].items.slice(3))
@@ -300,7 +306,7 @@ const SubscriptionCard = () => {
                   <h3 className="text-2xl font-bold text-white mt-4">{plan.name}</h3>
 
                   <div className="mt-8 mb-4 flex items-center justify-center space-x-4">
-                    <span className={`text-3xl font-extrabold tracking-tight
+                    <span className={`text-5xl font-extrabold tracking-tight
                       ${plan.popular
                         ? 'bg-gradient-to-r from-purple-400 to-rose-400 bg-clip-text text-transparent'
                         : plan.name === "Free Trial"
@@ -313,32 +319,6 @@ const SubscriptionCard = () => {
                     {plan.name !== "Free Trial" && (
                       <span className="text-lg text-gray-400 font-medium">/mo</span>
                     )}
-                    <span className="mx-2">
-                      <svg className="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                      </svg>
-                    </span>
-                    <span className="relative flex items-center">
-                      <span className="absolute -left-4 -top-2 opacity-40 pointer-events-none">
-                        <svg className="w-10 h-10 text-yellow-400 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M11.3 1.046a1 1 0 00-1.6 0l-7 10A1 1 0 003 13h5v5a1 1 0 001.6.8l7-10A1 1 0 0017 7h-5V2a1 1 0 00-.7-.954z"/>
-                        </svg>
-                      </span>
-                      <span className={`
-                        text-4xl font-extrabold tracking-tight drop-shadow-lg animate-bounce
-                        ${plan.popular
-                          ? 'bg-gradient-to-r from-yellow-300 via-pink-400 to-purple-500 bg-clip-text text-transparent'
-                          : plan.name === "Free Trial"
-                            ? 'bg-gradient-to-r from-emerald-300 via-green-400 to-teal-400 bg-clip-text text-transparent'
-                            : 'bg-gradient-to-r from-cyan-300 via-blue-400 to-green-400 bg-clip-text text-transparent'
-                        }
-                      `}>
-                        {plan.name === "Free Trial" && "50"}
-                        {plan.name === "Standard" && "300"}
-                        {plan.name === "Professional" && "1000"}
-                      </span>
-                    </span>
-                    <span className="text-base text-gray-300 ml-1">credits/month</span>
                   </div>
 
                   <p className="mt-4 text-gray-300">{plan.description}</p>
