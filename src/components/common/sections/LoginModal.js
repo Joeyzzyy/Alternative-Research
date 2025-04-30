@@ -10,12 +10,10 @@ const LoginModal = ({
   isForgotPassword, 
   setIsForgotPassword,
   onLoginSuccess,
-  showNotification,
   handleGoogleLogin,
   onRegisterSuccess
 }) => {
   const [messageApi, contextHolder] = message.useMessage();
-  // Login form state
   const [loginForm, setLoginForm] = useState({
     email: '',
     password: ''
@@ -214,21 +212,17 @@ const LoginModal = ({
         } catch (e) {}
       }
 
-      // Modified logic: Only treat as error if code is not 200
       if (response && response.code && response.code !== 200) {
         setErrorMessage(response.message || 'Registration failed. Please try again.');
         return;
       }
       
-      // Registration successful
       setSuccessMessage('Registration successful!');
       
-      // Automatically login after successful registration
       try {
         const loginResponse = await apiClient.login(registerForm.email, registerForm.password);
         
         if (loginResponse && loginResponse.accessToken) {
-          // If onRegisterSuccess callback provided, use it
           if (onRegisterSuccess) {
             onRegisterSuccess({
               accessToken: loginResponse.accessToken,
@@ -236,7 +230,6 @@ const LoginModal = ({
               customerId: loginResponse.data.customerId
             });
           } 
-          // Otherwise use onLoginSuccess if available
           else if (onLoginSuccess) {
             onLoginSuccess({
               accessToken: loginResponse.accessToken,
@@ -245,7 +238,6 @@ const LoginModal = ({
             });
           }
           
-          // Close login modal
           setShowLoginModal(false);
         } else {
           // If auto-login fails but registration succeeded, redirect to login form
@@ -254,7 +246,6 @@ const LoginModal = ({
         }
       } catch (loginError) {
         console.error("Auto-login after registration failed:", loginError);
-        // If auto-login fails but registration succeeded, redirect to login form
         setIsLoginForm(true);
         setSuccessMessage('Registration successful. Please log in with your credentials.');
       }
@@ -286,7 +277,6 @@ const LoginModal = ({
         confirmPassword: resetForm.confirmPassword
       });
       
-      // Handle password mismatch error
       if (response && response.code === 1041) {
         setErrorMessage(response.message || 'Passwords do not match. Please re-enter your password.');
         return;
@@ -328,7 +318,6 @@ const LoginModal = ({
   // 修改 handleGoogleLogin
   const handleGoogleLoginClick = async () => {
     setGoogleLoading(true);
-    // 新增：从 localStorage 获取 invitationCode
     let invitationCode = null;
     try {
       invitationCode = localStorage.getItem('invitationCode');
@@ -336,9 +325,7 @@ const LoginModal = ({
       invitationCode = null;
     }
     try {
-      // 传递 invitationCode 给 handleGoogleLogin
       await handleGoogleLogin(invitationCode); // 调用父组件传进来的 Google 登录逻辑
-      // 用完邀请码后立即删除
       if (invitationCode) {
         try {
           localStorage.removeItem('invitationCode');

@@ -62,7 +62,6 @@ const ResearchTool = ({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); 
   const [isUserLoggedIn, setIsUserLoggedIn] = useState(false); 
 
-  // --- 新增：示例数据和当前索引状态 ---
   const examples = [
     { url: 'https://alternative.nytgames.top/nyt-games-original-alternative', title: 'Play NYT Games Free: The Ultimate Word Puzzle Collection Without Subscriptions', image: '/images/preview-nytgames.png', timestamp: 'Generated 2 hours ago' },
     { url: 'https://alternative.neobund.com/doba-alternative', title: 'NeoBund: The Smarter Alternative to Doba with Guaranteed 2-Day US Shipping', image: '/images/preview-neobund.png', timestamp: 'Generated on April 26' }
@@ -71,8 +70,6 @@ const ResearchTool = ({
   const isMobile = useMediaQuery({ query: '(max-width: 767px)' });
 
   const [currentExampleIndex, setCurrentExampleIndex] = useState(0);
-  // --- 结束新增 ---
-
   useEffect(() => {
     const lastInput = localStorage.getItem('urlInput');
     if (lastInput) {
@@ -122,9 +119,7 @@ const ResearchTool = ({
   }, [logs, rightPanelTab]);
 
   useEffect(() => {
-    // Only reset if there are messages and input is currently disabled
     if (messages.length > 0 && inputDisabledDueToUrlGet) {
-      // Check if the last message is not from the system and not a thinking message
       const lastMessage = messages[messages.length - 1];
       if (lastMessage.source !== 'system' && !lastMessage.isThinking) {
         setInputDisabledDueToUrlGet(false);
@@ -140,7 +135,6 @@ const ResearchTool = ({
       const response = await apiClient.chatWithAI(JSON.stringify(competitors), currentWebsiteId);
 
       if (response?.code === 200 && response.data?.answer) {
-        // 更新当前步骤为2，表示已完成"Find Competitors"，现在处于"Select Competitors"阶段
         setCurrentStep(2);
         const answer = filterMessageTags(response.data.answer);
         messageHandler.updateAgentMessage(answer, thinkingMessageId);
@@ -276,9 +270,7 @@ const ResearchTool = ({
                     </div>
                   ) : (
                     <div>
-                      {/* 用 dangerouslySetInnerHTML 渲染加粗后的内容 */}
                       <span dangerouslySetInnerHTML={{ __html: filteredContent.split('\n').join('<br />') }} />
-                      {/* 添加消息后的加载动画 - 当 message.showLoading 为 true 时显示 */}
                       {message.showLoading && (
                         <div className="inline-flex items-center ml-2 mt-1">
                           <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce"></div>
@@ -309,12 +301,10 @@ const ResearchTool = ({
 
   useEffect(() => {
     const handleLoginSuccess = () => {
-      setIsUserLoggedIn(true); // 更新全局登录状态 (使用新的 setter)
-      if (localStorage.getItem('urlInput')) {
-        // 延迟一点执行，确保登录状态已完全更新
+      setIsUserLoggedIn(true);
+      if (localStorage.getItem('urlInput') && !isMobile) {
         setTimeout(() => {
           initializeChat(localStorage.getItem('urlInput'));
-          // 清除待处理的输入
           localStorage.removeItem('urlInput');
         }, 500);
       }
@@ -482,10 +472,9 @@ const ResearchTool = ({
     };
     
     const handleImageError = (e) => {
-      e.target.onerror = null; // 防止无限循环
+      e.target.onerror = null; 
       e.target.style.display = 'none'; 
     
-      // 禁用父链接
       const parentLink = e.target.closest('a');
       if (parentLink) {
         parentLink.onclick = (event) => event.preventDefault();
@@ -499,7 +488,6 @@ const ResearchTool = ({
       <div className="h-full flex flex-col" ref={detailsRef}>
         <div className="p-3 space-y-2 overflow-y-auto flex-grow"> {/* 添加 flex-grow */}
           {mergedLogs.map((log, index) => {
-            // 跳过 Info 和 Codes 类型的日志
             if (log.type === 'Info' || log.type === 'Codes') {
               return null;
             }
@@ -529,7 +517,6 @@ const ResearchTool = ({
               );
             }
             
-            // 解析 Dify 日志的 content
             let difyContent = null;
             if (log.type === 'Dify' && typeof log.content === 'string') {
               try {
@@ -548,7 +535,6 @@ const ResearchTool = ({
               ? colorStreamRef.current
               : log.content;
 
-            // --- 修改：为新的 Crawler 类型添加图标和标题 ---
             const isCrawlerType = log.type === 'Crawler_Images' || log.type === 'Crawler_Headers' || log.type === 'Crawler_Footers';
             const uniqueKey = `${log.id || 'log'}-${log.type}-${index}`; 
             const isEmptyCrawlerContent = log.content === null || (isCrawlerType && Array.isArray(log.content) && log.content.length === 0);
@@ -580,7 +566,6 @@ const ResearchTool = ({
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
                     </svg>
                   )}
-                  {/* --- 修改：为所有 Crawler 相关类型显示同一个图标 --- */}
                   {isCrawlerType && (
                      <svg className="w-4 h-4 mr-2 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.09M19.938 11a2 2 0 11-4 0 2 2 0 014 0zM14 21a4 4 0 100-8 4 4 0 000 8z" /> {/* 简化的爬虫/网络图标 */}
@@ -591,21 +576,17 @@ const ResearchTool = ({
                     {log.type === 'Error' && 'Error Message'}
                     {log.type === 'API' && 'Agent Action Result'}
                     {log.type === 'Color' && 'Analyzing Page Style'}
-                    {/* --- 修改：根据具体 Crawler 类型显示不同标题 --- */}
                     {log.type === 'Crawler_Images' && 'Crawled Images'}
                     {log.type === 'Crawler_Headers' && 'Crawled Header Links'}
                     {log.type === 'Crawler_Footers' && 'Crawled Footer Links'}
                   </div>
                 </div>
 
-                {/* Dify 日志内容渲染 - 低调高级风格 */}
                 {log.type === 'Dify' && difyContent && (
                   <div className="text-[10px] text-gradient-metal break-words leading-relaxed space-y-1">
-                    {/* 当前动作标题 */}
                     <div className="font-semibold text-sm text-gradient-metal mb-1">
                       Current Action
                     </div>
-                    {/* 只保留文字，去除渐变色，低调显示 */}
                     <div className="flex items-center space-x-2 px-1 py-1">
                       <span
                         className="font-semibold text-gradient-metal text-xs"
@@ -2052,11 +2033,9 @@ const ResearchTool = ({
     const currentExample = examples[currentExampleIndex];
     return (
       <div className={`w-full min-h-screen flex flex-col items-center justify-center relative bg-cover bg-center bg-no-repeat bg-gradient-to-br from-slate-900 via-slate-950 to-black overflow-y-auto px-4 py-16`}>
-        {/* 移动端特定的背景效果或元素 */}
         <div className="absolute top-1/4 left-0 right-0 h-1/2 -translate-y-1/2 animate-shimmer pointer-events-none z-0 opacity-50"></div>
         {contextHolder}
 
-        {/* 移动端布局: 文本和表单在上方 */}
         <div className="w-full flex flex-col items-center mb-8 mt-8">
           <div className={`mb-6 text-center`}>
             <h1 className={`text-3xl font-bold mb-4`}>
@@ -2074,12 +2053,22 @@ const ResearchTool = ({
           <div className="relative max-w-md w-full mx-auto">
             <form onSubmit={(e) => {
               e.preventDefault();
+              // 1. 首先验证域名
               if (!validateDomain(userInput)) {
                 messageApi.error('Please enter a valid domain (e.g., example.com or https://example.com)');
                 return;
               }
-              const formattedInput = userInput.trim();
-              initializeChat(formattedInput);
+              // 2. 检查登录状态
+              if (!isUserLoggedIn) {
+                // 3. 未登录，触发 'showAlternativelyLoginModal' 事件来显示登录弹窗
+                const showLoginEvent = new CustomEvent('showAlternativelyLoginModal');
+                window.dispatchEvent(showLoginEvent);
+                return;
+              } else {
+                // 4. 已登录，显示提示信息
+                messageApi.info('Please switch to a PC for a better page generation experience!');
+                return;
+              }
             }}>
               <div className="flex flex-col items-stretch gap-2">
                 <div className="w-full">
@@ -2109,7 +2098,7 @@ const ResearchTool = ({
                       transition-all duration-300 flex items-center justify-center gap-2 w-full {/* <-- 修改：添加 w-full 和 justify-center */}
                       hover:scale-105 shadow-lg
                       ${isProcessingTask ? 'opacity-70 cursor-not-allowed hover:scale-100' : 'cursor-pointer'}`}
-                    style={{ height: '64px' }} // 按钮高度，可调整以匹配输入框
+                    style={{ height: '64px' }} 
                     disabled={!userInput.trim() || isProcessingTask}
                   >
                     {isProcessingTask ? (
