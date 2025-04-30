@@ -2094,7 +2094,7 @@ const ResearchTool = ({
            >
           {contextHolder}
           {isUserLoggedIn && (
-          <div className={`fixed top-[80px] left-4 bottom-4 z-50 bg-slate-900/60 backdrop-blur-md rounded-lg shadow-xl border border-slate-700/50 flex flex-col transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-72' : 'w-10'} overflow-visible`}> {/* 修改宽度 w-12 -> w-10 */}
+          <div className={`fixed top-[80px] left-4 bottom-4 z-50 bg-slate-900/60 backdrop-blur-md rounded-lg shadow-xl border border-slate-700/50 flex flex-col transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-72' : 'w-16'} overflow-visible`}> {/* 修改宽度 w-12 -> w-10 */}
             <button
               onClick={toggleSidebar}
               className="absolute top-1/2 -right-2 transform -translate-y-1/2 z-[51] bg-slate-700 hover:bg-slate-600 text-white w-6 h-10 rounded-r-md flex items-center justify-center transition-colors shadow-md" // 修改 -right-3 -> -right-2
@@ -2103,6 +2103,25 @@ const ResearchTool = ({
             >
               {isSidebarOpen ? <LeftOutlined style={{ fontSize: '12px' }} /> : <RightOutlined style={{ fontSize: '12px' }} />}
             </button>
+
+            <div
+              className={`absolute inset-0 flex items-center justify-center transition-opacity duration-200 ease-in-out pointer-events-none ${
+                isSidebarOpen ? 'opacity-0' : 'opacity-100'
+              }`}
+              aria-hidden={isSidebarOpen} // 辅助技术隐藏
+            >
+              <span
+                className="text-xs font-semibold text-slate-400"
+                style={{
+                  writingMode: 'vertical-rl', // 竖排，从右到左
+                  textOrientation: 'mixed',   // 保持字符正立
+                  transform: 'rotate(180deg)', // 旋转180度使文字从下往上读
+                  whiteSpace: 'nowrap',       // 防止文字换行
+                }}
+              >
+                My Tasks
+              </span>
+            </div>
 
             {/* 内容容器，根据状态控制透明度和交互 */}
             {/* --- 保持内容隐藏逻辑不变 --- */}

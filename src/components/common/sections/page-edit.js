@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import apiClient from '../../../lib/api/index.js';
 import { Button, Modal, Spin, Row, Col, Pagination, Popconfirm, Input, Form, message, Drawer, Tag } from 'antd';
-import { UploadOutlined, DeleteOutlined, CheckOutlined, EditOutlined, CloseOutlined, CheckCircleFilled, LoadingOutlined } from '@ant-design/icons';
+import { UploadOutlined, DeleteOutlined, CheckOutlined, EditOutlined, CloseOutlined, CheckCircleFilled, LoadingOutlined, SaveOutlined } from '@ant-design/icons';
 
 // --- 新增：定义常用提示 ---
 const commonPrompts = [
@@ -67,6 +67,12 @@ export default function HtmlPreview({ pageId }) {
   const [sectionCodeContent, setSectionCodeContent] = useState(''); // 当前编辑的 Section 代码内容
   const [codeEditingSectionId, setCodeEditingSectionId] = useState(null); // 正在编辑代码的 Section ID
   // --- 直接代码编辑状态结束 ---
+  // --- 新增：页面标题状态 ---
+  const [pageTitle, setPageTitle] = useState('');
+  // --- 页面标题状态结束 ---
+  // --- 新增：用于标题保存的状态 ---
+  const [isSavingTitle, setIsSavingTitle] = useState(false);
+  // --- 状态结束 ---
 
   // Show notification and set auto-hide
   const showNotification = (message, type = 'success', duration = 3000) => {
@@ -82,13 +88,32 @@ export default function HtmlPreview({ pageId }) {
     async function fetchHtml() {
       setLoading(true);
       setError('');
+      // --- 新增：重置标题 ---
+      setPageTitle('');
+      // --- 重置标题结束 ---
       try {
         const response = await apiClient.getPageBySlug(pageId, 'en');
         if (response.notFound) {
           setError('Page not found');
           setHtml('');
         } else if (response.code === 200 && response.data?.html) {
-          setHtml(response.data.html);
+          const fetchedHtml = response.data.html;
+          setHtml(fetchedHtml);
+          // --- 新增：尝试从获取的 HTML 中提取标题 ---
+          try {
+            const titleMatch = fetchedHtml.match(/<title>(.*?)<\/title>/i);
+            if (titleMatch && titleMatch[1]) {
+              setPageTitle(titleMatch[1]);
+            } else {
+              // 如果没有找到 title 标签，可以设置一个默认值或留空
+              setPageTitle('Untitled Page'); // 或者 pageId
+              console.warn("Could not find <title> tag in fetched HTML.");
+            }
+          } catch (parseError) {
+             console.error("Error parsing title from HTML:", parseError);
+             setPageTitle('Untitled Page'); // 解析出错时的回退
+          }
+          // --- 提取标题结束 ---
         } else {
           setError('Failed to load page content');
           setHtml('');
@@ -101,6 +126,72 @@ export default function HtmlPreview({ pageId }) {
     }
     fetchHtml();
   }, [pageId]);
+
+  // --- 新增：更新 iframe 中的 title 标签 ---
+  const updateIframeTitle = (newTitle) => {
+    const iframe = iframeRef.current;
+    if (iframe && iframe.contentDocument) {
+      const doc = iframe.contentDocument;
+      let titleElement = doc.querySelector('head > title');
+      if (!titleElement) {
+        // 如果 <head> 或 <title> 不存在，则创建它们
+        let headElement = doc.querySelector('head');
+        if (!headElement) {
+          headElement = doc.createElement('head');
+          // 将新 head 插入到 html 元素的开头
+          doc.documentElement.insertBefore(headElement, doc.documentElement.firstChild);
+        }
+        titleElement = doc.createElement('title');
+        headElement.appendChild(titleElement);
+        console.log("Created missing <head> or <title> element.");
+      }
+      titleElement.textContent = newTitle;
+      console.log("Updated iframe title to:", newTitle);
+    } else {
+      console.warn("Cannot update iframe title: iframe or document not ready.");
+    }
+  };
+  // --- 更新 iframe title 结束 ---
+
+  // --- 新增：处理保存标题的函数 ---
+  async function handleSaveTitle() {
+    if (!pageTitle.trim()) {
+      message.warn('Page title cannot be empty.');
+      return;
+    }
+    if (!iframeRef.current || !iframeRef.current.contentDocument) {
+      message.error('Preview content is not ready to save the title.');
+      return;
+    }
+
+    setIsSavingTitle(true);
+    showNotification('Saving title...', 'info', 1500); // 短暂提示
+
+    try {
+      // 1. 确保 iframe 中的 title 是最新的
+      updateIframeTitle(pageTitle);
+
+      // 2. 获取包含更新后 title 的完整 HTML
+      const doc = iframeRef.current.contentDocument;
+      const updatedFullHtml = doc.documentElement.outerHTML;
+
+      // 3. 调用 API 保存
+      await apiClient.editAlternativeHtml({
+        html: updatedFullHtml,
+        resultId: pageId,
+      });
+
+      showNotification('Page title saved successfully!', 'success');
+
+    } catch (e) {
+      console.error('Failed to save title:', e);
+      showNotification('Failed to save page title', 'error');
+      // 可以考虑是否需要错误处理，比如恢复旧标题？
+    } finally {
+      setIsSavingTitle(false);
+    }
+  }
+  // --- 保存标题函数结束 ---
 
   // Save edited content
   async function saveContent() {
@@ -143,6 +234,10 @@ export default function HtmlPreview({ pageId }) {
           return;
         }
       }
+
+      // --- 新增：在保存前，确保 iframe 中的 title 与状态同步 ---
+      updateIframeTitle(pageTitle);
+      // --- title 同步结束 ---
 
       // 获取更新后的整个页面 HTML
       const updatedHtml = iframeRef.current.contentDocument.documentElement.outerHTML;
@@ -1026,29 +1121,23 @@ export default function HtmlPreview({ pageId }) {
       // 即使找不到元素也要尝试保存，因为 HTML 可能已经更新
     }
 
+    // --- 移除：不再在此处更新 title ---
+    // updateIframeTitle(pageTitle);
+    // --- 移除结束 ---
+
     // 获取包含已接受更改的完整 HTML
     const updatedFullHtml = doc.documentElement.outerHTML;
 
-    // 设置保存状态，类似 saveContent
-    setSaving(true); // 可以复用现有的 saving 状态或创建一个新的
-    // --- 修改：通知信息改为英文 ---
-    showNotification('Applying changes...', 'info', 1500); // 短暂提示
+    setSaving(true);
+    showNotification('Applying changes...', 'info', 1500);
 
     try {
-      // 调用保存整个页面 HTML 的 API
       await apiClient.editAlternativeHtml({
         html: updatedFullHtml,
         resultId: pageId,
       });
-
-      // 更新组件内部的 html 状态，以便重新渲染 iframe (如果需要的话)
-      // 或者依赖于页面的自动刷新机制
-      // setHtml(updatedFullHtml); // 可选：如果希望立即反映在内部状态
-
-      // --- 修改：通知信息改为英文 ---
       showNotification('AI edit accepted and applied!', 'success');
     } catch (e) {
-      // --- 修改：日志和通知信息改为英文 ---
       console.error('Save failed after accepting AI edit:', e);
       showNotification('Failed to save accepted changes', 'error');
       // 注意：此时 iframe 中的内容是修改后的，但保存失败了。
@@ -1258,11 +1347,13 @@ export default function HtmlPreview({ pageId }) {
         originalElement.parentNode.replaceChild(newElement, originalElement);
         console.log(`Section ${codeEditingSectionId} updated with new code.`);
 
-        // 获取更新后的完整 HTML
+        // --- 移除：不再在此处更新 title ---
+        // updateIframeTitle(pageTitle);
+        // --- 移除结束 ---
+
         const updatedFullHtml = doc.documentElement.outerHTML;
 
-        // 调用 API 保存
-        setSaving(true); // 使用现有 saving 状态
+        setSaving(true);
         showNotification('Applying code changes...', 'info', 1500);
 
         await apiClient.editAlternativeHtml({
@@ -1353,11 +1444,44 @@ export default function HtmlPreview({ pageId }) {
         zIndex: 10,
         justifyContent: 'space-between'
       }}>
-        <div>
+        {/* --- 修改：将 Page Editor 和 PageId 包裹起来 --- */}
+        <div style={{ display: 'flex', alignItems: 'center' }}>
           Page Editor
           <span style={{ fontWeight: 400, fontSize: 16, marginLeft: 24, color: '#e0e7ef' }}>
             (PageId: {pageId})
           </span>
+        </div>
+        {/* --- 新增：页面标题输入区域 --- */}
+        <div style={{ display: 'flex', alignItems: 'center', flexGrow: 1, marginLeft: '40px', marginRight: '40px', gap: '12px' /* --- 新增：输入框和按钮间距 --- */ }}>
+          <span style={{ color: '#9ca3af', fontSize: '14px', marginRight: '10px', fontWeight: 500, flexShrink: 0 /* 防止 "Title:" 被压缩 */ }}>Title:</span>
+          <Input
+            value={pageTitle}
+            onChange={(e) => setPageTitle(e.target.value)}
+            // --- 移除：不再需要在 onBlur 时更新 iframe title ---
+            // onBlur={() => updateIframeTitle(pageTitle)}
+            placeholder="Enter page title"
+            style={{
+              flexGrow: 1,
+            }}
+            disabled={loading || saving || isPreviewingEdit || isEditingSectionCode || isSavingTitle} // --- 新增：标题保存时也禁用 ---
+          />
+          {/* --- 新增：保存标题按钮 --- */}
+          <Button
+            type="primary"
+            icon={<SaveOutlined />}
+            onClick={handleSaveTitle}
+            loading={isSavingTitle}
+            disabled={loading || saving || isPreviewingEdit || isEditingSectionCode || isSavingTitle || !pageTitle.trim()} // --- 新增：禁用条件 ---
+            title="Save Page Title"
+          >
+            Save Title
+          </Button>
+          {/* --- 保存标题按钮结束 --- */}
+        </div>
+        {/* --- 页面标题输入区域结束 --- */}
+        {/* --- 新增：一个占位符或者其他右侧控件区域，如果需要的话 --- */}
+        <div>
+          {/* 这里可以放其他的全局操作按钮，比如全局保存等 */}
         </div>
       </div>
       {/* --- 更新：编辑模式提示条 (更简洁，新配色) --- */}
