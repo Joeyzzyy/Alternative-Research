@@ -20,7 +20,6 @@ const ResearchTool = ({
 }) => {
   const [messageApi, contextHolder] = message.useMessage();
   const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
   const [messages, setMessages] = useState([]);
   const [userInput, setUserInput] = useState('');
   const [isMessageSending, setIsMessageSending] = useState(false);
@@ -64,8 +63,8 @@ const ResearchTool = ({
 
   // --- 新增：示例数据和当前索引状态 ---
   const examples = [
-    { url: 'https://alternative.nytgames.top/nyt-games-original-alternative', title: 'NYT Games Top', image: '/images/preview-nytgames.png', timestamp: 'Generated 2 hours ago' },
-    { url: 'https://alternative.neobund.com/doba-alternative', title: 'Neobund', image: '/images/preview-neobund.png', timestamp: 'Generated on Oct 26' }
+    { url: 'https://alternative.nytgames.top/nyt-games-original-alternative', title: 'Play NYT Games Free: The Ultimate Word Puzzle Collection Without Subscriptions', image: '/images/preview-nytgames.png', timestamp: 'Generated 2 hours ago' },
+    { url: 'https://alternative.neobund.com/doba-alternative', title: 'NeoBund: The Smarter Alternative to Doba with Guaranteed 2-Day US Shipping', image: '/images/preview-neobund.png', timestamp: 'Generated on Oct 26' }
   ];
   const [currentExampleIndex, setCurrentExampleIndex] = useState(0);
   // --- 结束新增 ---
@@ -303,14 +302,6 @@ const ResearchTool = ({
       }
     }
   }, [messages]);
-
-  useEffect(() => {
-      const timer = setTimeout(() => {
-      setInitialLoading(false);
-    }, 1500);
-    
-    return () => clearTimeout(timer);
-  }, []);
 
   useEffect(() => {
     const handleLoginSuccess = () => {
@@ -2070,42 +2061,6 @@ const ResearchTool = ({
   }, [showInitialScreen, examples.length]);
   // --- 结束 ---
 
-  if (initialLoading) {
-    return (
-      <div className="w-full min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950
-                    flex items-center justify-center relative overflow-hidden" // 添加 relative 和 overflow-hidden
-           style={{
-             paddingTop: "80px",
-             // 降低光晕透明度
-             backgroundImage: `
-               radial-gradient(circle at top left, rgba(59, 130, 246, 0.1) 0%, transparent 30%), /* 降低 alpha 值 */
-               radial-gradient(circle at bottom right, rgba(129, 140, 248, 0.07) 0%, transparent 40%), /* 降低 alpha 值 */
-               linear-gradient(to bottom, #020617, #0f172a, #020617) /* 保持原有渐变 */
-             `,
-             backgroundSize: 'cover', // 确保渐变覆盖整个区域
-             backgroundPosition: 'center',
-             backgroundRepeat: 'no-repeat'
-           }}>
-        {/* 添加一个绝对定位的伪元素用于更柔和的整体光晕 */}
-        <div className="absolute inset-0 bg-gradient-radial from-slate-900/5 via-transparent to-transparent opacity-40"></div> {/* 降低透明度 */}
-        <div className="text-center relative z-10"> {/* 确保内容在光晕之上 */}
-          <img 
-            src="/images/alternatively-logo.png" 
-            alt="AltPage.ai" 
-            className="w-16 h-16 mx-auto mb-4 animate-pulse" 
-          />
-          <h2 className="text-xl font-semibold text-white mb-2">Loading</h2>
-          <p className="text-gray-300">Preparing your research environment...</p>
-          <div className="mt-4 flex justify-center space-x-2">
-            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
-            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-            <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   if (showInitialScreen) {
     const currentExample = examples[currentExampleIndex];
     return (
@@ -2317,13 +2272,20 @@ const ResearchTool = ({
                 rel="noopener noreferrer"
                 className="block w-full mx-auto bg-stone-900/50 border-blue-700/30 hover:border-blue-600/50 text-stone-300 backdrop-blur-sm rounded-xl border relative overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 group hover:-translate-y-1 animate-fadeIn"
               >
-                <div className="absolute top-0 left-0 right-0 h-8 bg-slate-700/80 flex items-center justify-between px-3 z-10 pointer-events-none">
+                <div className="absolute top-0 left-0 right-0 h-8 bg-slate-700/80 flex items-center px-3 z-10 pointer-events-none">
                   <div className="flex space-x-1.5">
                     <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
                     <div className="w-2.5 h-2.5 rounded-full bg-yellow-500"></div>
                     <div className="w-2.5 h-2.5 rounded-full bg-green-500"></div>
                   </div>
-                  <span className="text-xs text-slate-300 truncate">{currentExample.title}</span>
+                  <div className="flex-grow text-center">
+                    <span className="text-xs text-slate-300 truncate">{currentExample.title}</span>
+                  </div>
+                  <div className="flex space-x-1.5 invisible"> {/* 使用 invisible 使其不显示但仍占据空间 */}
+                    <div className="w-2.5 h-2.5"></div>
+                    <div className="w-2.5 h-2.5"></div>
+                    <div className="w-2.5 h-2.5"></div>
+                  </div>
                 </div>
                 {/* --- 修改：给图片容器添加固定高度和 overflow-hidden --- */}
                 <div className="pt-8 h-[400px] overflow-hidden"> {/* 你可以根据需要调整这个高度，例如 h-[350px] 或 h-[450px] */}
@@ -2426,7 +2388,7 @@ const ResearchTool = ({
             </div>
 
             <div className="flex-1 overflow-y-auto pt-12 px-4 pb-4 chat-messages-container">
-              {initialLoading ? (
+              {showInitialScreen ? (
                 <div className="flex items-center justify-center h-full">
                   <Spin size="large" />
                 </div>
