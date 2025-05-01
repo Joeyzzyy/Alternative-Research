@@ -64,7 +64,8 @@ const ResearchTool = ({
 
   const examples = [
     { url: 'https://alternative.nytgames.top/nyt-games-original-alternative', title: 'Play NYT Games Free: The Ultimate Word Puzzle Collection Without Subscriptions', image: '/images/preview-nytgames.png', timestamp: 'Generated 2 hours ago' },
-    { url: 'https://alternative.neobund.com/doba-alternative', title: 'NeoBund: The Smarter Alternative to Doba with Guaranteed 2-Day US Shipping', image: '/images/preview-neobund.png', timestamp: 'Generated on April 26' }
+    { url: 'https://alternative.neobund.com/doba-alternative', title: 'NeoBund: The Smarter Alternative to Doba with Guaranteed 2-Day US Shipping', image: '/images/preview-neobund.png', timestamp: 'Generated on April 26' },
+    { url: 'https://www.dreambrand.studio/luxury-jewelry-influencer-ai-platform', title: 'Turn Your Influence into a Luxury Jewelry Empire with Al-Powered Design & Zero Hassle', image: '/images/preview-dreambrand.png', timestamp: 'Generated on April 30' }
   ];
 
   const isMobile = useMediaQuery({ query: '(max-width: 767px)' });
