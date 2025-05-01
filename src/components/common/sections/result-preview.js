@@ -18,7 +18,6 @@ const HistoryCardList = () => {
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null });
   const [verifiedDomains, setVerifiedDomains] = useState([]);
   const [selectedPublishUrl, setSelectedPublishUrl] = useState('');
-  const [deployLoading, setDeployLoading] = useState(false);
   const [deployPreviewUrl, setDeployPreviewUrl] = useState('');
   const scrollRef = useRef(null);
   const [hasToken, setHasToken] = useState(true);
@@ -603,7 +602,6 @@ const HistoryCardList = () => {
             width="90vw" // Wider modal
             destroyOnClose // Ensure state resets
             maskClosable={true}
-            // === 修改 Modal 样式 (第一步) ===
             styles={{
               mask: {
                 // 稍微增强背景模糊效果
@@ -618,12 +616,12 @@ const HistoryCardList = () => {
                 backdropFilter: 'blur(5px)', // 给头部也加上模糊
               },
               body: {
-                padding: 0, // Remove default padding
-                // 使用更接近 research-tool 的深邃渐变
-                background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.9) 0%, rgba(3, 7, 18, 0.95) 100%)', // slate-900 to near-black
-                minHeight: '80vh', // Ensure minimum height
-                maxHeight: '80vh', // Limit height to allow scrolling if needed
-                overflow: 'hidden', // Prevent body scroll, children will scroll
+                padding: 0,
+                background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.9) 0%, rgba(3, 7, 18, 0.95) 100%)',
+                minHeight: '80vh',
+                maxHeight: '80vh',
+                overflow: 'hidden', // Prevent body scroll
+                display: 'flex', // Use flex for sidebar + content
               },
               content: {
                 padding: 0,
@@ -633,57 +631,52 @@ const HistoryCardList = () => {
             }}
           >
             {resultLoading ? (
-              <div className="flex h-[80vh] items-center justify-center">
+              <div className="flex h-[80vh] items-center justify-center w-full"> {/* Ensure loading takes full width */}
                 <Spin size="large" />
               </div>
             ) : resultDetail && Array.isArray(resultDetail.data) && resultDetail.data.length > 0 ? (
-              <div className="flex h-[80vh]"> {/* Use fixed height matching body */}
+              <>
                 {/* Left Sidebar - Task Details */}
                 <div className="w-[280px] p-4 flex flex-col gap-4 overflow-y-auto border-r border-slate-700/40 bg-slate-950/50 backdrop-blur-md scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-800/50 text-xs flex-shrink-0">
-                  {/* === 恢复：标题单独一行 === */}
+                  {/* Task Details Title */}
                   <div className="flex justify-between items-center pb-2 border-b border-slate-700/60 mb-2">
                     <div className="text-base font-semibold text-cyan-300 tracking-wide">
                       Task Details
                     </div>
-                    {/* === 移除：按钮已移到右侧 === */}
                   </div>
 
-                  {/* Pages List */}
-                  <div>
-                    <div className="mb-2 text-sm font-semibold text-cyan-400 tracking-wide pl-1">Generated Pages</div>
-                    <div className="flex flex-col gap-1.5">
-                      {resultDetail.data.map((item, idx) => (
-                        <div
-                          key={item.resultId || idx}
-                          className={`
-                            group rounded-md px-2.5 py-1.5 cursor-pointer transition duration-200 ease-in-out
-                            border
-                            ${selectedPreviewId === item.resultId
-                              ? 'bg-gradient-to-r from-cyan-600/30 to-slate-700/40 border-cyan-500 shadow-md scale-[1.02]'
-                              : 'bg-slate-800/60 hover:bg-slate-700/70 border-slate-700/50 hover:border-slate-600/70'
-                            }
-                          `}
-                          onClick={() => setSelectedPreviewId(item.resultId)}
-                        >
-                          {/* ... page item content ... */}
-                          <div className="flex items-center justify-between">
-                            <div className="font-medium text-xs text-slate-100 truncate max-w-[160px]" title={item.slug || item.websiteId}>{item.slug || `Page ${idx + 1}`}</div>
-                          </div>
-                          <div className="text-[10px] text-slate-400 break-all mt-1">ID: {item.resultId}</div>
-                          <div className="text-[10px] text-slate-500 mt-0.5">
-                            {item.created_at ? new Date(item.created_at).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' }) : ''}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                  {/* Basic Task Info */}
+                  <div className="space-y-1.5 text-slate-300">
+                     <div className="font-medium text-cyan-400 text-sm pt-2 mb-1">Task ID:</div>
+                     <div className="text-xs font-mono text-slate-100 select-all">{selectedItem.websiteId}</div>
+                     {selectedItem.generatedStart && (
+                       <>
+                         <div className="font-medium text-cyan-400 text-sm pt-2 mb-1">Start Time:</div>
+                         <div className="text-xs text-slate-100">
+                           {new Date(selectedItem.generatedStart).toLocaleString([], { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+                         </div>
+                       </>
+                     )}
+                     {selectedItem.generatedEnd && (
+                       <>
+                         <div className="font-medium text-cyan-400 text-sm pt-2 mb-1">End Time:</div>
+                         <div className="text-xs text-slate-100">
+                           {new Date(selectedItem.generatedEnd).toLocaleString([], { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
+                         </div>
+                       </>
+                     )}
+                     <>
+                       <div className="font-medium text-cyan-400 text-sm pt-2 mb-1">Pages Generated:</div>
+                       <div className="text-xs text-slate-100">
+                         {resultDetail.data.length}
+                       </div>
+                     </>
                   </div>
 
-                  {/* Deploy Status */}
                   <div>
-                    <div className="text-sm font-semibold text-cyan-400 mb-1 pl-1">Deploy Status</div>
-                    {/* Deploy status content will be styled later */}
+                    <div className="text-sm font-semibold text-cyan-400 mb-1 pl-1 pt-3">Deploy Status</div>
                     {currentItem.deploymentStatus === 'publish' ? (
-                      <div className="flex flex-col gap-1 p-2 rounded-md bg-green-900/40 border border-green-700/60"> {/* 微调背景和边框 */}
+                      <div className="flex flex-col gap-1">
                         <span className="text-green-300 font-semibold text-xs">Published</span>
                         {currentItem.siteUrl && currentItem.slug && (
                           <div className="text-cyan-400 text-xxs mt-0.5 break-all">
@@ -700,23 +693,24 @@ const HistoryCardList = () => {
                         )}
                       </div>
                     ) : (
-                      <div className="p-2 rounded-md bg-slate-800/70 border border-slate-700/60"> {/* 微调背景和边框 */}
+                      <div>
                         <span className="text-slate-400 text-xs">Not Published</span>
                       </div>
                     )}
                   </div>
-
-                  {/* Domain Settings Button (已移到右侧预览区顶部) */}
                 </div>
 
-                {/* Right Panel - Preview */}
                 <div className="flex-1 flex flex-col bg-black/40 overflow-hidden p-1">
                   {(() => {
                     const previewItem = resultDetail.data.find(i => i.resultId === selectedPreviewId);
                     if (!previewItem) {
+                      if (resultDetail.data.length > 0) {
+                        setSelectedPreviewId(resultDetail.data[0].resultId);
+                        return <div className="flex items-center justify-center h-full"><Spin/></div>;
+                      }
                       return (
                         <div className="flex items-center justify-center h-full text-slate-500 text-lg">
-                          Select a page to preview
+                          No pages available for preview.
                         </div>
                       );
                     }
@@ -724,10 +718,38 @@ const HistoryCardList = () => {
                     const previewUrl = isPublished
                       ? `${previewItem.siteUrl.replace(/\/$/, '')}/${previewItem.slug}`
                       : `https://preview.websitelm.site/en/${previewItem.resultId}`;
+
                     return (
                       <div className="w-full h-full bg-slate-950 rounded-lg shadow-inner flex flex-col border border-slate-800/70 overflow-hidden">
-                        {/* Header Bar */}
-                        <div className="flex items-center justify-between px-3 py-1.5 bg-gradient-to-b from-slate-800/90 to-slate-900/90 border-b border-slate-700/50 flex-shrink-0 backdrop-blur-sm">
+                        {/* --- 新增：标签栏 --- */}
+                        <div className="flex items-end bg-slate-900/80 border-b border-slate-700/60 px-2 pt-1.5 flex-shrink-0 overflow-x-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent">
+                          {resultDetail.data.map((item, idx) => (
+                            <button
+                              key={item.resultId}
+                              onClick={() => setSelectedPreviewId(item.resultId)}
+                              className={`
+                                px-3 py-1.5 text-xs font-medium rounded-t-md mr-1 transition duration-200 ease-in-out border-t border-l border-r flex items-center gap-1.5 whitespace-nowrap
+                                ${selectedPreviewId === item.resultId
+                                  ? 'bg-slate-800/90 border-slate-700/70 text-cyan-300 shadow-inner' // Active tab style
+                                  : 'bg-slate-950/70 border-transparent text-slate-400 hover:bg-slate-800/50 hover:text-slate-200' // Inactive tab style
+                                }
+                              `}
+                              title={`View Page ${idx + 1} (ID: ${item.resultId})`}
+                            >
+                              {/* 可以加个小图标 */}
+                              {/* <FileTextOutlined /> */}
+                              Page {idx + 1}
+                            </button>
+                          ))}
+                          {/* Optional: Add a small spacer or "+" button if needed */}
+                          <div className="flex-grow border-b border-slate-700/60 h-[1px] self-end"></div> {/* Fills remaining space */}
+                        </div>
+                        {/* --- 结束新增：标签栏 --- */}
+
+                        {/* Header Bar (地址栏和按钮) */}
+                        {/* --- 修改：背景色和边框，使其与新标签栏协调 --- */}
+                        <div className="flex items-center justify-between px-3 py-1.5 bg-slate-800/90 border-b border-slate-700/50 flex-shrink-0 backdrop-blur-sm">
+                          {/* --- 内容保持不变 --- */}
                           <div className="flex items-center flex-1 min-w-0 mr-4">
                             {/* Traffic Lights */}
                             <div className="flex space-x-1.5 mr-3">
@@ -735,13 +757,12 @@ const HistoryCardList = () => {
                               <div className="w-2.5 h-2.5 rounded-full bg-yellow-500 opacity-80"></div>
                               <div className="w-2.5 h-2.5 rounded-full bg-green-500 opacity-80"></div>
                             </div>
-                            {/* URL Display */}
+                            {/* URL Display (现在会根据 selectedPreviewId 自动更新) */}
                             <div className="flex-1 bg-slate-900/70 text-slate-300 text-[11px] px-2 py-1 rounded border border-slate-700 truncate shadow-inner">
                               {previewUrl}
                             </div>
                           </div>
-                          {/* Action Buttons */}
-                          {/* === 修改：将 Bind 按钮移到此处 === */}
+                          {/* Action Buttons (现在会根据 selectedPreviewId 自动更新 currentItem) */}
                           <div className="flex items-center gap-2 flex-shrink-0">
                             <button
                               onClick={() => { if (previewUrl) window.open(previewUrl, '_blank'); }}
@@ -769,7 +790,6 @@ const HistoryCardList = () => {
                             >
                               <EditOutlined /> Edit
                             </button>
-                            {/* === 新增：Bind with your domain 按钮 === */}
                             <button
                               onClick={() => setIsPublishSettingsModalVisible(true)}
                               className={`
@@ -779,21 +799,22 @@ const HistoryCardList = () => {
                                 disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-600 disabled:to-gray-700
                               `}
                               title="Bind with your domain"
-                              disabled={!selectedPreviewId || resultLoading} // 保持禁用逻辑
+                              disabled={!selectedPreviewId || resultLoading}
                             >
                               <LinkOutlined /> Bind With Your Domain
                             </button>
                           </div>
+                          {/* --- 结束修改：Header Bar --- */}
                         </div>
 
-                        {/* Iframe Preview */}
+                        {/* Iframe Preview (key 确保在 selectedPreviewId 变化时刷新) */}
                         <div className="flex-1 overflow-hidden bg-slate-900">
                           <iframe
                             key={selectedPreviewId} // Re-render iframe when ID changes
                             src={previewUrl}
                             title="Preview"
                             className="w-full h-full border-none"
-                            sandbox="allow-scripts allow-same-origin" // Security sandbox
+                            sandbox="allow-scripts allow-same-origin"
                             onError={(e) => console.error("Iframe loading error:", e)}
                           />
                         </div>
@@ -801,9 +822,9 @@ const HistoryCardList = () => {
                     );
                   })()}
                 </div>
-              </div>
+              </>
             ) : (
-              <div className="flex h-[80vh] items-center justify-center text-slate-500">
+              <div className="flex h-[80vh] items-center justify-center text-slate-500 w-full"> {/* Ensure error takes full width */}
                 {resultDetail?.error || 'No data available for this task.'}
               </div>
             )}

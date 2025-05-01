@@ -1847,45 +1847,52 @@ const ResearchTool = ({
 
   useEffect(() => {
     const allCodesLogs = logs.filter(log => log.type === 'Codes' && log.content?.resultId);
-    
-    processedLogIdsRef.current = [];
-    
-    const newCodesLogs = allCodesLogs;
-    
+
+    // 过滤掉那些已经为其创建了标签页的日志，防止重复添加
+    const newCodesLogs = allCodesLogs.filter(log =>
+      !browserTabs.some(tab => tab.id === `result-${log.content.resultId}`)
+    );
+
     if (newCodesLogs.length === 0) {
       return;
     }
-    
+
+    // 获取添加前已有的标签页数量
+    const currentTabCount = browserTabs.length;
     const newTabsToAdd = [];
-    
-    newCodesLogs.forEach(log => {
+
+    newCodesLogs.forEach((log, index) => {
       const tabId = `result-${log.content.resultId}`;
-      
-      const existingTab = browserTabs.find(tab => tab.id === tabId);
-      
-      if (!existingTab) {
-        newTabsToAdd.push({
-          id: tabId,
-          title: `Result ${log.content.resultId}`,
-          url: `https://preview.websitelm.site/en/${log.content.resultId}`
-        });
-      }
-      
-      processedLogIdsRef.current.push(log.id);
+      // 计算新的页面编号
+      const pageNumber = currentTabCount + index + 1;
+
+      // 不再需要检查 existingTab，因为 newCodesLogs 已经被过滤
+
+      newTabsToAdd.push({
+        id: tabId,
+        // --- 修改：使用递增的页码作为标题 ---
+        title: `Page ${pageNumber}`,
+        // --- 结束修改 ---
+        url: `https://preview.websitelm.site/en/${log.content.resultId}`
+      });
+
+      // processedLogIdsRef.current.push(log.id); // 这行现在可能不是必需的，因为我们基于 browserTabs 过滤
     });
-    
+
     if (newTabsToAdd.length > 0) {
       setBrowserTabs(prevTabs => {
         const updatedTabs = [...prevTabs, ...newTabsToAdd];
         return updatedTabs;
       });
-      
+
       // 设置最后一个新标签页为活动标签并切换到浏览器视图
       const lastNewTab = newTabsToAdd[newTabsToAdd.length - 1];
       setActiveTab(lastNewTab.id);
       setRightPanelTab('browser'); // 替换 setShowBrowser(true)
     }
-  }, [logs]); // 只依赖 logs
+  // --- 修改：添加 browserTabs 和相关 setter 到依赖项 ---
+  }, [logs, browserTabs, setBrowserTabs, setActiveTab, setRightPanelTab]); // 添加依赖项
+  // --- 结束修改 ---
 
   const processedLogIdsRef = useRef([]);
 
