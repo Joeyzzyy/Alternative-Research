@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react'
 import apiClient from '../../../lib/api/index.js';
 import { Button, Modal, Spin, Row, Col, Pagination, Popconfirm, Input, Form, message, Drawer, Tag } from 'antd';
 import { UploadOutlined, DeleteOutlined, CheckOutlined, EditOutlined, CloseOutlined, CheckCircleFilled, LoadingOutlined, SaveOutlined } from '@ant-design/icons';
+import { debounce } from 'lodash';
 
 // --- 新增：定义常用提示 ---
 const commonPrompts = [
@@ -17,6 +18,9 @@ const commonPrompts = [
 ];
 
 export default function HtmlPreview({ pageId }) {
+  // === 新增：获取 message API 和 contextHolder ===
+  const [messageApi, contextHolder] = message.useMessage();
+
   const [html, setHtml] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -1377,148 +1381,123 @@ export default function HtmlPreview({ pageId }) {
     }
   }
 
-  return (
-    <div style={{ width: '100%', height: '100%', background: '#18181c', display: 'flex', flexDirection: 'column', position: 'relative' }}>
-      {/* --- 新增：自定义滚动条样式 --- */}
-      <style>{`
-        .section-nav-scrollbar::-webkit-scrollbar {
-          width: 8px; /* 滚动条宽度 */
-        }
-        .section-nav-scrollbar::-webkit-scrollbar-track {
-          background: #1e293b; /* 轨道颜色 (slate-800) */
-          border-radius: 4px; /* 轨道圆角 */
-        }
-        .section-nav-scrollbar::-webkit-scrollbar-thumb {
-          background-color: #475569; /* 滑块颜色 (slate-600) */
-          border-radius: 4px; /* 滑块圆角 */
-          border: 2px solid #1e293b; /* 创建类似 padding 的效果 */
-        }
-        .section-nav-scrollbar::-webkit-scrollbar-thumb:hover {
-          background-color: #64748b; /* 悬停时滑块颜色 (slate-500) */
-        }
-        /* Firefox 滚动条样式 */
-        .section-nav-scrollbar {
-          scrollbar-width: thin; /* 使用细滚动条 */
-          scrollbar-color: #475569 #1e293b; /* 滑块颜色 轨道颜色 */
-        }
-      `}</style>
-      {/* Custom Notification */}
-      {notification.visible && (
-        <div style={{
-          position: 'fixed', // or 'absolute' if parent container is relative
-          top: '70px', // Adjust position to avoid overlapping the top bar
-          left: '50%',
-          transform: 'translateX(-50%)',
-          padding: '10px 20px',
-          // 更新背景颜色逻辑以包含 'info' 类型
-          background: notification.type === 'success'
-            ? '#4caf50' // Success green
-            : notification.type === 'error'
-              ? '#f44336' // Error red
-              : '#ffc107', // Info yellow (e.g., Amber 500)
-          color: notification.type === 'info' ? '#1f2937' : 'white', // Info 类型使用深色文字以提高对比度
-          borderRadius: '4px',
-          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-          zIndex: 9999, // Increase zIndex significantly
-          fontSize: '14px',
-          fontWeight: 500,
-          textAlign: 'center'
-        }}>
-          {notification.message}
-        </div>
-      )}
+  // --- Render Logic ---
+  if (loading && !html) { // Show initial loading spinner
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: '#0f172a' }}>
+        {/* === 确保 contextHolder 在这里也渲染，以防 message 在加载时弹出 === */}
+        {contextHolder}
+        <Spin size="large" tip="Loading Editor..." />
+      </div>
+    );
+  }
 
-      {/* Top Bar - Updated Style */}
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#0f172a' /* slate-950 */ }}>
+      {/* === 渲染 contextHolder === */}
+      {contextHolder}
+      {/* --- 顶部 Header --- */}
       <div style={{
-        height: 56,
-        // background: 'linear-gradient(90deg, #232c5b 0%, #3a225a 100%)', // Old background
-        background: '#1f2937', // Updated background (slate-800)
-        color: '#fff',
+        height: 60,
+        background: 'linear-gradient(to bottom, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95))',
+        backdropFilter: 'blur(4px)',
+        color: '#e2e8f0',
         display: 'flex',
         alignItems: 'center',
-        padding: '0 32px',
-        fontWeight: 700,
-        fontSize: 20,
-        letterSpacing: 1,
-        boxShadow: '0 2px 8px #0004',
+        padding: '0 24px',
+        borderBottom: '1px solid rgba(51, 65, 85, 0.6)',
         zIndex: 10,
-        justifyContent: 'space-between'
+        // justifyContent: 'space-between', // Remove space-between, let items flow left
+        gap: '24px', // Add gap between main sections
+        flexShrink: 0,
       }}>
-        {/* --- 修改：将 Page Editor 和 PageId 包裹起来 --- */}
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          Page Editor
-          <span style={{ fontWeight: 400, fontSize: 16, marginLeft: 24, color: '#e0e7ef' }}>
+        {/* Page Editor Title and ID */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0 }}>
+          <span style={{ fontSize: 18, fontWeight: 600, color: '#cbd5e1' }}>Page Editor</span>
+          <span style={{ fontWeight: 400, fontSize: 14, color: '#64748b' }}>
             (PageId: {pageId})
           </span>
         </div>
-        {/* --- 新增：页面标题输入区域 --- */}
-        <div style={{ display: 'flex', alignItems: 'center', flexGrow: 1, marginLeft: '40px', marginRight: '40px', gap: '12px' /* --- 新增：输入框和按钮间距 --- */ }}>
-          <span style={{ color: '#9ca3af', fontSize: '14px', marginRight: '10px', fontWeight: 500, flexShrink: 0 /* 防止 "Title:" 被压缩 */ }}>Title:</span>
+
+        {/* Page Title Input Area */}
+        {/* === 修改：靠左放置，限制最大宽度 === */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          // marginLeft: 'auto', // 移除，不再推到右边
+          // marginRight: '32px', // 移除
+          gap: '12px',
+          maxWidth: '600px', // 保持最大宽度限制
+          width: '100%', // 允许缩小
+          flexShrink: 1, // Allow shrinking if needed, but less prioritized than others
+        }}>
+          <span style={{ color: '#94a3b8', fontSize: '13px', marginRight: '8px', fontWeight: 500, flexShrink: 0 }}>Title:</span>
           <Input
             value={pageTitle}
             onChange={(e) => setPageTitle(e.target.value)}
-            // --- 移除：不再需要在 onBlur 时更新 iframe title ---
-            // onBlur={() => updateIframeTitle(pageTitle)}
             placeholder="Enter page title"
             style={{
               flexGrow: 1,
+              background: 'rgba(15, 23, 42, 0.7)',
+              borderColor: '#334155',
+              color: '#e2e8f0',
             }}
-            disabled={loading || saving || isPreviewingEdit || isEditingSectionCode || isSavingTitle} // --- 新增：标题保存时也禁用 ---
+            disabled={loading || saving || isPreviewingEdit || isEditingSectionCode || isSavingTitle}
           />
-          {/* --- 新增：保存标题按钮 --- */}
           <Button
             type="primary"
             icon={<SaveOutlined />}
             onClick={handleSaveTitle}
             loading={isSavingTitle}
-            disabled={loading || saving || isPreviewingEdit || isEditingSectionCode || isSavingTitle || !pageTitle.trim()} // --- 新增：禁用条件 ---
+            disabled={loading || saving || isPreviewingEdit || isEditingSectionCode || isSavingTitle || !pageTitle.trim()}
             title="Save Page Title"
+            style={{ background: '#2563eb', borderColor: '#2563eb', flexShrink: 0 }}
           >
             Save Title
           </Button>
-          {/* --- 保存标题按钮结束 --- */}
         </div>
-        {/* --- 页面标题输入区域结束 --- */}
-        {/* --- 新增：一个占位符或者其他右侧控件区域，如果需要的话 --- */}
-        <div>
-          {/* 这里可以放其他的全局操作按钮，比如全局保存等 */}
+
+        {/* Right Aligned Controls Placeholder */}
+        {/* === 修改：使用 marginLeft: 'auto' 将其推到最右边 === */}
+        <div style={{ flexShrink: 0, marginLeft: 'auto' }}>
+          {/* Future global buttons like Save All, Exit etc. */}
         </div>
       </div>
-      {/* --- 更新：编辑模式提示条 (更简洁，新配色) --- */}
+      {/* --- 更新：编辑模式提示条样式 --- */}
       <div style={{
-        background: '#334155', // 新背景色 (slate-700)
-        color: '#e2e8f0',      // 新文字颜色 (slate-200)
-        padding: '8px 32px',   // 调整内边距
+        // 使用更深的背景和柔和的文字颜色
+        background: 'rgba(15, 23, 42, 0.8)', // slate-900/80
+        color: '#94a3b8', // slate-400
+        padding: '6px 24px', // 调整内边距
         textAlign: 'center',
-        fontSize: 14,          // 调整字体大小
-        fontWeight: 600,       // 设置字重
-        // letterSpacing: 1, // 可以移除或调整字间距
-        // boxShadow: '0 1px 3px rgba(0, 0, 0, 0.12)', // 可以移除阴影
+        fontSize: 13, // 调整字体大小
+        fontWeight: 500, // 调整字重
         zIndex: 9,
-        // borderBottom: '2px solid #0f766e', // 移除下边框
-        userSelect: 'none'
+        borderBottom: '1px solid rgba(51, 65, 85, 0.4)', // 更细的边框 (slate-700/40)
+        userSelect: 'none',
+        flexShrink: 0, // 防止提示条被压缩
       }}>
         <span>
-          🖱️ Click <span style={{ fontWeight: 700 }}>text</span> or <span style={{ fontWeight: 700 }}>images</span> to edit. Changes save automatically.
+          🖱️ Click <span style={{ fontWeight: 600, color: '#cbd5e1' /* slate-300 */ }}>text</span> or <span style={{ fontWeight: 600, color: '#cbd5e1' /* slate-300 */ }}>images</span> to edit. Changes save automatically.
         </span>
       </div>
       {/* Page Rendering Area - Flex Layout */}
-      <div style={{ flex: 1, background: '#18181c', display: 'flex', overflow: 'hidden' /* Prevent inner scroll affecting outer */ }}>
+      <div style={{ flex: 1, background: '#020617', /* 更深的背景 (slate-950/near black) */ display: 'flex', overflow: 'hidden' }}>
 
-        {/* --- 更新：左侧 Section 导航栏 --- */}
+        {/* Left Section Navigation (will be styled next) */}
         {sections.length > 0 && (
           <div
-            // --- 新增：添加 CSS 类名以应用滚动条样式 ---
-            className="section-nav-scrollbar"
+            className="section-nav-scrollbar" // Keep class for scrollbar styling
             style={{
-              width: 320, // 保持宽度
-              background: '#0f172a', // 深色背景 (slate-950)
-              padding: '24px 8px 24px 16px', // 调整内边距 (减少右侧，为滚动条留空间)
+              width: 320,
+              background: '#0f172a', // Default background (slate-950) - will refine
+              padding: '24px 8px 24px 16px',
               overflowY: 'auto',
-              borderRight: '2px solid #1e293b', // 边框 (slate-800)
+              borderRight: '1px solid #1e293b', // Default border (slate-800) - will refine
               display: 'flex',
               flexDirection: 'column',
-              gap: '0', // 移除 gap，通过 border 控制间距感
+              gap: '0',
+              flexShrink: 0, // Prevent shrinking
             }}>
             {/* --- 更新：导航栏标题 --- */}
             <div style={{
@@ -1536,30 +1515,23 @@ export default function HtmlPreview({ pageId }) {
             {sections.map((section, index) => (
               // --- 更新：导航项容器样式 - 增加分隔线和悬停效果 ---
               <div
-                key={section.id}
+                key={section.id || index}
                 style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'flex-start',
-                  padding: '14px 12px', // --- 修改：调整垂直内边距 ---
-                  borderRadius: '6px', // 轻微圆角
+                  padding: '12px 8px', // 增加垂直内边距
+                  borderRadius: '6px',
                   transition: 'background-color 0.2s ease',
-                  // 添加底部分隔线，最后一个元素除外
                   borderBottom: index < sections.length - 1 ? '1px solid #1e293b' : 'none', // slate-800 分隔线
-                  cursor: 'pointer', // 整个区域可点击（虽然实际点击在按钮上）
-                  // --- 新增：为滚动条腾出右侧空间 ---
+                  cursor: 'pointer',
                   marginRight: '8px',
                 }}
-                // 容器的悬停效果
                 onMouseOver={e => { e.currentTarget.style.background = '#1e293b'; }} // slate-800 hover 背景
                 onMouseOut={e => { e.currentTarget.style.background = 'transparent'; }}
-                // 点击容器也尝试滚动，增强体验
                 onClick={() => !isPreviewingEdit && scrollToSection(section.id)}
               >
                 {/* --- 更新：Section 标签按钮 (保持悬停指示) --- */}
                 <button
                   onClick={(e) => {
-                    e.stopPropagation(); // 阻止事件冒泡到父 div 的 onClick
+                    e.stopPropagation();
                     if (!isPreviewingEdit) scrollToSection(section.id);
                   }}
                   style={{

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import apiClient from '../../../lib/api/index.js';
 import { Modal, Button, Spin, message, Select, Radio } from 'antd';
-import { DeleteOutlined, ExclamationCircleOutlined, ReloadOutlined, LeftOutlined, CopyOutlined, RightOutlined, CloseOutlined, ClearOutlined, EditOutlined } from '@ant-design/icons';
+import { DeleteOutlined, ExclamationCircleOutlined, ReloadOutlined, LeftOutlined, CopyOutlined, RightOutlined, CloseOutlined, ClearOutlined, EditOutlined, EyeOutlined, LinkOutlined } from '@ant-design/icons';
 import HtmlPreview from './page-edit';
 import PublishSettingsModal from './publish-setting-modal';
 
@@ -592,324 +592,219 @@ const HistoryCardList = () => {
         {/* Detailed Modal */}
         {selectedItem && (
           <Modal
-            open={true}
+            title={
+              <span className="text-lg font-semibold text-slate-100">
+                Generated Alternative Pages For: <span className="text-cyan-400">{selectedItem.website}</span>
+              </span>
+            }
+            open={!!selectedItem}
             onCancel={handleModalClose}
-            footer={null}
-            width={'100vw'}
-            style={{ top: 0, padding: 0, margin: 0, maxWidth: '100vw' }}
+            footer={null} // No default footer
+            width="90vw" // Wider modal
+            destroyOnClose // Ensure state resets
+            maskClosable={true}
+            // === 修改 Modal 样式 (第一步) ===
             styles={{
+              mask: {
+                // 稍微增强背景模糊效果
+                backdropFilter: 'blur(8px)',
+                backgroundColor: 'rgba(0, 0, 0, 0.75)', // 加深遮罩层
+              },
+              header: {
+                // 使用更深的 slate 颜色，并增加透明度
+                backgroundColor: 'rgba(15, 23, 42, 0.85)', // slate-900 with opacity
+                borderBottom: '1px solid rgba(51, 65, 85, 0.6)', // slate-700 with opacity
+                padding: '12px 20px',
+                backdropFilter: 'blur(5px)', // 给头部也加上模糊
+              },
               body: {
+                padding: 0, // Remove default padding
+                // 使用更接近 research-tool 的深邃渐变
+                background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.9) 0%, rgba(3, 7, 18, 0.95) 100%)', // slate-900 to near-black
+                minHeight: '80vh', // Ensure minimum height
+                maxHeight: '80vh', // Limit height to allow scrolling if needed
+                overflow: 'hidden', // Prevent body scroll, children will scroll
+              },
+              content: {
                 padding: 0,
-                background: '#18181c',
-                minHeight: '100vh',
-                maxHeight: '100vh',
-                display: 'flex',
-                flexDirection: 'column',
-                position: 'relative',
-                overflow: 'hidden',
+                boxShadow: '0 15px 40px rgba(0, 0, 0, 0.4)', // 增强阴影
+                backgroundColor: 'transparent', // Make content background transparent to show body gradient
               },
             }}
-            wrapClassName="fullscreen-modal"
-            title={null}
-            centered={false}
-            closable={false}
-            maskClosable={true}
           >
-            {/* Close button */}
-            <div className="absolute top-3 right-4 z-30">
-              <button
-                onClick={handleModalClose}
-                className="p-2 rounded-full text-white bg-slate-800/60 hover:bg-slate-700/80 transition duration-200"
-                title="Close"
-                disabled={resultLoading}
-                style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              >
-                <CloseOutlined style={{ fontSize: 28, display: 'block' }} />
-              </button>
-            </div>
-            {/* Sidebar toggle button */}
-            <button
-              onClick={() => setIsSidebarVisible(!isSidebarVisible)}
-              className="absolute top-1/2 left-0 -translate-y-1/2 z-30 bg-slate-700/80 hover:bg-slate-600/90 rounded-r-md py-3 px-1 shadow border-y border-r border-slate-600 transition duration-300 ease-in-out"
-              style={{ transform: `translateY(-50%) translateX(${isSidebarVisible ? '280px' : '0px'})` }}
-              title={isSidebarVisible ? "Collapse Sidebar" : "Expand Sidebar"}
-            >
-              {isSidebarVisible
-                ? <LeftOutlined style={{ fontSize: 16, color: '#94a3b8' }} />
-                : <RightOutlined style={{ fontSize: 16, color: '#e2e8f0' }} />
-              }
-            </button>
-
             {resultLoading ? (
-              <div className="flex-1 flex items-center justify-center">
+              <div className="flex h-[80vh] items-center justify-center">
                 <Spin size="large" />
               </div>
-            ) : Array.isArray(resultDetail?.data) && resultDetail.data.length > 0 ? (
-              <div className="flex flex-row flex-1 min-h-0 text-sm relative">
-                {/* Sidebar container */}
-                <div className={`
-                  ${isSidebarVisible ? 'w-[280px]' : 'w-0'}
-                  flex-shrink-0 flex flex-col border-r border-slate-800 bg-slate-950/30 overflow-hidden
-                  transition-all duration-300 ease-in-out
-                `}>
-                  <div className={`flex flex-col h-full ${isSidebarVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'} transition-opacity duration-150 delay-150`}>
-                    <div className="text-center text-base font-bold text-cyan-300 pt-3 pb-2 tracking-wide flex-shrink-0 border-b border-slate-800">
-                      My Tasks
+            ) : resultDetail && Array.isArray(resultDetail.data) && resultDetail.data.length > 0 ? (
+              <div className="flex h-[80vh]"> {/* Use fixed height matching body */}
+                {/* Left Sidebar - Task Details */}
+                <div className="w-[280px] p-4 flex flex-col gap-4 overflow-y-auto border-r border-slate-700/40 bg-slate-950/50 backdrop-blur-md scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-800/50 text-xs flex-shrink-0">
+                  {/* === 恢复：标题单独一行 === */}
+                  <div className="flex justify-between items-center pb-2 border-b border-slate-700/60 mb-2">
+                    <div className="text-base font-semibold text-cyan-300 tracking-wide">
+                      Task Details
                     </div>
-                    <div className="flex-1 overflow-y-auto scrollbar-hide p-3 space-y-3">
-                      {historyList
-                        .filter(task => task.generatorStatus === 'finished' || task.generatorStatus === 'processing' || task.generatorStatus === 'failed')
-                        .map((item) => (
+                    {/* === 移除：按钮已移到右侧 === */}
+                  </div>
+
+                  {/* Pages List */}
+                  <div>
+                    <div className="mb-2 text-sm font-semibold text-cyan-400 tracking-wide pl-1">Generated Pages</div>
+                    <div className="flex flex-col gap-1.5">
+                      {resultDetail.data.map((item, idx) => (
                         <div
-                          key={item.websiteId}
+                          key={item.resultId || idx}
                           className={`
-                            group relative rounded-lg bg-white/5 hover:bg-white/10 transition
-                            shadow-md p-3 flex flex-col items-start justify-between
-                            border hover:border-primary-500
-                            cursor-pointer text-xs
-                            ${selectedItem.websiteId === item.websiteId
-                              ? 'border-cyan-500 ring-1 ring-cyan-500/60 bg-gradient-to-r from-cyan-900/30 to-slate-900/50'
-                              : 'border-white/10'}
-                          `}
-                          onClick={() => {
-                            if (selectedItem.websiteId !== item.websiteId) {
-                              handleCardClick(item);
+                            group rounded-md px-2.5 py-1.5 cursor-pointer transition duration-200 ease-in-out
+                            border
+                            ${selectedPreviewId === item.resultId
+                              ? 'bg-gradient-to-r from-cyan-600/30 to-slate-700/40 border-cyan-500 shadow-md scale-[1.02]'
+                              : 'bg-slate-800/60 hover:bg-slate-700/70 border-slate-700/50 hover:border-slate-600/70'
                             }
-                          }}
+                          `}
+                          onClick={() => setSelectedPreviewId(item.resultId)}
                         >
-                          <button
-                            className="absolute top-2 right-2 bg-red-700/70 hover:bg-red-800/80 text-white rounded-full p-1 shadow transition z-10"
-                            title="Delete"
-                            style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                            onClick={e => {
-                              e.stopPropagation();
-                              setDeleteConfirm({ open: true, id: item.websiteId });
-                            }}
-                            disabled={deletingId === item.websiteId || isClearingAll}
-                          >
-                            <DeleteOutlined style={{ fontSize: 12 }} />
-                          </button>
-                          <div className="w-full flex flex-col items-start">
-                            <div className="font-semibold text-sm text-white mb-1 truncate w-[calc(100%-30px)]">{item.website}</div>
-                            <div className="mb-1.5">
-                              {renderStatusBadge(item.generatorStatus)}
-                            </div>
-                            <div className="text-gray-400 text-xxs mb-0.5">
-                              ID: <span className="text-gray-300 font-mono">{item.websiteId}</span>
-                            </div>
-                            {item.generatedStart && (
-                              <div className="text-gray-500 text-xxs">
-                                Start: {new Date(item.generatedStart).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })}
-                              </div>
-                            )}
-                            {item.generatedEnd && (
-                              <div className="text-gray-500 text-xxs">
-                                End: {new Date(item.generatedEnd).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })}
-                              </div>
-                            )}
+                          {/* ... page item content ... */}
+                          <div className="flex items-center justify-between">
+                            <div className="font-medium text-xs text-slate-100 truncate max-w-[160px]" title={item.slug || item.websiteId}>{item.slug || `Page ${idx + 1}`}</div>
+                          </div>
+                          <div className="text-[10px] text-slate-400 break-all mt-1">ID: {item.resultId}</div>
+                          <div className="text-[10px] text-slate-500 mt-0.5">
+                            {item.created_at ? new Date(item.created_at).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' }) : ''}
                           </div>
                         </div>
                       ))}
                     </div>
                   </div>
-                </div>
-                <div className="flex flex-col flex-1 min-h-0 overflow-hidden p-4">
-                  <div className="flex flex-row flex-1 min-h-0 bg-gradient-to-br from-slate-900 via-slate-950 to-black rounded-lg shadow-xl overflow-hidden border border-slate-800">
-                    <div className="w-[300px] p-3 flex flex-col gap-3 overflow-y-auto border-r border-slate-800 bg-slate-900/80 scrollbar-hide text-xs flex-shrink-0">
-                      <div className="text-center text-base font-bold text-cyan-300 pb-1 tracking-wide flex-shrink-0 border-b border-slate-700 mb-2">
-                        Task Details
-                      </div>
-                      <div>
-                        <div className="mb-1 text-sm font-bold text-cyan-300 tracking-wide pl-1">All Pages Under This Task</div>
-                        <div className="flex flex-col gap-1.5">
-                          {resultDetail.data.map((item, idx) => (
-                            <div
-                              key={item.resultId || idx}
-                              className={`
-                                group rounded px-2 py-1.5 cursor-pointer transition
-                                border
-                                ${selectedPreviewId === item.resultId
-                                  ? 'bg-gradient-to-r from-cyan-900/60 to-slate-800/80 border-cyan-500 shadow-md'
-                                  : 'bg-slate-800/40 hover:bg-slate-800/60 border-slate-700'}
-                              `}
-                              onClick={() => setSelectedPreviewId(item.resultId)}
+
+                  {/* Deploy Status */}
+                  <div>
+                    <div className="text-sm font-semibold text-cyan-400 mb-1 pl-1">Deploy Status</div>
+                    {/* Deploy status content will be styled later */}
+                    {currentItem.deploymentStatus === 'publish' ? (
+                      <div className="flex flex-col gap-1 p-2 rounded-md bg-green-900/40 border border-green-700/60"> {/* 微调背景和边框 */}
+                        <span className="text-green-300 font-semibold text-xs">Published</span>
+                        {currentItem.siteUrl && currentItem.slug && (
+                          <div className="text-cyan-400 text-xxs mt-0.5 break-all">
+                            View:&nbsp;
+                            <a
+                              href={`${currentItem.siteUrl.replace(/\/$/, '')}/${currentItem.slug}`}
+                              className="underline hover:text-cyan-300 transition"
+                              target="_blank"
+                              rel="noopener noreferrer"
                             >
-                              <div className="flex items-center justify-between">
-                                <div className="font-semibold text-xs text-white truncate max-w-[140px]">{item.slug || item.websiteId}</div>
-                              </div>
-                              <div className="text-xxs text-gray-400 break-all mt-0.5">Result ID: {item.resultId}</div>
-                              <div className="text-xxs text-gray-500 mt-0.5">
-                                {item.created_at ? new Date(item.created_at).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' }) : ''}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-xs font-semibold text-cyan-300 mb-0.5">Deploy Status</div>
-                        {currentItem.deploymentStatus === 'publish' ? (
-                          <div className="flex flex-col gap-0.5">
-                            <span className="text-green-400 font-semibold text-xs">Published</span>
-                            {currentItem.siteUrl && currentItem.slug && (
-                              <div className="text-cyan-400 text-xxs mt-0.5 break-all">
-                                View:&nbsp;
-                                <a
-                                  href={`${currentItem.siteUrl.replace(/\/$/, '')}/${currentItem.slug}`}
-                                  className="underline hover:text-cyan-300 transition"
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  {`${currentItem.siteUrl.replace(/\/$/, '')}/${currentItem.slug}`}
-                                </a>
-                              </div>
-                            )}
-                            <div className="flex items-center gap-2 mt-1">
-                              <button
-                                className="px-2 py-0.5 rounded bg-red-600 hover:bg-red-500 text-white text-xxs font-semibold transition w-fit disabled:opacity-60 disabled:cursor-not-allowed"
-                                disabled={deployLoading}
-                                onClick={async () => {
-                                  setDeployLoading(true);
-                                  try {
-                                    const resp = await apiClient.updateAlternativePublishStatus(selectedPreviewId, 'unpublish');
-                                    if (resp?.code === 200) {
-                                      messageApi.success('Unpublished successfully!');
-                                      setResultDetail(prev => {
-                                        if (!prev || !Array.isArray(prev.data)) return prev;
-                                        return {
-                                          ...prev,
-                                          data: prev.data.map(item =>
-                                            item.resultId === selectedPreviewId
-                                              ? { ...item, deploymentStatus: 'unpublish' }
-                                              : item
-                                          )
-                                        };
-                                      });
-                                    } else {
-                                      messageApi.error(resp?.message || 'Unpublish failed');
-                                    }
-                                  } catch (e) {
-                                    messageApi.error(e.message || 'Unpublish failed');
-                                  } finally {
-                                    setDeployLoading(false);
-                                  }
-                                }}
-                              >
-                                {deployLoading ? 'Unpublishing...' : 'Unpublish'}
-                              </button>
-                            </div>
+                              {`${currentItem.siteUrl.replace(/\/$/, '')}/${currentItem.slug}`}
+                            </a>
                           </div>
-                        ) : (
-                          <span className="text-gray-300 font-bold text-xs">Not Published</span>
                         )}
                       </div>
-                    </div>
-                    <div className="flex-1 flex justify-center from-black via-slate-950 to-slate-900 p-3 min-h-0">
-                      {(() => {
-                        const previewItem = resultDetail.data.find(i => i.resultId === selectedPreviewId);
-                        if (!previewItem) {
-                          return (
-                            <div className="flex items-center justify-center h-full text-gray-400">
-                              No preview available
+                    ) : (
+                      <div className="p-2 rounded-md bg-slate-800/70 border border-slate-700/60"> {/* 微调背景和边框 */}
+                        <span className="text-slate-400 text-xs">Not Published</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Domain Settings Button (已移到右侧预览区顶部) */}
+                </div>
+
+                {/* Right Panel - Preview */}
+                <div className="flex-1 flex flex-col bg-black/40 overflow-hidden p-1">
+                  {(() => {
+                    const previewItem = resultDetail.data.find(i => i.resultId === selectedPreviewId);
+                    if (!previewItem) {
+                      return (
+                        <div className="flex items-center justify-center h-full text-slate-500 text-lg">
+                          Select a page to preview
+                        </div>
+                      );
+                    }
+                    const isPublished = previewItem.deploymentStatus === 'publish' && previewItem.siteUrl && previewItem.slug;
+                    const previewUrl = isPublished
+                      ? `${previewItem.siteUrl.replace(/\/$/, '')}/${previewItem.slug}`
+                      : `https://preview.websitelm.site/en/${previewItem.resultId}`;
+                    return (
+                      <div className="w-full h-full bg-slate-950 rounded-lg shadow-inner flex flex-col border border-slate-800/70 overflow-hidden">
+                        {/* Header Bar */}
+                        <div className="flex items-center justify-between px-3 py-1.5 bg-gradient-to-b from-slate-800/90 to-slate-900/90 border-b border-slate-700/50 flex-shrink-0 backdrop-blur-sm">
+                          <div className="flex items-center flex-1 min-w-0 mr-4">
+                            {/* Traffic Lights */}
+                            <div className="flex space-x-1.5 mr-3">
+                              <div className="w-2.5 h-2.5 rounded-full bg-red-500 opacity-80"></div>
+                              <div className="w-2.5 h-2.5 rounded-full bg-yellow-500 opacity-80"></div>
+                              <div className="w-2.5 h-2.5 rounded-full bg-green-500 opacity-80"></div>
                             </div>
-                          );
-                        }
-                        const isPublished = previewItem.deploymentStatus === 'publish' && previewItem.siteUrl && previewItem.slug;
-                        const previewUrl = isPublished
-                          ? `${previewItem.siteUrl.replace(/\/$/, '')}/${previewItem.slug}`
-                          : `https://preview.websitelm.site/en/${previewItem.resultId}`;
-                        return (
-                          <div className="w-full h-full bg-black/90 rounded-lg shadow-xl flex flex-col border border-slate-800 overflow-hidden">
-                            <div className="flex items-center justify-between px-3 py-1 bg-gray-900 border-b border-gray-800 flex-shrink-0">
-                              <div className="flex items-center flex-1 min-w-0">
-                                <div className="w-2 h-2 rounded-full bg-red-400 mr-2"></div>
-                                <div className="w-2 h-2 rounded-full bg-yellow-400 mr-2"></div>
-                                <div className="w-2 h-2 rounded-full bg-green-400 mr-4"></div>
-                                {/* URL Display */}
-                                <div className="flex-1 bg-gray-900 text-gray-200 text-xxs px-1.5 py-0.5 rounded border border-gray-700 truncate">
-                                  {previewUrl}
-                                </div>
-                                {/* Preview Button */}
-                                <button
-                                  onClick={() => {
-                                    if (previewUrl) window.open(previewUrl, '_blank');
-                                  }}
-                                  className={`
-                                    ml-2 px-2 py-2 rounded text-xs font-semibold text-white shadow-sm transition duration-200
-                                    bg-gradient-to-r from-green-500 to-cyan-500 hover:from-green-400 hover:to-cyan-400
-                                    disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-600 disabled:to-gray-700
-                                  `}
-                                  title="Preview Page in New Tab"
-                                  disabled={!selectedPreviewId || resultLoading || !previewUrl}
-                                >
-                                  Preview in New Window
-                                </button>
-                                {/* Edit Button */}
-                                <button
-                                  onClick={() => {
-                                    if (selectedPreviewId) {
-                                      setEditPageId(selectedPreviewId);
-                                    }
-                                  }}
-                                  className={`
-                                    ml-2 px-2 py-2 rounded text-xs font-semibold text-white shadow-sm transition duration-200
-                                    bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400
-                                    disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-600 disabled:to-gray-700
-                                  `}
-                                  title="Edit This Page"
-                                  disabled={!selectedPreviewId || resultLoading}
-                                >
-                                  Edit This Page
-                                </button>
-                                {/* === 修改：按钮文案改回，点击打开新弹窗 === */}
-                                <button
-                                  onClick={() => {
-                                    console.log('Bind button clicked. Checking conditions:');
-                                    console.log('isPublishSettingsModalVisible (before set):', isPublishSettingsModalVisible);
-                                    console.log('currentItem:', currentItem);
-                                    console.log('currentCustomerId:', currentCustomerId);
-                                    // 检查所有条件是否满足
-                                    if (!currentItem || Object.keys(currentItem).length === 0) {
-                                      console.error('currentItem is missing or empty.');
-                                      messageApi.error('Cannot open publish settings: Task details are missing.');
-                                      return; // 阻止打开弹窗
-                                    }
-                                    if (!currentCustomerId) {
-                                      console.error('currentCustomerId is missing.');
-                                      messageApi.error('Cannot open publish settings: Customer ID is missing.');
-                                      return; // 阻止打开弹窗
-                                    }
-                                    // 打开发布设置弹窗
-                                    setIsPublishSettingsModalVisible(true);
-                                  }}
-                                  className={`
-                                    ml-2 px-2 py-2 rounded text-xs font-semibold text-white shadow-sm transition duration-200
-                                    bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-400 hover:to-indigo-400
-                                    disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-600 disabled:to-gray-700
-                                  `}
-                                  title="Bind Your Own Domain" // 修改 title 回去
-                                >
-                                  Bind Your Own Domain {/* 修改按钮文本回去 */}
-                                </button>
-                              </div>
-                            </div>
-                            <div className="flex-1 overflow-hidden rounded-b-lg">
-                              <iframe
-                                src={previewUrl}
-                                title="Preview"
-                                className="w-full h-full"
-                                frameBorder="0"
-                              />
+                            {/* URL Display */}
+                            <div className="flex-1 bg-slate-900/70 text-slate-300 text-[11px] px-2 py-1 rounded border border-slate-700 truncate shadow-inner">
+                              {previewUrl}
                             </div>
                           </div>
-                        );
-                      })()}
-                    </div>
-                  </div>
+                          {/* Action Buttons */}
+                          {/* === 修改：将 Bind 按钮移到此处 === */}
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            <button
+                              onClick={() => { if (previewUrl) window.open(previewUrl, '_blank'); }}
+                              className={`
+                                px-2 py-1 rounded text-xs font-semibold text-white shadow-sm transition duration-200 flex items-center gap-1
+                                bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500
+                                border border-cyan-500/50 hover:border-cyan-400
+                                disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-600 disabled:to-gray-700
+                              `}
+                              title="Preview Page in New Tab"
+                              disabled={!selectedPreviewId || resultLoading || !previewUrl}
+                            >
+                              <EyeOutlined /> Preview
+                            </button>
+                            <button
+                              onClick={() => { if (selectedPreviewId) setEditPageId(selectedPreviewId); }}
+                              className={`
+                                px-2 py-1 rounded text-xs font-semibold text-white shadow-sm transition duration-200 flex items-center gap-1
+                                bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500
+                                border border-purple-500/50 hover:border-purple-400
+                                disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-600 disabled:to-gray-700
+                              `}
+                              title="Edit This Page"
+                              disabled={!selectedPreviewId || resultLoading}
+                            >
+                              <EditOutlined /> Edit
+                            </button>
+                            {/* === 新增：Bind with your domain 按钮 === */}
+                            <button
+                              onClick={() => setIsPublishSettingsModalVisible(true)}
+                              className={`
+                                px-2 py-1 rounded text-xs font-semibold text-white shadow-sm transition duration-200 flex items-center gap-1
+                                bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500
+                                border border-blue-500/50 hover:border-blue-400
+                                disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-600 disabled:to-gray-700
+                              `}
+                              title="Bind with your domain"
+                              disabled={!selectedPreviewId || resultLoading} // 保持禁用逻辑
+                            >
+                              <LinkOutlined /> Bind With Your Domain
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Iframe Preview */}
+                        <div className="flex-1 overflow-hidden bg-slate-900">
+                          <iframe
+                            key={selectedPreviewId} // Re-render iframe when ID changes
+                            src={previewUrl}
+                            title="Preview"
+                            className="w-full h-full border-none"
+                            sandbox="allow-scripts allow-same-origin" // Security sandbox
+                            onError={(e) => console.error("Iframe loading error:", e)}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             ) : (
-              <div className="flex-1 flex items-center justify-center text-gray-400">
-                No data available
+              <div className="flex h-[80vh] items-center justify-center text-slate-500">
+                {resultDetail?.error || 'No data available for this task.'}
               </div>
             )}
           </Modal>
