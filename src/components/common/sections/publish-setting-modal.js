@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, Button, Spin, Select, Radio, Input, message, App, Tag, Alert, Table, Collapse } from 'antd';
-import { CopyOutlined, EditOutlined, ExclamationCircleOutlined, CloseOutlined, DeleteOutlined, ReloadOutlined, CaretRightOutlined } from '@ant-design/icons';
-// 假设 apiClient 是通过 props 传入或者可以从 context 获取
-// import apiClient from '@/services/apiClient'; // 根据你的项目结构调整
+import { Modal, Button, Spin, Select, Radio, Input, message, App, Tag, Alert, Table, Collapse, Descriptions } from 'antd';
+import { CopyOutlined, EditOutlined, ExclamationCircleOutlined, CloseOutlined, DeleteOutlined, ReloadOutlined, CaretRightOutlined, InfoCircleOutlined } from '@ant-design/icons';
 
 const PublishSettingsModal = ({
   open,
@@ -30,24 +28,19 @@ const PublishSettingsModal = ({
   // === 新增：根域名 State ===
   const [rootDomain, setRootDomain] = useState(null); // 用于存储 getDomain 获取的根域名
   const [rootDomainId, setRootDomainId] = useState(null); // 新增：用于存储根域名的 ID
-  // === 新增：子域名相关 State ===
   const [subdomains, setSubdomains] = useState([]);
   const [subdomainLoading, setSubdomainLoading] = useState(false);
-  // === 新增：添加子域名相关 State ===
   const [subdomainPrefix, setSubdomainPrefix] = useState('');
   const [isAddingSubdomain, setIsAddingSubdomain] = useState(false);
   const [activeCollapseKey, setActiveCollapseKey] = useState([]); // 用于控制 Collapse 组件的展开/收起
-  // === 新增：删除子域名相关 State ===
   const [isDeletingSubdomain, setIsDeletingSubdomain] = useState(false); // 添加删除子域名的 loading 状态
+  const [publishMode, setPublishMode] = useState('subdomain'); // 'subdomain' 或 'subdirectory'
+  const [baseDomainInput, setBaseDomainInput] = useState(''); // 用于子目录模式的基础域名输入
+  const [subdirectoryName, setSubdirectoryName] = useState('alternative'); // 默认子目录名称
 
-  // === 新增：使用 useModal Hook ===
   const [modal, contextHolder] = Modal.useModal(); // 获取 modal 实例和 contextHolder
-
-  // === Vercel Project ID (需要确认来源) ===
-  // 假设从某个配置或环境变量获取，或者暂时硬编码 (与 loadSubdomains 保持一致)
   const VERCEL_PROJECT_ID = 'prj_wzQuo0EarALY8MsjNvPotb4wYO8S';
 
-  // === 内部加载已验证域名和产品信息的函数 ===
   const loadData = async () => {
     setDomainLoading(true);
     setVerifiedDomains([]); // 重置
@@ -97,7 +90,7 @@ const PublishSettingsModal = ({
       }
 
       // 3. 获取 Vercel 项目的 projectId (硬编码或从配置获取)
-      const projectId = VERCEL_PROJECT_ID; // 使用常量
+      const projectId = VERCEL_PROJECT_ID;
 
       // 4. 获取 Vercel 域名列表
       const domainResp = await apiClient.getVercelDomainInfo(projectId);
@@ -174,7 +167,6 @@ const PublishSettingsModal = ({
     }
   };
 
-  // === 修改：加载子域名的函数，接收根域名作为参数 ===
   const loadSubdomains = async (currentRootDomain) => {
     if (!currentRootDomain) { // 使用传入的参数判断
       console.log("No root domain provided, skipping subdomain load.");
@@ -183,8 +175,6 @@ const PublishSettingsModal = ({
     }
     setSubdomainLoading(true);
     setSubdomains([]); // 重置
-    // const rootDomain = currentProductInfo.projectWebsite; // 删除旧代码
-    // TODO: 替换为实际的 Vercel Project ID
     const projectId = 'prj_wzQuo0EarALY8MsjNvPotb4wYO8S'; // 保持和 loadData 一致
 
     try {
@@ -230,49 +220,98 @@ const PublishSettingsModal = ({
     }
   };
 
-  // === 当 Modal 打开时，加载数据 ===
   useEffect(() => {
-    // 打印所有传入的 props
-    console.log('PublishSettingsModal Props:', {
+    // === 日志：记录传入的 props ===
+    console.log('[PublishSettingsModal useEffect] Running effect. Props:', {
       open,
-      onClose,
-      apiClient,
-      messageApi,
-      currentItem,
+      currentItem, // 重点关注 currentItem.siteUrl 和 currentItem.slug
       currentCustomerId,
-      onPublishSuccess,
-      onDomainChange,
     });
 
     if (open) {
-      // 设置初始 slug
-      setSlugInput(currentItem?.slug || '');
-      // 重置状态
+      // 1. 初始化 Slug (保持不变)
+      const initialSlug = currentItem?.slug || '';
+      setSlugInput(initialSlug);
+      console.log('[PublishSettingsModal useEffect] Initial slug set to:', initialSlug); // 日志
+
+      // 2. 重置通用状态
       setVerificationStatus('idle');
       setDomainToVerify('');
       setTxtRecord(null);
       setVerificationError(null);
       setSlugEditing(false);
-      // 加载域名等信息 (loadData 现在会自己获取根域名)
-      loadData(); // loadData 内部会使用 currentCustomerId
-      // === 新增：设置子域名前缀默认值 ===
-      setSubdomainPrefix('alternative'); // 设置默认值
+      console.log('[PublishSettingsModal useEffect] Common states reset.'); // 日志
+
+      // 3. === 根据 currentItem.siteUrl 初始化发布模式 ===
+      let initialMode = 'subdomain'; // 默认子域名模式
+      let initialBaseDomain = '';
+      let initialSubdirectory = 'alternative'; // 默认子目录名
+
+      const siteUrl = currentItem?.siteUrl; // 获取 siteUrl
+      console.log('[PublishSettingsModal useEffect] Checking currentItem.siteUrl:', siteUrl); // 日志
+
+      if (siteUrl) {
+        try {
+          const url = new URL(siteUrl);
+          const hostname = url.hostname; // 提取域名
+          const pathParts = url.pathname.split('/').filter(part => part !== ''); // 分割路径并移除空部分
+
+          // === 日志：记录解析结果 ===
+          console.log('[PublishSettingsModal useEffect] Parsed siteUrl:', { hostname, pathname: url.pathname, pathParts });
+
+          // === 修改判断条件：只要路径部分不为空，就认为是子目录模式 ===
+          // 假设 siteUrl 结构是 https://domain.com/subdirectory (没有 slug) 或 https://domain.com/subdirectory/slug
+          // pathParts 会是 ['subdirectory'] 或 ['subdirectory', 'slug']
+          if (pathParts.length >= 1) { // <--- 修改这里：从 > 1 改为 >= 1
+            initialMode = 'subdirectory';
+            initialBaseDomain = hostname;
+            initialSubdirectory = pathParts[0]; // 第一部分作为子目录
+            // === 日志：记录识别为子目录模式 ===
+            console.log(`[PublishSettingsModal useEffect] Identified as subdirectory mode (pathParts.length >= 1). Initial values:`, { initialMode, initialBaseDomain, initialSubdirectory });
+          } else {
+            // === 日志：记录 siteUrl 不匹配子目录模式 ===
+            console.log(`[PublishSettingsModal useEffect] siteUrl (${siteUrl}) pathParts length (${pathParts.length}) < 1, defaulting to subdomain mode.`);
+          }
+        } catch (e) {
+          // === 日志：记录 URL 解析错误 ===
+          console.error("[PublishSettingsModal useEffect] Error parsing currentItem.siteUrl, defaulting to subdomain mode:", e);
+        }
+      } else {
+         // === 日志：记录 siteUrl 为空 ===
+         console.log("[PublishSettingsModal useEffect] currentItem.siteUrl is empty or null, defaulting to subdomain mode.");
+      }
+
+      // 4. 设置计算出的初始状态
+      console.log('[PublishSettingsModal useEffect] Setting initial state:', { publishMode: initialMode, baseDomainInput: initialBaseDomain, subdirectoryName: initialSubdirectory }); // 日志
+      setPublishMode(initialMode);
+      setBaseDomainInput(initialBaseDomain);
+      setSubdirectoryName(initialSubdirectory);
+      setSubdomainPrefix('alternative'); // 子域名模式的默认前缀
+
+      // 5. 根据确定的模式加载数据
+      console.log(`[PublishSettingsModal useEffect] Mode is ${initialMode}. Calling loadData().`); // 日志
+      loadData(); // 现在统一调用 loadData，它内部会处理根域名等逻辑
+
     } else {
-       // 关闭时重置状态，避免下次打开残留
+       // 关闭时重置状态 (保持不变)
+       console.log('[PublishSettingsModal useEffect] Modal closed, resetting states.'); // 日志
        setSelectedPublishUrl('');
        setVerifiedDomains([]);
        setDomainLoading(false);
-       setRootDomain(null); // 新增：关闭时重置根域名
-       setRootDomainId(null); // 新增：关闭时重置根域名 ID
-       // === 新增：关闭时重置子域名状态 ===
+       setRootDomain(null);
+       setRootDomainId(null);
        setSubdomains([]);
        setSubdomainLoading(false);
-       setSubdomainPrefix('alternative'); // 关闭时也重置为默认值
+       setSubdomainPrefix('alternative');
        setIsAddingSubdomain(false);
-       setActiveCollapseKey([]); // 关闭时重置 Collapse 状态
-       setIsDeletingSubdomain(false); // 关闭时重置删除状态
+       setActiveCollapseKey([]);
+       setIsDeletingSubdomain(false);
+       setBaseDomainInput('');
+       setSubdirectoryName('alternative');
+       setPublishMode('subdomain');
     }
-  }, [open, currentItem, currentCustomerId]); // 修改依赖，添加 currentCustomerId
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, currentItem, currentCustomerId]); // 依赖项保持不变 (暂时忽略 exhaustive-deps 警告，因为 loadData 等函数未包含)
 
   // === 域名验证相关函数 (从 result-preview.js 移动过来) ===
   const handleAddDomain = async () => {
@@ -401,7 +440,6 @@ const PublishSettingsModal = ({
     });
   };
 
-  // === 删除域名绑定相关函数 ===
   const handleDeleteDomainVerification = () => {
     // === 修改：使用 modal.confirm ===
     modal.confirm({
@@ -461,41 +499,93 @@ const PublishSettingsModal = ({
     }
   };
 
-  // === 发布函数 ===
   const handlePublish = async () => {
       setDeployLoading(true);
-      try {
-         if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slugInput)) {
-           messageApi.error('Invalid slug format. Please fix the slug before publishing.');
-           setDeployLoading(false);
-           return;
-         }
-        if (slugEditing) {
-           messageApi.warning('Please save or cancel the slug edit before publishing.');
+      let publishUrl = '';
+      let isValid = false;
+      // === 修改：确保使用最新的 slugInput ===
+      const currentSlug = slugInput.trim(); // 使用 state 中的 slugInput
+
+      // 1. 验证 Slug
+      if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(currentSlug)) { // 使用 currentSlug
+        messageApi.error('Invalid slug format. Please fix the slug before publishing.');
+        setDeployLoading(false);
+        return;
+      }
+      if (slugEditing) {
+         messageApi.warning('Please save or cancel the slug edit before publishing.');
+         setDeployLoading(false);
+         return;
+      }
+
+      // 2. 根据模式确定 publishUrl/subdirectory 并验证
+      if (publishMode === 'subdomain') {
+        if (!selectedPublishUrl) {
+          messageApi.error('Please select a verified subdomain to publish to.');
+          setDeployLoading(false);
+          return;
+        }
+        publishUrl = selectedPublishUrl; // 子域名模式使用选中的 URL
+        isValid = true;
+      } else if (publishMode === 'subdirectory') {
+        // === 修改：使用 state 中的 baseDomainInput 和 subdirectoryName ===
+        const currentBaseDomain = baseDomainInput.trim();
+        const currentSubdirectory = subdirectoryName.trim();
+
+        if (!currentBaseDomain) { // 使用 currentBaseDomain
+          messageApi.error('Please enter your base domain name (e.g., yourdomain.com).');
+          setDeployLoading(false);
+          return;
+        }
+        if (!/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(currentBaseDomain)) { // 使用 currentBaseDomain
+           messageApi.error('Invalid base domain format.');
            setDeployLoading(false);
            return;
         }
+        if (!currentSubdirectory) { // 使用 currentSubdirectory
+            messageApi.error('Please enter a subdirectory path.');
+            setDeployLoading(false);
+            return;
+        }
+        // === 修改：构建 publishUrl 时包含子目录 ===
+        // publishUrl 现在代表完整的发布目标标识符，后端可能需要解析它
+        // 或者，你可能需要分别传递 baseDomain, subdirectory, slug 给 API
+        // 这里我们先按组合方式构建，假设 API 能处理
+        publishUrl = `${currentBaseDomain}/${currentSubdirectory}`; // <--- 包含子目录
+        isValid = true;
+      }
+
+      if (!isValid) {
+        messageApi.error('Publishing configuration is incomplete.');
+        setDeployLoading(false);
+        return;
+      }
+
+      // 3. 调用 API
+      try {
+        // === 修改 API 调用以传递 slugInput ===
+        // 假设 API 需要 resultId, 操作类型, 发布目标(域名或域名/子目录), slug
         const resp = await apiClient.updateAlternativePublishStatus(
-          currentItem.resultId, // 使用传入的 currentItem
+          currentItem.resultId,
           'publish',
-          selectedPublishUrl,
-          slugInput
+          publishUrl, // 包含基础域名和子目录 (如果是子目录模式)
+          currentSlug           // 使用 state 中的 slugInput
         );
+
         if (resp?.code === 200) {
           messageApi.success('Published successfully!');
-          onPublishSuccess(); // 调用成功回调
-          onClose(); // 关闭弹窗
+          onPublishSuccess();
+          onClose();
         } else {
           messageApi.error(resp?.message || 'Publish failed');
         }
       } catch (e) {
         messageApi.error(e.message || 'Publish failed');
       } finally {
-        setDeployLoading(false); 
+        setDeployLoading(false);
       }
   };
 
-  // === Slug 保存函数 ===
    const handleSaveSlug = async () => {
       setSlugSaving(true);
       try {
@@ -521,7 +611,6 @@ const PublishSettingsModal = ({
       setSlugSaving(false);
     };
 
-  // === 新增：获取域名状态信息的辅助函数 ===
   const getDomainStatusInfo = (domain) => {
     if (domain.verified) {
       return { color: 'success', text: 'Verified' };
@@ -534,7 +623,6 @@ const PublishSettingsModal = ({
     return { color: 'warning', text: 'Pending DNS' };
   };
 
-  // === 新增：处理删除子域名的函数 ===
   const handleDeleteSubdomain = (domainName) => {
     modal.confirm({
       title: <span className="text-red-400">Confirm Subdomain Deletion</span>,
@@ -574,7 +662,6 @@ const PublishSettingsModal = ({
     });
   };
 
-  // === 新增：DNS 表格列定义 ===
   const dnsColumns = [
     { title: 'Type', dataIndex: 'type', key: 'type', width: '15%' },
     { title: 'Name', dataIndex: 'name', key: 'name', width: '30%' },
@@ -589,7 +676,6 @@ const PublishSettingsModal = ({
     // },
   ];
 
-  // === 新增：实现添加子域名的函数 ===
   const handleAddSubdomain = async () => {
     if (!subdomainPrefix.trim()) {
       messageApi.warning('Please enter a subdomain prefix.');
@@ -663,7 +749,6 @@ const PublishSettingsModal = ({
     }
   };
 
-  // === 新增：Collapse 组件的 Panel 定义 ===
   const getSubdomainPanel = () => {
     if (!rootDomain) {
       return null;
@@ -776,8 +861,6 @@ const PublishSettingsModal = ({
   };
 
   return (
-    // 确保你的应用根组件被 <App> 包裹，或者至少 PublishSettingsModal 的某个祖先被 <App> 包裹
-    // <App>
     <Modal
       open={open}
       onCancel={onClose}
@@ -798,248 +881,469 @@ const PublishSettingsModal = ({
       {/* 确保 currentItem 加载完成 */}
       {currentItem ? (
         <div className="text-gray-200 space-y-6">
-          {/* Domain Section */}
-          <Spin spinning={domainLoading} tip={<span className="text-gray-300">Loading domains...</span>}>
-            <div className="pb-5 border-b border-slate-700">
-              <h3 className="text-lg font-semibold text-white mb-4">Domain Binding</h3>
-              {rootDomain ? (
-                <div className="space-y-4">
-                  <div className="p-3 bg-slate-700/50 rounded border border-slate-600 flex items-center justify-between flex-wrap gap-2">
-                    <div>
-                      <span className="text-sm font-medium text-gray-300">Bound Root Domain: </span>
-                      <span className="text-sm font-semibold text-cyan-300">{rootDomain}</span>
-                    </div>
-                    <Button
-                      type="link"
-                      danger
-                      size="small"
-                      onClick={handleDeleteDomainVerification}
-                      loading={isDeletingVerification}
-                      className="text-red-400 hover:text-red-300 flex-shrink-0"
-                    >
-                      Remove Binding
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <Spin spinning={verificationLoading} tip={<span className="text-gray-300">{verificationStatus === 'verifying' ? "Verifying..." : "Processing..."}</span>}>
-                  {verificationError && <p className="text-red-400 text-sm mb-3">{verificationError}</p>}
-                  {verificationStatus === 'idle' && (
-                    <div className="space-y-3">
-                      <p className="text-sm text-gray-300">Enter the domain name you want to associate with your site (e.g., mydomain.com).</p>
-                      <input
-                        type="text"
-                        placeholder="example.com"
-                        value={domainToVerify}
-                        onChange={(e) => {
-                          setDomainToVerify(e.target.value.trim());
-                          setVerificationError(null);
-                        }}
-                        className="w-full px-3 py-2 rounded bg-slate-700 border border-slate-600 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
-                        disabled={verificationLoading || !currentCustomerId}
-                      />
-                      <Button
-                        type="primary"
-                        onClick={handleAddDomain}
-                        loading={verificationLoading}
-                        disabled={!domainToVerify || verificationLoading || !currentCustomerId}
-                        className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border-none text-white font-semibold"
-                      >
-                        Get Verification Record
-                      </Button>
-                      {!currentCustomerId && <p className="text-yellow-400 text-xs mt-1">Customer ID is not available, cannot add domain.</p>}
-                    </div>
-                  )}
-                  {(verificationStatus === 'pending_txt' || verificationStatus === 'verifying') && txtRecord && (
-                    <div className="space-y-3">
-                      <p className="text-sm text-gray-300">
-                        Add the following TXT record to your domain's DNS settings.
-                        <span className="block text-xs text-yellow-400/80 mt-1">
-                          If verification repeatedly fails, please delete the existing TXT record for this host in your DNS settings and add it again.
-                        </span>
-                      </p>
-                      <div className="space-y-1 bg-slate-700/50 p-3 rounded border border-slate-600">
-                        <p><strong className="text-gray-200">Type:</strong> <code className="text-cyan-300 bg-slate-800 px-1 rounded">TXT</code></p>
-                        <p><strong className="text-gray-200">Name/Host:</strong></p>
-                        <div className="flex items-center justify-between bg-slate-800 px-2 py-1 rounded">
-                          <code className="text-cyan-300 break-all mr-2">{txtRecord.name}</code>
-                          <Button icon={<CopyOutlined className="text-gray-300 hover:text-white"/>} type="text" size="small" onClick={() => copyToClipboard(txtRecord.name)} />
-                        </div>
-                        <p><strong className="text-gray-200">Value/Content:</strong></p>
-                        <div className="flex items-center justify-between bg-slate-800 px-2 py-1 rounded">
-                          <code className="text-cyan-300 break-all mr-2">{txtRecord.value}</code>
-                          <Button icon={<CopyOutlined className="text-gray-300 hover:text-white"/>} type="text" size="small" onClick={() => copyToClipboard(txtRecord.value)} />
-                        </div>
-                      </div>
-                      <p className="text-xs text-gray-400">Once added, click the button below to verify.</p>
-                      <Button
-                        type="primary"
-                        onClick={handleVerifyDomain}
-                        loading={verificationLoading && verificationStatus === 'verifying'}
-                        disabled={verificationLoading}
-                        className="w-full bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-500 hover:to-teal-500 border-none text-white font-semibold"
-                      >
-                        {verificationLoading && verificationStatus === 'verifying' ? 'Verifying...' : 'Verify DNS Record'}
-                      </Button>
-                      <Button
-                        type="default"
-                        onClick={() => {
-                          setVerificationStatus('idle');
-                          setTxtRecord(null);
-                          setVerificationError(null);
-                        }}
-                        disabled={verificationLoading}
-                        className="w-full bg-slate-600 hover:bg-slate-500 border-slate-500 text-white"
-                      >
-                        Change Domain
-                      </Button>
-                    </div>
-                  )}
-                  {verificationStatus === 'failed' && (
-                     <div className="space-y-3">
-                       <Button
-                         type="primary"
-                         onClick={() => {
-                           setVerificationStatus('idle');
-                           setVerificationError(null);
-                         }}
-                         className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border-none text-white font-semibold"
-                       >
-                         Try Again
-                       </Button>
-                     </div>
-                  )}
-                </Spin>
-              )}
-            </div>
-          </Spin>
-
-          {/* === 新增：子域名管理区域 (使用 Collapse 组件) === */}
-          {rootDomain && (
-            <Collapse
-              ghost
-              activeKey={activeCollapseKey}
-              onChange={(keys) => setActiveCollapseKey(Array.isArray(keys) ? keys : [keys])}
-              expandIcon={({ isActive }) => <CaretRightOutlined rotate={isActive ? 90 : 0} style={{ color: 'white', fontSize: '12px' }} />}
-              className="domain-collapse-override"
+          {/* === 新增：发布模式选择 === */}
+          <div className="pb-5 border-b border-slate-700">
+            <h3 className="text-lg font-semibold text-white mb-3">Publishing Mode</h3>
+            <Radio.Group
+              onChange={(e) => {
+                setPublishMode(e.target.value);
+                // 清理切换模式时可能不再相关的状态
+                setSelectedPublishUrl('');
+                setBaseDomainInput('');
+                setVerificationStatus('idle');
+                setDomainToVerify('');
+                setTxtRecord(null);
+                setVerificationError(null);
+                // 如果从子目录切换回子域名，重新加载域名数据
+                if (e.target.value === 'subdomain') {
+                  loadData();
+                }
+              }}
+              value={publishMode}
+              optionType="button"
+              buttonStyle="solid"
+              className="publish-mode-radio-group-new" // 使用新的 class
             >
-              {getSubdomainPanel()}
-            </Collapse>
-          )}
+              <Radio.Button value="subdomain">Use Subdomain</Radio.Button>
+              <Radio.Button value="subdirectory">Use Subdirectory (Advanced)</Radio.Button>
+            </Radio.Group>
+            {publishMode === 'subdirectory' && (
+              <Alert
+                message="Subdirectory Mode requires manual Nginx configuration on your server."
+                type="info"
+                showIcon
+                icon={<InfoCircleOutlined />}
+                className="mt-3 bg-blue-900/30 border-blue-700/50 text-blue-200 text-xs"
+              />
+            )}
+          </div>
 
-          {/* === URL 选择 Section (仅在有验证域名时显示) === */}
-          {verifiedDomains.length > 0 && (
-            <div className="space-y-5">
-              {/* URL Selection */}
-              <div>
-                <label htmlFor="publish-url-select" className="block text-sm font-medium text-gray-300 mb-2">Select Publish URL</label>
-                <Select
-                  id="publish-url-select"
-                  value={selectedPublishUrl}
-                  onChange={(value) => setSelectedPublishUrl(value)}
-                  className="w-full domain-select-override"
-                  placeholder="Select a verified subdomain"
-                  dropdownStyle={{ background: '#2a3a50', border: '1px solid #475569' }}
-                  allowClear // 允许清空选择
-                  disabled={domainLoading || isDeletingSubdomain || isAddingSubdomain} // 加载或操作时禁用
-                >
-                  {verifiedDomains
-                    .filter(url => url !== rootDomain) // 仍然排除根域名本身作为可选发布 URL
-                    .map(url => (
-                      <Select.Option
-                        key={url}
-                        value={url}
-                        className="domain-select-option-override"
-                      >
-                        <span>{url}</span>
-                      </Select.Option>
-                  ))}
-                </Select>
-                 {/* 提示：当有 verifiedDomains 但过滤后没有可选子域名时 */}
-                 {verifiedDomains.length > 0 && verifiedDomains.filter(url => url !== rootDomain).length === 0 && (
-                   <p className="text-xs text-yellow-400 mt-1">No available subdomains to select. Add a subdomain below.</p>
-                 )}
-              </div>
-
-              {/* === Slug Section (仅在绑定根域名后显示) === */}
-              {rootDomain && ( // 新增条件：只要 rootDomain 存在就显示 Slug 部分
-                <div className="mt-5"> {/* 添加一些上边距 */}
-                  <h3 className="text-base font-semibold text-white mb-2">Page Slug</h3>
-                  <p className="text-sm text-gray-300 mb-2">Set a unique slug for this page version (e.g., 'main-landing-page').</p>
-                  {slugEditing ? (
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={slugInput}
-                        onChange={(e) => setSlugInput(e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, ''))}
-                        className="flex-grow px-3 py-1.5 rounded bg-slate-700 border border-slate-600 text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 text-sm"
-                        placeholder="e.g., main-landing-page"
-                        disabled={slugSaving}
-                      />
-                      <div className="flex gap-1 flex-shrink-0">
-                        <button
-                          className="px-3 py-1.5 rounded bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
-                          disabled={slugSaving || !slugInput}
-                          onClick={handleSaveSlug}
+          {/* === 条件渲染：根据 publishMode 显示不同内容 === */}
+          {publishMode === 'subdomain' && (
+            <>
+              {/* Domain Section */}
+              <Spin spinning={domainLoading} tip={<span className="text-gray-300">Loading domains...</span>}>
+                <div className="pb-5 border-b border-slate-700">
+                  <h3 className="text-lg font-semibold text-white mb-4">Domain Binding</h3>
+                  {rootDomain ? (
+                    <div className="space-y-4">
+                      <div className="p-3 bg-slate-700/50 rounded border border-slate-600 flex items-center justify-between flex-wrap gap-2">
+                        <div>
+                          <span className="text-sm font-medium text-gray-300">Bound Root Domain: </span>
+                          <span className="text-sm font-semibold text-cyan-300">{rootDomain}</span>
+                        </div>
+                        <Button
+                          type="link"
+                          danger
+                          size="small"
+                          onClick={handleDeleteDomainVerification}
+                          loading={isDeletingVerification}
+                          className="text-red-400 hover:text-red-300 flex-shrink-0"
                         >
-                          {slugSaving ? <Spin size="small" /> : 'Save Slug'}
-                        </button>
-                        <button
-                          className="px-3 py-1.5 rounded bg-slate-600 hover:bg-slate-500 text-white text-xs font-semibold transition"
-                          onClick={() => {
-                            setSlugInput(currentItem?.slug || '');
-                            setSlugEditing(false);
-                          }}
-                          disabled={slugSaving}
-                        >
-                          Cancel
-                        </button>
+                          Remove Binding
+                        </Button>
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center justify-between gap-2 bg-slate-700/60 px-3 py-2 rounded border border-slate-600 min-h-[38px]">
-                      <span className="text-gray-100 text-sm break-all mr-2">{slugInput || <span className="text-gray-400 italic">No slug set</span>}</span>
-                      <button
-                        className="px-3 py-1 rounded bg-slate-600 hover:bg-slate-500 text-white text-xs font-semibold transition flex-shrink-0 flex items-center gap-1"
-                        onClick={() => setSlugEditing(true)}
-                      >
-                        <EditOutlined className="text-gray-300" />
-                        Edit
-                      </button>
+                    <Spin spinning={verificationLoading} tip={<span className="text-gray-300">{verificationStatus === 'verifying' ? "Verifying..." : "Processing..."}</span>}>
+                      {verificationError && <p className="text-red-400 text-sm mb-3">{verificationError}</p>}
+                      {verificationStatus === 'idle' && (
+                        <div className="space-y-3">
+                          <p className="text-sm text-gray-300">Enter the domain name you want to associate with your site (e.g., mydomain.com).</p>
+                          <input
+                            type="text"
+                            placeholder="example.com"
+                            value={domainToVerify}
+                            onChange={(e) => {
+                              setDomainToVerify(e.target.value.trim());
+                              setVerificationError(null);
+                            }}
+                            className="w-full px-3 py-2 rounded bg-slate-700 border border-slate-600 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
+                            disabled={verificationLoading || !currentCustomerId}
+                          />
+                          <Button
+                            type="primary"
+                            onClick={handleAddDomain}
+                            loading={verificationLoading}
+                            disabled={!domainToVerify || verificationLoading || !currentCustomerId}
+                            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border-none text-white font-semibold"
+                          >
+                            Get Verification Record
+                          </Button>
+                          {!currentCustomerId && <p className="text-yellow-400 text-xs mt-1">Customer ID is not available, cannot add domain.</p>}
+                        </div>
+                      )}
+                      {(verificationStatus === 'pending_txt' || verificationStatus === 'verifying') && txtRecord && (
+                        <div className="space-y-3">
+                          <p className="text-sm text-gray-300">
+                            Add the following TXT record to your domain's DNS settings.
+                            <span className="block text-xs text-yellow-400/80 mt-1">
+                              If verification repeatedly fails, please delete the existing TXT record for this host in your DNS settings and add it again.
+                            </span>
+                          </p>
+                          <div className="space-y-1 bg-slate-700/50 p-3 rounded border border-slate-600">
+                            <p><strong className="text-gray-200">Type:</strong> <code className="text-cyan-300 bg-slate-800 px-1 rounded">TXT</code></p>
+                            <p><strong className="text-gray-200">Name/Host:</strong></p>
+                            <div className="flex items-center justify-between bg-slate-800 px-2 py-1 rounded">
+                              <code className="text-cyan-300 break-all mr-2">{txtRecord.name}</code>
+                              <Button icon={<CopyOutlined className="text-gray-300 hover:text-white"/>} type="text" size="small" onClick={() => copyToClipboard(txtRecord.name)} />
+                            </div>
+                            <p><strong className="text-gray-200">Value/Content:</strong></p>
+                            <div className="flex items-center justify-between bg-slate-800 px-2 py-1 rounded">
+                              <code className="text-cyan-300 break-all mr-2">{txtRecord.value}</code>
+                              <Button icon={<CopyOutlined className="text-gray-300 hover:text-white"/>} type="text" size="small" onClick={() => copyToClipboard(txtRecord.value)} />
+                            </div>
+                          </div>
+                          <p className="text-xs text-gray-400">Once added, click the button below to verify.</p>
+                          <Button
+                            type="primary"
+                            onClick={handleVerifyDomain}
+                            loading={verificationLoading && verificationStatus === 'verifying'}
+                            disabled={verificationLoading}
+                            className="w-full bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-500 hover:to-teal-500 border-none text-white font-semibold"
+                          >
+                            {verificationLoading && verificationStatus === 'verifying' ? 'Verifying...' : 'Verify DNS Record'}
+                          </Button>
+                          <Button
+                            type="default"
+                            onClick={() => {
+                              setVerificationStatus('idle');
+                              setTxtRecord(null);
+                              setVerificationError(null);
+                            }}
+                            disabled={verificationLoading}
+                            className="w-full bg-slate-600 hover:bg-slate-500 border-slate-500 text-white"
+                          >
+                            Change Domain
+                          </Button>
+                        </div>
+                      )}
+                      {verificationStatus === 'failed' && (
+                         <div className="space-y-3">
+                           <Button
+                             type="primary"
+                             onClick={() => {
+                               setVerificationStatus('idle');
+                               setVerificationError(null);
+                             }}
+                             className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border-none text-white font-semibold"
+                           >
+                             Try Again
+                           </Button>
+                         </div>
+                      )}
+                    </Spin>
+                  )}
+                </div>
+              </Spin>
+
+              {/* 子域名管理区域 (仅在根域名绑定后显示) */}
+              {rootDomain && (
+                <Collapse
+                  ghost
+                  activeKey={activeCollapseKey}
+                  onChange={(keys) => setActiveCollapseKey(Array.isArray(keys) ? keys : [keys])}
+                  expandIcon={({ isActive }) => <CaretRightOutlined rotate={isActive ? 90 : 0} style={{ color: 'white', fontSize: '12px' }} />}
+                  className="domain-collapse-override"
+                >
+                  {getSubdomainPanel()}
+                </Collapse>
+              )}
+
+              {/* URL 选择 Section (仅在有验证域名时显示) */}
+              {verifiedDomains.length > 0 && (
+                <div className="space-y-5">
+                  {/* URL Selection */}
+                  <div>
+                    <label htmlFor="publish-url-select" className="block text-sm font-medium text-gray-300 mb-2">Select Publish URL</label>
+                    <Select
+                      id="publish-url-select"
+                      value={selectedPublishUrl}
+                      onChange={(value) => setSelectedPublishUrl(value)}
+                      className="w-full domain-select-override"
+                      placeholder="Select a verified subdomain"
+                      dropdownStyle={{ background: '#2a3a50', border: '1px solid #475569' }}
+                      allowClear // 允许清空选择
+                      disabled={domainLoading || isDeletingSubdomain || isAddingSubdomain} // 加载或操作时禁用
+                    >
+                      {verifiedDomains
+                        .filter(url => url !== rootDomain) // 仍然排除根域名本身作为可选发布 URL
+                        .map(url => (
+                          <Select.Option
+                            key={url}
+                            value={url}
+                            className="domain-select-option-override"
+                          >
+                            <span>{url}</span>
+                          </Select.Option>
+                      ))}
+                    </Select>
+                     {/* 提示：当有 verifiedDomains 但过滤后没有可选子域名时 */}
+                     {verifiedDomains.length > 0 && verifiedDomains.filter(url => url !== rootDomain).length === 0 && (
+                       <p className="text-xs text-yellow-400 mt-1">No available subdomains to select. Add a subdomain below.</p>
+                     )}
+                  </div>
+
+                  {/* === Slug Section (仅在绑定根域名后显示) === */}
+                  {rootDomain && ( // 新增条件：只要 rootDomain 存在就显示 Slug 部分
+                    <div className="mt-5"> {/* 添加一些上边距 */}
+                      <h3 className="text-base font-semibold text-white mb-2">Page Slug</h3>
+                      <p className="text-sm text-gray-300 mb-2">Set a unique slug for this page version (e.g., 'main-landing-page').</p>
+                      {slugEditing ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={slugInput}
+                            onChange={(e) => setSlugInput(e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, ''))}
+                            className="flex-grow px-3 py-1.5 rounded bg-slate-700 border border-slate-600 text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 text-sm"
+                            placeholder="e.g., main-landing-page"
+                            disabled={slugSaving}
+                          />
+                          <div className="flex gap-1 flex-shrink-0">
+                            <button
+                              className="px-3 py-1.5 rounded bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                              disabled={slugSaving || !slugInput}
+                              onClick={handleSaveSlug}
+                            >
+                              {slugSaving ? <Spin size="small" /> : 'Save Slug'}
+                            </button>
+                            <button
+                              className="px-3 py-1.5 rounded bg-slate-600 hover:bg-slate-500 text-white text-xs font-semibold transition"
+                              onClick={() => {
+                                setSlugInput(currentItem?.slug || '');
+                                setSlugEditing(false);
+                              }}
+                              disabled={slugSaving}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between gap-2 bg-slate-700/60 px-3 py-2 rounded border border-slate-600 min-h-[38px]">
+                          <span className="text-gray-100 text-sm break-all mr-2">{slugInput || <span className="text-gray-400 italic">No slug set</span>}</span>
+                          <button
+                            className="px-3 py-1 rounded bg-slate-600 hover:bg-slate-500 text-white text-xs font-semibold transition flex-shrink-0 flex items-center gap-1"
+                            onClick={() => setSlugEditing(true)}
+                          >
+                            <EditOutlined className="text-gray-300" />
+                            Edit
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
               )}
+
+              {/* Publish Button and Preview URL (仅在子域名模式且有选中 URL 时显示) */}
+              {verifiedDomains.length > 0 && (
+                <div className="mt-6 pt-6 flex flex-col gap-4 border-t border-slate-700">
+                   {/* Preview URL (依赖 selectedPublishUrl 和 slugInput) */}
+                   {selectedPublishUrl && slugInput && (
+                    <div className="bg-slate-800/50 p-3 rounded-md border border-slate-700/50">
+                      <div className="text-sm font-semibold text-cyan-300 mb-1">Publish Preview URL</div>
+                      <div className="text-cyan-400 underline break-all hover:text-cyan-300 transition cursor-default text-sm">
+                        {`https://${selectedPublishUrl}/${slugInput}`}
+                      </div>
+                    </div>
+                  )}
+                  {/* Publish Button (依赖 selectedPublishUrl 和 slugInput) */}
+                  <button
+                    disabled={!selectedPublishUrl || !slugInput || deployLoading || isDeletingVerification || slugEditing || verificationLoading || domainLoading}
+                    onClick={handlePublish}
+                    className={`
+                      w-full px-4 py-2.5 rounded font-semibold transition text-base shadow-lg
+                      ${(!selectedPublishUrl || !slugInput || deployLoading || isDeletingVerification || slugEditing || verificationLoading || domainLoading)
+                        ? 'bg-cyan-800/70 text-cyan-400/80 cursor-not-allowed opacity-80'
+                        : 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-cyan-500/30'}
+                    `}
+                  >
+                    {deployLoading ? <Spin /> : 'Publish Now'}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* === 条件渲染：子目录模式 UI === */}
+          {publishMode === 'subdirectory' && (
+            <div className="space-y-6"> {/* 保持此处的垂直间距用于分隔下面的区块 */}
+
+              {/* 新增：将基础域名和子目录路径放在一行 */}
+              <div className="flex flex-col md:flex-row gap-4"> {/* 在中等屏幕及以上变为行排列，保留间隙 */}
+
+                {/* 1. Base Domain Input (Flex Item 1) */}
+                <div className="flex-1"> {/* 让此项占据可用空间 */}
+                  <label htmlFor="base-domain-input" className="block text-sm font-medium text-gray-300 mb-2">
+                    Your Base Domain <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    id="base-domain-input"
+                    type="text"
+                    placeholder="yourdomain.com"
+                    value={baseDomainInput}
+                    onChange={(e) => setBaseDomainInput(e.target.value.trim())}
+                    className="w-full px-3 py-2 rounded bg-slate-700 border border-slate-600 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
+                    disabled={deployLoading || slugEditing}
+                  />
+                  <p className="text-xs text-gray-400 mt-1 h-8 md:h-10"> {/* 增加最小高度以对齐 */}
+                    Enter the main domain where you will configure the subdirectory proxy.
+                  </p>
+                </div>
+
+                {/* 2. Subdirectory Path Input (Flex Item 2) */}
+                <div className="flex-1"> {/* 让此项占据可用空间 */}
+                  <label htmlFor="subdirectory-name-input" className="block text-sm font-medium text-gray-300 mb-2">
+                    Subdirectory Path <span className="text-red-400">*</span>
+                  </label>
+                  <div className="flex items-center rounded border border-slate-600 bg-slate-700 focus-within:border-cyan-500 focus-within:ring-1 focus-within:ring-cyan-500">
+                    <span className="px-2 text-gray-400">/</span>
+                    <input
+                      id="subdirectory-name-input"
+                      type="text"
+                      placeholder="alternative"
+                      value={subdirectoryName}
+                      onChange={(e) => {
+                        const sanitized = e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '');
+                        setSubdirectoryName(sanitized);
+                      }}
+                      className="flex-grow bg-transparent border-none placeholder-gray-500 focus:ring-0 px-1 py-2 text-white" // 调整了内边距
+                      disabled={deployLoading || slugEditing}
+                    />
+                    <span className="px-2 text-gray-400">/</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1 h-8 md:h-10"> {/* 增加最小高度以对齐 */}
+                    Choose a path like 'blog', 'docs', 'app'. Final URL structure: {baseDomainInput || 'yourdomain.com'}/<span className="text-cyan-300">{subdirectoryName || 'path'}</span>/{slugInput || 'your-slug'}
+                  </p>
+                </div>
+
+              </div> {/* 行结束 */}
+
+              {/* 2. Slug Section (现在紧跟在上面的行之后) */}
+              <div>
+                <h3 className="text-base font-semibold text-white mb-2">Page Slug <span className="text-red-400">*</span></h3>
+                <p className="text-sm text-gray-300 mb-2">Set a unique slug for this page version (e.g., 'main-landing-page').</p>
+                {slugEditing ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={slugInput}
+                      onChange={(e) => setSlugInput(e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, ''))}
+                      className="flex-grow px-3 py-1.5 rounded bg-slate-700 border border-slate-600 text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 text-sm"
+                      placeholder="e.g., main-landing-page"
+                      disabled={slugSaving}
+                    />
+                    <div className="flex gap-1 flex-shrink-0">
+                      <button
+                        className="px-3 py-1.5 rounded bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={slugSaving || !slugInput}
+                        onClick={handleSaveSlug}
+                      >
+                        {slugSaving ? <Spin size="small" /> : 'Save Slug'}
+                      </button>
+                      <button
+                        className="px-3 py-1.5 rounded bg-slate-600 hover:bg-slate-500 text-white text-xs font-semibold transition"
+                        onClick={() => {
+                          setSlugInput(currentItem?.slug || '');
+                          setSlugEditing(false);
+                        }}
+                        disabled={slugSaving}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between gap-2 bg-slate-700/60 px-3 py-2 rounded border border-slate-600 min-h-[38px]">
+                    <span className="text-gray-100 text-sm break-all mr-2">{slugInput || <span className="text-gray-400 italic">No slug set</span>}</span>
+                    <button
+                      className="px-3 py-1 rounded bg-slate-600 hover:bg-slate-500 text-white text-xs font-semibold transition flex-shrink-0 flex items-center gap-1"
+                      onClick={() => setSlugEditing(true)}
+                    >
+                      <EditOutlined className="text-gray-300" />
+                      Edit
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* 3. Nginx Configuration Guide (简化版) */}
+              <div className="pb-5 border-t border-slate-700 pt-5">
+                <h3 className="text-lg font-semibold text-white mb-3">Nginx Setup Guide</h3>
+                 <Alert
+                    message={<span className="font-semibold text-yellow-100">Important</span>}
+                    description={
+                      <ul className="list-disc list-inside text-yellow-200/90 text-xs space-y-1">
+                        <li>Requires Nginx & server access.</li>
+                        <li>Backup Nginx config before editing.</li>
+                      </ul>
+                    }
+                    type="warning"
+                    showIcon
+                    className="bg-yellow-600/20 border-yellow-500/30 text-yellow-200 mb-4"
+                    icon={<ExclamationCircleOutlined className="text-yellow-300" />}
+                  />
+
+                <div className="space-y-3 text-sm text-gray-300">
+                  <p><strong>1. Locate Nginx Config:</strong> Find your site's config file (e.g., <code className="text-xs bg-slate-600 px-1 rounded">/etc/nginx/sites-available/yourdomain.com</code>).</p>
+                  <p><strong>2. Add Location Block:</strong> Inside the <code className="text-xs bg-slate-600 px-1 rounded">server</code> block for your domain, add this:</p>
+                  <pre className="bg-slate-800 p-3 rounded mt-1 text-xs text-cyan-200 overflow-x-auto"><code>
+{`# Route traffic for /${subdirectoryName || 'your-path'}/
+location /${subdirectoryName || 'your-path'}/ {
+    proxy_pass https://websitelm-pages-production-pj7miz9g0-joeyzzyys-projects.vercel.app; # Your service URL
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    # Optional: Add if your service URL requires a trailing slash
+    # proxy_pass https://websitelm-pages-production-pj7miz9g0-joeyzzyys-projects.vercel.app/;
+
+    # Optional: Improve asset handling/redirects if needed
+    # proxy_redirect off;
+    # proxy_http_version 1.1;
+    # proxy_set_header Upgrade $http_upgrade;
+    # proxy_set_header Connection "upgrade";
+}`}
+                  </code></pre>
+                   <p className="text-xs text-gray-400 mt-1">Ensure the <code className="text-xs bg-slate-600 px-1 rounded">location</code> path matches the subdirectory you chose above.</p>
+
+                  <p><strong>3. Test Config:</strong> Run <code className="text-xs bg-slate-600 px-1 rounded">sudo nginx -t</code>. Check for "syntax is ok".</p>
+                  <p><strong>4. Reload Nginx:</strong> Run <code className="text-xs bg-slate-600 px-1 rounded">sudo systemctl reload nginx</code> or <code className="text-xs bg-slate-600 px-1 rounded">sudo service nginx reload</code>.</p>
+                  <p><strong>5. Verify:</strong> After publishing, check if <code className="text-xs bg-slate-600 px-1 rounded">{baseDomainInput || 'yourdomain.com'}/{subdirectoryName || 'your-path'}/{slugInput || 'your-slug'}</code> loads correctly.</p>
+                </div>
+                 {/* 移除旧的详细步骤列表 */}
+              </div>
+
+              {/* 4. Publish Button (Subdirectory Mode) */}
+              <div className="mt-6 pt-6 flex flex-col gap-4 border-t border-slate-700">
+                 {/* Preview URL (依赖 baseDomainInput, slugInput, subdirectoryName) */}
+                 {baseDomainInput && slugInput && subdirectoryName && (
+                  <div className="bg-slate-800/50 p-3 rounded-md border border-slate-700/50">
+                    <div className="text-sm font-semibold text-cyan-300 mb-1">Expected Publish URL (After Nginx Setup)</div>
+                    <div className="text-cyan-400 underline break-all hover:text-cyan-300 transition cursor-default text-sm">
+                      {`https://${baseDomainInput}/${subdirectoryName}/${slugInput}`}
+                    </div>
+                  </div>
+                )}
+                <button
+                  disabled={!baseDomainInput || !slugInput || !subdirectoryName || deployLoading || slugEditing}
+                  onClick={handlePublish}
+                  className={`
+                    w-full px-4 py-2.5 rounded font-semibold transition text-base shadow-lg
+                    ${(!baseDomainInput || !slugInput || !subdirectoryName || deployLoading || slugEditing)
+                      ? 'bg-cyan-800/70 text-cyan-400/80 cursor-not-allowed opacity-80'
+                      : 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-cyan-500/30'}
+                  `}
+                >
+                  {deployLoading ? <Spin /> : 'Publish Now'}
+                </button>
+                 <p className="text-xs text-center text-gray-400">Ensure your Nginx configuration is complete before publishing.</p>
+              </div>
             </div>
           )}
 
-          {/* Publish Button and Preview URL (保持原有条件) */}
-          {verifiedDomains.length > 0 && (
-            <div className="mt-6 pt-6 flex flex-col gap-4 border-t border-slate-700">
-               {/* Preview URL (依赖 selectedPublishUrl 和 slugInput) */}
-               {selectedPublishUrl && slugInput && (
-                <div className="bg-slate-800/50 p-3 rounded-md border border-slate-700/50">
-                  <div className="text-sm font-semibold text-cyan-300 mb-1">Publish Preview URL</div>
-                  <div className="text-cyan-400 underline break-all hover:text-cyan-300 transition cursor-default text-sm">
-                    {`https://${selectedPublishUrl}/${slugInput}`}
-                  </div>
-                </div>
-              )}
-              {/* Publish Button (依赖 selectedPublishUrl 和 slugInput) */}
-              <button
-                disabled={!selectedPublishUrl || !slugInput || deployLoading || isDeletingVerification || slugEditing || verificationLoading || domainLoading}
-                onClick={handlePublish}
-                className={`
-                  w-full px-4 py-2.5 rounded font-semibold transition text-base shadow-lg
-                  ${(!selectedPublishUrl || !slugInput || deployLoading || isDeletingVerification || slugEditing || verificationLoading || domainLoading)
-                    ? 'bg-cyan-800/70 text-cyan-400/80 cursor-not-allowed opacity-80'
-                    : 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-cyan-500/30'}
-                `}
-              >
-                {deployLoading ? <Spin /> : 'Publish Now'}
-              </button>
-            </div>
-          )}
         </div>
       ) : (
          <div className="flex items-center justify-center h-40">
@@ -1083,31 +1387,35 @@ export default PublishSettingsModal;
     color: #cbd5e1 !important; /* 默认选项文字颜色 */
   }
 
-  /* === 移除 Radio.Group 相关样式 === */
+  /* === 移除旧的 Radio.Group 相关样式 (如果不再需要) === */
   /*
-  .publish-mode-radio-group .ant-radio-button-wrapper {
-    background-color: #334155 !important;
-    border-color: #475569 !important;
-    color: #cbd5e1 !important;
+  .publish-mode-radio-group .ant-radio-button-wrapper { ... }
+  */
+
+  /* === 新增：新的发布模式 Radio.Group 样式 === */
+  .publish-mode-radio-group-new .ant-radio-button-wrapper {
+    background-color: #334155 !important; /* 深蓝灰色背景 */
+    border-color: #475569 !important; /* 边框颜色 */
+    color: #cbd5e1 !important; /* 文字颜色 */
     box-shadow: none !important;
   }
-  .publish-mode-radio-group .ant-radio-button-wrapper:hover {
+  .publish-mode-radio-group-new .ant-radio-button-wrapper:hover {
     background-color: #475569 !important;
     color: #e2e8f0 !important;
   }
-  .publish-mode-radio-group .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled) {
-    background-color: #0ea5e9 !important;
-    border-color: #0284c7 !important;
-    color: #ffffff !important;
+  .publish-mode-radio-group-new .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled) {
+    background-color: #0ea5e9 !important; /* 青色背景 */
+    border-color: #0284c7 !important; /* 深青色边框 */
+    color: #ffffff !important; /* 白色文字 */
   }
-  .publish-mode-radio-group .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled):hover {
-     background-color: #0369a1 !important;
+  .publish-mode-radio-group-new .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled):hover {
+     background-color: #0369a1 !important; /* 深一点的青色 */
      border-color: #075985 !important;
   }
-  .publish-mode-radio-group .ant-radio-button-wrapper:not(:first-child)::before {
+  /* 移除按钮间的分割线 */
+  .publish-mode-radio-group-new .ant-radio-button-wrapper:not(:first-child)::before {
     width: 0;
   }
-  */
 
   /* === 自定义子域名 DNS 表格样式 === */
   .subdomain-dns-table-override .ant-table {
