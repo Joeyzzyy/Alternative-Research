@@ -412,6 +412,9 @@ function PaymentModal({ visible, onClose, plan, period, onSuccess }) {
   const [cardError, setCardError] = React.useState('');
   const [messageApi, contextHolder] = antdMessage.useMessage();
 
+  console.log('plan', plan);
+  console.log('period', period);
+
   const handleSubmit = async () => {
     if (!stripe || !elements) return;
     setProcessing(true);
@@ -445,11 +448,9 @@ function PaymentModal({ visible, onClose, plan, period, onSuccess }) {
         customerId,
         email,
         name,
-        packageId: plan.packageFeatureId,
+        packageId: plan.priceId[period],
         paymentMethodId: paymentMethod.id,
       });
-
-      // --- 修改后的成功/失败判断逻辑 ---
 
       // 1. 检查业务逻辑是否完全成功 (body code 为 200)
       if (res?.code === 200) {
