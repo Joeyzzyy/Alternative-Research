@@ -434,12 +434,19 @@ function PaymentModal({ visible, onClose, plan, period, onSuccess }) {
       }
 
       // 调用后端创建订阅
+      const customerId = localStorage.getItem('alternativelyCustomerId');
+      if (!customerId) {
+        messageApi.error('Customer ID not found. Please log in again.');
+        setProcessing(false);
+        return;
+      }
+
       const res = await apiClient.createSubscription({
+        customerId,
         email,
         name,
-        packageId: plan.priceId[period],
+        packageId: plan.packageFeatureId,
         paymentMethodId: paymentMethod.id,
-        billingAddress: { postalCode }
       });
 
       // --- 修改后的成功/失败判断逻辑 ---
