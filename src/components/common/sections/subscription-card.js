@@ -106,6 +106,10 @@ const SubscriptionCard = () => {
         priceId: {
           monthly: planMap.Standard.monthly?.priceId,
           yearly: planMap.Standard.yearly?.priceId
+        },
+        packageFeatureId: {
+          monthly: planMap.Standard.monthly?.packageFeatureId,
+          yearly: planMap.Standard.yearly?.packageFeatureId
         }
       };
 
@@ -141,6 +145,10 @@ const SubscriptionCard = () => {
         priceId: {
           monthly: planMap.Professional.monthly?.priceId,
           yearly: planMap.Professional.yearly?.priceId
+        },
+        packageFeatureId: {
+          monthly: planMap.Professional.monthly?.packageFeatureId,
+          yearly: planMap.Professional.yearly?.packageFeatureId
         }
       };
 
@@ -191,6 +199,9 @@ const SubscriptionCard = () => {
           ],
           priceId: {
             monthly: planMap.Testing.monthly?.priceId
+          },
+          packageFeatureId: {
+            monthly: planMap.Testing.monthly?.packageFeatureId
           }
         };
       }
@@ -448,7 +459,7 @@ function PaymentModal({ visible, onClose, plan, period, onSuccess }) {
         customerId,
         email,
         name,
-        packageId: plan.priceId[period],
+        packageId: plan.packageFeatureId[period],
         paymentMethodId: paymentMethod.id,
       });
 
