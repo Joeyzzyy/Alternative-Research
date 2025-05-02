@@ -396,7 +396,9 @@ const SubscriptionCard = () => {
           plan={selectedPlan}
           period={selectedPeriod}
           onSuccess={() => {
-            // 支付成功后的回调，比如刷新套餐状态
+            setTimeout(() => {
+              window.location.reload();
+            }, 1000);
           }}
         />
       </Elements>
