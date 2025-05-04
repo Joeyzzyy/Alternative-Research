@@ -528,30 +528,27 @@ const PublishSettingsModal = ({
         publishUrl = selectedPublishUrl; // 子域名模式使用选中的 URL
         isValid = true;
       } else if (publishMode === 'subdirectory') {
-        // === 修改：使用 state 中的 baseDomainInput 和 subdirectoryName ===
-        const currentBaseDomain = baseDomainInput.trim();
+        // === 修改：使用 state 中的 rootDomain 和 subdirectoryName ===
+        // const currentBaseDomain = baseDomainInput.trim(); // 不再需要从 input 获取
         const currentSubdirectory = subdirectoryName.trim();
 
-        if (!currentBaseDomain) { // 使用 currentBaseDomain
-          messageApi.error('Please enter your base domain name (e.g., yourdomain.com).');
+        // === 新增：检查 rootDomain 是否存在 (理论上此时应该存在) ===
+        if (!rootDomain) {
+          messageApi.error('Base domain is not bound or verified. Please complete the domain binding first.');
           setDeployLoading(false);
           return;
         }
-        if (!/^[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(currentBaseDomain)) { // 使用 currentBaseDomain
-           messageApi.error('Invalid base domain format.');
-           setDeployLoading(false);
-           return;
-        }
+
         if (!currentSubdirectory) { // 使用 currentSubdirectory
             messageApi.error('Please enter a subdirectory path.');
             setDeployLoading(false);
             return;
         }
-        // === 修改：构建 publishUrl 时包含子目录 ===
+        // === 修改：构建 publishUrl 时使用 rootDomain ===
         // publishUrl 现在代表完整的发布目标标识符，后端可能需要解析它
         // 或者，你可能需要分别传递 baseDomain, subdirectory, slug 给 API
         // 这里我们先按组合方式构建，假设 API 能处理
-        publishUrl = `${currentBaseDomain}/${currentSubdirectory}`; // <--- 包含子目录
+        publishUrl = `${rootDomain}/${currentSubdirectory}`; // <--- 使用 rootDomain
         isValid = true;
       }
 
@@ -568,7 +565,7 @@ const PublishSettingsModal = ({
         const resp = await apiClient.updateAlternativePublishStatus(
           currentItem.resultId,
           'publish',
-          publishUrl, // 包含基础域名和子目录 (如果是子目录模式)
+          publishUrl, // 包含基础域名(rootDomain)和子目录 (如果是子目录模式)
           currentSlug           // 使用 state 中的 slugInput
         );
 
@@ -1170,177 +1167,283 @@ const PublishSettingsModal = ({
           {publishMode === 'subdirectory' && (
             <div className="space-y-6"> {/* 保持此处的垂直间距用于分隔下面的区块 */}
 
-              {/* 新增：将基础域名和子目录路径放在一行 */}
-              <div className="flex flex-col md:flex-row gap-4"> {/* 在中等屏幕及以上变为行排列，保留间隙 */}
-
-                {/* 1. Base Domain Input (Flex Item 1) */}
-                <div className="flex-1"> {/* 让此项占据可用空间 */}
-                  <label htmlFor="base-domain-input" className="block text-sm font-medium text-gray-300 mb-2">
-                    Your Base Domain <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    id="base-domain-input"
-                    type="text"
-                    placeholder="yourdomain.com"
-                    value={baseDomainInput}
-                    onChange={(e) => setBaseDomainInput(e.target.value.trim())}
-                    className="w-full px-3 py-2 rounded bg-slate-700 border border-slate-600 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
-                    disabled={deployLoading || slugEditing}
-                  />
-                  <p className="text-xs text-gray-400 mt-1 h-8 md:h-10"> {/* 增加最小高度以对齐 */}
-                    Enter the main domain where you will configure the subdirectory proxy.
-                  </p>
-                </div>
-
-                {/* 2. Subdirectory Path Input (Flex Item 2) */}
-                <div className="flex-1"> {/* 让此项占据可用空间 */}
-                  <label htmlFor="subdirectory-name-input" className="block text-sm font-medium text-gray-300 mb-2">
-                    Subdirectory Path <span className="text-red-400">*</span>
-                  </label>
-                  <div className="flex items-center rounded border border-slate-600 bg-slate-700 focus-within:border-cyan-500 focus-within:ring-1 focus-within:ring-cyan-500">
-                    <span className="px-2 text-gray-400">/</span>
-                    <input
-                      id="subdirectory-name-input"
-                      type="text"
-                      placeholder="alternative"
-                      value={subdirectoryName}
-                      onChange={(e) => {
-                        const sanitized = e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '');
-                        setSubdirectoryName(sanitized);
-                      }}
-                      className="flex-grow bg-transparent border-none placeholder-gray-500 focus:ring-0 px-1 py-2 text-white" // 调整了内边距
-                      disabled={deployLoading || slugEditing}
-                    />
-                    <span className="px-2 text-gray-400">/</span>
-                  </div>
-                  <p className="text-xs text-gray-400 mt-1 h-8 md:h-10"> {/* 增加最小高度以对齐 */}
-                    Choose a path like 'blog', 'docs', 'app'. Final URL structure: {baseDomainInput || 'yourdomain.com'}/<span className="text-cyan-300">{subdirectoryName || 'path'}</span>/{slugInput || 'your-slug'}
-                  </p>
-                </div>
-
-              </div> {/* 行结束 */}
-
-              {/* 2. Slug Section (现在紧跟在上面的行之后) */}
-              <div>
-                <h3 className="text-base font-semibold text-white mb-2">Page Slug <span className="text-red-400">*</span></h3>
-                <p className="text-sm text-gray-300 mb-2">Set a unique slug for this page version (e.g., 'main-landing-page').</p>
-                {slugEditing ? (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={slugInput}
-                      onChange={(e) => setSlugInput(e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, ''))}
-                      className="flex-grow px-3 py-1.5 rounded bg-slate-700 border border-slate-600 text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 text-sm"
-                      placeholder="e.g., main-landing-page"
-                      disabled={slugSaving}
-                    />
-                    <div className="flex gap-1 flex-shrink-0">
-                      <button
-                        className="px-3 py-1.5 rounded bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={slugSaving || !slugInput}
-                        onClick={handleSaveSlug}
-                      >
-                        {slugSaving ? <Spin size="small" /> : 'Save Slug'}
-                      </button>
-                      <button
-                        className="px-3 py-1.5 rounded bg-slate-600 hover:bg-slate-500 text-white text-xs font-semibold transition"
-                        onClick={() => {
-                          setSlugInput(currentItem?.slug || '');
-                          setSlugEditing(false);
-                        }}
-                        disabled={slugSaving}
-                      >
-                        Cancel
-                      </button>
+              {/* === 新增：子目录模式下的域名绑定区域 === */}
+              <Spin spinning={domainLoading} tip={<span className="text-gray-300">Loading domain info...</span>}>
+                <div className="pb-5 border-b border-slate-700">
+                  <h3 className="text-lg font-semibold text-white mb-4">Base Domain Binding</h3>
+                  {rootDomain ? (
+                    // === 域名已绑定时显示 ===
+                    <div className="space-y-4">
+                      <div className="p-3 bg-slate-700/50 rounded border border-slate-600 flex items-center justify-between flex-wrap gap-2">
+                        <div>
+                          <span className="text-sm font-medium text-gray-300">Bound Base Domain: </span>
+                          <span className="text-sm font-semibold text-cyan-300">{rootDomain}</span>
+                        </div>
+                        <Button
+                          type="link"
+                          danger
+                          size="small"
+                          onClick={handleDeleteDomainVerification} // 使用相同的删除函数
+                          loading={isDeletingVerification}
+                          className="text-red-400 hover:text-red-300 flex-shrink-0"
+                        >
+                          Remove Binding
+                        </Button>
+                      </div>
+                      <p className="text-xs text-gray-400">
+                        This domain will be used as the base for your subdirectory setup.
+                      </p>
                     </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between gap-2 bg-slate-700/60 px-3 py-2 rounded border border-slate-600 min-h-[38px]">
-                    <span className="text-gray-100 text-sm break-all mr-2">{slugInput || <span className="text-gray-400 italic">No slug set</span>}</span>
-                    <button
-                      className="px-3 py-1 rounded bg-slate-600 hover:bg-slate-500 text-white text-xs font-semibold transition flex-shrink-0 flex items-center gap-1"
-                      onClick={() => setSlugEditing(true)}
-                    >
-                      <EditOutlined className="text-gray-300" />
-                      Edit
-                    </button>
-                  </div>
-                )}
-              </div>
+                  ) : (
+                    // === 域名未绑定时显示 (与子域名模式类似) ===
+                    <Spin spinning={verificationLoading} tip={<span className="text-gray-300">{verificationStatus === 'verifying' ? "Verifying..." : "Processing..."}</span>}>
+                      {verificationError && <p className="text-red-400 text-sm mb-3">{verificationError}</p>}
+                      {verificationStatus === 'idle' && (
+                        <div className="space-y-3">
+                          <p className="text-sm text-gray-300">Enter the base domain you want to use for the subdirectory setup (e.g., yourdomain.com).</p>
+                          <input
+                            type="text"
+                            placeholder="yourdomain.com"
+                            value={domainToVerify}
+                            onChange={(e) => {
+                              setDomainToVerify(e.target.value.trim());
+                              setVerificationError(null);
+                            }}
+                            className="w-full px-3 py-2 rounded bg-slate-700 border border-slate-600 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
+                            disabled={verificationLoading || !currentCustomerId}
+                          />
+                          <Button
+                            type="primary"
+                            onClick={handleAddDomain} // 使用相同的添加函数
+                            loading={verificationLoading}
+                            disabled={!domainToVerify || verificationLoading || !currentCustomerId}
+                            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border-none text-white font-semibold"
+                          >
+                            Get Verification Record
+                          </Button>
+                          {!currentCustomerId && <p className="text-yellow-400 text-xs mt-1">Customer ID is not available, cannot add domain.</p>}
+                        </div>
+                      )}
+                      {(verificationStatus === 'pending_txt' || verificationStatus === 'verifying') && txtRecord && (
+                        // TXT 记录验证 UI (与子域名模式完全相同)
+                        <div className="space-y-3">
+                          <p className="text-sm text-gray-300">
+                            Add the following TXT record to your domain's DNS settings.
+                            <span className="block text-xs text-yellow-400/80 mt-1">
+                              If verification repeatedly fails, please delete the existing TXT record for this host in your DNS settings and add it again.
+                            </span>
+                          </p>
+                          <div className="space-y-1 bg-slate-700/50 p-3 rounded border border-slate-600">
+                            <p><strong className="text-gray-200">Type:</strong> <code className="text-cyan-300 bg-slate-800 px-1 rounded">TXT</code></p>
+                            <p><strong className="text-gray-200">Name/Host:</strong></p>
+                            <div className="flex items-center justify-between bg-slate-800 px-2 py-1 rounded">
+                              <code className="text-cyan-300 break-all mr-2">{txtRecord.name}</code>
+                              <Button icon={<CopyOutlined className="text-gray-300 hover:text-white"/>} type="text" size="small" onClick={() => copyToClipboard(txtRecord.name)} />
+                            </div>
+                            <p><strong className="text-gray-200">Value/Content:</strong></p>
+                            <div className="flex items-center justify-between bg-slate-800 px-2 py-1 rounded">
+                              <code className="text-cyan-300 break-all mr-2">{txtRecord.value}</code>
+                              <Button icon={<CopyOutlined className="text-gray-300 hover:text-white"/>} type="text" size="small" onClick={() => copyToClipboard(txtRecord.value)} />
+                            </div>
+                          </div>
+                          <p className="text-xs text-gray-400">Once added, click the button below to verify.</p>
+                          <Button
+                            type="primary"
+                            onClick={handleVerifyDomain} // 使用相同的验证函数
+                            loading={verificationLoading && verificationStatus === 'verifying'}
+                            disabled={verificationLoading}
+                            className="w-full bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-500 hover:to-teal-500 border-none text-white font-semibold"
+                          >
+                            {verificationLoading && verificationStatus === 'verifying' ? 'Verifying...' : 'Verify DNS Record'}
+                          </Button>
+                          <Button
+                            type="default"
+                            onClick={() => {
+                              setVerificationStatus('idle');
+                              setTxtRecord(null);
+                              setVerificationError(null);
+                            }}
+                            disabled={verificationLoading}
+                            className="w-full bg-slate-600 hover:bg-slate-500 border-slate-500 text-white"
+                          >
+                            Change Domain
+                          </Button>
+                        </div>
+                      )}
+                      {verificationStatus === 'failed' && (
+                         <div className="space-y-3">
+                           <Button
+                             type="primary"
+                             onClick={() => {
+                               setVerificationStatus('idle');
+                               setVerificationError(null);
+                             }}
+                             className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border-none text-white font-semibold"
+                           >
+                             Try Again
+                           </Button>
+                         </div>
+                      )}
+                    </Spin>
+                  )}
+                </div>
+              </Spin>
 
-              {/* 3. Nginx Configuration Guide (简化版) */}
-              <div className="pb-5 border-t border-slate-700 pt-5">
-                <h3 className="text-lg font-semibold text-white mb-3">Nginx Setup Guide</h3>
-                 <Alert
-                    message={<span className="font-semibold text-yellow-100">Important</span>}
-                    description={
-                      <ul className="list-disc list-inside text-yellow-200/90 text-xs space-y-1">
-                        <li>Requires Nginx & server access.</li>
-                        <li>Backup Nginx config before editing.</li>
-                      </ul>
-                    }
-                    type="warning"
-                    showIcon
-                    className="bg-yellow-600/20 border-yellow-500/30 text-yellow-200 mb-4"
-                    icon={<ExclamationCircleOutlined className="text-yellow-300" />}
-                  />
+              {/* === 新增：只有在基础域名绑定后才显示后续配置 === */}
+              {rootDomain && (
+                <div className="space-y-6"> {/* 添加一个容器并保持间距 */}
 
-                <div className="space-y-3 text-sm text-gray-300">
-                  <p><strong>1. Locate Nginx Config:</strong> Find your site's config file (e.g., <code className="text-xs bg-slate-600 px-1 rounded">/etc/nginx/sites-available/yourdomain.com</code>).</p>
-                  <p><strong>2. Add Location Block:</strong> Inside the <code className="text-xs bg-slate-600 px-1 rounded">server</code> block for your domain, add this:</p>
-                  <pre className="bg-slate-800 p-3 rounded mt-1 text-xs text-cyan-200 overflow-x-auto"><code>
-{`# Route traffic for /${subdirectoryName || 'your-path'}/
-location /${subdirectoryName || 'your-path'}/ {
-    proxy_pass https://websitelm-pages-production-pj7miz9g0-joeyzzyys-projects.vercel.app; # Your service URL
-    proxy_set_header Host $host;
+                  {/* 1. Subdirectory Path Input */}
+                  <div> {/* 包裹起来方便控制 */}
+                    <label htmlFor="subdirectory-name-input" className="block text-sm font-medium text-gray-300 mb-2">
+                      Subdirectory Path <span className="text-red-400">*</span>
+                    </label>
+                    <div className="flex items-center rounded border border-slate-600 bg-slate-700 focus-within:border-cyan-500 focus-within:ring-1 focus-within:ring-cyan-500">
+                      <span className="pl-3 pr-1 text-gray-400">{rootDomain}/</span> {/* 显示绑定的域名 */}
+                      <input
+                        id="subdirectory-name-input"
+                        type="text"
+                        placeholder="alternative"
+                        value={subdirectoryName}
+                        onChange={(e) => {
+                          const sanitized = e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '');
+                          setSubdirectoryName(sanitized);
+                        }}
+                        className="flex-grow bg-transparent border-none placeholder-gray-500 focus:ring-0 px-1 py-2 text-white"
+                        disabled={deployLoading || slugEditing}
+                      />
+                      <span className="px-2 text-gray-400">/</span>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Choose a path like 'blog', 'docs', 'app'. Final URL structure: {rootDomain}/<span className="text-cyan-300">{subdirectoryName || 'path'}</span>/{slugInput || 'your-slug'}
+                    </p>
+                  </div>
+
+                  {/* 2. Slug Section */}
+                  <div>
+                    <h3 className="text-base font-semibold text-white mb-2">Page Slug <span className="text-red-400">*</span></h3>
+                    <p className="text-sm text-gray-300 mb-2">Set a unique slug for this page version (e.g., 'main-landing-page').</p>
+                    {slugEditing ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={slugInput}
+                          onChange={(e) => setSlugInput(e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, ''))}
+                          className="flex-grow px-3 py-1.5 rounded bg-slate-700 border border-slate-600 text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 text-sm"
+                          placeholder="e.g., main-landing-page"
+                          disabled={slugSaving}
+                        />
+                        <div className="flex gap-1 flex-shrink-0">
+                          <button
+                            className="px-3 py-1.5 rounded bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={slugSaving || !slugInput}
+                            onClick={handleSaveSlug}
+                          >
+                            {slugSaving ? <Spin size="small" /> : 'Save Slug'}
+                          </button>
+                          <button
+                            className="px-3 py-1.5 rounded bg-slate-600 hover:bg-slate-500 text-white text-xs font-semibold transition"
+                            onClick={() => {
+                              setSlugInput(currentItem?.slug || '');
+                              setSlugEditing(false);
+                            }}
+                            disabled={slugSaving}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between gap-2 bg-slate-700/60 px-3 py-2 rounded border border-slate-600 min-h-[38px]">
+                        <span className="text-gray-100 text-sm break-all mr-2">{slugInput || <span className="text-gray-400 italic">No slug set</span>}</span>
+                        <button
+                          className="px-3 py-1 rounded bg-slate-600 hover:bg-slate-500 text-white text-xs font-semibold transition flex-shrink-0 flex items-center gap-1"
+                          onClick={() => setSlugEditing(true)}
+                        >
+                          <EditOutlined className="text-gray-300" />
+                          Edit
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 3. Nginx Configuration Guide */}
+                  <div className="pb-5 border-t border-slate-700 pt-5">
+                    <h3 className="text-lg font-semibold text-white mb-3">Nginx Setup Guide</h3>
+                     <Alert
+                        message={<span className="font-semibold text-yellow-100">Important</span>}
+                        description={
+                          <ul className="list-disc list-inside text-yellow-200/90 text-xs space-y-1">
+                            <li>Requires Nginx & server access.</li>
+                            <li>Backup Nginx config before editing.</li>
+                          </ul>
+                        }
+                        type="warning"
+                        showIcon
+                        className="bg-yellow-600/20 border-yellow-500/30 text-yellow-200 mb-4"
+                        icon={<ExclamationCircleOutlined className="text-yellow-300" />}
+                      />
+
+                    <div className="space-y-3 text-sm text-gray-300">
+                      <p><strong>1. Locate Nginx Config:</strong> Find your site's config file (e.g., <code className="text-xs bg-slate-600 px-1 rounded">/etc/nginx/sites-available/{rootDomain}</code>).</p> {/* 使用 rootDomain */}
+                      {/* === 修改：更新说明和 Nginx 示例 === */}
+                      <p><strong>2. Add Location Block:</strong> Inside the <code className="text-xs bg-slate-600 px-1 rounded">server</code> block for your domain (<code className="text-xs bg-slate-600 px-1 rounded">{rootDomain}</code>), add a location block similar to this example. Adjust the path (e.g., <code className="text-xs bg-slate-600 px-1 rounded">^/alternative/</code>) to match the subdirectory path you chose (<code className="text-xs bg-slate-600 px-1 rounded">{subdirectoryName || 'your-path'}</code>):</p>
+                      <pre className="bg-slate-800 p-3 rounded mt-1 text-xs text-cyan-200 overflow-x-auto"><code>
+{`location ~ ^/${subdirectoryName || 'alternative'}/.*$ {
+    proxy_pass https://websitelm-pages-production.vercel.app;
+    proxy_set_header Host websitelm-pages-production.vercel.app;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-AlterPage-Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
-
-    # Optional: Add if your service URL requires a trailing slash
-    # proxy_pass https://websitelm-pages-production-pj7miz9g0-joeyzzyys-projects.vercel.app/;
-
-    # Optional: Improve asset handling/redirects if needed
-    # proxy_redirect off;
-    # proxy_http_version 1.1;
-    # proxy_set_header Upgrade $http_upgrade;
-    # proxy_set_header Connection "upgrade";
 }`}
-                  </code></pre>
-                   <p className="text-xs text-gray-400 mt-1">Ensure the <code className="text-xs bg-slate-600 px-1 rounded">location</code> path matches the subdirectory you chose above.</p>
+                      </code></pre>
+                       <p className="text-xs text-gray-400 mt-1">Ensure the <code className="text-xs bg-slate-600 px-1 rounded">location</code> path (e.g., <code className="text-xs bg-slate-600 px-1 rounded">^/${subdirectoryName || 'alternative'}/.*$</code>) correctly matches the subdirectory you chose above.</p>
+                      {/* === 修改结束 === */}
 
-                  <p><strong>3. Test Config:</strong> Run <code className="text-xs bg-slate-600 px-1 rounded">sudo nginx -t</code>. Check for "syntax is ok".</p>
-                  <p><strong>4. Reload Nginx:</strong> Run <code className="text-xs bg-slate-600 px-1 rounded">sudo systemctl reload nginx</code> or <code className="text-xs bg-slate-600 px-1 rounded">sudo service nginx reload</code>.</p>
-                  <p><strong>5. Verify:</strong> After publishing, check if <code className="text-xs bg-slate-600 px-1 rounded">{baseDomainInput || 'yourdomain.com'}/{subdirectoryName || 'your-path'}/{slugInput || 'your-slug'}</code> loads correctly.</p>
-                </div>
-                 {/* 移除旧的详细步骤列表 */}
-              </div>
-
-              {/* 4. Publish Button (Subdirectory Mode) */}
-              <div className="mt-6 pt-6 flex flex-col gap-4 border-t border-slate-700">
-                 {/* Preview URL (依赖 baseDomainInput, slugInput, subdirectoryName) */}
-                 {baseDomainInput && slugInput && subdirectoryName && (
-                  <div className="bg-slate-800/50 p-3 rounded-md border border-slate-700/50">
-                    <div className="text-sm font-semibold text-cyan-300 mb-1">Expected Publish URL (After Nginx Setup)</div>
-                    <div className="text-cyan-400 underline break-all hover:text-cyan-300 transition cursor-default text-sm">
-                      {`https://${baseDomainInput}/${subdirectoryName}/${slugInput}`}
+                      <p><strong>3. Test Config:</strong> Run <code className="text-xs bg-slate-600 px-1 rounded">sudo nginx -t</code>. Check for "syntax is ok".</p>
+                      <p><strong>4. Reload Nginx:</strong> Run <code className="text-xs bg-slate-600 px-1 rounded">sudo systemctl reload nginx</code> or <code className="text-xs bg-slate-600 px-1 rounded">sudo service nginx reload</code>.</p>
+                      <p><strong>5. Verify:</strong> After publishing, check if <code className="text-xs bg-slate-600 px-1 rounded">{rootDomain}/{subdirectoryName || 'your-path'}/{slugInput || 'your-slug'}</code> loads correctly.</p> {/* 使用 rootDomain */}
                     </div>
                   </div>
-                )}
-                <button
-                  disabled={!baseDomainInput || !slugInput || !subdirectoryName || deployLoading || slugEditing}
-                  onClick={handlePublish}
-                  className={`
-                    w-full px-4 py-2.5 rounded font-semibold transition text-base shadow-lg
-                    ${(!baseDomainInput || !slugInput || !subdirectoryName || deployLoading || slugEditing)
-                      ? 'bg-cyan-800/70 text-cyan-400/80 cursor-not-allowed opacity-80'
-                      : 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-cyan-500/30'}
-                  `}
-                >
-                  {deployLoading ? <Spin /> : 'Publish Now'}
-                </button>
-                 <p className="text-xs text-center text-gray-400">Ensure your Nginx configuration is complete before publishing.</p>
-              </div>
+
+                  {/* 4. Publish Button (Subdirectory Mode) */}
+                  <div className="mt-6 pt-6 flex flex-col gap-4 border-t border-slate-700">
+                     {/* Preview URL */}
+                     {rootDomain && slugInput && subdirectoryName && ( // 使用 rootDomain
+                      <div className="bg-slate-800/50 p-3 rounded-md border border-slate-700/50">
+                        <div className="text-sm font-semibold text-cyan-300 mb-1">Expected Publish URL (After Nginx Setup)</div>
+                        <div className="text-cyan-400 underline break-all hover:text-cyan-300 transition cursor-default text-sm">
+                          {`https://${rootDomain}/${subdirectoryName}/${slugInput}`} {/* 使用 rootDomain */}
+                        </div>
+                      </div>
+                    )}
+                    <button
+                      disabled={!rootDomain || !slugInput || !subdirectoryName || deployLoading || slugEditing} // 依赖 rootDomain
+                      onClick={handlePublish}
+                      className={`
+                        w-full px-4 py-2.5 rounded font-semibold transition text-base shadow-lg
+                        ${(!rootDomain || !slugInput || !subdirectoryName || deployLoading || slugEditing) // 依赖 rootDomain
+                          ? 'bg-cyan-800/70 text-cyan-400/80 cursor-not-allowed opacity-80'
+                          : 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-cyan-500/30'}
+                      `}
+                    >
+                      {deployLoading ? <Spin /> : 'Publish Now'}
+                    </button>
+                     <p className="text-xs text-center text-gray-400">Ensure your Nginx configuration is complete before publishing.</p>
+                  </div>
+                </div>
+              )}
+
+              {/* === 移除旧的、未绑定的 UI 结构 === */}
+              {/*
+              <div className="flex flex-col md:flex-row gap-4"> ... </div>
+              <div> ... Slug Section ... </div>
+              <div className="pb-5 border-t border-slate-700 pt-5"> ... Nginx Guide ... </div>
+              <div className="mt-6 pt-6 flex flex-col gap-4 border-t border-slate-700"> ... Publish Button ... </div>
+              */}
+
             </div>
           )}
 
