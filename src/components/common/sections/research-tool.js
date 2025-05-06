@@ -7,6 +7,7 @@ import { EventSourcePolyfill } from 'event-source-polyfill';
 import MessageHandler from '../../../utils/MessageHandler';
 import HistoryCardList from './result-preview.js';
 import { useMediaQuery } from 'react-responsive';
+import BrandAssetsModal from './brand-assets';
 
 const TAG_FILTERS = {
   '\\[URL_GET\\]': '',  
@@ -77,6 +78,7 @@ const ResearchTool = () => {
   const isMobile = useMediaQuery({ query: '(max-width: 767px)' });
 
   const [currentExampleIndex, setCurrentExampleIndex] = useState(0);
+  const [showBrandAssetsModal, setShowBrandAssetsModal] = useState(false);
   useEffect(() => {
     const lastInput = localStorage.getItem('urlInput');
     if (lastInput) {
@@ -1844,6 +1846,30 @@ const ResearchTool = () => {
       
       (async () => {
         try {
+          if (browserTabs.length === 1 && isFirstTimeUser) {
+            Modal.info({
+              title: 'Page Generated & Colors Extracted!',
+              content: (
+                <div>
+                  <p>We've successfully generated your first page!</p>
+                  <p>We automatically extracted brand colors from your website URL (<strong>{userInput || 'your website'}</strong>). You can review and adjust these colors in the next step to ensure future pages match your brand perfectly.</p>
+                  <p><strong>Saving your preferred colors will also update the page already generated.</strong></p>
+                  <p>Click OK to proceed to color customization.</p>
+                </div>
+              ),
+              // 3. 在用户点击 OK 后显示 BrandAssetsModal
+              onOk() {
+                console.log("[DEBUG] Pre-info modal OK clicked. Showing BrandAssetsModal.");
+                setShowBrandAssetsModal(true);
+                // 注意：此时不发送 completionMessage，用户的下一步操作在 BrandAssetsModal 中
+              },
+              okText: 'Customize Colors', // 按钮文字
+              width: 500, // 调整宽度
+              centered: true, // 居中显示
+              maskClosable: false, // 不允许点击遮罩层关闭
+            }); 
+          }
+
           const completionMessage = "Current page generation is finished, move me to next step, tell me what i can do next [PAGES_GENERATED]";
           const response = await apiClient.chatWithAI(completionMessage, currentWebsiteId);
           
