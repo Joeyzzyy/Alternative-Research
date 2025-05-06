@@ -30,6 +30,21 @@ const HistoryCardList = () => {
   const [isPublishSettingsModalVisible, setIsPublishSettingsModalVisible] = useState(false); // 新增：控制发布设置弹窗
   const currentItem = resultDetail?.data?.find(item => item.resultId === selectedPreviewId) || {};
 
+  // === 新增：统一样式的确认弹窗 ===
+  const confirmationModalStyles = {
+    mask: {
+      backdropFilter: 'blur(5px)',
+      backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    },
+    content: {
+      backgroundColor: 'rgba(15, 23, 42, 0.95)', // slate-900 with opacity
+      border: '1px solid rgba(51, 65, 85, 0.7)', // slate-700 with opacity
+      boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
+      borderRadius: '8px',
+    },
+    // body 样式由 Tailwind class 控制，默认 padding 即可
+  };
+
   // === 新增：函数用于检查 URL 参数并打开弹窗 ===
   const checkUrlAndOpenModal = (list) => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -510,17 +525,18 @@ const HistoryCardList = () => {
             >
               Delete
             </Button>,
-            <Button key="cancel" onClick={() => setDeleteConfirm({ open: false, id: null })}>
+            <Button key="cancel" onClick={() => setDeleteConfirm({ open: false, id: null })} className="ant-btn-modal-cancel-dark">
               Cancel
             </Button>
           ]}
           centered
           title={null}
+          styles={confirmationModalStyles}
         >
           <div className="flex flex-col items-center justify-center py-6">
             <ExclamationCircleOutlined style={{ fontSize: 40, color: '#f87171' }} />
             <div className="mt-4 text-lg font-semibold text-red-400">Are you sure you want to delete this task, this action will remove all the pages under this task?</div>
-            <div className="mt-2 text-gray-300 text-center">
+            <div className="mt-2 text-slate-300 text-center">
               This action cannot be undone.
             </div>
           </div>
@@ -539,7 +555,7 @@ const HistoryCardList = () => {
             >
               Confirm Delete All
             </Button>,
-            <Button key="cancel" onClick={() => setClearAllConfirmOpen(false)} disabled={isClearingAll}>
+            <Button key="cancel" onClick={() => setClearAllConfirmOpen(false)} disabled={isClearingAll} className="ant-btn-modal-cancel-dark">
               Cancel
             </Button>
           ]}
@@ -547,11 +563,12 @@ const HistoryCardList = () => {
           title={null}
           closable={!isClearingAll}
           maskClosable={!isClearingAll}
+          styles={confirmationModalStyles}
         >
           <div className="flex flex-col items-center justify-center py-6">
             <ExclamationCircleOutlined style={{ fontSize: 40, color: '#f87171' }} />
             <div className="mt-4 text-lg font-semibold text-red-400">Are you sure you want to delete ALL records?</div>
-            <div className="mt-2 text-gray-300 text-center">
+            <div className="mt-2 text-slate-300 text-center">
               This action cannot be undone. All history items will be permanently removed.
             </div>
           </div>
@@ -572,17 +589,18 @@ const HistoryCardList = () => {
             >
               Delete
             </Button>,
-            <Button key="cancel" onClick={() => setFailedModal({ open: false, id: null })}>
+            <Button key="cancel" onClick={() => setFailedModal({ open: false, id: null })} className="ant-btn-modal-cancel-dark">
               Cancel
             </Button>
           ]}
           centered
           title={null}
+          styles={confirmationModalStyles}
         >
           <div className="flex flex-col items-center justify-center py-6">
             <ExclamationCircleOutlined style={{ fontSize: 40, color: '#f87171' }} />
             <div className="mt-4 text-lg font-semibold text-red-400">Task failed</div>
-            <div className="mt-2 text-gray-300 text-center">
+            <div className="mt-2 text-slate-300 text-center">
               No details are available for this task.<br />
               Would you like to delete it?
             </div>
@@ -988,6 +1006,19 @@ const HistoryCardList = () => {
   /* 移除按钮间的间距（如果需要更紧凑） */
   .publish-mode-radio-group .ant-radio-button-wrapper:not(:first-child)::before {
     width: 0; /* 隐藏分隔线 */
+  }
+
+  /* === 新增：自定义暗色主题弹窗取消按钮 === */
+  .ant-btn-modal-cancel-dark,
+  .ant-btn-modal-cancel-dark:focus { /* AntD 默认按钮（非 primary, 非 danger） */
+    background-color: #334155 !important; /* slate-700 */
+    border-color: #4b5563 !important;     /* slate-600 */
+    color: #d1d5db !important;           /* slate-300 */
+  }
+  .ant-btn-modal-cancel-dark:hover {
+    background-color: #4b5563 !important; /* slate-600 */
+    border-color: #6b7280 !important;     /* slate-500 */
+    color: #f3f4f6 !important;           /* slate-100 */
   }
 `}</style>
 

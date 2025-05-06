@@ -425,9 +425,6 @@ function PaymentModal({ visible, onClose, plan, period, onSuccess }) {
   const [cardError, setCardError] = React.useState('');
   const [messageApi, contextHolder] = antdMessage.useMessage();
 
-  console.log('plan', plan);
-  console.log('period', period);
-
   const handleSubmit = async () => {
     if (!stripe || !elements) return;
     setProcessing(true);

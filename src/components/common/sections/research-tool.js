@@ -1,7 +1,7 @@
 'use client';
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { Input, Button, Spin, message, Tooltip, Avatar, Modal } from 'antd';
-import { ArrowRightOutlined, InfoCircleOutlined, UserOutlined, LeftOutlined, RightOutlined, MenuOutlined } from '@ant-design/icons';
+import { ArrowRightOutlined, InfoCircleOutlined, UserOutlined, LeftOutlined, RightOutlined, MenuOutlined, EditOutlined, ExportOutlined, LinkOutlined } from '@ant-design/icons';
 import apiClient from '../../../lib/api/index.js';
 import { EventSourcePolyfill } from 'event-source-polyfill';
 import MessageHandler from '../../../utils/MessageHandler';
@@ -11,14 +11,11 @@ import { useMediaQuery } from 'react-responsive';
 const TAG_FILTERS = {
   '\\[URL_GET\\]': '',  
   '\\[COMPETITOR_SELECTED\\]': '',  
-  '\\[END\\]': '',  
-  '\\[ALL_END\\]': '',  
+  '\\[PAGES_GENERATED_END\\]': '',  
 };
 const ALTERNATIVELY_LOGO = '/images/alternatively-logo.png';
 
-const ResearchTool = ({ 
-  setTargetShowcaseTab
-}) => {
+const ResearchTool = () => {
   const [messageApi, contextHolder] = message.useMessage();
   const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState([]);
@@ -48,25 +45,34 @@ const ResearchTool = ({
   const [dynamicPlaceholder, setDynamicPlaceholder] = useState("Enter product website URL to get started (e.g., example.com)");
   const placeholderIntervalRef = useRef(null); 
   const placeholderTimeoutRef = useRef(null);
-  const [currentStep, setCurrentStep] = useState(1);
   const filterMessageTags = (message) => {
     let filteredMessage = message;
     Object.entries(TAG_FILTERS).forEach(([tag, replacement]) => {
       filteredMessage = filteredMessage.replace(new RegExp(tag, 'g'), replacement);
     });
-    
     return filteredMessage;
   };
-  const [styleChangeCompleted, setStyleChangeCompleted] = useState(false);
+  const [fiveCompetitorsChosenAndPagesGenerated, setFiveCompetitorsChosenAndPagesGenerated] = useState(false);
   const hasTriggeredStep4Ref = useRef(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); 
   const [isUserLoggedIn, setIsUserLoggedIn] = useState(false); 
+  const [isFirstTimeUser, setIsFirstTimeUser] = useState(false);
+  const sidebarRef = useRef(null);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [taskSteps, setTaskSteps] = useState([
+    { id: 1, name: "Find Competitors", gradient: "from-blue-500/40 to-cyan-500/40", borderColor: "border-blue-500/60", shadowColor: "shadow-blue-500/20" },
+    { id: 2, name: "Select Competitor", gradient: "from-cyan-500/40 to-teal-500/40", borderColor: "border-cyan-500/60", shadowColor: "shadow-cyan-500/20" },
+    { id: 3, name: "Analyze Competitor", gradient: "from-teal-500/40 to-green-500/40", borderColor: "border-teal-500/60", shadowColor: "shadow-teal-500/20" },
+    { id: 4, name: "Page Generation", gradient: "from-green-500/40 to-lime-500/40", borderColor: "border-green-500/60", shadowColor: "shadow-green-500/20" },
+  ]);
 
   const examples = [
     { url: 'https://alternative.nytgames.top/nyt-games-original-alternative', title: 'Play NYT Games Free: The Ultimate Word Puzzle Collection Without Subscriptions', image: '/images/preview-nytgames.png', timestamp: 'Generated 2 hours ago' },
     { url: 'https://alternative.neobund.com/doba-alternative', title: 'NeoBund: The Smarter Alternative to Doba with Guaranteed 2-Day US Shipping', image: '/images/preview-neobund.png', timestamp: 'Generated on April 26' },
     { url: 'https://www.dreambrand.studio/luxury-jewelry-influencer-ai-platform', title: 'Turn Your Influence into a Luxury Jewelry Empire with Al-Powered Design & Zero Hassle', image: '/images/preview-dreambrand.png', timestamp: 'Generated on April 30' }
   ];
+  const processedStepLogIdsRef = useRef(new Set());
+  const finalStepAddedRef = useRef(false);
 
   const isMobile = useMediaQuery({ query: '(max-width: 767px)' });
 
@@ -128,6 +134,33 @@ const ResearchTool = ({
     }
   }, [messages]);
 
+  const handleFirstTimeUsers = async (competitors) => {
+    setCurrentStep(2);
+    const thinkingMessageId = messageHandler.addAgentThinkingMessage();
+    const competitorsStringMessage = 'I am a new user, choose the first competitor of the following list and directly start the generation process: ' 
+      + JSON.stringify(competitors);
+    try {
+      const response = await apiClient.chatWithAI(competitorsStringMessage, currentWebsiteId);
+      if (response?.code === 200 && response.data?.answer) {
+        const answer = filterMessageTags(response.data.answer);
+        messageHandler.updateAgentMessage(answer, thinkingMessageId);
+        messageHandler.addSystemMessage('System starts analyzing competitors and generating alternative pages, please wait...');
+        console.log('competitors', competitors);
+        let firstCompetitorArray = [competitors[0].name];
+        const generateResponse = await apiClient.generateAlternative(currentWebsiteId, firstCompetitorArray);
+        if (generateResponse?.code === 200) {
+          setCurrentStep(3);
+          setInputDisabledDueToUrlGet(true);
+          setIsProcessingTask(true);
+        } else {
+          messageHandler.addSystemMessage(`⚠️ Failed to generate alternative page: Invalid server response`);
+        }
+      }
+    } catch (error) {
+      messageHandler.handleErrorMessage(error, thinkingMessageId);
+    }
+  }
+
   const handleCompetitorListRequest = async (competitors) => {
     setIsMessageSending(true);
     const thinkingMessageId = messageHandler.addAgentThinkingMessage();
@@ -147,7 +180,7 @@ const ResearchTool = ({
       messageHandler.handleErrorMessage(error, thinkingMessageId);
     } finally {
       setIsMessageSending(false);
-      setInputDisabledDueToUrlGet(false); // 确保重新启用输入
+      setInputDisabledDueToUrlGet(false); 
     }
   };
 
@@ -1071,22 +1104,8 @@ const ResearchTool = ({
           } else {
             messageHandler.addSystemMessage(`⚠️ Failed to extract competitor information from the response, task eneded, please try again`);
           }
-        } else if (rawAnswer.includes('[END]')) {
-          const answer = filterMessageTags(rawAnswer);
-          messageHandler.updateAgentMessage(answer, thinkingMessageId);
-          const styleRequirement = answer.trim();
-          try {
-            const styleResponse = await apiClient.changeStyle(styleRequirement, currentWebsiteId);
-            if (styleResponse?.code === 200) {
-              // 可以添加一个系统消息表示样式已更新
-              messageHandler.addSystemMessage('I am updating the style, please wait a moment...');
-              setShouldConnectSSE(true);
-            } else {
-              messageHandler.addSystemMessage('⚠️ Failed to update style: Invalid server response');
-            }
-          } catch (styleError) {
-            messageHandler.addSystemMessage(`⚠️ Failed to update style: ${styleError.message}`);
-          }
+        } else if (rawAnswer.includes('[PAGES_GENERATED_END]')) {
+          setFiveCompetitorsChosenAndPagesGenerated(true);
         } else {
           const answer = filterMessageTags(rawAnswer);
           messageHandler.updateAgentMessage(answer, thinkingMessageId);
@@ -1123,21 +1142,17 @@ const ResearchTool = ({
           const { pageGeneratorLimit, pageGeneratorUsage } = packageResponse.data;
           const availableCredits = pageGeneratorLimit - pageGeneratorUsage;
           if (availableCredits <= 0) {
-            // --- MODIFICATION START ---
-            // Instead of showing modal, scroll to subscription card
             const el = document.getElementById('pricing'); // Use the correct ID for your subscription section
             if (el) {
               messageApi.warning('You have run out of credits. Please purchase a plan to continue.', 2);
               el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              // Optional: Add a visual cue like a temporary highlight or message near the card
-              // e.g., el.classList.add('highlight-subscription'); setTimeout(() => el.classList.remove('highlight-subscription'), 3000);
             } else {
               console.warn('Subscription card element not found for scrolling.');
-              // Fallback: Maybe show a simple alert or log an error
             }
             setIsProcessingTask(false); // Stop processing
             return; // Exit the function
-            // --- MODIFICATION END ---
+          } else if (availableCredits === pageGeneratorLimit && availableCredits > 0) {
+            setIsFirstTimeUser(true);
           }
         } else {
           console.warn('[DEBUG] Failed to get user package information, continuing without credit check');
@@ -1359,7 +1374,6 @@ const ResearchTool = ({
     let eventSource = null;
 
     const showErrorModal = (errorMessage = 'An irreversible error occurred during the task.') => {
-      // 确保只显示一个错误弹窗
       if (document.querySelector('.error-modal-container')) {
         return;
       }
@@ -1370,7 +1384,6 @@ const ResearchTool = ({
       const modalContent = document.createElement('div');
       modalContent.className = 'bg-gradient-to-b from-slate-900 to-slate-950 rounded-lg shadow-xl p-6 max-w-md w-full border border-red-500/50 relative animate-fadeIn'; // 使用渐变背景和红色边框
 
-      // 添加 SVG 图标
       const iconContainer = document.createElement('div');
       iconContainer.className = 'mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4';
       iconContainer.innerHTML = `
@@ -1381,7 +1394,6 @@ const ResearchTool = ({
 
       const title = document.createElement('h3');
       title.className = 'text-xl font-semibold text-white mb-3 text-center flex items-center justify-center gap-2'; // 使用 flex 布局居中并添加间距
-      // 添加 😭 表情符号
       title.innerHTML = `
         <span>Oops! Something Went Wrong...</span>
         <span class="text-2xl">😭</span> 
@@ -1389,7 +1401,6 @@ const ResearchTool = ({
 
       const description = document.createElement('p');
       description.className = 'text-gray-300 mb-2 text-center text-sm';
-      // 更新描述，告知用户技术团队已知晓
       description.textContent = `We encountered a hiccup processing your request (${errorMessage}). Our tech wizards have been notified and are on the case!`; 
 
       const creditInfo = document.createElement('p');
@@ -1398,7 +1409,6 @@ const ResearchTool = ({
 
       const instruction = document.createElement('p');
       instruction.className = 'text-gray-400 mb-6 text-center text-sm';
-      // 更新指示，鼓励用户重试
       instruction.textContent = 'Could you please try starting the task again from the homepage?'; 
 
       const buttonContainer = document.createElement('div');
@@ -1410,7 +1420,6 @@ const ResearchTool = ({
 
       closeButton.onclick = () => {
         document.body.removeChild(modalContainer);
-        // 可以选择跳转到首页
         window.location.href = '/'; // 或者你的首页路由
       };
 
@@ -1676,7 +1685,7 @@ const ResearchTool = ({
           // 使用指数退避策略计算延迟
           const delay = Math.min(BASE_RETRY_DELAY * Math.pow(2, newRetryCount - 1), MAX_RETRY_DELAY);
 
-          console.log(`Retrying SSE connection in ${delay}ms (Attempt ${newRetryCount}/${MAX_RETRY_COUNT})`);
+          console.log(`Retrying SSE connection in ${delay}ms`);
 
           // 清除之前的超时
           if (retryTimeoutRef.current) {
@@ -1701,15 +1710,11 @@ const ResearchTool = ({
           }, delay);
         } else {
           console.log(`Maximum retry attempts (${MAX_RETRY_COUNT}) reached. Giving up.`);
-          // --- 新增：达到最大重试次数时停止提示 ---
           isShowingReconnectNoticeRef.current = false;
           if (sseReconnectNoticeTimeoutRef.current) {
             clearTimeout(sseReconnectNoticeTimeoutRef.current);
             sseReconnectNoticeTimeoutRef.current = null;
           }
-          // 可选：显示最终的失败消息
-          messageApi.error('Failed to reconnect to the agent after multiple attempts.', 5);
-          // --- 结束新增 ---
         }
       };
     };
@@ -1743,23 +1748,75 @@ const ResearchTool = ({
     // 检查是否存在 GENERATION_FINISHED 日志,是的话，就可以标记第5步生成完成
     const generationFinishedLog = logs.find(log => 
       log.type === 'Info' && 
-      log.step === 'GENERATION_FINISHED'
+      log.step === 'GENERATION_FINISHED' &&
+      !processedStepLogIdsRef.current.has(log.id)
     );
-
-    if (generationFinishedLog) {
-      setCurrentStep(5);
-    }
 
     const colorChangeFinishedLog = logs.find(log => 
       log.type === 'Info' && 
-      log.step === 'GENERATION_CHANGE_FINISHED'
+      log.step === 'GENERATION_CHANGE_FINISHED' &&
+      !processedStepLogIdsRef.current.has(log.id)
     );
 
-    if ((colorChangeFinishedLog) && shouldConnectSSE) {
-      setShouldConnectSSE(false);
-      setStyleChangeCompleted(true);
+    let logToProcess = null;
+    if (colorChangeFinishedLog) {
+      logToProcess = colorChangeFinishedLog;
+    } else if (generationFinishedLog) {
+      logToProcess = generationFinishedLog;
     }
-  }, [logs, shouldConnectSSE]);
+
+    if (logToProcess) {
+      processedStepLogIdsRef.current.add(logToProcess.id);
+
+      const nextStepId = currentStep + 1;
+      setCurrentStep(nextStepId); 
+
+      if (typeof setTaskSteps === 'function') {
+         setTaskSteps(prevSteps => {
+           const newStep = {
+             id: nextStepId, // 使用计算好的 ID
+             name: "Waiting for user input",
+             gradient: "from-gray-500/40 to-slate-500/40",
+             borderColor: "border-gray-500/60",
+             shadowColor: "shadow-gray-500/20",
+           };
+           return [...prevSteps, newStep];
+         });
+      } else {
+         console.warn("setTaskSteps function is not available to update task steps.");
+      }
+
+      if (isFirstTimeUser && browserTabs.length >= 6) {
+        setTaskSteps(prevSteps => {
+          const newStep = {
+            id: nextStepId,
+            name: "Current Task Finished",
+            gradient: "from-gray-500/40 to-slate-500/40",
+            borderColor: "border-gray-500/60",
+            shadowColor: "shadow-gray-500/20",
+          };
+          return [...prevSteps, newStep];
+        });
+        if (shouldConnectSSE) {
+          setShouldConnectSSE(false);
+        }
+      } else if (!isFirstTimeUser && browserTabs.length >= 5) {
+        setTaskSteps(prevSteps => {
+          const newStep = {
+            id: nextStepId,
+            name: "Current Task Finished",
+            gradient: "from-gray-500/40 to-slate-500/40",
+            borderColor: "border-gray-500/60",
+            shadowColor: "shadow-gray-500/20",
+          };
+          return [...prevSteps, newStep];
+        });
+        if (shouldConnectSSE) {
+          setShouldConnectSSE(false);
+        }
+      }
+    }
+  }, [logs, shouldConnectSSE, setCurrentStep, setTaskSteps, setShouldConnectSSE]);
 
   useEffect(() => {
     const apiLog = logs.find(log => 
@@ -1770,48 +1827,29 @@ const ResearchTool = ({
 
     if (apiLog && apiLog.content?.data && !competitorListProcessedRef.current && canProcessCompetitors) {
       competitorListProcessedRef.current = true; 
-      const competitors = apiLog.content.data.map(domain => ({
-        name: domain,
-        url: `https://${domain}`
-      }));
+      const competitors = apiLog.content.data;
 
-      handleCompetitorListRequest(competitors);
+      // 如果是首次试用产品，credits没有消耗过
+      if (isFirstTimeUser) {
+        handleFirstTimeUsers(competitors);
+      } else {
+        handleCompetitorListRequest(competitors);
+      }
     }
 
-    // 检查改色任务完成
-    const styleChangeFinishedLog = logs.find(log => 
-      log.type === 'Info' && 
-      log.step === 'GENERATION_CHANGE_FINISHED' &&
-      !log.processed
-    );
-
-    if (styleChangeFinishedLog) {
-      // 标记该日志已处理，避免重复添加消息
-      setLogs(prevLogs => prevLogs.map(log => 
-        log.id === styleChangeFinishedLog.id ? {...log, processed: true} : log
-      ));
-      
-      setIsProcessingTask(true);
-      messageHandler.addSystemMessage("Task completed! Thank you for using our service. You can find your generated page in the history records in the upper right corner of the page, where you can deploy and adjust it further.");
-      
-    }
-    
-    // 添加检测任务完成的逻辑
     const finishedLog = logs.find(log => 
       log.type === 'Info' && 
       log.step === 'GENERATION_FINISHED'
     );
     
     if (finishedLog && !finishedLog.processed) {
-      // 标记该日志已处理，避免重复添加消息
       setLogs(prevLogs => prevLogs.map(log => 
         log.id === finishedLog.id ? {...log, processed: true} : log
       ));
       
-      // 向chat接口发送任务完成消息，带有[PAGES_GENERATED]标记
       (async () => {
         try {
-          const completionMessage = "Task completed successfully! You can check the generated pages in the simulated browser and let me know if you need to change the colors and styles of those pags. [PAGES_GENERATED]";
+          const completionMessage = "Current page generation is finished, move me to next step, tell me what i can do next [PAGES_GENERATED]";
           const response = await apiClient.chatWithAI(completionMessage, currentWebsiteId);
           
           if (response?.code === 200 && response.data?.answer) {
@@ -1820,7 +1858,6 @@ const ResearchTool = ({
             const thinkingMessageId = messageHandler.addAgentThinkingMessage();
             messageHandler.updateAgentMessage(answer, thinkingMessageId);
           } else {
-            // 如果API调用失败，仍然添加系统消息
             messageHandler.addSystemMessage(
               "Oops! The service encountered a temporary issue. Could you please try sending your message again?"
             );
@@ -1863,10 +1900,7 @@ const ResearchTool = ({
 
     newCodesLogs.forEach((log, index) => {
       const tabId = `result-${log.content.resultId}`;
-      // 计算新的页面编号
       const pageNumber = currentTabCount + index + 1;
-
-      // 不再需要检查 existingTab，因为 newCodesLogs 已经被过滤
 
       newTabsToAdd.push({
         id: tabId,
@@ -1891,10 +1925,7 @@ const ResearchTool = ({
       setRightPanelTab('browser'); // 替换 setShowBrowser(true)
     }
   // --- 修改：添加 browserTabs 和相关 setter 到依赖项 ---
-  }, [logs, browserTabs, setBrowserTabs, setActiveTab, setRightPanelTab]); // 添加依赖项
-  // --- 结束修改 ---
-
-  const processedLogIdsRef = useRef([]);
+  }, [logs, browserTabs, setBrowserTabs, setActiveTab, setRightPanelTab]);
 
   useEffect(() => {
     return () => {
@@ -1902,6 +1933,7 @@ const ResearchTool = ({
     };
   }, []);
 
+  const processedLogIdsRef = useRef([]);
   const currentTextIndexRef = useRef(0); // Track which sentence to display
   const isDeletingRef = useRef(false); // Track if currently deleting
   const charIndexRef = useRef(0); // Track character index within the sentence
@@ -2010,9 +2042,28 @@ const ResearchTool = ({
     };
   }, [isProcessingTask, currentStep, canProcessCompetitors]);
 
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
+  const toggleSidebar = useCallback(() => {
+    setIsSidebarOpen(prev => !prev);
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (event.target.closest('.ant-modal-root')) {
+        return; // 如果点击在 Modal 内，则不执行关闭侧边栏的操作
+      }
+
+      // 检查侧边栏是否打开，ref 是否已绑定，以及点击的目标是否不在侧边栏内部
+      if (isSidebarOpen && sidebarRef.current && !sidebarRef.current.contains(event.target)) {
+        toggleSidebar(); // 调用收起侧边栏的函数
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isSidebarOpen, toggleSidebar]); 
 
   // --- 新增：手动切换示例的函数 ---
   const goToNextExample = () => {
@@ -2203,9 +2254,19 @@ const ResearchTool = ({
           <div className="absolute top-1/4 left-0 right-0 h-1/2 -translate-y-1/2 animate-shimmer pointer-events-none z-0"></div>
           {contextHolder}
           {isUserLoggedIn && (
-          <div className={`fixed top-[80px] left-4 bottom-4 z-50 bg-slate-900/60 backdrop-blur-md rounded-lg shadow-xl border border-slate-700/50 flex flex-col transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-72' : 'w-12'} overflow-visible`}> {/* 修改宽度 w-12 -> w-10 */}
+          <div 
+            ref={sidebarRef}
+            onClick={() => {
+              if (!isSidebarOpen) {
+                toggleSidebar();
+              }
+            }}
+            className={`fixed top-[80px] left-4 bottom-4 z-50 bg-slate-900/60 backdrop-blur-md rounded-lg shadow-xl border border-slate-700/50 flex flex-col transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-72' : 'w-12'} overflow-visible ${!isSidebarOpen ? 'cursor-pointer' : ''}`}> {/* 修改宽度 w-12 -> w-10 */}
             <button
-              onClick={toggleSidebar}
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleSidebar();
+              }}
               className="absolute top-2 right-2 z-[51] bg-slate-700 hover:bg-slate-600 text-white w-8 h-8 rounded-full flex items-center justify-center transition-colors shadow-md" // 将 left-2 改为 right-2
               title={isSidebarOpen ? "Collapse History" : "Expand History"}
               style={{ outline: 'none' }}
@@ -2537,7 +2598,7 @@ const ResearchTool = ({
 
             <div className="p-4 border-t border-gray-300/20 flex-shrink-0"> {/* 保持这个区域不变 */}
               <div className="max-w-[600px] mx-auto">
-                {styleChangeCompleted ? (
+                {fiveCompetitorsChosenAndPagesGenerated ? (
                   <div className={`flex flex-col items-center justify-center p-4 rounded-lg bg-slate-800/60 border border-slate-700/50`}>
                     <p className={`text-center mb-3 text-sm `}>
                       The current task is complete. You can start a new task to generate more pages!
@@ -2660,7 +2721,7 @@ const ResearchTool = ({
                       className={`text-sm ${
                         rightPanelTab === 'details'
                           ? 'text-blue-400 font-medium'
-                          : 'text-gray-400 hover:'
+                          : 'text-gray-400 hover:text-blue-300' // 修改 hover 颜色
                       }`}
                     >
                       Execution Log
@@ -2670,44 +2731,15 @@ const ResearchTool = ({
                       className={`text-sm ${
                         rightPanelTab === 'browser'
                            ? 'text-blue-400 font-medium'
-                          : 'text-gray-400 hover:'
+                          : 'text-gray-400 hover:text-blue-300' // 修改 hover 颜色
                       }`}
                     >
                       Browser
                   </button>
                 </div>
+                  {/* --- 修改：移除 "Bind Your Own Domain" 按钮 --- */}
                   <div className="flex items-center text-xs">
-                      <div className="p-3 flex justify-end" style={{padding: 0, marginLeft: 3}}>
-                          <div>
-                            <Button
-                              type="primary"
-                              icon={<ArrowRightOutlined />}
-                              onClick={() => {
-                                if (browserTabs.length > 0) {
-                                  // 打开新标签页，并附带查询参数和哈希
-                                  window.open('https://altpage.ai?openPreviewModal=true#result-preview-section', '_blank');
-                                } else {
-                                  messageApi.info('Please wait until at least one page has finished generating.')
-                                }
-                              }}
-                              className={`transition-all duration-300 ${
-                                browserTabs.length == 0
-                                  ? 'bg-gray-600 hover:bg-gray-600 cursor-not-allowed opacity-60'
-                                  : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-md hover:shadow-lg'
-                              }`}
-                              style={{
-                                border: 'none',
-                                fontWeight: 300,
-                                fontSize: '10px',
-                                padding: '3px 8px',
-                                height: 'auto',
-                                marginRight: '10px'
-                              }}
-                            >
-                              Bind Your Own Domain
-                            </Button>
-                          </div>
-                      </div>
+                    {/* --- 移除按钮的代码 --- */}
                     <div className={`w-2 h-2 rounded-full mr-2 ${
                       sseConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
                     }`}></div>
@@ -2729,66 +2761,49 @@ const ResearchTool = ({
                           </div>
 
                           <div className="flex flex-col space-y-2 w-full">
-                            <div className={`text-xs rounded px-2 py-1.5 flex items-center justify-between transition-all duration-500 ${currentStep >= 1 // 高亮逻辑不变
-                              ? 'bg-gradient-to-r from-blue-500/40 to-cyan-500/40 text-white border border-blue-500/60 shadow-sm shadow-blue-500/20'
-                              : 'bg-slate-700/50 text-slate-400 border border-slate-600/40'}`}>
-                              <span className={currentStep === 1 ? 'font-medium' : ''}>1. Find Competitors</span>
-                              {/* --- 添加勾选图标 --- */}
-                              {currentStep > 1 && (
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-green-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                </svg>
-                              )}
-                            </div>
-
-                            <div className={`text-xs rounded px-2 py-1.5 flex items-center justify-between transition-all duration-500 ${currentStep >= 2 // 高亮逻辑不变
-                              ? 'bg-gradient-to-r from-cyan-500/40 to-teal-500/40 text-white border border-cyan-500/60 shadow-sm shadow-cyan-500/20'
-                              : 'bg-slate-700/50 text-slate-400 border border-slate-600/40'}`}>
-                              <span className={currentStep === 2 ? 'font-medium' : ''}>2. Select Competitor</span>
-                              {/* --- 添加勾选图标 --- */}
-                              {currentStep > 2 && (
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-green-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                </svg>
-                              )}
-                            </div>
-
-                            <div className={`text-xs rounded px-2 py-1.5 flex items-center justify-between transition-all duration-500 ${currentStep >= 3 // 高亮逻辑不变
-                              ? 'bg-gradient-to-r from-teal-500/40 to-green-500/40 text-white border border-teal-500/60 shadow-sm shadow-teal-500/20'
-                              : 'bg-slate-700/50 text-slate-400 border border-slate-600/40'}`}>
-                              <span className={currentStep === 3 ? 'font-medium' : ''}>3. Analyze Competitor</span>
-                              {/* --- 添加勾选图标 --- */}
-                              {currentStep > 3 && (
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-green-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                </svg>
-                              )}
-                            </div>
-
-                            <div className={`text-xs rounded px-2 py-1.5 flex items-center justify-between transition-all duration-500 ${currentStep >= 4 // 高亮逻辑不变
-                              ? 'bg-gradient-to-r from-green-500/40 to-lime-500/40 text-white border border-green-500/60 shadow-sm shadow-green-500/20'
-                              : 'bg-slate-700/50 text-slate-400 border border-slate-600/40'}`}>
-                              <span className={currentStep === 4 ? 'font-medium' : ''}>4. Page Generation</span>
-                              {/* --- 添加勾选图标 --- */}
-                              {currentStep > 4 && (
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-green-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                </svg>
-                              )}
-                            </div>
-
-                            <div className={`text-xs rounded px-2 py-1.5 flex items-center justify-between transition-all duration-500 ${currentStep >= 5 // 高亮逻辑不变
-                              ? 'bg-gradient-to-r from-lime-500/40 to-emerald-500/40 text-white border border-lime-500/60 shadow-sm shadow-lime-500/20'
-                              : 'bg-slate-700/50 text-slate-400 border border-slate-600/40'}`}>
-                              <span className={currentStep === 5 ? 'font-medium' : ''}>5. Style Change(Optional)</span>
-                              {/* --- 添加勾选图标 (特殊逻辑) --- */}
-                              {(styleChangeCompleted || currentStep > 5) && ( // 如果改色完成 或 步骤已超过5
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-green-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                </svg>
-                              )}
-                            </div>
+                            {taskSteps.map((step) => (
+                              <div
+                                key={step.id}
+                                className={`text-xs rounded px-2 py-1.5 flex items-center justify-between transition-all duration-500 ${
+                                  currentStep >= step.id
+                                    ? `bg-gradient-to-r ${step.gradient} text-white border ${step.borderColor} shadow-sm ${step.shadowColor}`
+                                    : 'bg-slate-700/50 text-slate-400 border border-slate-600/40'
+                                }`}
+                              >
+                                <span className={currentStep === step.id ? 'font-medium' : ''}>{`${step.name}`}</span>
+                                {currentStep === step.id ? (
+                                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                ) : currentStep > step.id ? (
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-green-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                  </svg>
+                                ) : (null)}
+                              </div>
+                            ))}
                           </div>
+                        </div>
+                      )}
+                      {!showInitialScreen && browserTabs.length > 0 && (
+                        <div className="mt-4 pt-3 border-t border-gray-300/10 text-center">
+                          <p className="text-xs font-medium text-blue-300 mb-1">Generated Pages</p>
+                          <p className="text-xl font-semibold text-white">{browserTabs.length}</p>
+                          <button
+                            onClick={() => {
+                              setRightPanelTab('browser');
+                              if (browserTabs.length > 0 && !activeTab) {
+                                setActiveTab(browserTabs[0].id);
+                              }
+                            }}
+                            className="mt-2 px-3 py-1 text-xs font-medium rounded-md transition-all duration-300 flex items-center justify-center gap-1 w-full
+                              bg-gradient-to-r from-teal-500 to-cyan-600 text-white hover:from-teal-600 hover:to-cyan-700 border border-teal-600/50
+                              hover:scale-105 shadow-sm hover:shadow-md"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            Check Pages
+                          </button>
                         </div>
                       )}
                     </div>
@@ -2823,35 +2838,72 @@ const ResearchTool = ({
 
                         {activeTab && (
                           <div>
-                            <div className={`flex items-center mb-2 rounded-lg p-2 bg-gray-800/50`}>
+                            {/* --- 修改：将 URL 显示和按钮放在同一行，并调整布局 --- */}
+                            <div className={`flex items-center justify-between mb-2 rounded-lg p-2 bg-gray-800/50`}>
+                              {/* URL 显示 */}
                               <div className={`flex-1 px-3 py-1.5 text-xs rounded mr-2 overflow-hidden overflow-ellipsis whitespace-nowrap bg-gray-700/50 text-gray-300`}>
                                 {browserTabs.find(tab => tab.id === activeTab)?.url}
                               </div>
-                              <button
-                                onClick={() => window.open(browserTabs.find(tab => tab.id === activeTab)?.url, '_blank')}
-                                className={`p-1.5 rounded-md transition-colors duration-200 group hover:bg-gray-700/50`}
-                                title="Open in new tab"
-                              >
-                                <svg
-                                  className={`w-4 h-4 transition-colors duration-200 text-gray-400 group-hover:text-blue-400`}
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
+                              {/* --- 新增：按钮组 --- */}
+                              <div className="flex items-center space-x-2 flex-shrink-0">
+                                <Button
+                                  type="primary"
+                                  size="small" // 使用 small 尺寸
+                                  icon={<EditOutlined />} // 编辑图标
+                                  onClick={() => {
+                                    // TODO: 实现编辑功能或提示
+                                    messageApi.info('Edit functionality coming soon!');
+                                  }}
+                                  className="bg-yellow-600 hover:bg-yellow-500 border-yellow-700 hover:border-yellow-600" // 编辑按钮样式
+                                  style={{ fontSize: '10px', padding: '0 8px', height: '24px' }} // 调整内边距和高度
                                 >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                                  />
-                                </svg>
-                              </button>
+                                  Edit
+                                </Button>
+                                <Button
+                                  type="default" // 使用 default 类型
+                                  size="small" // 使用 small 尺寸
+                                  icon={<ExportOutlined />} // 导出/新标签页图标
+                                  onClick={() => window.open(browserTabs.find(tab => tab.id === activeTab)?.url, '_blank')}
+                                  className="bg-slate-600 hover:bg-slate-500 text-white border-slate-700 hover:border-slate-600" // 预览按钮样式
+                                  style={{ fontSize: '10px', padding: '0 8px', height: '24px' }} // 调整内边距和高度
+                                >
+                                  Preview
+                                </Button>
+                                <Button
+                                  type="primary"
+                                  size="small" // 使用 small 尺寸
+                                  icon={<LinkOutlined />} // 链接/绑定图标
+                                  onClick={() => {
+                                    if (browserTabs.length > 0) {
+                                      window.open('https://altpage.ai?openPreviewModal=true#result-preview-section', '_blank');
+                                    } else {
+                                      messageApi.info('Please wait until at least one page has finished generating.')
+                                    }
+                                  }}
+                                  className={`transition-all duration-300 ${
+                                    browserTabs.length == 0
+                                      ? 'bg-gray-600 hover:bg-gray-600 cursor-not-allowed opacity-60'
+                                      : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-md hover:shadow-lg'
+                                  }`}
+                                  style={{
+                                    border: 'none',
+                                    fontWeight: 300,
+                                    fontSize: '10px',
+                                    padding: '0 8px', // 调整内边距
+                                    height: '24px', // 调整高度
+                                  }}
+                                >
+                                  Bind With Your Domain
+                                </Button>
+                              </div>
+                              {/* --- 移除旧的图标按钮 --- */}
                             </div>
+                            {/* --- 结束修改 --- */}
 
                             <div className="bg-white rounded-lg overflow-hidden">
                               <iframe
                                 src={browserTabs.find(tab => tab.id === activeTab)?.url}
-                                className="w-full h-[calc(100vh-280px)]" 
+                                className="w-full h-[calc(100vh-280px)]"
                                 title="Preview"
                               />
                             </div>
