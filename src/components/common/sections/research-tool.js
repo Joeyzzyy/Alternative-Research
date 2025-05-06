@@ -1869,7 +1869,7 @@ const ResearchTool = () => {
           );
         } finally {
           setInputDisabledDueToUrlGet(false);
-          setIsProcessingTask(false);
+          setIsMessageSending(false);
         }
       })();
     }
