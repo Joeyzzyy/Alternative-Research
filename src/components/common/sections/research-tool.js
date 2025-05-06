@@ -12,6 +12,8 @@ const TAG_FILTERS = {
   '\\[URL_GET\\]': '',  
   '\\[COMPETITOR_SELECTED\\]': '',  
   '\\[PAGES_GENERATED_END\\]': '',  
+  '\\[FIRST_TIME_USER\\]': '',
+  '\\[FIRST_TIME_USER_END\\]': '',
 };
 const ALTERNATIVELY_LOGO = '/images/alternatively-logo.png';
 
@@ -138,7 +140,7 @@ const ResearchTool = () => {
     setCurrentStep(2);
     const thinkingMessageId = messageHandler.addAgentThinkingMessage();
     const competitorsStringMessage = 'I am a new user, choose the first competitor of the following list and directly start the generation process: ' 
-      + JSON.stringify(competitors);
+      + JSON.stringify(competitors) + '[FIRST_TIME_USER]';
     try {
       const response = await apiClient.chatWithAI(competitorsStringMessage, currentWebsiteId);
       if (response?.code === 200 && response.data?.answer) {
@@ -146,7 +148,7 @@ const ResearchTool = () => {
         messageHandler.updateAgentMessage(answer, thinkingMessageId);
         messageHandler.addSystemMessage('System starts analyzing competitors and generating alternative pages, please wait...');
         console.log('competitors', competitors);
-        let firstCompetitorArray = [competitors[0].name];
+        let firstCompetitorArray = [competitors[0].url];
         const generateResponse = await apiClient.generateAlternative(currentWebsiteId, firstCompetitorArray);
         if (generateResponse?.code === 200) {
           setCurrentStep(3);
