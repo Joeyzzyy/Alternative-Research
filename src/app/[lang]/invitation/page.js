@@ -129,8 +129,11 @@ export default function InvitationPage() {
                 color: '#2563eb',
                 fontWeight: 800,
                 fontSize: '1em',
-              }}>20 credits</span>
+              }}>200 credits</span>
               <span> for generating Alternative Pages for your product.</span>
+              <span style={{ fontSize: '0.9em', color: '#4A5568', marginLeft: '4px' }}>
+                (Can be used for approximately 20 alternative pages generation)
+              </span>
             </div>
             <ul style={{
               listStyle: 'none',
