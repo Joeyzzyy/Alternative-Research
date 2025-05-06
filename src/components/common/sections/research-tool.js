@@ -1922,7 +1922,7 @@ const ResearchTool = () => {
       setRightPanelTab('browser'); // 替换 setShowBrowser(true)
     }
 
-    if (browserTabs.length === 1 && isFirstTimeUser) {
+    if (updatedTabs.length === 1 && isFirstTimeUser) {
       console.log('DEBUG: browserTabs.length', browserTabs.length);
       console.log('DEBUG: isFirstTimeUser', isFirstTimeUser);
       if (browserTabs.length === 1 && isFirstTimeUser) {
