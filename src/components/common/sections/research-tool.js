@@ -2682,6 +2682,18 @@ const ResearchTool = () => {
                       title={(loading || isMessageSending || inputDisabledDueToUrlGet) ? "Agent is working, please wait a sec." : ""}
                       placement="topLeft"
                     >
+                      <div className="mb-2 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => setShowBrandAssetsModal(true)}
+                          className="flex items-center justify-center gap-1.5 px-3 py-1 bg-slate-700/80 hover:bg-slate-600/80 text-gray-300 hover:text-white text-xs font-medium rounded-md transition-all duration-300 border border-slate-600/50 hover:border-indigo-500/50"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                          </svg>
+                          Set Page Colors
+                        </button>
+                      </div>
                       <div className="relative">
                         <style jsx>{`
                           .research-tool-input::placeholder {
@@ -3043,6 +3055,14 @@ const ResearchTool = () => {
           )}
         </div>
       </Modal>
+
+      {/* 在这里添加 BrandAssetsModal */}
+      {showBrandAssetsModal && (
+        <BrandAssetsModal
+          showBrandAssetsModal={showBrandAssetsModal}
+          setShowBrandAssetsModal={setShowBrandAssetsModal}
+        />
+      )}
     </>
   );
 };
