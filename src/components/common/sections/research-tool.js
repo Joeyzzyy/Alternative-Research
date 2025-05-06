@@ -54,7 +54,6 @@ const ResearchTool = () => {
     });
     return filteredMessage;
   };
-  const [fiveCompetitorsChosenAndPagesGenerated, setFiveCompetitorsChosenAndPagesGenerated] = useState(false);
   const hasTriggeredStep4Ref = useRef(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); 
   const [isUserLoggedIn, setIsUserLoggedIn] = useState(false); 
@@ -1106,8 +1105,6 @@ const ResearchTool = () => {
           } else {
             messageHandler.addSystemMessage(`⚠️ Failed to extract competitor information from the response, task eneded, please try again`);
           }
-        } else if (rawAnswer.includes('[PAGES_GENERATED_END]')) {
-          setFiveCompetitorsChosenAndPagesGenerated(true);
         } else {
           const answer = filterMessageTags(rawAnswer);
           messageHandler.updateAgentMessage(answer, thinkingMessageId);
@@ -2600,7 +2597,7 @@ const ResearchTool = () => {
 
             <div className="p-4 border-t border-gray-300/20 flex-shrink-0"> {/* 保持这个区域不变 */}
               <div className="max-w-[600px] mx-auto">
-                {fiveCompetitorsChosenAndPagesGenerated ? (
+                {(!isFirstTimeUser && browserTabs.length >= 5) || (isFirstTimeUser && browserTabs.length >= 6) ? (
                   <div className={`flex flex-col items-center justify-center p-4 rounded-lg bg-slate-800/60 border border-slate-700/50`}>
                     <p className={`text-center mb-3 text-sm `}>
                       The current task is complete. You can start a new task to generate more pages!

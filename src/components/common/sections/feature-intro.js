@@ -15,36 +15,97 @@ const competitorPages = [
 const AlternativePageFeature = () => {
   const [activeIndex, setActiveIndex] = useState(0); // State for active card index
 
+  // State for search input animation
+  const [animatedInputValue, setAnimatedInputValue] = useState('');
+  const [animationPhase, setAnimationPhase] = useState('typing'); // 'typing', 'pausingAfterTyping', 'processing', 'resetting'
+  const [currentCharIndex, setCurrentCharIndex] = useState(0);
+  const [isSearching, setIsSearching] = useState(false); // For icon click visual
+  const [postClickPhase, setPostClickPhase] = useState('idle'); // 'idle', 'spinning', 'showingArrow'
+  const fullTextToType = "wix alternative";
+
   // Effect to cycle through cards
   useEffect(() => {
     const interval = setInterval(() => {
       setActiveIndex((prevIndex) => (prevIndex + 1) % competitorPages.length);
-    }, 1000); // Change card every 0.5 seconds (was 3000)
+    }, 1000); // Change card every 1 second
 
     return () => clearInterval(interval); // Cleanup interval on unmount
   }, []); // Empty dependency array ensures this runs only once on mount
 
-  // Function to determine the CSS class based on index relative to activeIndex
-  const getCardClass = (index) => {
-    const diff = index - activeIndex;
-    const total = competitorPages.length;
+  // Effect for search input animation and post-click sequence
+  useEffect(() => {
+    let timerId;
+    let clickTimerId;
+    let spinTimerId;
+    let arrowTimerId;
 
-    // Normalize difference for wrapping around
-    let position;
-    if (diff === 0) {
-      position = 'active'; // Current card
-    } else if (diff === 1 || diff === -(total - 1)) {
-      position = 'next'; // Card immediately after
-    } else if (diff === 2 || diff === -(total - 2)) {
-      position = 'upcoming'; // Card after the next one
-    } else if (diff === -1 || diff === total - 1) {
-      position = 'prev'; // Card immediately before
-    } else {
-      position = 'hidden'; // Other cards
+    const typeCharacter = () => {
+      if (currentCharIndex < fullTextToType.length) {
+        setAnimatedInputValue(prev => prev + fullTextToType[currentCharIndex]);
+        setCurrentCharIndex(prev => prev + 1);
+      } else {
+        setAnimationPhase('pausingAfterTyping');
+      }
+    };
+
+    // No clearCharacter needed now, reset happens differently
+
+    switch (animationPhase) {
+      case 'typing':
+        timerId = setTimeout(typeCharacter, currentCharIndex === 0 ? 700 : 120);
+        break;
+
+      case 'pausingAfterTyping':
+        // Pause, then simulate click
+        timerId = setTimeout(() => {
+          setIsSearching(true); // Start click visual
+          clickTimerId = setTimeout(() => {
+            setIsSearching(false); // End click visual
+            setAnimationPhase('processing'); // Move to the next phase
+            setPostClickPhase('spinning'); // Start the spinning part of processing
+          }, 400); // Click visual duration
+        }, 1500); // Pause duration before click
+        break;
+
+      case 'processing':
+        // This phase handles spinning and arrow
+        if (postClickPhase === 'spinning') {
+          // Duration of the spin animation
+          spinTimerId = setTimeout(() => {
+            setPostClickPhase('showingArrow');
+          }, 1200); // Spin duration (adjust as needed)
+        } else if (postClickPhase === 'showingArrow') {
+          // Duration the arrow is shown
+          arrowTimerId = setTimeout(() => {
+            setAnimationPhase('resetting'); // Move to reset phase
+          }, 1000); // Arrow display duration
+        }
+        break;
+
+      case 'resetting':
+        // Reset all relevant states to start the loop again
+        setAnimatedInputValue('');
+        setCurrentCharIndex(0);
+        setPostClickPhase('idle');
+        // No need to set isSearching false here, already done
+        // Set short timeout before going back to typing for a smoother transition
+        timerId = setTimeout(() => {
+             setAnimationPhase('typing');
+        }, 100); // Short delay before restart
+        break;
+
+      default:
+        break;
     }
-    // console.log(`Index: ${index}, Active: ${activeIndex}, Diff: ${diff}, Position: ${position}`); // For debugging
-    return `page-card page-card-${position}`;
-  };
+
+    return () => {
+      clearTimeout(timerId);
+      clearTimeout(clickTimerId);
+      clearTimeout(spinTimerId);
+      clearTimeout(arrowTimerId);
+    };
+    // Dependencies updated to include postClickPhase
+  }, [animationPhase, postClickPhase, currentCharIndex, animatedInputValue, fullTextToType]);
 
   return (
     <>
@@ -203,6 +264,61 @@ const AlternativePageFeature = () => {
            opacity: 0.9; /* Slightly reduce opacity if needed */
         }
 
+        /* Add spinning animation */
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .animate-spin-slow {
+          animation: spin 1.2s linear infinite; /* Adjust duration to match spinTimerId */
+        }
+
+        /* Styles for the spinner overlay */
+        .spinner-container {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background-color: rgba(255, 255, 255, 0.85); /* Slightly transparent white background */
+          opacity: 0;
+          transition: opacity 0.3s ease-in-out;
+          pointer-events: none;
+        }
+        .spinner-container.visible {
+          opacity: 1;
+          pointer-events: auto;
+        }
+        /* Simple spinner using border */
+        .spinner {
+          border: 4px solid rgba(0, 0, 0, 0.1);
+          border-left-color: #3b82f6; /* blue-500 */
+          border-radius: 50%;
+          width: 40px; /* Adjust size */
+          height: 40px; /* Adjust size */
+          animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+
+        /* Styles for the arrow overlay */
+        .arrow-container {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background-color: rgba(255, 255, 255, 0.9); /* Optional: semi-transparent overlay */
+          opacity: 0;
+          transition: opacity 0.3s ease-in-out;
+          pointer-events: none; /* Allow clicks through if needed */
+        }
+        .arrow-container.visible {
+          opacity: 1;
+          pointer-events: auto;
+        }
+
       `}</style>
 
       <div className="bg-gradient-to-b from-slate-950 via-slate-900 to-black py-24 sm:py-32 relative overflow-hidden">
@@ -231,40 +347,61 @@ const AlternativePageFeature = () => {
               {/* Visual Element First - Added consistent height */}
               <div className="w-full flex justify-center items-center mb-8 h-72"> {/* Set consistent height h-72 */}
                 {/* --- Start: Simplified Google Search Bar --- */}
-                {/* Updated border, shadow, and padding for a cleaner look */}
-                {/* Added subtle UI elements to fill space */}
-                <div className="w-full max-w-md bg-white rounded-lg border border-slate-300 shadow-xl transition-transform duration-300 p-6 sm:p-8 overflow-hidden text-sm font-sans flex flex-col justify-center h-full"> {/* Changed to flex-col */}
+                <div className="w-full max-w-md bg-white rounded-lg border border-slate-300 shadow-xl transition-all duration-300 p-6 sm:p-8 overflow-hidden text-sm font-sans flex flex-col justify-center h-full relative"> {/* Added relative positioning */}
 
-                  {/* Subtle Top Bar Simulation */}
-                  <div className="flex items-center justify-between w-full mb-4 pb-2 border-b border-slate-200">
-                    <div className="flex space-x-2">
-                      <div className="w-3 h-3 bg-red-400 rounded-full opacity-70"></div>
-                      <div className="w-3 h-3 bg-yellow-400 rounded-full opacity-70"></div>
-                      <div className="w-3 h-3 bg-green-400 rounded-full opacity-70"></div>
-                    </div>
-                    <div className="w-1/3 h-2 bg-slate-200 rounded-sm opacity-70"></div> {/* Address bar placeholder */}
+                  {/* Content that fades during processing */}
+                  <div className={`transition-opacity duration-300 ${postClickPhase === 'spinning' || postClickPhase === 'showingArrow' ? 'opacity-0' : 'opacity-100'}`}>
+                     {/* Subtle Top Bar Simulation */}
+                     <div className="flex items-center justify-between w-full mb-4 pb-2 border-b border-slate-200">
+                       <div className="flex space-x-2">
+                         <div className="w-3 h-3 bg-red-400 rounded-full opacity-70"></div>
+                         <div className="w-3 h-3 bg-yellow-400 rounded-full opacity-70"></div>
+                         <div className="w-3 h-3 bg-green-400 rounded-full opacity-70"></div>
+                       </div>
+                       <div className="w-1/3 h-2 bg-slate-200 rounded-sm opacity-70"></div> {/* Address bar placeholder */}
+                     </div>
+
+                     {/* Inner search bar - simplified */}
+                     <div className="flex items-center border border-gray-300 rounded-full px-3 py-1.5 shadow-sm bg-white w-full hover:shadow-md transition-shadow duration-200">
+                       {/* Google Logo Image */}
+                       <img src="/images/google-logo.png" alt="Google logo" className="h-5 w-auto mr-3 flex-shrink-0" /> {/* Added flex-shrink-0 */}
+                       {/* Input field */}
+                       <input type="text" value={animatedInputValue} className="flex-grow outline-none text-gray-800 text-sm sm:text-base mr-2 bg-transparent min-w-0" readOnly /> {/* Added min-w-0 */}
+                       {/* Large Search Icon Button */}
+                       <div
+                         className={`ml-auto p-2 rounded-full transition-all duration-200 ease-in-out transform cursor-pointer flex items-center justify-center flex-shrink-0 ${ // Added ml-auto and flex-shrink-0
+                           isSearching
+                             ? 'bg-blue-700 scale-90 shadow-inner'
+                             : 'bg-blue-500 hover:bg-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 shadow-md hover:shadow-lg'
+                         }`}
+                         style={{ width: '36px', height: '36px' }} // Ensure size consistency
+                       >
+                         <svg
+                           xmlns="http://www.w3.org/2000/svg"
+                           className="h-5 w-5 text-white" // Icon size within the button
+                           fill="none"
+                           viewBox="0 0 24 24"
+                           stroke="currentColor"
+                           strokeWidth={2.5} // Slightly thicker stroke
+                         >
+                           <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                         </svg>
+                       </div>
+                     </div>
                   </div>
 
-                  {/* Slightly refined inner search bar */}
-                  <div className="flex items-center border border-gray-300 rounded-full px-4 py-2.5 shadow-sm bg-white w-full hover:shadow-md transition-shadow duration-200"> {/* Adjusted padding and added hover effect */}
-                    <svg className="h-5 w-5 mr-3 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"> {/* Adjusted icon size/color */}
-                      <path fill="#4285F4" d="M21.35 11.1h-9.17v2.73h5.21c-.23 1.65-1.68 2.86-3.58 2.86-2.18 0-3.95-1.78-3.95-3.98s1.77-3.98 3.95-3.98c1.2 0 2.1.5 2.78 1.13l1.9-1.83C16.84 5.88 14.76 4.73 12.18 4.73 8.36 4.73 5.03 7.94 5.03 12s3.33 7.27 7.15 7.27c3.98 0 6.83-2.8 6.83-6.97 0-.46-.04-.9-.12-1.33z"/>
-                      <path fill="#34A853" d="M12.18 19.27c1.94 0 3.6-.83 4.8-2.18l-2.2-1.7c-.65.44-1.5.7-2.6.7-2.03 0-3.74-1.37-4.35-3.2H5.18v2.1C6.5 17.9 9.1 19.27 12.18 19.27z"/>
-                      <path fill="#FBBC05" d="M7.83 14.39c-.18-.54-.28-1.1-.28-1.69s.1-1.15.28-1.69V8.9H5.18C4.8 9.8 4.6 10.88 4.6 12s.2 2.2.6 3.1l2.65-2.01z"/>
-                      <path fill="#EA4335" d="M12.18 7.58c1.04 0 1.95.36 2.67 1.05l2.06-2.06C15.78 5.01 14.03 4.1 12.18 4.1c-3.08 0-5.7 1.37-7 3.7l2.65 2.01c.6-1.83 2.32-3.23 4.35-3.23z"/>
-                      <path fill="none" d="M0 0h24v24H0z"/>
-                    </svg>
-                    {/* Input field */}
-                    <input type="text" value="wix alternative" className="flex-grow outline-none text-gray-800 text-sm sm:text-base" readOnly />
-                    {/* Optional Icons */}
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-400 ml-3 cursor-pointer hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v3a3 3 0 01-3 3z" />
-                    </svg>
-                     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-400 ml-2 cursor-pointer hover:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                   {/* Spinner Overlay */}
+                   <div className={`spinner-container ${postClickPhase === 'spinning' ? 'visible' : ''}`}>
+                     <div className="spinner"></div>
+                   </div>
+
+                   {/* Arrow Overlay */}
+                   <div className={`arrow-container ${postClickPhase === 'showingArrow' ? 'visible' : ''}`}>
+                     <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                       <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
                      </svg>
-                  </div>
+                   </div>
+
                 </div>
               </div>
               {/* Text Content Below */}

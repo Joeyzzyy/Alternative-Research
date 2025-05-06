@@ -515,7 +515,9 @@ export default function Header() {
                           </div>
                           <p className="mb-3 text-gray-300">Total Credits: {userCredits.pageGeneratorLimit * 10}</p>
                           <p className="mb-3 text-gray-300">Used: {userCredits.pageGeneratorUsage * 10}</p>
-                          <p className="text-gray-400 text-xs mb-4">Note: Changing the overall color scheme or style of the page will also consume credits.</p>
+                          <p className="text-gray-400 text-xs mb-4">
+                            Generating a new alternative page or changing the overall color scheme/style consumes <span className="font-bold text-white">10 credits</span>.
+                          </p>
 
                           {/* 添加购买更多积分按钮 */}
                           <button
