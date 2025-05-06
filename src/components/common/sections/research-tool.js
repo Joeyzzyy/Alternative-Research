@@ -54,7 +54,6 @@ const ResearchTool = () => {
     });
     return filteredMessage;
   };
-  const hasTriggeredStep4Ref = useRef(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); 
   const [isUserLoggedIn, setIsUserLoggedIn] = useState(false); 
   const [isFirstTimeUser, setIsFirstTimeUser] = useState(false);
@@ -1088,6 +1087,7 @@ const ResearchTool = () => {
                   const generateResponse = await apiClient.generateAlternative(currentWebsiteId, domainArray);
                   if (generateResponse?.code === 200) {
                     setCurrentStep(3);
+                    setTaskSteps(prevSteps => prevSteps.filter(step => step.name !== 'Waiting for user input'));
                     setInputDisabledDueToUrlGet(true);
                     setIsProcessingTask(true);
                   } else {
@@ -1123,7 +1123,6 @@ const ResearchTool = () => {
     let thinkingMessageId;
     try {
       setIsProcessingTask(true);
-      hasTriggeredStep4Ref.current = false;
       const isLoggedIn = localStorage.getItem('alternativelyIsLoggedIn') === 'true';
       const token = localStorage.getItem('alternativelyAccessToken');
       // Handle not logged in case
@@ -1512,10 +1511,7 @@ const ResearchTool = () => {
           }
 
           if (logData.type === 'Html') {
-            if (!hasTriggeredStep4Ref.current && currentStep < 5) {
               setCurrentStep(4);
-              hasTriggeredStep4Ref.current = true; 
-            }
             // 如果是新的流式输出开始，重置累积的内容
             if (!isStreamingRef.current || currentStreamIdRef.current !== logData.id) {
               htmlStreamRef.current = '';
