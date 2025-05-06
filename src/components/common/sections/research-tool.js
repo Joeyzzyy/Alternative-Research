@@ -1846,6 +1846,8 @@ const ResearchTool = () => {
       
       (async () => {
         try {
+          console.log('DEBUG: browserTabs.length', browserTabs.length);
+          console.log('DEBUG: isFirstTimeUser', isFirstTimeUser);
           if (browserTabs.length === 1 && isFirstTimeUser) {
             Modal.info({
               title: 'Page Generated & Colors Extracted!',
