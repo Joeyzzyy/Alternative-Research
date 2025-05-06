@@ -1399,11 +1399,11 @@ const ResearchTool = () => {
 
       const description = document.createElement('p');
       description.className = 'text-gray-300 mb-2 text-center text-sm';
-      description.textContent = `We encountered a hiccup processing your request (${errorMessage}). Our tech wizards have been notified and are on the case!`; 
+      description.textContent = `We encountered an irreversible error. Any pages already generated will be saved.`; 
 
       const creditInfo = document.createElement('p');
       creditInfo.className = 'text-green-400 mb-4 text-center text-sm font-medium';
-      creditInfo.textContent = 'Good news: Your credits have not been deducted for this task.'; // 保持不变
+      creditInfo.textContent = 'Credits for unfinished pages will not be deducted.'; 
 
       const instruction = document.createElement('p');
       instruction.className = 'text-gray-400 mb-6 text-center text-sm';
