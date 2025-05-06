@@ -1859,6 +1859,7 @@ const ResearchTool = () => {
 
             const thinkingMessageId = messageHandler.addAgentThinkingMessage();
             messageHandler.updateAgentMessage(answer, thinkingMessageId);
+            
           } else {
             messageHandler.addSystemMessage(
               "Oops! The service encountered a temporary issue. Could you please try sending your message again?"
@@ -1866,13 +1867,12 @@ const ResearchTool = () => {
           }
         } catch (error) {
           console.error("Error sending completion message:", error);
-          // 出错时也添加系统消息
           messageHandler.addSystemMessage(
             "Failed to send completion message. Please try again later."
           );
         } finally {
-          // 确保重新启用输入
           setInputDisabledDueToUrlGet(false);
+          setIsProcessingTask(false);
         }
       })();
     }
