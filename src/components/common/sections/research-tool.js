@@ -73,7 +73,6 @@ const ResearchTool = () => {
     { url: 'https://www.dreambrand.studio/luxury-jewelry-influencer-ai-platform', title: 'Turn Your Influence into a Luxury Jewelry Empire with Al-Powered Design & Zero Hassle', image: '/images/preview-dreambrand.png', timestamp: 'Generated on April 30' }
   ];
   const processedStepLogIdsRef = useRef(new Set());
-  const finalStepAddedRef = useRef(false);
 
   const isMobile = useMediaQuery({ query: '(max-width: 767px)' });
 
@@ -2084,6 +2083,16 @@ const ResearchTool = () => {
   }, [showInitialScreen, examples.length]);
   // --- 结束 ---
 
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('openHistoryList') === 'true') {
+      setIsSidebarOpen(true);
+      const currentUrl = new URL(window.location);
+      currentUrl.searchParams.delete('openHistoryList');
+      window.history.replaceState(null, '', currentUrl.toString());
+    }
+  }, [setIsSidebarOpen]);
+
   const renderMobileInitialScreen = () => {
     const currentExample = examples[currentExampleIndex];
     return (
@@ -2860,8 +2869,11 @@ const ResearchTool = () => {
                                   size="small" // 使用 small 尺寸
                                   icon={<EditOutlined />} // 编辑图标
                                   onClick={() => {
-                                    // TODO: 实现编辑功能或提示
-                                    messageApi.info('Edit functionality coming soon!');
+                                    if (browserTabs.length > 0) {
+                                      window.open('https://altpage.ai?openPreviewModal=true&openHistoryList=true', '_blank');
+                                    } else {
+                                      messageApi.info('Please wait until at least one page has finished generating.')
+                                    }
                                   }}
                                   className="bg-yellow-600 hover:bg-yellow-500 border-yellow-700 hover:border-yellow-600" // 编辑按钮样式
                                   style={{ fontSize: '10px', padding: '0 8px', height: '24px' }} // 调整内边距和高度
@@ -2884,7 +2896,7 @@ const ResearchTool = () => {
                                   icon={<LinkOutlined />} // 链接/绑定图标
                                   onClick={() => {
                                     if (browserTabs.length > 0) {
-                                      window.open('https://altpage.ai?openPreviewModal=true#result-preview-section', '_blank');
+                                      window.open('https://altpage.ai?openPreviewModal=true&openHistoryList=true', '_blank');
                                     } else {
                                       messageApi.info('Please wait until at least one page has finished generating.')
                                     }
