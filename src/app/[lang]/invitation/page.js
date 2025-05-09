@@ -263,7 +263,7 @@ export default function InvitationPage() {
                 window.open(`https://altpage.ai?invitation=${code}`, '_blank');
               }}
             >
-              Claim Your 20 Credits
+              Claim Your 200 Credits
             </button>
           </div>
         </div>
