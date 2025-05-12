@@ -34,7 +34,6 @@ const ResearchTool = () => {
   const [canProcessCompetitors, setCanProcessCompetitors] = useState(false);
   const [browserTabs, setBrowserTabs] = useState([]);
   const [activeTab, setActiveTab] = useState(null);
-  const [inputDisabledDueToUrlGet, setInputDisabledDueToUrlGet] = useState(false);
   const messageHandler = useMemo(() => new MessageHandler(setMessages), [setMessages]);
   const [sseConnected, setSseConnected] = useState(false);
   const retryCountRef = useRef(0);
@@ -73,6 +72,7 @@ const ResearchTool = () => {
     { url: 'https://www.dreambrand.studio/luxury-jewelry-influencer-ai-platform', title: 'Turn Your Influence into a Luxury Jewelry Empire with Al-Powered Design & Zero Hassle', image: '/images/preview-dreambrand.png', timestamp: 'Generated on April 30' }
   ];
   const processedStepLogIdsRef = useRef(new Set());
+  const [isTaskRunning, setIsTaskRunning] = useState(false);
 
   const isMobile = useMediaQuery({ query: '(max-width: 767px)' });
 
@@ -127,10 +127,9 @@ const ResearchTool = () => {
   }, [logs, rightPanelTab]);
 
   useEffect(() => {
-    if (messages.length > 0 && inputDisabledDueToUrlGet) {
+    if (messages.length > 0) {
       const lastMessage = messages[messages.length - 1];
       if (lastMessage.source !== 'system' && !lastMessage.isThinking) {
-        setInputDisabledDueToUrlGet(false);
       }
     }
   }, [messages]);
@@ -151,8 +150,8 @@ const ResearchTool = () => {
         const generateResponse = await apiClient.generateAlternative(currentWebsiteId, firstCompetitorArray);
         if (generateResponse?.code === 200) {
           setCurrentStep(3);
-          setInputDisabledDueToUrlGet(true);
           setIsProcessingTask(true);
+          setIsTaskRunning(true);
         } else {
           messageHandler.addSystemMessage(`⚠️ Failed to generate alternative page: Invalid server response`);
         }
@@ -181,7 +180,6 @@ const ResearchTool = () => {
       messageHandler.handleErrorMessage(error, thinkingMessageId);
     } finally {
       setIsMessageSending(false);
-      setInputDisabledDueToUrlGet(false); 
     }
   };
 
@@ -1029,7 +1027,6 @@ const ResearchTool = () => {
       if (response?.code === 200 && response.data?.answer) {
         const rawAnswer = response.data.answer;
         if (rawAnswer.includes('[URL_GET]')) {
-          setInputDisabledDueToUrlGet(true);
           messageHandler.updateAgentMessage(rawAnswer, thinkingMessageId);
           const searchResponse = await apiClient.searchCompetitor(
             formattedInput,
@@ -1088,9 +1085,8 @@ const ResearchTool = () => {
                   const generateResponse = await apiClient.generateAlternative(currentWebsiteId, domainArray);
                   if (generateResponse?.code === 200) {
                     setCurrentStep(3);
-                    setTaskSteps(prevSteps => prevSteps.filter(step => step.name !== 'Waiting for user input'));
-                    setInputDisabledDueToUrlGet(true);
                     setIsProcessingTask(true);
+                    setIsTaskRunning(true);
                   } else {
                     messageHandler.addSystemMessage(`⚠️ Failed to generate alternative page: Invalid server response`);
                   }
@@ -1148,8 +1144,8 @@ const ResearchTool = () => {
             } else {
               console.warn('Subscription card element not found for scrolling.');
             }
-            setIsProcessingTask(false); // Stop processing
-            return; // Exit the function
+            setIsProcessingTask(false);
+            return; 
           } else if (availableCredits === pageGeneratorLimit && availableCredits > 0) {
             setIsFirstTimeUser(true);
           }
@@ -1308,7 +1304,6 @@ const ResearchTool = () => {
       if (greetingResponse?.code === 200 && greetingResponse.data?.answer) {
         const answer = filterMessageTags(greetingResponse.data.answer);
         if (greetingResponse.data.answer.includes('[URL_GET]')) {
-          setInputDisabledDueToUrlGet(true);
           messageHandler.updateAgentMessage(answer, thinkingMessageId);
           const searchResponse = await apiClient.searchCompetitor(
             inputForAPI, // 使用提取的 hostname
@@ -1438,7 +1433,6 @@ const ResearchTool = () => {
       }
       setSseConnected(false);
       setIsProcessingTask(false); // 标记任务处理结束
-      setInputDisabledDueToUrlGet(false); // 允许用户输入
       setShouldConnectSSE(false); // 防止自动重连
       // 清理重试逻辑
       retryCountRef.current = 0;
@@ -1755,21 +1749,6 @@ const ResearchTool = () => {
       const nextStepId = currentStep + 1;
       setCurrentStep(nextStepId); 
 
-      if (typeof setTaskSteps === 'function') {
-         setTaskSteps(prevSteps => {
-           const newStep = {
-             id: nextStepId, 
-             name: "Waiting for user input",
-             gradient: "from-gray-500/40 to-slate-500/40",
-             borderColor: "border-gray-500/60",
-             shadowColor: "shadow-gray-500/20",
-           };
-           return [...prevSteps, newStep];
-         });
-      } else {
-         console.warn("setTaskSteps function is not available to update task steps.");
-      }
-
       if (isFirstTimeUser && browserTabs.length >= 6) {
         setTaskSteps(prevSteps => {
           const newStep = {
@@ -1825,10 +1804,10 @@ const ResearchTool = () => {
       log.step === 'GENERATION_FINISHED'
     );
     
-    if (finishedLog && !finishedLog.processed) {
-      setLogs(prevLogs => prevLogs.map(log => 
-        log.id === finishedLog.id ? {...log, processed: true} : log
-      ));
+    if (finishedLog && isTaskRunning) {
+      // setLogs(prevLogs => prevLogs.map(log => 
+      //   log.id === finishedLog.id ? {...log, processed: true} : log
+      // ));
       
       (async () => {
         try {
@@ -1852,8 +1831,8 @@ const ResearchTool = () => {
             "Failed to send completion message. Please try again later."
           );
         } finally {
-          setInputDisabledDueToUrlGet(false);
           setIsMessageSending(false);
+          setIsTaskRunning(false);
         }
       })();
     }
@@ -2625,7 +2604,7 @@ const ResearchTool = () => {
                 ) : (
                   <>
                     <Tooltip
-                      title={(loading || isMessageSending || inputDisabledDueToUrlGet) ? "Agent is working, please wait a sec." : ""}
+                      title={(loading || isMessageSending) ? "Agent is working, please wait a sec." : ""}
                       placement="topLeft"
                     >
                       <div className="mb-2 flex justify-end">
@@ -2657,9 +2636,9 @@ const ResearchTool = () => {
                           ref={inputRef}
                           value={userInput}
                           onChange={(e) => setUserInput(e.target.value)}
-                          disabled={loading || isMessageSending || inputDisabledDueToUrlGet}
+                          disabled={loading || isMessageSending}
                           placeholder={
-                            !(loading || isMessageSending || inputDisabledDueToUrlGet)
+                            !(loading || isMessageSending)
                               ? "Waiting for your answer..."
                               : ""
                           }
@@ -2671,7 +2650,7 @@ const ResearchTool = () => {
                           onPressEnter={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            if (userInput.trim() && !loading && !isMessageSending && !inputDisabledDueToUrlGet) {
+                            if (userInput.trim() && !loading && !isMessageSending) {
                               handleUserInput(e);
                             }
                           }}
@@ -2679,13 +2658,13 @@ const ResearchTool = () => {
                         <button
                           type="button"
                           onClick={(e) => {
-                            if (userInput.trim() && !loading && !isMessageSending && !inputDisabledDueToUrlGet) {
+                            if (userInput.trim() && !loading && !isMessageSending) {
                               handleUserInput(e);
                             }
                           }}
-                          disabled={loading || isMessageSending || inputDisabledDueToUrlGet || !userInput.trim()} // 同时检查输入是否为空
+                          disabled={loading || isMessageSending || !userInput.trim()} // 同时检查输入是否为空
                           className={`absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-2 text-xs font-medium rounded-md transition-all duration-300 flex items-center gap-1 shadow-sm
-                            ${(loading || isMessageSending || inputDisabledDueToUrlGet || !userInput.trim())
+                            ${(loading || isMessageSending || !userInput.trim())
                               ? 'bg-gray-500 text-gray-300 cursor-not-allowed opacity-70'
                               : 'bg-blue-600 hover:bg-blue-500 text-white cursor-pointer hover:shadow-md'
                             }`}
@@ -2699,25 +2678,6 @@ const ResearchTool = () => {
                         {/* === 结束新增 === */}
                       </div>
                     </Tooltip>
-                    {!(loading || isMessageSending || inputDisabledDueToUrlGet) && (
-                      <div
-                        className="mt-2 flex items-center justify-center gap-2 animate-pulse"
-                        style={{
-                          background: 'linear-gradient(90deg, #3b82f6 0%, #6366f1 100%)', // Changed gradient to blue/indigo
-                          color: '#fff',
-                          borderRadius: '8px',
-                          fontWeight: 'bold',
-                          fontSize: '0.95rem', // 字体大小缩小
-                          padding: '6px 0',    // 上下内边距也略微缩小
-                          boxShadow: '0 2px 12px 0 rgba(59,130,246,0.15)' // Adjusted shadow color
-                        }}
-                      >
-                        <svg className="w-4 h-4 text-white animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" />
-                        </svg>
-                        <span>It's your turn! Please enter your answer above 👆</span>
-                      </div>
-                    )}
                     <div className="flex justify-end mt-3 px-1">
                       <div className="text-xs text-gray-400">
                         Press Enter ↵ to submit
