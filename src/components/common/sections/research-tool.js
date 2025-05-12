@@ -1728,36 +1728,24 @@ const ResearchTool = () => {
         clearTimeout(retryTimeoutRef.current);
         retryTimeoutRef.current = null;
       }
-      // --- 新增：组件卸载时停止重连提示 ---
       isShowingReconnectNoticeRef.current = false;
       if (sseReconnectNoticeTimeoutRef.current) {
         clearTimeout(sseReconnectNoticeTimeoutRef.current);
         sseReconnectNoticeTimeoutRef.current = null;
       }
-      // --- 结束新增 ---
       retryCountRef.current = 0;
     };
-  // --- 将 currentWebsiteId 添加到依赖数组 ---
   }, [shouldConnectSSE, currentWebsiteId, messageHandler, apiClient]); // Added dependencies
 
   useEffect(() => {
-    // 检查是否存在 GENERATION_FINISHED 日志,是的话，就可以标记第5步生成完成
     const generationFinishedLog = logs.find(log => 
       log.type === 'Info' && 
       log.step === 'GENERATION_FINISHED' &&
       !processedStepLogIdsRef.current.has(log.id)
     );
 
-    const colorChangeFinishedLog = logs.find(log => 
-      log.type === 'Info' && 
-      log.step === 'GENERATION_CHANGE_FINISHED' &&
-      !processedStepLogIdsRef.current.has(log.id)
-    );
-
     let logToProcess = null;
-    if (colorChangeFinishedLog) {
-      logToProcess = colorChangeFinishedLog;
-    } else if (generationFinishedLog) {
+    if (generationFinishedLog) {
       logToProcess = generationFinishedLog;
     }
 
@@ -1770,7 +1758,7 @@ const ResearchTool = () => {
       if (typeof setTaskSteps === 'function') {
          setTaskSteps(prevSteps => {
            const newStep = {
-             id: nextStepId, // 使用计算好的 ID
+             id: nextStepId, 
              name: "Waiting for user input",
              gradient: "from-gray-500/40 to-slate-500/40",
              borderColor: "border-gray-500/60",
@@ -1825,7 +1813,6 @@ const ResearchTool = () => {
       competitorListProcessedRef.current = true; 
       const competitors = apiLog.content.data;
 
-      // 如果是首次试用产品，credits没有消耗过
       if (isFirstTimeUser) {
         handleFirstTimeUsers(competitors);
       } else {
@@ -2130,8 +2117,9 @@ const ResearchTool = () => {
                 return;
               } else {
                 // 4. 已登录，显示提示信息
-                messageApi.info('Please switch to a PC for a better page generation experience!');
-                return;
+                const formattedInput = userInput.trim();
+                initializeChat(formattedInput); // 调用 initializeChat 来启动任务
+                return; // 结束执行
               }
             }}>
               <div className="flex flex-col items-stretch gap-2">
@@ -2547,8 +2535,8 @@ const ResearchTool = () => {
              backgroundRepeat: 'no-repeat'
            }}>
 
-        <div className="relative z-10 w-full flex flex-row gap-6 h-[calc(100vh-140px)] px-4 text-sm">
-          <div className="w-[35%] relative flex flex-col">
+        <div className={`relative z-10 w-full flex ${isMobile ? 'flex-col' : 'flex-row'} gap-6 h-[calc(100vh-140px)] px-4 text-sm`}>
+          <div className={`${isMobile ? 'w-full h-full' : 'w-[35%]'} relative flex flex-col`}>
             <div className="h-12 px-4 border-b border-gray-300/20 flex-shrink-0 flex items-center justify-between relative">
               <div className="flex items-center">
                 <img src="/images/alternatively-logo.png" alt="AltPage.ai" className="w-5 h-5 mr-1.5" />
@@ -2589,6 +2577,17 @@ const ResearchTool = () => {
               )}
             </div>
 
+            {/* 移动端提示横幅 */}
+            {isMobile && (
+              <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-4 py-2 text-xs font-medium shadow-md">
+                <div className="flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>For a better experience viewing execution process and generated pages, please visit on desktop.</span>
+                </div>
+              </div>
+            )}
             <div className="flex-1 overflow-y-auto pt-12 px-4 pb-4 chat-messages-container">
               {showInitialScreen ? (
                 <div className="flex items-center justify-center h-full">
@@ -2727,9 +2726,10 @@ const ResearchTool = () => {
               </div>
             </div>
           </div>
-          <div className={`w-[65%]
+          {!isMobile && (
+            <div className={`w-[65%]
             bg-slate-900/10 border-blue-700/30
-           backdrop-blur-lg rounded-2xl border shadow-xl flex flex-col h-full relative overflow-hidden`}>
+            backdrop-blur-lg rounded-2xl border shadow-xl flex flex-col h-full relative overflow-hidden`}>
             <div className="flex-1 flex flex-col overflow-hidden">
               <div className="h-12 border-b border-gray-300/20 p-3 flex-shrink-0">
                 <div className="flex justify-between items-center">
@@ -2936,7 +2936,8 @@ const ResearchTool = () => {
                 )}
               </div>
             </div>
-          </div>
+            </div>
+          )}
         </div>
       </div>
       <Modal
