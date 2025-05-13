@@ -166,3 +166,5 @@ const CommonLayout = ({ article, keywords }) => {
 };
 
 export default memo(CommonLayout);
+
+export default memo(CommonLayout);
