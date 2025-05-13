@@ -150,7 +150,7 @@ const ResearchTool = () => {
         if (generateResponse?.code === 200) {
           setCurrentStep(3);
           setIsProcessingTask(true);
-          startedTaskCountRef.current += 1;
+          startedTaskCountRef.current += firstCompetitorArray.length;
         } else {
           messageHandler.addSystemMessage(`⚠️ Failed to generate alternative page: Invalid server response`);
         }
@@ -1085,7 +1085,7 @@ const ResearchTool = () => {
                   if (generateResponse?.code === 200) {
                     setCurrentStep(3);
                     setIsProcessingTask(true);
-                    startedTaskCountRef.current += 1;
+                    startedTaskCountRef.current += domainArray.length;
                   } else {
                     messageHandler.addSystemMessage(`⚠️ Failed to generate alternative page: Invalid server response`);
                   }
@@ -1802,7 +1802,7 @@ const ResearchTool = () => {
       log.step === 'GENERATION_FINISHED'
     );
     
-    if (finishedLog && isProcessingTask && browserTabs.length === startedTaskCountRef.current) {
+    if (finishedLog && isProcessingTask && browserTabs.length === startedTaskCountRef.current && startedTaskCountRef.current > 0) {
       setIsProcessingTask(false);
       (async () => {
         try {
@@ -2339,6 +2339,10 @@ const ResearchTool = () => {
             <div className="relative max-w-[44rem] ml-auto w-full"> {/* 父容器，定义了最大宽度 */}
               <form onSubmit={(e) => {
                 e.preventDefault();
+                if (!userInput.trim()) {
+                  messageApi.error('Please enter your product website URL.');
+                  return;
+                }
                 if (!validateDomain(userInput)) {
                   console.log('[DEBUG] Invalid domain:', userInput);
                   messageApi.error('Please enter a valid domain (e.g., example.com or https://example.com)');
@@ -2376,7 +2380,7 @@ const ResearchTool = () => {
                           hover:scale-105 shadow-lg
                           ${isProcessingTask ? 'opacity-70 cursor-not-allowed hover:scale-100' : 'cursor-pointer'}`}
                         style={{ height: '64px' }} // 按钮高度，可调整以匹配输入框
-                        disabled={!userInput.trim() || isProcessingTask}
+                        disabled={isProcessingTask}
                       >
                         {isProcessingTask ? (
                           <>
