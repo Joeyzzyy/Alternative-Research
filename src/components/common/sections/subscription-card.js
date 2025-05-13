@@ -91,10 +91,10 @@ const SubscriptionCard = () => {
             title: "Features include:",
             items: [
               <>
-                <span className="font-bold text-2xl text-cyan-400 inline-block animate-bounce-subtle">300</span> credits/month (approx. <span className="font-bold text-2xl text-cyan-400 inline-block animate-bounce-subtle">30</span> pages for alternative page or blog generation)
+                <span className="font-bold text-2xl text-cyan-400 inline-block animate-bounce-subtle">100</span> credits/month (approx. <span className="font-bold text-2xl text-cyan-400 inline-block animate-bounce-subtle">10</span> pages for alternative page or blog generation)
               </>,
-              `Generate up to ${planMap.Standard.monthly?.pageLimit ?? 30} pages in total /month`,
-              `Freely hosting ${planMap.Standard.monthly?.pageLimit ?? 30} pages on our server`,
+              `Generate up to ${planMap.Standard.monthly?.pageLimit ?? 10} pages in total /month`,
+              `Freely hosting ${planMap.Standard.monthly?.pageLimit ?? 10} pages on our server`,
               "Auto images grabbing and matching",
               "Auto internal links insertion",
               "AI page design and generation",
@@ -127,10 +127,10 @@ const SubscriptionCard = () => {
             title: "Everything in Standard, plus:",
             items: [
               <>
-                <span className="font-bold text-2xl text-purple-400 inline-block animate-bounce-subtle">1000</span> credits/month (approx. <span className="font-bold text-2xl text-purple-400 inline-block animate-bounce-subtle">100</span> pages for alternative page or blog generation)
+                <span className="font-bold text-2xl text-purple-400 inline-block animate-bounce-subtle">300</span> credits/month (approx. <span className="font-bold text-2xl text-purple-400 inline-block animate-bounce-subtle">300</span> pages for alternative page or blog generation)
               </>,
-              `Generate up to ${planMap.Professional.monthly?.pageLimit ?? 100} pages in total /month`,
-              `Freely hosting ${planMap.Professional.monthly?.pageLimit ?? 100} pages on our server`,
+              `Generate up to ${planMap.Professional.monthly?.pageLimit ?? 300} pages in total /month`,
+              `Freely hosting ${planMap.Professional.monthly?.pageLimit ?? 300} pages on our server`,
               "Auto images grabbing and matching",
               "Auto internal links insertion",
               "AI page design and generation",

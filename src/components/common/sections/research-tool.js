@@ -72,8 +72,7 @@ const ResearchTool = () => {
     { url: 'https://www.dreambrand.studio/luxury-jewelry-influencer-ai-platform', title: 'Turn Your Influence into a Luxury Jewelry Empire with Al-Powered Design & Zero Hassle', image: '/images/preview-dreambrand.png', timestamp: 'Generated on April 30' }
   ];
   const processedStepLogIdsRef = useRef(new Set());
-  const [isTaskRunning, setIsTaskRunning] = useState(false);
-
+  const startedTaskCountRef = useRef(0);
   const isMobile = useMediaQuery({ query: '(max-width: 767px)' });
 
   const [currentExampleIndex, setCurrentExampleIndex] = useState(0);
@@ -151,7 +150,7 @@ const ResearchTool = () => {
         if (generateResponse?.code === 200) {
           setCurrentStep(3);
           setIsProcessingTask(true);
-          setIsTaskRunning(true);
+          startedTaskCountRef.current += 1;
         } else {
           messageHandler.addSystemMessage(`⚠️ Failed to generate alternative page: Invalid server response`);
         }
@@ -1058,35 +1057,35 @@ const ResearchTool = () => {
           if (competitorArrayMatch && competitorArrayMatch[1]) {
             try {
               const cleanedString = competitorArrayMatch[1]
-                .replace(/\\'/g, "'")  // 处理转义的单引号
-                .replace(/\\"/g, '"')  // 处理转义的双引号
-                .replace(/'/g, '"')    // 将单引号替换为双引号
+                .replace(/\\'/g, "'")  
+                .replace(/\\"/g, '"')  
+                .replace(/'/g, '"')    
                 .trim();
               let competitors;
               try {
                 competitors = JSON.parse(`[${cleanedString}]`);
               } catch (e) {
                 competitors = cleanedString
-                  .replace(/[\[\]'"`]/g, '') // 移除所有引号和方括号
+                  .replace(/[\[\]'"`]/g, '') 
                   .split(',')
                   .map(s => s.trim())
-                  .filter(s => s.length > 0); // 过滤空字符串
+                  .filter(s => s.length > 0); 
               }
               if (Array.isArray(competitors) && competitors.length > 0) {
                 const domainArray = competitors.map(comp => 
                   String(comp)
                     .trim()
-                    .replace(/^https?:\/\//, '')  // 移除协议
-                    .replace(/\/$/, '')           // 移除末尾斜杠
-                    .replace(/\s+/g, '')          // 移除所有空格
-                ).filter(domain => domain.length > 0);  // 过滤掉空域名
+                    .replace(/^https?:\/\//, '')  
+                    .replace(/\/$/, '')           
+                    .replace(/\s+/g, '')          
+                ).filter(domain => domain.length > 0);  
 
                 if (domainArray.length > 0) {
                   const generateResponse = await apiClient.generateAlternative(currentWebsiteId, domainArray);
                   if (generateResponse?.code === 200) {
                     setCurrentStep(3);
                     setIsProcessingTask(true);
-                    setIsTaskRunning(true);
+                    startedTaskCountRef.current += 1;
                   } else {
                     messageHandler.addSystemMessage(`⚠️ Failed to generate alternative page: Invalid server response`);
                   }
@@ -1335,7 +1334,6 @@ const ResearchTool = () => {
       messageHandler.handleErrorMessage(error, thinkingMessageId);
     } finally {
       setLoading(false);
-      // --- REMOVED --- setIsProcessingTask(false) was here, moved earlier in credit check fail case
     }
   };
 
@@ -1804,11 +1802,8 @@ const ResearchTool = () => {
       log.step === 'GENERATION_FINISHED'
     );
     
-    if (finishedLog && isTaskRunning) {
-      // setLogs(prevLogs => prevLogs.map(log => 
-      //   log.id === finishedLog.id ? {...log, processed: true} : log
-      // ));
-      
+    if (finishedLog && isProcessingTask && browserTabs.length === startedTaskCountRef.current) {
+      setIsProcessingTask(false);
       (async () => {
         try {
           const completionMessage = "Current page generation is finished, move me to next step, tell me what i can do next [PAGES_GENERATED]";
@@ -1826,17 +1821,15 @@ const ResearchTool = () => {
             );
           }
         } catch (error) {
-          console.error("Error sending completion message:", error);
           messageHandler.addSystemMessage(
             "Failed to send completion message. Please try again later."
           );
         } finally {
           setIsMessageSending(false);
-          setIsTaskRunning(false);
         }
       })();
     }
-  }, [logs, canProcessCompetitors]); // 当日志更新时检查
+  }, [logs, canProcessCompetitors, currentWebsiteId, messageHandler, apiClient, isProcessingTask]);
 
   useEffect(() => {
     return () => {
@@ -2832,7 +2825,7 @@ const ResearchTool = () => {
                                   icon={<EditOutlined />} // 编辑图标
                                   onClick={() => {
                                     if (browserTabs.length > 0) {
-                                      window.open('https://altpage.ai?openPreviewModal=true&openHistoryList=true', '_blank');
+                                      window.open('https://altpage.ai?openPreviewModal=true&openHistoryList=true&action=edit', '_blank');
                                     } else {
                                       messageApi.info('Please wait until at least one page has finished generating.')
                                     }
@@ -2858,7 +2851,7 @@ const ResearchTool = () => {
                                   icon={<LinkOutlined />} // 链接/绑定图标
                                   onClick={() => {
                                     if (browserTabs.length > 0) {
-                                      window.open('https://altpage.ai?openPreviewModal=true&openHistoryList=true', '_blank');
+                                      window.open('https://altpage.ai?openPreviewModal=true&openHistoryList=true&action=bind', '_blank');
                                     } else {
                                       messageApi.info('Please wait until at least one page has finished generating.')
                                     }

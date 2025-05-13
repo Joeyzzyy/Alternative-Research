@@ -45,7 +45,7 @@ const HistoryCardList = () => {
     // body 样式由 Tailwind class 控制，默认 padding 即可
   };
 
-  // === 新增：函数用于检查 URL 参数并打开弹窗 ===
+  // === 修改：扩展函数用于检查URL参数并执行相应操作 ===
   const checkUrlAndOpenModal = (list) => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('openPreviewModal') === 'true' && list && list.length > 0) {
@@ -54,9 +54,36 @@ const HistoryCardList = () => {
       if (firstValidItem) {
         // 调用 handleCardClick 来处理弹窗打开和数据加载
         handleCardClick(firstValidItem);
+        
+        // 获取操作类型参数
+        const actionType = urlParams.get('action');
+        
+        // 设置一个延时器，等待数据加载完成后执行额外操作
+        if (actionType) {
+          const checkDataLoaded = setInterval(() => {
+            // 检查数据是否已加载完成
+            if (!resultLoading && resultDetail && Array.isArray(resultDetail.data) && resultDetail.data.length > 0) {
+              clearInterval(checkDataLoaded);
+              
+              // 根据action参数执行相应操作
+              if (actionType === 'edit' && selectedPreviewId) {
+                // 模拟点击Edit按钮 - 对应代码中的 setEditPageId(selectedPreviewId)
+                setTimeout(() => setEditPageId(selectedPreviewId), 500);
+              } else if (actionType === 'bind' || actionType === 'publish') {
+                // 模拟点击Bind With Your Domain按钮 - 对应代码中的 setIsPublishSettingsModalVisible(true)
+                setTimeout(() => setIsPublishSettingsModalVisible(true), 500);
+              }
+            }
+          }, 500); // 每500ms检查一次
+          
+          // 设置超时，防止无限等待
+          setTimeout(() => clearInterval(checkDataLoaded), 10000); // 10秒后强制清除
+        }
+        
         // 从 URL 中移除查询参数，避免刷新时重复触发
         const currentUrl = new URL(window.location);
         currentUrl.searchParams.delete('openPreviewModal');
+        currentUrl.searchParams.delete('action');
         history.replaceState(null, '', currentUrl.toString());
       }
     }
