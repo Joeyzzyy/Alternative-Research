@@ -12,6 +12,7 @@ export default function InvitationPage() {
   const inviterMap = {
     'ZH1-LBYALTPAGE': '朱鹤',
     'ZYALTPAGE': '朱越',
+    'YFALTPAGE': 'Youssef', // 新增 Youssef 的邀请码和姓名
   };
   const inviterName = inviterMap[code] || '朱鹤'; 
 
