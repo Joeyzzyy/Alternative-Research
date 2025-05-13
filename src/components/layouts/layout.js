@@ -83,7 +83,6 @@ const CommonLayout = ({ article, keywords }) => {
           data={headerData}
         />
       )}
-      
       <div className="flex-1 w-full max-w-[100vw] overflow-x-hidden">
         {sections.map((section, index) => {
           if (section.componentName === "ResearchTool") {
@@ -164,7 +163,5 @@ const CommonLayout = ({ article, keywords }) => {
     </div>
   );
 };
-
-export default memo(CommonLayout);
 
 export default memo(CommonLayout);
