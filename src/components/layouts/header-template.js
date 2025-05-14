@@ -97,7 +97,6 @@ export default function Header() {
   const [showCreditsTooltip, setShowCreditsTooltip] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-  const [googleOneTapInitialized, setGoogleOneTapInitialized] = useState(false);
   const [showBrandAssetsModal, setShowBrandAssetsModal] = useState(false);
 
   useEffect(() => {
@@ -109,12 +108,6 @@ export default function Header() {
       setUserEmail(storedEmail);
     }
   }, []);
-
-  useEffect(() => {
-    if (!isLoggedIn && googleOneTapInitialized) {
-      setGoogleOneTapInitialized(false);
-    }
-  }, [isLoggedIn]);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -363,7 +356,8 @@ export default function Header() {
           window.location.hash;
         window.history.replaceState({}, '', newUrl);
       }
-      
+
+      console.log('isLoggedIn', isLoggedIn);
       // 如果存在 showGoogleLogin 参数并且值为true且用户未登录，自动触发 Google 登录
       if (showGoogleLogin === 'true' && !isLoggedIn) {
         // 移除 showGoogleLogin 参数
