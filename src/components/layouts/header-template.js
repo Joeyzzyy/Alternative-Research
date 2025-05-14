@@ -344,8 +344,10 @@ export default function Header() {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       const invitation = urlParams.get('invitation');
-      // 新增：检查是否有 showGoogleLogin 参数
+      // 检查是否有 showGoogleLogin 参数
       const showGoogleLogin = urlParams.get('showGoogleLogin');
+      // 新增：检查是否有 showLoginModal 参数
+      const showLoginModalParam = urlParams.get('showLoginModal');
       
       if (invitation) {
         try {
@@ -362,7 +364,7 @@ export default function Header() {
         window.history.replaceState({}, '', newUrl);
       }
       
-      // 新增：如果存在 showGoogleLogin 参数并且值为true且用户未登录，自动触发 Google 登录
+      // 如果存在 showGoogleLogin 参数并且值为true且用户未登录，自动触发 Google 登录
       if (showGoogleLogin === 'true' && !isLoggedIn) {
         // 移除 showGoogleLogin 参数
         urlParams.delete('showGoogleLogin');
@@ -377,8 +379,25 @@ export default function Header() {
           handleGoogleLogin();
         }, 500);
       }
+      
+      // 新增：如果存在 showLoginModal 参数并且值为true且用户未登录，自动显示登录模态框
+      if (showLoginModalParam === 'true' && !isLoggedIn) {
+        // 移除 showLoginModal 参数
+        urlParams.delete('showLoginModal');
+        const newUrl =
+          window.location.pathname +
+          (urlParams.toString() ? `?${urlParams.toString()}` : '') +
+          window.location.hash;
+        window.history.replaceState({}, '', newUrl);
+        
+        // 延迟一小段时间后显示登录模态框，确保页面已完全加载
+        setTimeout(() => {
+          setShowLoginModal(true);
+          setIsLoginForm(true); // 确保显示登录表单而不是注册表单
+        }, 500);
+      }
     }
-  }, [isLoggedIn, handleGoogleLogin]); // 添加 isLoggedIn 和 handleGoogleLogin 作为依赖项
+  }, [isLoggedIn, handleGoogleLogin, setShowLoginModal, setIsLoginForm]); // 添加所有依赖项
 
   const toggleMobileMenu = () => {
     setState(prevState => ({ ...prevState, isOpen: !prevState.isOpen }));
