@@ -362,15 +362,12 @@ export default function Header() {
           window.location.hash;
         window.history.replaceState({}, '', newUrl);
         
-        // 延迟一小段时间后触发登录，确保页面已完全加载
         setTimeout(() => {
           handleGoogleLogin();
         }, 500);
       }
       
-      // 新增：如果存在 showLoginModal 参数并且值为true且用户未登录，自动显示登录模态框
       if (showLoginModalParam === 'true' && !storedIsLoggedIn) {
-        // 移除 showLoginModal 参数
         urlParams.delete('showLoginModal');
         const newUrl =
           window.location.pathname +
