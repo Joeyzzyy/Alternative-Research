@@ -671,35 +671,40 @@ const HistoryCardList = () => {
             }
             open={!!selectedItem}
             onCancel={handleModalClose}
-            footer={null} // No default footer
-            width="90vw" // Wider modal
-            destroyOnClose // Ensure state resets
+            footer={null}
+            width="90vw"
+            destroyOnClose
             maskClosable={true}
+            centered
             styles={{
               mask: {
-                // 稍微增强背景模糊效果
                 backdropFilter: 'blur(8px)',
-                backgroundColor: 'rgba(0, 0, 0, 0.75)', // 加深遮罩层
+                backgroundColor: 'rgba(0, 0, 0, 0.75)',
+              },
+              wrapper: {
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
               },
               header: {
-                // 使用更深的 slate 颜色，并增加透明度
-                backgroundColor: 'rgba(15, 23, 42, 0.85)', // slate-900 with opacity
-                borderBottom: '1px solid rgba(51, 65, 85, 0.6)', // slate-700 with opacity
+                backgroundColor: 'rgba(15, 23, 42, 0.85)',
+                borderBottom: '1px solid rgba(51, 65, 85, 0.6)',
                 padding: '12px 20px',
-                backdropFilter: 'blur(5px)', // 给头部也加上模糊
+                backdropFilter: 'blur(5px)',
               },
               body: {
                 padding: 0,
                 background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.9) 0%, rgba(3, 7, 18, 0.95) 100%)',
-                minHeight: '80vh',
+                height: '80vh',
                 maxHeight: '80vh',
-                overflow: 'hidden', // Prevent body scroll
-                display: 'flex', // Use flex for sidebar + content
+                overflow: 'hidden',
+                display: 'flex',
               },
               content: {
                 padding: 0,
-                boxShadow: '0 15px 40px rgba(0, 0, 0, 0.4)', // 增强阴影
-                backgroundColor: 'transparent', // Make content background transparent to show body gradient
+                boxShadow: '0 15px 40px rgba(0, 0, 0, 0.4)',
+                backgroundColor: 'transparent',
+                maxHeight: '90vh',
               },
             }}
           >
