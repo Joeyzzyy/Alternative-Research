@@ -676,6 +676,7 @@ const HistoryCardList = () => {
             destroyOnClose
             maskClosable={true}
             centered
+            closeIcon={<CloseOutlined style={{ color: '#fff', fontSize: 20 }} />}
             styles={{
               mask: {
                 backdropFilter: 'blur(8px)',
