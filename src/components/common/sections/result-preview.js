@@ -858,7 +858,12 @@ const HistoryCardList = () => {
                               <EyeOutlined /> Preview
                             </button>
                             <button
-                              onClick={() => { if (selectedPreviewId) setEditPageId(selectedPreviewId); }}
+                              onClick={() => { 
+                                if (selectedPreviewId) {
+                                  // 修改：直接使用 /page-edit 路径，不包含语言参数
+                                  window.open(`/page-edit/${selectedPreviewId}`, '_blank');
+                                }
+                              }}
                               className={`
                                 px-2 py-1 rounded text-xs font-semibold text-white shadow-sm transition duration-200 flex items-center gap-1
                                 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500
