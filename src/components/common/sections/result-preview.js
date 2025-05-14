@@ -24,7 +24,6 @@ const HistoryCardList = () => {
   const [slugInput, setSlugInput] = useState('');
   const [clearAllConfirmOpen, setClearAllConfirmOpen] = useState(false);
   const [isClearingAll, setIsClearingAll] = useState(false);
-  const [editPageId, setEditPageId] = useState(null); // 新增：用于控制全屏编辑页面
   const [currentCustomerId, setCurrentCustomerId] = useState(null); // 新增：存储 Customer ID
   const [isSidebarVisible, setIsSidebarVisible] = useState(true); // 新增：控制详情弹窗侧边栏可见性
   const [isPublishSettingsModalVisible, setIsPublishSettingsModalVisible] = useState(false); // 新增：控制发布设置弹窗
@@ -55,53 +54,24 @@ const HistoryCardList = () => {
     console.log('URL检查 - 列表状态:', { listLength: list?.length });
 
     if (shouldOpenModal && list && list.length > 0) {
-      // 优先选择第一个 'finished' 状态的项
       const firstValidItem = list.find(item => item.generatorStatus === 'finished') || list[0];
       console.log('URL检查 - 选中项:', firstValidItem);
       
       if (firstValidItem) {
-        // 使用 handleCardClick 的回调函数来处理后续操作
+        // 仅设置状态，不执行额外操作
         handleCardClick(firstValidItem, async () => {
-          // 等待一小段时间确保状态更新
-          setTimeout(async () => {
-            try {
-              // 获取详情数据
-              const res = await apiClient.getAlternativeWebsiteResultList(firstValidItem.websiteId);
-              console.log('URL检查 - 获取详情数据:', res);
-              
-              if (res?.data?.[0]?.resultId) {
-                // 确保选中第一个结果
-                setSelectedPreviewId(res.data[0].resultId);
-                
-                // 再次等待一小段时间确保 selectedPreviewId 已更新
-                setTimeout(() => {
-                  console.log('URL检查 - 准备执行操作:', {
-                    resultId: res.data[0].resultId,
-                    actionType
-                  });
-                  
-                  if (actionType === 'edit') {
-                    setEditPageId(res.data[0].resultId);
-                  } else if (actionType === 'bind') {
-                    // 打开 Bind with your domain 弹窗
-                    setIsPublishSettingsModalVisible(true);
-                  }
-                }, 500); // 增加延迟时间到 500ms
-              }
-            } catch (error) {
-              console.error('URL检查 - 获取详情数据失败:', error);
+          try {
+            const res = await apiClient.getAlternativeWebsiteResultList(firstValidItem.websiteId);
+            console.log('URL检查 - 获取详情数据:', res);
+            
+            if (res?.data?.[0]?.resultId) {
+              setSelectedPreviewId(res.data[0].resultId);
+              // 移除这里的直接操作，让状态更新后通过 useEffect 处理
             }
-          }, 500); // 增加延迟时间到 500ms
+          } catch (error) {
+            console.error('URL检查 - 获取详情数据失败:', error);
+          }
         });
-        
-        // 将清除 URL 参数的操作延迟执行
-        setTimeout(() => {
-          const newUrl = new URL(window.location);
-          newUrl.searchParams.delete('openPreviewModal');
-          newUrl.searchParams.delete('action');
-          newUrl.searchParams.delete('openHistoryList');
-          window.history.replaceState({}, '', newUrl);
-        }, 1000); // 延迟 1 秒后清除 URL 参数
       }
     }
   };
@@ -416,6 +386,29 @@ const HistoryCardList = () => {
     // 重新获取产品信息，这会更新传递给 Modal 的 currentProductInfo
     // await fetchProductInfo(); // 删除：不再调用获取产品信息
   };
+
+  // 新增：使用 useEffect 监听 URL 参数和选中状态的变化
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const actionType = urlParams.get('action');
+    
+    // 仅当有选中的预览ID且URL中包含action参数时执行操作
+    if (selectedPreviewId) {
+      if (actionType === 'edit') {
+        window.open(`/page-edit/${selectedPreviewId}`, '_blank');
+      } else if (actionType === 'bind') {
+        // 打开绑定域名弹窗
+        setIsPublishSettingsModalVisible(true);
+      }
+      
+      // 清除 URL 参数
+      const newUrl = new URL(window.location);
+      newUrl.searchParams.delete('openPreviewModal');
+      newUrl.searchParams.delete('action');
+      newUrl.searchParams.delete('openHistoryList');
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, [selectedPreviewId]); // 依赖于 selectedPreviewId
 
   if (!hasToken) {
     return null;
@@ -915,48 +908,6 @@ const HistoryCardList = () => {
             )}
           </Modal>
         )}
-        {/* Fullscreen edit page modal */}
-        <Modal
-          open={!!editPageId}
-          onCancel={() => setEditPageId(null)}
-          footer={null}
-          width="100vw"
-          style={{ top: 0, padding: 0, margin: 0, maxWidth: '100vw' }}
-          styles={{
-            body: {
-              height: '100vh',
-              padding: 0,
-              margin: 0,
-              background: '#18181c',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              alignItems: 'center',
-              position: 'relative',
-            }
-          }}
-          closable={false}
-          maskClosable={true}
-          destroyOnClose
-          title={null}
-          wrapClassName="fullscreen-modal"
-        >
-          <div className="absolute top-3 right-4 z-30 flex items-center gap-2">
-            <button
-              onClick={() => setEditPageId(null)}
-              className="p-2 rounded-full text-white bg-slate-800/60 hover:bg-slate-700/80 transition duration-200"
-              title="Close"
-              style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            >
-              <CloseOutlined style={{ fontSize: 28, display: 'block' }} />
-            </button>
-          </div>
-          {editPageId && (
-            <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
-              <HtmlPreview pageId={editPageId} />
-            </div>
-          )}
-        </Modal>
         {/* === 新增：渲染 PublishSettingsModal === */}
         {isPublishSettingsModalVisible && currentItem && currentCustomerId && (
           <PublishSettingsModal
