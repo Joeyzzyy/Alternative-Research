@@ -48,43 +48,60 @@ const HistoryCardList = () => {
   // === 修改：扩展函数用于检查URL参数并执行相应操作 ===
   const checkUrlAndOpenModal = (list) => {
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('openPreviewModal') === 'true' && list && list.length > 0) {
-      // 优先选择第一个 'finished' 状态的项，否则选择列表中的第一个
+    const shouldOpenModal = urlParams.get('openPreviewModal') === 'true';
+    const actionType = urlParams.get('action');
+    
+    console.log('URL检查 - 参数:', { shouldOpenModal, actionType });
+    console.log('URL检查 - 列表状态:', { listLength: list?.length });
+
+    if (shouldOpenModal && list && list.length > 0) {
+      // 优先选择第一个 'finished' 状态的项
       const firstValidItem = list.find(item => item.generatorStatus === 'finished') || list[0];
+      console.log('URL检查 - 选中项:', firstValidItem);
+      
       if (firstValidItem) {
-        // 调用 handleCardClick 来处理弹窗打开和数据加载
-        handleCardClick(firstValidItem);
-        
-        // 获取操作类型参数
-        const actionType = urlParams.get('action');
-        
-        // 设置一个延时器，等待数据加载完成后执行额外操作
-        if (actionType) {
-          const checkDataLoaded = setInterval(() => {
-            // 检查数据是否已加载完成
-            if (!resultLoading && resultDetail && Array.isArray(resultDetail.data) && resultDetail.data.length > 0) {
-              clearInterval(checkDataLoaded);
+        // 使用 handleCardClick 的回调函数来处理后续操作
+        handleCardClick(firstValidItem, async () => {
+          // 等待一小段时间确保状态更新
+          setTimeout(async () => {
+            try {
+              // 获取详情数据
+              const res = await apiClient.getAlternativeWebsiteResultList(firstValidItem.websiteId);
+              console.log('URL检查 - 获取详情数据:', res);
               
-              // 根据action参数执行相应操作
-              if (actionType === 'edit' && selectedPreviewId) {
-                // 模拟点击Edit按钮 - 对应代码中的 setEditPageId(selectedPreviewId)
-                setTimeout(() => setEditPageId(selectedPreviewId), 500);
-              } else if (actionType === 'bind' || actionType === 'publish') {
-                // 模拟点击Bind With Your Domain按钮 - 对应代码中的 setIsPublishSettingsModalVisible(true)
-                setTimeout(() => setIsPublishSettingsModalVisible(true), 500);
+              if (res?.data?.[0]?.resultId) {
+                // 确保选中第一个结果
+                setSelectedPreviewId(res.data[0].resultId);
+                
+                // 再次等待一小段时间确保 selectedPreviewId 已更新
+                setTimeout(() => {
+                  console.log('URL检查 - 准备执行操作:', {
+                    resultId: res.data[0].resultId,
+                    actionType
+                  });
+                  
+                  if (actionType === 'edit') {
+                    setEditPageId(res.data[0].resultId);
+                  } else if (actionType === 'bind') {
+                    // 打开 Bind with your domain 弹窗
+                    setIsPublishSettingsModalVisible(true);
+                  }
+                }, 500); // 增加延迟时间到 500ms
               }
+            } catch (error) {
+              console.error('URL检查 - 获取详情数据失败:', error);
             }
-          }, 500); // 每500ms检查一次
-          
-          // 设置超时，防止无限等待
-          setTimeout(() => clearInterval(checkDataLoaded), 10000); // 10秒后强制清除
-        }
+          }, 500); // 增加延迟时间到 500ms
+        });
         
-        // 从 URL 中移除查询参数，避免刷新时重复触发
-        const currentUrl = new URL(window.location);
-        currentUrl.searchParams.delete('openPreviewModal');
-        currentUrl.searchParams.delete('action');
-        history.replaceState(null, '', currentUrl.toString());
+        // 将清除 URL 参数的操作延迟执行
+        setTimeout(() => {
+          const newUrl = new URL(window.location);
+          newUrl.searchParams.delete('openPreviewModal');
+          newUrl.searchParams.delete('action');
+          newUrl.searchParams.delete('openHistoryList');
+          window.history.replaceState({}, '', newUrl);
+        }, 1000); // 延迟 1 秒后清除 URL 参数
       }
     }
   };
@@ -243,7 +260,9 @@ const HistoryCardList = () => {
   ];
 
   // 点击卡片时，默认选中第一个 resultId
-  const handleCardClick = async (item) => {
+  const handleCardClick = async (item, callback) => {
+    console.log('处理卡片点击 - 开始:', { itemId: item.websiteId });
+    
     if (item.generatorStatus === 'failed') {
       setFailedModal({ open: true, id: item.websiteId });
       return;
@@ -251,25 +270,41 @@ const HistoryCardList = () => {
     if (item.generatorStatus === 'processing') {
       messageApi.info({
         content: 'Your Alternative Page is Being Generated. This usually takes 5-10 minutes. Please wait patiently!',
-        duration: 5, // 显示 5 秒
+        duration: 5,
       });
       return;
     }
+    
     setSelectedItem(item);
     setResultLoading(true);
     setResultDetail(null);
     setSelectedPreviewId(null);
+    
     try {
       const res = await apiClient.getAlternativeWebsiteResultList(item.websiteId);
+      console.log('处理卡片点击 - 获取数据成功:', { hasData: !!res?.data?.length });
+      
       setResultDetail(res);
-      // 默认选中第一个
-      if (Array.isArray(res?.data) && res.data.length > 0) {
-        setSelectedPreviewId(res.data[0].resultId);
-        setSlugInput(res.data[0].slug || '');
+      
+      // 使用 Promise 确保状态更新完成
+      await new Promise(resolve => {
+        if (Array.isArray(res?.data) && res.data.length > 0) {
+          setSelectedPreviewId(res.data[0].resultId);
+          setSlugInput(res.data[0].slug || '');
+        }
+        // 给状态更新一些时间
+        setTimeout(resolve, 200);
+      });
+      
+      // 在确保状态更新完成后执行回调
+      if (typeof callback === 'function') {
+        callback();
       }
     } catch (e) {
+      console.error('处理卡片点击 - 错误:', e);
       setResultDetail({ error: 'Failed to load details.' });
     }
+    
     setResultLoading(false);
     setSelectedPublishUrl('');
     setDeployPreviewUrl('');
