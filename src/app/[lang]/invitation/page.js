@@ -13,6 +13,7 @@ export default function InvitationPage() {
     'ZH1-LBYALTPAGE': '朱鹤',
     'ZYALTPAGE': '朱越',
     'YFALTPAGE': 'Youssef', // 新增 Youssef 的邀请码和姓名
+    'ALTPAGE-TEAM': 'Team altpage.ai',
   };
   const inviterName = inviterMap[code] || '朱鹤'; 
 
