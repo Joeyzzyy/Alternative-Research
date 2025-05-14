@@ -83,7 +83,6 @@ const animationStyles = `
 `;
 
 export default function Header() {
-  // 初始化 messageApi 和 contextHolder
   const [messageApi, contextHolder] = message.useMessage();
   const { userCredits, loading: userCreditsLoading } = useUser();
   const [state, setState] = useState({
@@ -93,7 +92,7 @@ export default function Header() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userEmail, setUserEmail] = useState('');
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [isLoginForm, setIsLoginForm] = useState(true); // true for login form, false for register form
+  const [isLoginForm, setIsLoginForm] = useState(true); 
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [showCreditsTooltip, setShowCreditsTooltip] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -102,7 +101,6 @@ export default function Header() {
   const [showBrandAssetsModal, setShowBrandAssetsModal] = useState(false);
 
   useEffect(() => {
-    // 检查本地存储中的登录信息
     const storedIsLoggedIn = localStorage.getItem('alternativelyIsLoggedIn');
     const storedEmail = localStorage.getItem('alternativelyCustomerEmail');
     
@@ -112,7 +110,6 @@ export default function Header() {
     }
   }, []);
 
-  // 当用户登出时重置 One Tap 状态
   useEffect(() => {
     if (!isLoggedIn && googleOneTapInitialized) {
       setGoogleOneTapInitialized(false);
@@ -120,7 +117,6 @@ export default function Header() {
   }, [isLoggedIn]);
 
   useEffect(() => {
-    // 从后台直接登录账号
     const urlParams = new URLSearchParams(window.location.search);
     const accessToken = urlParams.get('accessToken');
     const customerId = urlParams.get('customerId');
@@ -168,7 +164,6 @@ export default function Header() {
       messageApi.loading({ content: 'Connecting to Google...', key, duration: 0 });
       const response = await apiClient.googleLogin(invitationCode);
       if (response && response.data) {
-        // 用完邀请码后立即删除
         try {
           localStorage.removeItem('invitationCode');
         } catch (e) {}
@@ -186,11 +181,9 @@ export default function Header() {
   };
 
   const handleLogout = () => {
-    // 显示自定义确认对话框
     setShowLogoutConfirm(true);
   };
   
-  // Handle regular login button click
   const handleRegularLoginClick = () => {
     setShowLoginModal(true);
     setIsLoginForm(true);
@@ -351,6 +344,9 @@ export default function Header() {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       const invitation = urlParams.get('invitation');
+      // 新增：检查是否有 showGoogleLogin 参数
+      const showGoogleLogin = urlParams.get('showGoogleLogin');
+      
       if (invitation) {
         try {
           localStorage.setItem('invitationCode', invitation);
@@ -365,8 +361,24 @@ export default function Header() {
           window.location.hash;
         window.history.replaceState({}, '', newUrl);
       }
+      
+      // 新增：如果存在 showGoogleLogin 参数并且值为true且用户未登录，自动触发 Google 登录
+      if (showGoogleLogin === 'true' && !isLoggedIn) {
+        // 移除 showGoogleLogin 参数
+        urlParams.delete('showGoogleLogin');
+        const newUrl =
+          window.location.pathname +
+          (urlParams.toString() ? `?${urlParams.toString()}` : '') +
+          window.location.hash;
+        window.history.replaceState({}, '', newUrl);
+        
+        // 延迟一小段时间后触发登录，确保页面已完全加载
+        setTimeout(() => {
+          handleGoogleLogin();
+        }, 500);
+      }
     }
-  }, []);
+  }, [isLoggedIn, handleGoogleLogin]); // 添加 isLoggedIn 和 handleGoogleLogin 作为依赖项
 
   const toggleMobileMenu = () => {
     setState(prevState => ({ ...prevState, isOpen: !prevState.isOpen }));
