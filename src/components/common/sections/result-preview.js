@@ -415,7 +415,7 @@ const HistoryCardList = () => {
   }
 
   return (
-    <div id="result-preview-section" className="min-h-[320px] flex flex-col from-slate-950 via-slate-900 to-black text-white relative overflow-hidden">
+    <div id="result-preview-section" className="h-full flex flex-col from-slate-950 via-slate-900 to-black text-white relative overflow-hidden">
       {/* 背景装饰 */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_#22d3ee20_0%,_transparent_50%)] opacity-70 pointer-events-none"></div>
       <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-purple-600/10 rounded-full filter blur-3xl opacity-40 animate-pulse pointer-events-none"></div>

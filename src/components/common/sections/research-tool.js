@@ -65,7 +65,6 @@ const ResearchTool = () => {
     { id: 3, name: "Analyze Competitor", gradient: "from-teal-500/40 to-green-500/40", borderColor: "border-teal-500/60", shadowColor: "shadow-teal-500/20" },
     { id: 4, name: "Page Generation", gradient: "from-green-500/40 to-lime-500/40", borderColor: "border-green-500/60", shadowColor: "shadow-green-500/20" },
   ]);
-
   const examples = [
     { url: 'https://alternative.nytgames.top/nyt-games-original-alternative', title: 'Play NYT Games Free: The Ultimate Word Puzzle Collection Without Subscriptions', image: '/images/preview-nytgames.png', timestamp: 'Generated 2 hours ago' },
     { url: 'https://alternative.neobund.com/doba-alternative', title: 'NeoBund: The Smarter Alternative to Doba with Guaranteed 2-Day US Shipping', image: '/images/preview-neobund.png', timestamp: 'Generated on April 26' },
@@ -74,9 +73,18 @@ const ResearchTool = () => {
   const processedStepLogIdsRef = useRef(new Set());
   const startedTaskCountRef = useRef(0);
   const isMobile = useMediaQuery({ query: '(max-width: 767px)' });
-
   const [currentExampleIndex, setCurrentExampleIndex] = useState(0);
   const [showBrandAssetsModal, setShowBrandAssetsModal] = useState(false);
+  const [isTaskActiveForLogs, setIsTaskActiveForLogs] = useState(false);
+  const [isBrowserSidebarOpen, setIsBrowserSidebarOpen] = useState(true);
+
+  const latestLog = logs && logs.length > 0
+    ? logs[logs.length - 1]
+    : null;
+  const latestLogPreview = latestLog
+    ? `Agent is working, current step: ${latestLog.step || ''}, click for details`
+    : 'Agent is ready to work for you';
+
   useEffect(() => {
     const lastInput = localStorage.getItem('urlInput');
     if (lastInput) {
@@ -196,16 +204,16 @@ const ResearchTool = () => {
       return (
         <div
           key={index}
-          className="flex justify-center mb-6"
+          className="flex justify-start mb-10" // mb-6 改为 mb-10，增加下方间距
           style={{ animation: 'fadeIn 0.5s ease-out forwards' }}
         >
-          <div className="max-w-[80%] w-full flex flex-col items-center">
+          <div className="max-w-[90%] w-full flex flex-col items-start ml-12">
             <div
               className="px-4 py-2 rounded-lg bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm font-medium flex items-center gap-2"
               style={{
-                margin: '0 auto',
+                margin: 0,
                 minWidth: '180px',
-                maxWidth: '400px',
+                maxWidth: '600px',
               }}
             >
               <InfoCircleOutlined className="text-base text-yellow-500 mr-2" />
@@ -230,16 +238,6 @@ const ResearchTool = () => {
           style={{animation: 'fadeIn 0.5s ease-out forwards'}}
         >
           <div className="flex max-w-[80%] flex-row-reverse group">
-            <div className="flex-shrink-0 ml-4">
-              <div className="relative" style={{animation: 'bounceIn 0.6s ease-out forwards'}}>
-                <Avatar 
-                  size={40}
-                  icon={<UserOutlined />} 
-                  className="bg-gradient-to-br from-blue-500 to-blue-600 border-2 border-transparent
-                           group-hover:border-blue-300/50 transition-colors duration-300"
-                />
-              </div>
-            </div>
             <div className="relative">
               <div className="p-4 rounded-2xl text-sm bg-gradient-to-br from-blue-500 to-blue-600 
                             text-white shadow-xl backdrop-blur-sm
@@ -268,7 +266,7 @@ const ResearchTool = () => {
       return (
         <div key={index} className="flex justify-start mb-8" style={{animation: 'fadeIn 0.5s ease-out forwards'}}>
           <div className="flex max-w-[80%] flex-row group">
-            <div className="flex-shrink-0 mr-4" style={{animation: 'bounceIn 0.6s ease-out forwards'}}>
+            <div className="flex-shrink-0" style={{animation: 'bounceIn 0.6s ease-out forwards'}}>
               <div className="relative">
                 <Avatar 
                   size={40}
@@ -292,7 +290,7 @@ const ResearchTool = () => {
                             text-white shadow-xl backdrop-blur-sm
                             hover:shadow-slate-500/20 transition-all duration-300
                             rounded-tl-none transform hover:-translate-y-0.5"
-                  style={{maxWidth: '350px', wordWrap: 'break-word'}}>
+                  style={{maxWidth: '800px', wordWrap: 'break-word'}}>
                 <div className="relative z-10">
                   {message.isThinking ? (
                     <div className="flex space-x-1">
@@ -431,7 +429,25 @@ const ResearchTool = () => {
     return filteredContent;
   };
 
+  const typeRefs = useRef({});
+  const executionLogRef = useRef(null);
+  useEffect(() => {
+    if (executionLogRef.current) {
+      executionLogRef.current.scrollTop = executionLogRef.current.scrollHeight;
+    }
+  }, [logs]);
+
   const renderDetails = () => {
+    const typeNameMap = {
+      Agent: 'Find Competitors',
+      API: 'Get Competitor List',
+      Info: 'Competitor List Check',
+      Dify: 'Competitor Analysis',
+      Color: 'Get Page Color Style',
+      Html: 'Writing Codes',
+    };
+
+    // 1. 统计日志类型和每种类型的第一个索引
     const mergedLogs = [];
     const agentMessageMap = new Map();
     logs.forEach(log => {
@@ -439,15 +455,14 @@ const ResearchTool = () => {
         try {
           const content = log.content;
           if (content.organic_data) {
-            const organicData = typeof content.organic_data === 'string' 
-              ? JSON.parse(content.organic_data) 
+            const organicData = typeof content.organic_data === 'string'
+              ? JSON.parse(content.organic_data)
               : content.organic_data;
-
+  
             if (organicData.event === 'agent_message') {
               const { message_id, answer } = organicData;
-              
               const filteredAnswer = filterLogContent(answer);
-              
+  
               if (!agentMessageMap.has(message_id)) {
                 agentMessageMap.set(message_id, {
                   id: message_id,
@@ -468,19 +483,39 @@ const ResearchTool = () => {
         mergedLogs.push(log);
       }
     });
-    
+  
     agentMessageMap.forEach(mergedLog => {
       mergedLog.content = filterLogContent(mergedLog.content)
-      .replace(/\.([\s\u00A0]+)/g, '. <br />')
-      .replace(/\n/g, '<br />');
+        .replace(/\.([\s\u00A0]+)/g, '. <br />')
+        .replace(/\n/g, '<br />');
       mergedLogs.push(mergedLog);
     });
-    
-    mergedLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); // <--- 修改为倒序排序
-
-    const latestAgentLog = mergedLogs.find(l => l.type === 'Agent'); // 直接在倒序数组中查找第一个
-    const latestAgentLogId = latestAgentLog ? latestAgentLog.id : null;
-
+  
+    mergedLogs.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp)); // 正序，递增插入
+  
+    // 统计类型和第一个索引
+    const typeIndexMap = {};
+    const typeCountMap = {};
+    mergedLogs.forEach((log, idx) => {
+      if (typeIndexMap[log.type] === undefined) typeIndexMap[log.type] = idx;
+      typeCountMap[log.type] = (typeCountMap[log.type] || 0) + 1;
+    });
+  
+    // 为每种类型的第一个日志加 ref
+    Object.keys(typeIndexMap).forEach(type => {
+      if (!typeRefs.current[type]) {
+        typeRefs.current[type] = React.createRef();
+      }
+    });
+  
+    // 目录点击滚动
+    const handleTypeClick = (type) => {
+      const ref = typeRefs.current[type];
+      if (ref && ref.current) {
+        ref.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    };
+  
     // Helper function for status color
     const getStatusColor = (status) => {
       if (!status) return 'text-gray-400'; // Default
@@ -491,340 +526,343 @@ const ResearchTool = () => {
       if (status === 'skipped') return 'text-gray-500';
       return 'text-gray-400'; // Fallback
     };
-
+  
     const handleImageLoad = (e) => {
       e.target.classList.remove('opacity-0');
       e.target.classList.add('opacity-100');
-      
       const parentLink = e.target.closest('a');
       if (parentLink) {
-        parentLink.style.backgroundImage = 'none'; 
-        parentLink.style.backgroundColor = 'transparent'; 
+        parentLink.style.backgroundImage = 'none';
+        parentLink.style.backgroundColor = 'transparent';
       }
     };
-    
+  
     const handleImageError = (e) => {
-      e.target.onerror = null; 
-      e.target.style.display = 'none'; 
-    
+      e.target.onerror = null;
+      e.target.style.display = 'none';
       const parentLink = e.target.closest('a');
       if (parentLink) {
         parentLink.onclick = (event) => event.preventDefault();
         parentLink.style.cursor = 'default';
-        parentLink.style.backgroundImage = `url('/images/image-cannot-be-displayed.png')`; 
-        parentLink.style.backgroundColor = '#4A5568'; // Tailwind bg-gray-700 的颜色值
+        parentLink.style.backgroundImage = `url('/images/image-cannot-be-displayed.png')`;
+        parentLink.style.backgroundColor = '#4A5568';
       }
     };
-
+  
+    const latestHtmlLog = logs.filter(l => l.type === 'Html').slice(-1)[0];
+    const latestHtmlLogId = latestHtmlLog ? latestHtmlLog.id : null;
+  
+    const latestAgentLog = mergedLogs.filter(l => l.type === 'Agent').slice(-1)[0];
+    const latestAgentLogId = latestAgentLog ? latestAgentLog.id : null;
+  
+    const currentColorContent = (log) =>
+      log.id === currentColorStreamIdRef.current
+        ? colorStreamRef.current
+        : log.content;
+  
     return (
-      <div className="h-full flex flex-col" ref={detailsRef}>
-        <div className="p-3 space-y-2 overflow-y-auto flex-grow"> {/* 添加 flex-grow */}
-          {mergedLogs.map((log, index) => {
-            if (log.type === 'Info' || log.type === 'Codes') {
-              return null;
-            }
-            // 渲染 Agent 类型的日志
-            if (log.type === 'Agent') {
+      <div className="h-full flex flex-row">
+        {/* 左侧目录 */}
+        <div className="w-66 flex-shrink-0 border-r border-gray-700/40 bg-gray-900/60 p-2">
+          <div className="font-bold text-xs text-gray-300 mb-2">Deep Research</div>
+          <ul className="space-y-1">
+            {Object.keys(typeCountMap).map(type => (
+              <li key={type}>
+                <button
+                  className="text-left w-full text-xs px-2 py-1 rounded hover:bg-blue-500/20 text-gray-200"
+                  onClick={() => handleTypeClick(type)}
+                >
+                  {typeNameMap[type] || type} <span className="text-gray-400">({typeCountMap[type] + ' actions'})</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+        {/* 右侧日志内容 */}
+        <div className="flex-1 flex flex-col" ref={detailsRef}>
+          <div className="p-3 space-y-2 overflow-y-auto flex-grow chat-messages-container"
+            ref={executionLogRef}
+            style={{ overflowX: 'hidden' }}
+            >
+            {mergedLogs.map((log, index) => {
+              if (log.type === 'Info' || log.type === 'Codes') {
+                return null;
+              }
+              // 在每种类型的第一个日志加 ref
+              const logRef = typeIndexMap[log.type] === index ? typeRefs.current[log.type] : null;
+  
+              // ... 下面内容与原 renderDetails 保持一致 ...
+              let difyContent = null;
+              if (log.type === 'Dify' && typeof log.content === 'string') {
+                try {
+                  difyContent = JSON.parse(log.content);
+                } catch (e) {
+                  console.error('Failed to parse Dify content:', e);
+                }
+              } else if (log.type === 'Dify' && typeof log.content === 'object' && log.content !== null) {
+                difyContent = log.content;
+              }
+  
+              const isCrawlerType = log.type === 'Crawler_Images' || log.type === 'Crawler_Headers' || log.type === 'Crawler_Footers';
+              const uniqueKey = `${log.id || 'log'}-${log.type}-${index}`;
+              const isEmptyCrawlerContent = log.content === null || (isCrawlerType && Array.isArray(log.content) && log.content.length === 0);
+  
+              if (log.type === 'Agent') {
+                return (
+                  <div
+                    key={log.id || index}
+                    ref={logRef}
+                    className="bg-gray-800/50 p-2.5 rounded border border-gray-700/50 hover:border-gray-600/50 transition-all duration-300 animate-fadeIn max-w-full break-words"
+                    style={{ animationDelay: '0.5s' }}
+                  >
+                    <div className="flex items-center mb-2">
+                      <img src="/images/alternatively-logo.png" alt="AltPage.ai" className="w-4 h-4 mr-2" />
+                      <div className="text-[11px] text-gray-300 font-medium">Agent Thinking...</div>
+                    </div>
+                    <div
+                      ref={log.id === latestAgentLogId ? latestAgentContentRef : null}
+                      className="text-[10px] text-gray-400 break-words leading-relaxed agent-log-content-wrapper overflow-y-auto"
+                      style={{ maxHeight: '300px' }}
+                      dangerouslySetInnerHTML={{ __html: filterLogContent(log.content) }}
+                    />
+                    <div className="text-[9px] text-gray-500 mt-1.5">
+                      {new Date(log.timestamp).toLocaleString()}
+                    </div>
+                  </div>
+                );
+              }
+  
               return (
-                <div 
-                  key={index} 
+                <div
+                  key={uniqueKey}
+                  ref={logRef}
                   className="bg-gray-800/50 p-2.5 rounded border border-gray-700/50 hover:border-gray-600/50 transition-all duration-300 animate-fadeIn"
                   style={{ animationDelay: '0.5s' }}
                 >
                   <div className="flex items-center mb-2">
-                    <img src="/images/alternatively-logo.png" alt="AltPage.ai" className="w-4 h-4 mr-2" />
-                    <div className="text-[11px] text-gray-300 font-medium">Agent Thinking...</div>
+                    {log.type === 'Dify' && (
+                      <img src="/images/alternatively-logo.png" alt="AltPage.ai" className="w-4 h-4 mr-2" />
+                    )}
+                    {log.type === 'Error' && (
+                      <svg className="w-4 h-4 mr-2 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    )}
+                    {log.type === 'API' && (
+                      <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                    )}
+                    {log.type === 'Color' && (
+                      <svg className="w-4 h-4 mr-2 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                      </svg>
+                    )}
+                    {isCrawlerType && (
+                      <svg className="w-4 h-4 mr-2 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.09M19.938 11a2 2 0 11-4 0 2 2 0 014 0zM14 21a4 4 0 100-8 4 4 0 000 8z" />
+                      </svg>
+                    )}
+                    <div className="text-[11px] text-gray-300 font-medium">
+                      {log.type === 'Dify' && 'Running Page Content Generation Workflow'}
+                      {log.type === 'Error' && 'Error Message'}
+                      {log.type === 'API' && 'Agent Action Result'}
+                      {log.type === 'Color' && 'Analyzing Page Style'}
+                      {log.type === 'Crawler_Images' && 'Crawled Images'}
+                      {log.type === 'Crawler_Headers' && 'Crawled Header Links'}
+                      {log.type === 'Crawler_Footers' && 'Crawled Footer Links'}
+                    </div>
                   </div>
-                  {/* --- 修改：添加 ref={log.id === latestAgentLogId ? latestAgentContentRef : null} --- */}
-                  <div 
-                    ref={log.id === latestAgentLogId ? latestAgentContentRef : null} // <-- 附加 Ref
-                    className="text-[10px] text-gray-400 break-words leading-relaxed agent-log-content-wrapper overflow-y-auto" // 保留 overflow
-                    style={{ maxHeight: '300px' }} // 保留 maxHeight
-                    dangerouslySetInnerHTML={{ __html: filterLogContent(log.content) }}
-                  />
+  
+                  {log.type === 'Dify' && difyContent && (
+                    <div className="text-[10px] text-gradient-metal break-words leading-relaxed space-y-1 max-w-full">
+                      <div className="font-semibold text-sm text-gradient-metal mb-1">
+                        Current Action
+                      </div>
+                      <div className="flex items-center space-x-2 px-1 py-1">
+                        <span
+                          className="font-semibold text-gradient-metal text-xs"
+                          style={{ lineHeight: '1.2' }}
+                        >
+                          {difyContent.data.title || ''}
+                        </span>
+                        {difyContent.data && difyContent.data.status !== '' && (
+                          <span className={`ml-2 font-medium text-[11px] ${getStatusColor(difyContent.data.status)}`}>
+                            {difyContent.data.status}
+                          </span>
+                        )}
+                        {difyContent.data.elapsed_time !== undefined && (
+                          <span className="ml-2 text-gradient-metal text-[11px]">
+                            {difyContent.data.elapsed_time.toFixed(2)}s
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <span className="font-medium w-28 inline-block text-gradient-metal">Status:</span>
+                        <span className="inline-block text-gradient-metal">{difyContent.event || ''}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium w-28 inline-block text-gradient-metal">Executor:</span>
+                        <span className="inline-block text-gradient-metal">{log.step || difyContent.step || ''}</span>
+                      </div>
+                      {difyContent.data && typeof difyContent.data === 'object' && (
+                        <div>
+                          <span className="font-medium w-28 inline-block text-gradient-metal">Node ID:</span>
+                          <span className="inline-block text-gradient-metal">{difyContent.data.id || ''}</span>
+                        </div>
+                      )}
+                      <div>
+                        <span className="font-medium w-28 inline-block text-gradient-metal">Workflow ID:</span>
+                        <span className="inline-block text-gradient-metal">{difyContent.workflow_id || ''}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium w-28 inline-block text-gradient-metal">Task ID:</span>
+                        <span className="inline-block text-gradient-metal">{difyContent.task_id || ''}</span>
+                      </div>
+                      {difyContent.data?.error && (
+                        <div className="mt-1 pt-1 border-t border-gray-700/50 text-gradient-metal-error">
+                          <span className="font-semibold">Error:</span> {difyContent.data.error}
+                        </div>
+                      )}
+                    </div>
+                  )}
+  
+                  {log.type === 'Html' && (
+                    <div
+                      key={`${uniqueKey}-html-content`}
+                      className="text-[10px] text-gray-400 break-words leading-relaxed max-w-full"
+                      style={{ minHeight: '420px' }}
+                    >
+                      <div className="mb-1">
+                        <span className="font-semibold">Writing Codes Of Your Page...</span>
+                        <pre
+                          ref={log.id === latestHtmlLogId ? codeContainerRef : null}
+                          className="mt-1 p-2 bg-gray-700/50 rounded text-xs whitespace-pre-wrap break-words overflow-y-auto"
+                          style={{
+                            maxHeight: '400px',
+                            color: '#a5d6ff'
+                          }}
+                        >
+                          {log.id === currentStreamIdRef.current ? htmlStreamRef.current : log.content}
+                        </pre>
+                      </div>
+                    </div>
+                  )}
+  
+                  {log.type === 'Color' && (
+                    <div
+                      key={index}
+                      className="text-[10px] text-gray-400 break-words leading-relaxed max-w-full"
+                    >
+                      <div className="mb-1">
+                        <span className="font-semibold text-purple-400">Extracting Color Palette...</span>
+                        <pre
+                          className="mt-1 p-2 bg-gray-700/50 rounded text-xs whitespace-pre-wrap break-words overflow-y-auto"
+                          style={{
+                            maxHeight: '200px',
+                            color: '#e9d5ff'
+                          }}
+                        >
+                          {currentColorContent}
+                        </pre>
+                      </div>
+                    </div>
+                  )}
+  
+                  {isCrawlerType && (
+                    <div
+                      key={`${uniqueKey}-content`}
+                      className="text-[10px] text-gray-400 break-words leading-relaxed mt-1 max-w-full"
+                    >
+                      {isEmptyCrawlerContent ? (
+                        <p className="text-gray-500 italic">No relevant information retrieved.</p>
+                      ) : (
+                        <>
+                          {log.type === 'Crawler_Images' && Array.isArray(log.content) && (
+                            <div className="flex flex-wrap gap-2 max-w-full">
+                              {log.content.map((item, imgIndex) => (
+                                item.src ? (
+                                  <a
+                                    key={imgIndex}
+                                    href={item.src}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="group relative block cursor-pointer w-16 h-16 rounded border border-gray-600 bg-gray-700 bg-center bg-no-repeat bg-contain overflow-hidden"
+                                    style={{ backgroundImage: `url('/images/image-placeholder.svg')` }}
+                                  >
+                                    <img
+                                      src={item.src}
+                                      alt={item.alt || 'Crawled image'}
+                                      className="absolute inset-0 w-full h-full object-contain opacity-0 transition-opacity duration-300"
+                                      onLoad={handleImageLoad}
+                                      onError={handleImageError}
+                                    />
+                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 w-max max-w-xs p-1.5 bg-gray-900 text-white text-[9px] rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none break-all">
+                                      Alt: {item.alt || 'N/A'}<br />Src: {item.src}
+                                    </div>
+                                  </a>
+                                ) : null
+                              ))}
+                            </div>
+                          )}
+  
+                          {(log.type === 'Crawler_Headers' || log.type === 'Crawler_Footers') && Array.isArray(log.content) && (
+                            <ul className="list-none space-y-1 max-w-full">
+                              {log.content.map((item, linkIndex) => (
+                                (item.url && item.text !== undefined) ? (
+                                  <li key={linkIndex}>
+                                    <a
+                                      href={item.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-blue-400 hover:text-blue-300 hover:underline underline-offset-2"
+                                      title={item.url}
+                                    >
+                                      {item.text || item.url}
+                                    </a>
+                                  </li>
+                                ) : null
+                              ))}
+                            </ul>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+  
+                  {log.type === 'Error' ? (
+                    <div className="text-[10px] text-red-400 break-words leading-relaxed max-w-full">
+                      {log.content?.error && (
+                        <div className="mb-1">
+                          <span className="font-semibold">Error Message:</span> {log.content.error}
+                        </div>
+                      )}
+                    </div>
+                  ) : log.type === 'API' ? (
+                    <div className="text-[8px] text-gray-400 break-words leading-relaxed max-w-full">
+                      {log.content?.status && (
+                        <div className="mb-1">
+                          <span className="font-semibold">Status:</span> {log.content.status}
+                        </div>
+                      )}
+                      {log.content?.data && (
+                        <div className="mb-1">
+                          <span className="font-semibold">Data:</span>
+                          <pre className="mt-1 p-2 bg-gray-700/50 rounded text-[8px] overflow-auto whitespace-pre-wrap break-words" style={{ maxWidth: '100%' }}>
+                            {JSON.stringify(log.content.data, null, 2)}
+                          </pre>
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
+  
                   <div className="text-[9px] text-gray-500 mt-1.5">
                     {new Date(log.timestamp).toLocaleString()}
                   </div>
                 </div>
               );
-            }
-            
-            let difyContent = null;
-            if (log.type === 'Dify' && typeof log.content === 'string') {
-              try {
-                difyContent = JSON.parse(log.content);
-              } catch (e) {
-                console.error('Failed to parse Dify content:', e);
-              }
-            } else if (log.type === 'Dify' && typeof log.content === 'object' && log.content !== null) {
-              difyContent = log.content;
-            }
-
-            const latestHtmlLog = logs.filter(l => l.type === 'Html').slice(-1)[0];
-            const latestHtmlLogId = latestHtmlLog ? latestHtmlLog.id : null;
-
-            const currentColorContent = log.id === currentColorStreamIdRef.current
-              ? colorStreamRef.current
-              : log.content;
-
-            const isCrawlerType = log.type === 'Crawler_Images' || log.type === 'Crawler_Headers' || log.type === 'Crawler_Footers';
-            const uniqueKey = `${log.id || 'log'}-${log.type}-${index}`; 
-            const isEmptyCrawlerContent = log.content === null || (isCrawlerType && Array.isArray(log.content) && log.content.length === 0);
-
-            return (
-              <div
-                key={uniqueKey} 
-                className="bg-gray-800/50 p-2.5 rounded border border-gray-700/50 hover:border-gray-600/50 transition-all duration-300 animate-fadeIn" // <-- 添加 max-h 和 overflow-y
-                style={{
-                  animationDelay: '0.5s'
-                }}
-              >
-                <div className="flex items-center mb-2">
-                  {log.type === 'Dify' && (
-                    <img src="/images/alternatively-logo.png" alt="AltPage.ai" className="w-4 h-4 mr-2" />
-                  )}
-                  {log.type === 'Error' && (
-                    <svg className="w-4 h-4 mr-2 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  )}
-                  {log.type === 'API' && (
-                    <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                  )}
-                  {log.type === 'Color' && (
-                    <svg className="w-4 h-4 mr-2 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
-                    </svg>
-                  )}
-                  {isCrawlerType && (
-                     <svg className="w-4 h-4 mr-2 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.09M19.938 11a2 2 0 11-4 0 2 2 0 014 0zM14 21a4 4 0 100-8 4 4 0 000 8z" /> {/* 简化的爬虫/网络图标 */}
-                     </svg>
-                  )}
-                  <div className="text-[11px] text-gray-300 font-medium">
-                    {log.type === 'Dify' && 'Running Page Content Generation Workflow'}
-                    {log.type === 'Error' && 'Error Message'}
-                    {log.type === 'API' && 'Agent Action Result'}
-                    {log.type === 'Color' && 'Analyzing Page Style'}
-                    {log.type === 'Crawler_Images' && 'Crawled Images'}
-                    {log.type === 'Crawler_Headers' && 'Crawled Header Links'}
-                    {log.type === 'Crawler_Footers' && 'Crawled Footer Links'}
-                  </div>
-                </div>
-
-                {log.type === 'Dify' && difyContent && (
-                  <div className="text-[10px] text-gradient-metal break-words leading-relaxed space-y-1">
-                    <div className="font-semibold text-sm text-gradient-metal mb-1">
-                      Current Action
-                    </div>
-                    <div className="flex items-center space-x-2 px-1 py-1">
-                      <span
-                        className="font-semibold text-gradient-metal text-xs"
-                        style={{ lineHeight: '1.2' }}
-                      >
-                        {difyContent.data.title || ''}
-                      </span>
-                      {difyContent.data && difyContent.data.status !== '' && (
-                        <span className={`ml-2 font-medium text-[11px] ${getStatusColor(difyContent.data.status)}`}>
-                          {difyContent.data.status}
-                        </span>
-                      )}
-                      {difyContent.data.elapsed_time !== undefined && (
-                        <span className="ml-2 text-gradient-metal text-[11px]">
-                          {difyContent.data.elapsed_time.toFixed(2)}s
-                        </span>
-                      )}
-                    </div>
-                    {/* 执行状态 */}
-                    <div>
-                      <span className="font-medium w-28 inline-block text-gradient-metal">Status:</span>
-                      <span className="inline-block text-gradient-metal">{difyContent.event || ''}</span>
-                    </div>
-                    {/* 执行者 */}
-                    <div>
-                      <span className="font-medium w-28 inline-block text-gradient-metal">Executor:</span>
-                      <span className="inline-block text-gradient-metal">{log.step || difyContent.step || ''}</span>
-                    </div>
-                    {/* Node ID */}
-                    {difyContent.data && typeof difyContent.data === 'object' && (
-                      <div>
-                        <span className="font-medium w-28 inline-block text-gradient-metal">Node ID:</span>
-                        <span className="inline-block text-gradient-metal">{difyContent.data.id || ''}</span>
-                      </div>
-                    )}
-                    {/* Workflow ID */}
-                    <div>
-                      <span className="font-medium w-28 inline-block text-gradient-metal">Workflow ID:</span>
-                      <span className="inline-block text-gradient-metal">{difyContent.workflow_id || ''}</span>
-                    </div>
-                    {/* Task ID */}
-                    <div>
-                      <span className="font-medium w-28 inline-block text-gradient-metal">Task ID:</span>
-                      <span className="inline-block text-gradient-metal">{difyContent.task_id || ''}</span>
-                    </div>
-                    {/* 错误信息 */}
-                    {difyContent.data?.error && (
-                      <div className="mt-1 pt-1 border-t border-gray-700/50 text-gradient-metal-error">
-                        <span className="font-semibold">Error:</span> {difyContent.data.error}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* HTML 日志内容渲染 - 修改这部分 */}
-                {log.type === 'Html' && (
-                  <div 
-                    key={`${uniqueKey}-html-content`}
-                    className="text-[10px] text-gray-400 break-words leading-relaxed"
-                    style={{ minHeight: '420px' }}
-                  >
-                    <div className="mb-1">
-                      <span className="font-semibold">Writing Codes Of Your Page...</span>
-                      <pre 
-                        ref={log.id === latestHtmlLogId ? codeContainerRef : null}
-                        className="mt-1 p-2 bg-gray-700/50 rounded text-xs whitespace-pre-wrap break-words overflow-y-auto"
-                        style={{ 
-                          maxHeight: '400px', 
-                          color: '#a5d6ff'
-                        }}
-                      >
-                       {log.id === currentStreamIdRef.current ? htmlStreamRef.current : log.content}
-                      </pre>
-                    </div>
-                  </div>
-                )}
-
-                {/* --- 新增：Color 日志内容渲染 --- */}
-                {log.type === 'Color' && (
-                  <div
-                    key={index} // 添加特定后缀确保 key 唯一性
-                    className="text-[10px] text-gray-400 break-words leading-relaxed"
-                  >
-                    <div className="mb-1">
-                      <span className="font-semibold text-purple-400">Extracting Color Palette...</span>
-                      <pre
-                        className="mt-1 p-2 bg-gray-700/50 rounded text-xs whitespace-pre-wrap break-words overflow-y-auto"
-                        style={{
-                          maxHeight: '200px', // 可以设置不同的最大高度
-                          color: '#e9d5ff' // 紫色调
-                        }}
-                      >
-                        {/* 使用 Color 的累积内容 */}
-                        {currentColorContent}
-                      </pre>
-                    </div>
-                  </div>
-                )}
-
-                {/* --- 新增：Crawler 日志内容渲染 --- */}
-                {isCrawlerType && (
-                  <div
-                    key={`${uniqueKey}-content`}
-                    className="text-[10px] text-gray-400 break-words leading-relaxed mt-1"
-                  >
-                    {/* --- 如果内容是空字符串，显示提示信息 --- */}
-                    {isEmptyCrawlerContent ? (
-                      <p className="text-gray-500 italic">No relevant information retrieved.</p>
-                    ) : (
-                      <>
-                        {/* --- 图片渲染 (仅当 content 是非空数组时) --- */}
-                        {log.type === 'Crawler_Images' && Array.isArray(log.content) && (
-                          <div className="flex flex-wrap gap-2">
-                          {log.content.map((item, imgIndex) => (
-                            item.src ? ( 
-                              <a 
-                                key={imgIndex} 
-                                href={item.src} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
-                                // --- 修改 className ---
-                                className="group relative block cursor-pointer w-16 h-16 rounded border border-gray-600 bg-gray-700 bg-center bg-no-repeat bg-contain overflow-hidden" // 添加尺寸、背景占位符样式、overflow
-                                // --- 添加 style 设置背景图 ---
-                                style={{ backgroundImage: `url('/images/image-placeholder.svg')` }} // 默认显示占位符背景
-                              >
-                                <img
-                                  src={item.src}
-                                  alt={item.alt || 'Crawled image'}
-                                  // --- 修改 className ---
-                                  className="absolute inset-0 w-full h-full object-contain opacity-0 transition-opacity duration-300" // 绝对定位、初始透明、过渡效果
-                                  // --- 添加 onLoad 事件处理器 ---
-                                  onLoad={handleImageLoad} 
-                                  // --- 修改 onError 事件处理器 ---
-                                  onError={handleImageError} 
-                                />
-                                {/* 悬停显示 Alt 和 Src (保持不变) */}
-                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 w-max max-w-xs p-1.5 bg-gray-900 text-white text-[9px] rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none break-all">
-                                  Alt: {item.alt || 'N/A'}<br/>Src: {item.src}
-                                </div>
-                              </a> 
-                            ) : null 
-                          ))}
-                        </div>
-                        )}
-
-                        {/* --- 链接渲染 (Headers & Footers) (仅当 content 是数组时) --- */}
-                        {(log.type === 'Crawler_Headers' || log.type === 'Crawler_Footers') && Array.isArray(log.content) && (
-                          <ul className="list-none space-y-1">
-                            {log.content.map((item, linkIndex) => (
-                              (item.url && item.text !== undefined) ? ( // 检查 url 和 text 是否存在
-                                <li key={linkIndex}>
-                                  <a
-                                    href={item.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-blue-400 hover:text-blue-300 hover:underline underline-offset-2"
-                                    title={item.url} // 鼠标悬停显示 URL
-                                  >
-                                    {item.text || item.url} {/* 如果 text 为空，显示 URL */}
-                                  </a>
-                                </li>
-                              ) : null // 如果 url 或 text 不存在则不渲染
-                            ))}
-                          </ul>
-                        )}
-                        {/* 如果 content 不是空字符串也不是数组，这里不会渲染任何东西，
-                            可以根据需要添加对其他类型 content 的处理 */}
-                      </>
-                    )}
-                  </div>
-                )}
-
-                {/* 其他日志类型的渲染逻辑 */}
-                {log.type === 'Error' ? (
-                  <div className="text-[10px] text-red-400 break-words leading-relaxed">
-                    {log.content?.error && (
-                      <div className="mb-1">
-                        <span className="font-semibold">Error Message:</span> {log.content.error}
-                      </div>
-                    )}
-                  </div>
-                ) : log.type === 'API' ? (
-                  <div className="text-[8px] text-gray-400 break-words leading-relaxed">
-                    {log.content?.status && (
-                      <div className="mb-1">
-                        <span className="font-semibold">Status:</span> {log.content.status}
-                      </div>
-                    )}
-                    {log.content?.data && (
-                      <div className="mb-1">
-                        <span className="font-semibold">Data:</span>
-                        <pre className="mt-1 p-2 bg-gray-700/50 rounded text-[8px] overflow-auto">
-                          {JSON.stringify(log.content.data, null, 2)}
-                        </pre>
-                      </div>
-                    )}
-                  </div>
-                ) 
-                : null}
-
-                <div className="text-[9px] text-gray-500 mt-1.5">
-                  {new Date(log.timestamp).toLocaleString()}
-                </div>
-              </div>
-            );
-          })}
+            })}
+          </div>
         </div>
       </div>
     );
@@ -1032,6 +1070,11 @@ const ResearchTool = () => {
             false,
             currentWebsiteId
           );
+          // 新增：处理 code 1075 的情况
+          if (searchResponse?.code === 1075) {
+            messageHandler.updateAgentMessage("⚠️ There are already tasks in progress. Please wait for the current task to finish or delete it before starting a new one.", thinkingMessageId);
+            return;
+          }
           if (searchResponse?.code === 1058) {
             messageHandler.updateAgentMessage("⚠️ Network error occurred. Please try again.", thinkingMessageId);
             return;
@@ -1309,12 +1352,18 @@ const ResearchTool = () => {
             false,
             websiteId
           );
+          // 新增：处理 code 1075 的情况
+          if (searchResponse?.code === 1075) {
+            messageHandler.updateAgentMessage("⚠️ There are already tasks in progress. Please wait for the current task to finish or delete it before starting a new one.", thinkingMessageId);
+            return;
+          }
           if (searchResponse?.code === 1058) {
             messageHandler.updateAgentMessage("Oops! The service encountered a temporary issue. Could you please try sending your message again?", thinkingMessageId);
             return;
           }
           if (searchResponse?.code === 200 && searchResponse?.data?.websiteId) {
             setShouldConnectSSE(true);
+            setIsTaskActiveForLogs(true);
           }
 
           while (messageHandler.isProcessing) {
@@ -2145,7 +2194,7 @@ const ResearchTool = () => {
           <div className="mb-6 mx-auto w-fit">
             <div className="inline-flex items-center px-2.5 py-1.5 rounded text-yellow-400 text-xs" style={{ minWidth: 0, fontWeight: 400 }}>
               <svg className="w-4 h-4 mr-1 text-yellow-400" viewBox="0 0 24 24" fill="currentColor"> <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm-1.06 13.54L7.4 12l1.41-1.41 2.12 2.12 4.24-4.24 1.41 1.41-5.64 5.66z"/> </svg>
-              Generate and deploy 5 free alternative pages – no credit card required.
+              Generate and deploy 6 free alternative pages – no credit card required.
             </div>
           </div>
         </div>
@@ -2220,50 +2269,65 @@ const ResearchTool = () => {
           <div className="absolute top-1/4 left-0 right-0 h-1/2 -translate-y-1/2 animate-shimmer pointer-events-none z-0"></div>
           {contextHolder}
           {isUserLoggedIn && (
-          <div 
-            ref={sidebarRef}
-            onClick={() => {
-              if (!isSidebarOpen) {
-                toggleSidebar();
-              }
-            }}
-            className={`fixed top-[80px] left-4 bottom-4 z-50 bg-slate-900/60 backdrop-blur-md rounded-lg shadow-xl border border-slate-700/50 flex flex-col transition-all duration-300 ease-in-out ${isSidebarOpen ? 'w-72' : 'w-12'} overflow-visible ${!isSidebarOpen ? 'cursor-pointer' : ''}`}> {/* 修改宽度 w-12 -> w-10 */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleSidebar();
-              }}
-              className="absolute top-2 right-2 z-[51] bg-slate-700 hover:bg-slate-600 text-white w-8 h-8 rounded-full flex items-center justify-center transition-colors shadow-md" // 将 left-2 改为 right-2
-              title={isSidebarOpen ? "Collapse History" : "Expand History"}
-              style={{ outline: 'none' }}
-            >
-              {/* 保持图标逻辑不变 */}
-              {isSidebarOpen ? <LeftOutlined style={{ fontSize: '14px' }} /> : <MenuOutlined style={{ fontSize: '14px' }} />}
-            </button>
-            <div
-              className={`absolute inset-0 flex items-center justify-center transition-opacity duration-200 ease-in-out pointer-events-none ${
-                isSidebarOpen ? 'opacity-0' : 'opacity-100'
-              }`}
-              aria-hidden={isSidebarOpen} // 辅助技术隐藏
-            >
-              <span
-                className="text-xs font-semibold text-slate-400"
-                style={{
-                  writingMode: 'vertical-rl', // 竖排，从右到左
-                  textOrientation: 'mixed',   // 保持字符正立
-                  transform: 'rotate(180deg)', // 旋转180度使文字从下往上读
-                  whiteSpace: 'nowrap',       // 防止文字换行
-                }}
-              >
-                My Tasks
-              </span>
-            </div>
-
-            {/* 内容容器，根据状态控制透明度和交互 */}
-            <div className={`flex-1 overflow-y-auto transition-opacity duration-200 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-              {isSidebarOpen && <HistoryCardList />}
-            </div>
-          </div>
+            <>
+              {/* 折叠时只显示小按钮，icon为两条杠且靠左 */}
+              {!isSidebarOpen && (
+                <button
+                  onClick={toggleSidebar}
+                  className="fixed top-20 left-4 z-50 bg-slate-700 hover:bg-slate-600 text-white w-8 h-8 rounded-full flex items-center justify-center transition-colors shadow-md"
+                  title="Expand History"
+                  style={{ outline: 'none' }}
+                >
+                  {/* 两条杠靠左的SVG图标 */}
+                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                    {/* 上面一条长，靠左 */}
+                    <rect x="2" y="7" width="12" height="2" rx="1" fill="currentColor" />
+                    {/* 下面一条短，靠左 */}
+                    <rect x="2" y="12" width="6" height="2" rx="1" fill="currentColor" />
+                  </svg>
+                </button>
+              )}
+              {isSidebarOpen && (
+                <div
+                  ref={sidebarRef}
+                  className="fixed top-[72px] left-4 bottom-4 z-50 w-72 bg-slate-900/60 backdrop-blur-md rounded-lg shadow-xl border border-slate-700/50 flex flex-col transition-all duration-300 ease-in-out overflow-visible max-h-[80vh]" 
+                >
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleSidebar();
+                    }}
+                    className="absolute top-2 right-2 z-[51] bg-slate-700 hover:bg-slate-600 text-white w-8 h-8 rounded-full flex items-center justify-center transition-colors shadow-md"
+                    title="Collapse History"
+                    style={{ outline: 'none' }}
+                  >
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                      <rect x="2" y="7" width="12" height="2" rx="1" fill="currentColor" />
+                      <rect x="2" y="12" width="6" height="2" rx="1" fill="currentColor" />
+                    </svg>
+                  </button>
+                  <div
+                    className="absolute inset-0 flex items-center justify-center transition-opacity duration-200 ease-in-out pointer-events-none opacity-100"
+                    aria-hidden={!isSidebarOpen}
+                  >
+                    <span
+                      className="text-xs font-semibold text-slate-400"
+                      style={{
+                        writingMode: 'vertical-rl',
+                        textOrientation: 'mixed',
+                        transform: 'rotate(180deg)',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                    </span>
+                  </div>
+                  {/* 内容容器 */}
+                  <div className="flex-1 overflow-y-auto transition-opacity duration-200 opacity-100 h-full">
+                    <HistoryCardList />
+                  </div>
+                </div>
+              )}
+            </>
           )}
           {/* === 结束修改侧边栏 === */}
         {/* 添加垂直文本样式 */}
@@ -2376,11 +2440,11 @@ const ResearchTool = () => {
                         className={`px-4 py-4 text-base
                           bg-gradient-to-r from-blue-500 to-purple-700 text-white border-blue-400/50 hover:border-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.5)] hover:shadow-[0_0_25px_rgba(59,130,246,0.7)] hover:from-blue-400 hover:to-purple-600
                           rounded-xl
-                          transition-all duration-300 flex items-center gap-2
+                          transition-all duration-300 flex items-center justify-center gap-2 w-full {/* <-- 修改：添加 w-full 和 justify-center */}
                           hover:scale-105 shadow-lg
                           ${isProcessingTask ? 'opacity-70 cursor-not-allowed hover:scale-100' : 'cursor-pointer'}`}
-                        style={{ height: '64px' }} // 按钮高度，可调整以匹配输入框
-                        disabled={isProcessingTask}
+                        style={{ height: '64px' }} 
+                        disabled={!userInput.trim() || isProcessingTask}
                       >
                         {isProcessingTask ? (
                           <>
@@ -2422,7 +2486,7 @@ const ResearchTool = () => {
               </svg>
               <span className="[text-shadow:0_0_8px_rgba(59,130,246,0.5)]">{currentExample.timestamp}</span>
             </p>
-            <div className="relative w-full max-w-xxl px-12">
+            <div className="relative max-w-xxl px-12">
               <button
                 onClick={goToPrevExample}
                 className="absolute left-4 top-1/2 transform -translate-y-1/2 z-20 p-1 bg-slate-700/50 hover:bg-slate-600/70 rounded-full text-white transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
@@ -2500,7 +2564,7 @@ const ResearchTool = () => {
       {contextHolder}
       <div className={`w-full min-h-screen bg-cover bg-center bg-no-repeat text-white flex items-center justify-center p-4 relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-950 to-black`}
            style={{
-             paddingTop: "80px",
+             paddingTop: "40px",
              backgroundImage: `
                radial-gradient(circle at 20% 30%, rgba(59, 130, 246, 0.08) 0%, transparent 35%), /* 降低 alpha 值 */
                radial-gradient(circle at 80% 70%, rgba(129, 140, 248, 0.05) 0%, transparent 45%), /* 降低 alpha 值 */
@@ -2512,45 +2576,52 @@ const ResearchTool = () => {
            }}>
 
         <div className={`relative z-10 w-full flex ${isMobile ? 'flex-col' : 'flex-row'} gap-6 h-[calc(100vh-140px)] px-4 text-sm`}>
-          <div className={`${isMobile ? 'w-full h-full' : 'w-[35%]'} relative flex flex-col`}>
-            <div className="h-12 px-4 border-b border-gray-300/20 flex-shrink-0 flex items-center justify-between relative">
-              <div className="flex items-center">
+          <div className={`${isMobile
+                ? 'w-full h-full'
+                : isBrowserSidebarOpen
+                  ? 'w-1/2'
+                  : 'w-[95%]'
+              } relative flex flex-col`}>
+            <div className="h-12 px-4 border-b border-gray-300/20 flex-shrink-0 flex items-center relative">
+              <div className="flex items-center flex-shrink-0">
                 <img src="/images/alternatively-logo.png" alt="AltPage.ai" className="w-5 h-5 mr-1.5" />
                 <h2 className="text-sm font-semibold text-gray-100">Copilot</h2>
               </div>
-              {isProcessingTask && ( // 中止按钮只在任务进行中显示
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-300">
-                    If you want to abort the current task...
-                  </span>
-                  <button
-                    type="button"
-                    className="p-0"
-                    title="Abort Task"
-                    onClick={() => setShowAbortModal(true)}
-                    style={{
-                      height: '28px',
-                      width: '28px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      background: 'linear-gradient(135deg, #7f1d1d 0%, #b91c1c 100%)',
-                      borderRadius: '50%',
-                      boxShadow: '0 0 8px 1.5px rgba(185, 28, 28, 0.4), 0 2px 4px 0 rgba(127,29,29,0.10)',
-                      border: 'none',
-                      transition: 'box-shadow 0.3s ease-in-out',
-                    }}
-                  >
-                    <div style={{
-                      width: '10px',
-                      height: '10px',
-                      background: 'white',
-                      borderRadius: '2px',
-                      boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
-                    }} />
-                  </button>
-                </div>
-              )}
+              
+              <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
+                {isProcessingTask && (
+                  <div className="flex items-center gap-2">
+                    <Tooltip title="Cancel Current Task" placement="top">
+                      <button
+                        type="button"
+                        className="p-0"
+                        title="Abort Task"
+                        onClick={() => setShowAbortModal(true)}
+                        style={{
+                          height: '28px',
+                          width: '28px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: 'linear-gradient(135deg, #7f1d1d 0%, #b91c1c 100%)',
+                          borderRadius: '50%',
+                          boxShadow: '0 0 8px 1.5px rgba(185, 28, 28, 0.4), 0 2px 4px 0 rgba(127,29,29,0.10)',
+                          border: 'none',
+                          transition: 'box-shadow 0.3s ease-in-out',
+                        }}
+                      >
+                        <div style={{
+                          width: '10px',
+                          height: '10px',
+                          background: 'white',
+                          borderRadius: '2px',
+                          boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
+                        }} />
+                      </button>
+                    </Tooltip>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* 移动端提示横幅 */}
@@ -2566,17 +2637,17 @@ const ResearchTool = () => {
                 </div>
               </div>
             )}
-            <div className="flex-1 overflow-y-auto pt-12 px-4 pb-4 chat-messages-container">
+            <div className="flex-1 overflow-y-auto pt-4 px-4 pb-4 chat-messages-container">
               {showInitialScreen ? (
                 <div className="flex items-center justify-center h-full">
                   <Spin size="large" />
                 </div>
-                  ) : (
-                    <>
+              ) : (
+                <>
                   {messages.map((message, index) => renderChatMessage(message, index))}
                   <div ref={chatEndRef} />
-                    </>
-                  )}
+                </>
+              )}
             </div>
 
             <div className="p-4 border-t border-gray-300/20 flex-shrink-0"> {/* 保持这个区域不变 */}
@@ -2602,299 +2673,381 @@ const ResearchTool = () => {
                   <>
                     <Tooltip
                       title={(loading || isMessageSending) ? "Agent is working, please wait a sec." : ""}
-                      placement="topLeft"
+                      placement="bottomLeft"
                     >
-                      <div className="mb-2 flex justify-end">
-                        <button
-                          type="button"
-                          onClick={() => setShowBrandAssetsModal(true)}
-                          className="flex items-center justify-center gap-1.5 px-3 py-1 bg-slate-700/80 hover:bg-slate-600/80 text-gray-300 hover:text-white text-xs font-medium rounded-md transition-all duration-300 border border-slate-600/50 hover:border-indigo-500/50"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
-                          </svg>
-                          Set Page Colors
-                        </button>
-                      </div>
                       <div className="relative">
                         <style jsx>{`
                           .research-tool-input::placeholder {
                             color: #9ca3af; /* Default placeholder color */
                             opacity: 0.8;
                           }
-                          /* === 新增：调整输入框右内边距 === */
-                          .research-tool-input {
-                            padding-right: 80px; /* 为按钮留出空间 */
-                          }
                         `}</style>
-                        <Input
-                          autoComplete="off"
-                          name="no-autofill"
-                          ref={inputRef}
-                          value={userInput}
-                          onChange={(e) => setUserInput(e.target.value)}
-                          disabled={loading || isMessageSending}
-                          placeholder={
-                            !(loading || isMessageSending)
-                              ? "Waiting for your answer..."
-                              : ""
-                          }
-                          className={`research-tool-input bg-slate-700/50 border border-slate-600/50 rounded-xl text-sm placeholder-gray-500`}
-                          style={{
-                            height: '48px',
-                            transition: 'all 0.3s ease'
-                          }}
-                          onPressEnter={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            if (userInput.trim() && !loading && !isMessageSending) {
-                              handleUserInput(e);
-                            }
-                          }}
-                        />
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            if (userInput.trim() && !loading && !isMessageSending) {
-                              handleUserInput(e);
-                            }
-                          }}
-                          disabled={loading || isMessageSending || !userInput.trim()} // 同时检查输入是否为空
-                          className={`absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-2 text-xs font-medium rounded-md transition-all duration-300 flex items-center gap-1 shadow-sm
-                            ${(loading || isMessageSending || !userInput.trim())
-                              ? 'bg-gray-500 text-gray-300 cursor-not-allowed opacity-70'
-                              : 'bg-blue-600 hover:bg-blue-500 text-white cursor-pointer hover:shadow-md'
-                            }`}
-                          style={{ height: '36px' }} // 按钮高度略小于输入框
-                        >
-                          Send
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M13 5l7 7-7 7M5 12h14" />
-                          </svg>
-                        </button>
-                        {/* === 结束新增 === */}
+                        <div className="w-full max-w-xxl mx-auto">
+                          {/* === 进度条 Progress 移动到这里 === */}
+                          {!showInitialScreen && (
+                            <div className="flex-1 flex justify-center mb-3">
+                              <div className="flex flex-row items-center space-x-2 text-xs max-w-xl w-full"> 
+                                <div className="flex items-center space-x-1 mr-2 flex-shrink-0">
+                                  <span className="text-xs font-semibold text-blue-300">Progress</span>
+                                </div>
+                                <div className="flex flex-row space-x-1 w-full">
+                                  {taskSteps.map((step) => (
+                                    <div
+                                      key={step.id}
+                                      className={`text-xs rounded px-1 py-0.5 flex flex-1 items-center justify-between transition-all duration-500 ${
+                                        currentStep >= step.id
+                                          ? `bg-gradient-to-r ${step.gradient} text-white border ${step.borderColor} shadow-xs ${step.shadowColor}`
+                                          : 'bg-slate-700/50 text-slate-400 border border-slate-600/40'
+                                      }`}
+                                    >
+                                      <span className={`${currentStep === step.id ? 'font-medium' : ''} truncate mr-0.5`}>{`${step.name}`}</span>
+                                      {currentStep === step.id ? (
+                                        <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin flex-shrink-0"></div>
+                                      ) : currentStep > step.id ? (
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-green-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                        </svg>
+                                      ) : (
+                                        <div className="w-3 h-3 flex-shrink-0"></div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                          {/* === 进度条 Progress 结束 === */}
+                          <div className="rounded-2xl shadow-lg px-5 py-4 flex flex-col gap-2"
+                            style={{
+                              border: '1.5px solid #e0e7ef', // 只保留边框
+                              background: 'transparent',      // 背景透明
+                              boxShadow: '0 2px 16px 0 rgba(30,41,59,0.08)',
+                              backdropFilter: 'blur(2px)',
+                            }}
+                          >
+                            <Input
+                              autoComplete="off"
+                              name="no-autofill"
+                              ref={inputRef}
+                              value={userInput}
+                              onChange={(e) => setUserInput(e.target.value)}
+                              disabled={loading || isMessageSending}
+                              placeholder={
+                                !(loading || isMessageSending)
+                                  ? "Waiting for your answer..."
+                                  : ""
+                              }
+                              className="bg-transparent border-none shadow-none text-base text-white placeholder-gray-400"
+                              style={{
+                                minHeight: '48px',
+                                background: 'transparent',
+                                color: '#fff',
+                                boxShadow: 'none',
+                                outline: 'none',
+                                border: 'none',
+                                paddingLeft: 0,
+                                paddingRight: 0,
+                                caretColor: '#fff',
+                              }}
+                              onFocus={e => {
+                                e.target.style.background = 'transparent';
+                                e.target.style.color = '#fff';
+                                e.target.style.outline = 'none';
+                                e.target.style.boxShadow = 'none';
+                                e.target.style.border = 'none';
+                              }}
+                              onBlur={e => {
+                                e.target.style.background = 'transparent';
+                                e.target.style.color = '#fff';
+                                e.target.style.outline = 'none';
+                                e.target.style.boxShadow = 'none';
+                                e.target.style.border = 'none';
+                              }}
+                              onPressEnter={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                if (userInput.trim() && !loading && !isMessageSending) {
+                                  handleUserInput(e);
+                                }
+                              }}
+                            />
+                            <div className="flex justify-between items-end mt-1">
+                              {/* 左侧：品牌色+统计+Check Pages */}
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setShowBrandAssetsModal(true)}
+                                  className="w-auto px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 bg-indigo-600 hover:bg-indigo-500 text-white border border-indigo-700 shadow-sm"
+                                  style={{ height: '32px', minWidth: '90px' }}
+                                >
+                                  Set Brand Color
+                                </button>
+                                <div className="flex flex-col items-start" style={{ fontSize: '10px', minWidth: '100px' }}>
+                                  <span className="text-[10px] text-blue-300 mb-0">Generated Pages</span>
+                                  <span className="text-[13px] font-semibold text-white leading-none">{browserTabs.length}</span>
+                                </div>
+                                {browserTabs.length > 0 && (
+                                  <button
+                                    onClick={() => {
+                                      setRightPanelTab('browser');
+                                      if (browserTabs.length > 0 && !activeTab) {
+                                        setActiveTab(browserTabs[0].id);
+                                      }
+                                    }}
+                                    className={`ml-2 px-3 py-0.5 text-[10px] font-medium rounded transition-all duration-300 flex items-center justify-center gap-1
+                                      bg-gradient-to-r from-teal-500 to-cyan-600 text-white hover:from-teal-600 hover:to-cyan-700 border border-teal-600/50
+                                      hover:scale-105 shadow-sm hover:shadow-md whitespace-nowrap`} 
+                                    style={{ minWidth: '90px', height: '28px', lineHeight: '1.2' }} 
+                                  >
+                                    Check Pages
+                                  </button>
+                                )}
+                              </div>
+                              {/* 右侧：Send */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  if (userInput.trim() && !loading && !isMessageSending) {
+                                    handleUserInput(e);
+                                  }
+                                }}
+                                disabled={loading || isMessageSending || !userInput.trim()}
+                                className={`w-auto px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-300 flex items-center gap-1 shadow-sm
+                                  ${(loading || isMessageSending || !userInput.trim())
+                                    ? 'bg-gray-400 text-gray-200 cursor-not-allowed opacity-70'
+                                    : 'bg-blue-600 hover:bg-blue-500 text-white cursor-pointer hover:shadow-md'
+                                  }`}
+                                style={{ height: '32px', minWidth: '70px' }}
+                              >
+                                Send
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 5l7 7-7 7M5 12h14" />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </Tooltip>
-                    <div className="flex justify-end mt-3 px-1">
-                      <div className="text-xs text-gray-400">
-                        Press Enter ↵ to submit
-                      </div>
-                    </div>
                   </>
                 )}
               </div>
             </div>
           </div>
           {!isMobile && (
-            <div className={`w-[65%]
-            bg-slate-900/10 border-blue-700/30
-            backdrop-blur-lg rounded-2xl border shadow-xl flex flex-col h-full relative overflow-hidden`}>
-            <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="h-12 border-b border-gray-300/20 p-3 flex-shrink-0">
-                <div className="flex justify-between items-center">
-                  <div className="flex space-x-4">
+            <div className={`transition-all duration-300
+              ${isBrowserSidebarOpen
+                ? 'w-1/2 min-w-[160px]'
+                : 'w-[5%] min-w-[80px]'
+              }
+              bg-slate-900/10 border-blue-700/30
+              backdrop-blur-lg rounded-2xl border shadow-xl flex flex-col h-full relative overflow-hidden`}>
+                {isBrowserSidebarOpen ? (
+                  <>
                     <button
-                      onClick={() => setRightPanelTab('details')}
-                      className={`text-sm ${
-                        rightPanelTab === 'details'
-                          ? 'text-blue-400 font-medium'
-                          : 'text-gray-400 hover:text-blue-300' // 修改 hover 颜色
-                      }`}
+                      onClick={() => setIsBrowserSidebarOpen(open => !open)}
+                      className="absolute top-2 right-2 z-20 bg-slate-700 hover:bg-slate-600 text-white w-7 h-7 rounded-full flex items-center justify-center transition-colors shadow-md"
+                      title="Collapse"
+                      style={{ outline: 'none' }}
                     >
-                      Execution Log
+                      <svg width="16" height="16" fill="none" viewBox="0 0 20 20"><path d="M7 5l5 5-5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
                     </button>
+                  </>
+                ) : (
+                  <div
+                    className="
+                      absolute inset-0 z-10 flex flex-col items-center justify-center pointer-events-none select-none
+                    "
+                  >
                     <button
-                      onClick={() => setRightPanelTab('browser')}
-                      className={`text-sm ${
-                        rightPanelTab === 'browser'
-                           ? 'text-blue-400 font-medium'
-                          : 'text-gray-400 hover:text-blue-300' // 修改 hover 颜色
-                      }`}
+                      onClick={() => setIsBrowserSidebarOpen(open => !open)}
+                      className="mb-3 bg-slate-700 hover:bg-slate-600 text-white w-7 h-7 rounded-full flex items-center justify-center transition-colors shadow-md pointer-events-auto"
+                      title="Expand"
+                      style={{ outline: 'none' }}
                     >
-                      Browser
-                  </button>
-                </div>
-                  {/* --- 修改：移除 "Bind Your Own Domain" 按钮 --- */}
-                  <div className="flex items-center text-xs">
-                    {/* --- 移除按钮的代码 --- */}
-                    <div className={`w-2 h-2 rounded-full mr-2 ${
-                      sseConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
-                    }`}></div>
-                    <span className={'text-gray-400'}>Log Server {sseConnected ? 'Connected' : 'Disconnected'}</span>
-                  </div>
-          </div>
-        </div>
-              <div className="flex-1 overflow-y-auto">
-                {rightPanelTab === 'details' && (
-                  <div className="flex h-full">
-                    <div className={`w-48 flex-shrink-0 border-r border-gray-300/20 p-3 overflow-y-auto bg-slate-800/30`}>
-                      {!showInitialScreen && (
-                        <div className="relative">
-                          <div className="flex items-center space-x-2 mb-3"> {/* 调整标题和图标布局 */}
-                            <svg className={`w-5 h-5 text-blue-400`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                            </svg>
-                            <span className={`text-sm font-semibold text-blue-300`}>Task Progress</span>
-                          </div>
-
-                          <div className="flex flex-col space-y-2 w-full">
-                            {taskSteps.map((step) => (
-                              <div
-                                key={step.id}
-                                className={`text-xs rounded px-2 py-1.5 flex items-center justify-between transition-all duration-500 ${
-                                  currentStep >= step.id
-                                    ? `bg-gradient-to-r ${step.gradient} text-white border ${step.borderColor} shadow-sm ${step.shadowColor}`
-                                    : 'bg-slate-700/50 text-slate-400 border border-slate-600/40'
-                                }`}
-                              >
-                                <span className={currentStep === step.id ? 'font-medium' : ''}>{`${step.name}`}</span>
-                                {currentStep === step.id ? (
-                                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                ) : currentStep > step.id ? (
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-green-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                  </svg>
-                                ) : (null)}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                      {!showInitialScreen && browserTabs.length > 0 && (
-                        <div className="mt-4 pt-3 border-t border-gray-300/10 text-center">
-                          <p className="text-xs font-medium text-blue-300 mb-1">Generated Pages</p>
-                          <p className="text-xl font-semibold text-white">{browserTabs.length}</p>
-                          <button
-                            onClick={() => {
-                              setRightPanelTab('browser');
-                              if (browserTabs.length > 0 && !activeTab) {
-                                setActiveTab(browserTabs[0].id);
-                              }
-                            }}
-                            className="mt-2 px-3 py-1 text-xs font-medium rounded-md transition-all duration-300 flex items-center justify-center gap-1 w-full
-                              bg-gradient-to-r from-teal-500 to-cyan-600 text-white hover:from-teal-600 hover:to-cyan-700 border border-teal-600/50
-                              hover:scale-105 shadow-sm hover:shadow-md"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                            </svg>
-                            Check Pages
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1 overflow-y-auto">
-                      {renderDetails()}
+                      <svg width="16" height="16" fill="none" viewBox="0 0 20 20"><path d="M13 15l-5-5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                    </button>
+                    <div
+                      className="
+                        flex flex-col items-center
+                        text-xs font-bold text-blue-300
+                        bg-slate-900/70 rounded-xl px-4 py-3 shadow-lg
+                        tracking-wide
+                      "
+                      style={{
+                        lineHeight: '2.2',
+                        letterSpacing: '0.04em',
+                        boxShadow: '0 2px 12px 0 rgba(59,130,246,0.10)',
+                        backdropFilter: 'blur(2px)',
+                      }}
+                    >
+                      <span>Expand</span>
+                      <span>for</span>
+                      <span>execution</span>
+                      <span>logs</span>
+                      <span>&</span>
+                      <span>browser</span>
+                      <span>preview</span>
                     </div>
                   </div>
                 )}
-                {rightPanelTab === 'browser' && (
-                  <div className="space-y-2">
-                    {browserTabs.length === 0 ? (
-                      <div className="text-gray-500 text-center py-4 text-xs">
-                        No browser tabs available yet
+                {isBrowserSidebarOpen && (
+                  <div className="flex-1 flex flex-col overflow-hidden">
+                  <div className="h-12 border-b border-gray-300/20 p-3 flex-shrink-0">
+                    <div className="flex justify-between items-center">
+                      <div className="flex space-x-4">
+                        <button
+                          onClick={() => setRightPanelTab('details')}
+                          className={`text-sm ${
+                            rightPanelTab === 'details'
+                              ? 'text-blue-400 font-medium'
+                              : 'text-gray-400 hover:text-blue-300' // 修改 hover 颜色
+                          }`}
+                        >
+                          Execution Log
+                        </button>
+                        <button
+                          onClick={() => setRightPanelTab('browser')}
+                          className={`text-sm ${
+                            rightPanelTab === 'browser'
+                              ? 'text-blue-400 font-medium'
+                              : 'text-gray-400 hover:text-blue-300'
+                          }`}
+                        >
+                          Browser
+                        </button>
                       </div>
-                    ) : (
-                      <div className="p-3">
-                        <div className="flex items-center space-x-2 mb-3 overflow-x-auto">
-                          {browserTabs.map((tab) => (
-                            <button
-                              key={tab.id}
-                              onClick={() => setActiveTab(tab.id)}
-                              className={`px-3 py-1.5 text-xs rounded-full whitespace-nowrap ${
-                                activeTab === tab.id
-                                  ? 'bg-blue-500/20 text-blue-300'
-                                  : 'bg-gray-500/20 text-gray-400 hover:text-gray-300'
-                              }`}
-                            >
-                              {tab.title}
-                            </button>
-                          ))}
+                    </div>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto">
+                      {rightPanelTab === 'details' && (
+                      <div className="flex h-full">
+                        <div className="flex-1 overflow-y-auto">
+                          {logs.length === 0 ? (
+                            <div className="flex items-center justify-center h-full text-gray-400 text-base">
+                              Waiting for agent to execute...
+                            </div>
+                          ) : (
+                            renderDetails()
+                          )}
                         </div>
-
-                        {activeTab && (
-                          <div>
-                            {/* --- 修改：将 URL 显示和按钮放在同一行，并调整布局 --- */}
-                            <div className={`flex items-center justify-between mb-2 rounded-lg p-2 bg-gray-800/50`}>
-                              {/* URL 显示 */}
-                              <div className={`flex-1 px-3 py-1.5 text-xs rounded mr-2 overflow-hidden overflow-ellipsis whitespace-nowrap bg-gray-700/50 text-gray-300`}>
-                                {browserTabs.find(tab => tab.id === activeTab)?.url}
-                              </div>
-                              {/* --- 新增：按钮组 --- */}
-                              <div className="flex items-center space-x-2 flex-shrink-0">
-                                <Button
-                                  type="primary"
-                                  size="small" // 使用 small 尺寸
-                                  icon={<EditOutlined />} // 编辑图标
-                                  onClick={() => {
-                                    if (browserTabs.length > 0) {
-                                      window.open('https://altpage.ai?openPreviewModal=true&openHistoryList=true&action=edit', '_blank');
-                                    } else {
-                                      messageApi.info('Please wait until at least one page has finished generating.')
-                                    }
-                                  }}
-                                  className="bg-yellow-600 hover:bg-yellow-500 border-yellow-700 hover:border-yellow-600" // 编辑按钮样式
-                                  style={{ fontSize: '10px', padding: '0 8px', height: '24px' }} // 调整内边距和高度
-                                >
-                                  Edit
-                                </Button>
-                                <Button
-                                  type="default" // 使用 default 类型
-                                  size="small" // 使用 small 尺寸
-                                  icon={<ExportOutlined />} // 导出/新标签页图标
-                                  onClick={() => window.open(browserTabs.find(tab => tab.id === activeTab)?.url, '_blank')}
-                                  className="bg-slate-600 hover:bg-slate-500 text-white border-slate-700 hover:border-slate-600" // 预览按钮样式
-                                  style={{ fontSize: '10px', padding: '0 8px', height: '24px' }} // 调整内边距和高度
-                                >
-                                  Preview
-                                </Button>
-                                <Button
-                                  type="primary"
-                                  size="small" // 使用 small 尺寸
-                                  icon={<LinkOutlined />} // 链接/绑定图标
-                                  onClick={() => {
-                                    if (browserTabs.length > 0) {
-                                      window.open('https://altpage.ai?openPreviewModal=true&openHistoryList=true&action=bind', '_blank');
-                                    } else {
-                                      messageApi.info('Please wait until at least one page has finished generating.')
-                                    }
-                                  }}
-                                  className={`transition-all duration-300 ${
-                                    browserTabs.length == 0
-                                      ? 'bg-gray-600 hover:bg-gray-600 cursor-not-allowed opacity-60'
-                                      : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-md hover:shadow-lg'
+                      </div>
+                    )}
+                    {rightPanelTab === 'browser' && (
+                      <div className="space-y-2">
+                        {browserTabs.length === 0 ? (
+                          <div className="flex flex-col items-center justify-center py-12 px-4">
+                            <div className="flex items-center justify-center mb-4">
+                              <svg className="w-7 h-7 text-blue-400 animate-bounce mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                              <span className="text-xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent drop-shadow">
+                                No Pages Generated Yet
+                              </span>
+                            </div>
+                            <div className="text-base text-blue-200 bg-blue-900/40 rounded-lg px-6 py-4 shadow-md border border-blue-700/30 text-center">
+                              Your generated pages will appear here once the task is complete!
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="p-3">
+                            <div className="flex items-center space-x-2 mb-3 overflow-x-auto">
+                              {browserTabs.map((tab) => (
+                                <button
+                                  key={tab.id}
+                                  onClick={() => setActiveTab(tab.id)}
+                                  className={`px-3 py-1.5 text-xs rounded-full whitespace-nowrap ${
+                                    activeTab === tab.id
+                                      ? 'bg-blue-500/20 text-blue-300'
+                                      : 'bg-gray-500/20 text-gray-400 hover:text-gray-300'
                                   }`}
-                                  style={{
-                                    border: 'none',
-                                    fontWeight: 300,
-                                    fontSize: '10px',
-                                    padding: '0 8px', // 调整内边距
-                                    height: '24px', // 调整高度
-                                  }}
                                 >
-                                  Bind With Your Domain
-                                </Button>
+                                  {tab.title}
+                                </button>
+                              ))}
+                            </div>
+                
+                            {activeTab && (
+                              <div>
+                                {/* --- 修改：将 URL 显示和按钮放在同一行，并调整布局 --- */}
+                                <div className={`flex items-center justify-between mb-2 rounded-lg p-2 bg-gray-800/50`}>
+                                  {/* URL 显示 */}
+                                  <div className={`flex-1 px-3 py-1.5 text-xs rounded mr-2 overflow-hidden overflow-ellipsis whitespace-nowrap bg-gray-700/50 text-gray-300`}>
+                                    {browserTabs.find(tab => tab.id === activeTab)?.url}
+                                  </div>
+                                  {/* --- 新增：按钮组 --- */}
+                                  <div className="flex items-center space-x-2 flex-shrink-0">
+                                    <Button
+                                      type="primary"
+                                      size="small"
+                                      icon={<EditOutlined />}
+                                      onClick={() => {
+                                        if (browserTabs.length > 0) {
+                                          window.open('https://altpage.ai?openPreviewModal=true&openHistoryList=true&action=edit', '_blank');
+                                        } else {
+                                          messageApi.info('Please wait until at least one page has finished generating.')
+                                        }
+                                      }}
+                                      className="bg-yellow-600 hover:bg-yellow-500 border-yellow-700 hover:border-yellow-600"
+                                      style={{ fontSize: '10px', padding: '0 8px', height: '24px' }}
+                                    >
+                                      Edit
+                                    </Button>
+                                    <Button
+                                      type="default"
+                                      size="small"
+                                      icon={<ExportOutlined />}
+                                      onClick={() => window.open(browserTabs.find(tab => tab.id === activeTab)?.url, '_blank')}
+                                      className="bg-slate-600 hover:bg-slate-500 text-white border-slate-700 hover:border-slate-600"
+                                      style={{ fontSize: '10px', padding: '0 8px', height: '24px' }}
+                                    >
+                                      Preview
+                                    </Button>
+                                    <Button
+                                      type="primary"
+                                      size="small"
+                                      icon={<LinkOutlined />}
+                                      onClick={() => {
+                                        if (browserTabs.length > 0) {
+                                          window.open('https://altpage.ai?openPreviewModal=true&openHistoryList=true&action=bind', '_blank');
+                                        } else {
+                                          messageApi.info('Please wait until at least one page has finished generating.')
+                                        }
+                                      }}
+                                      className={`transition-all duration-300 ${
+                                        browserTabs.length == 0
+                                          ? 'bg-gray-600 hover:bg-gray-600 cursor-not-allowed opacity-60'
+                                          : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-md hover:shadow-lg'
+                                      }`}
+                                      style={{
+                                        border: 'none',
+                                        fontWeight: 300,
+                                        fontSize: '10px',
+                                        padding: '0 8px',
+                                        height: '24px',
+                                      }}
+                                    >
+                                      Bind With Your Domain
+                                    </Button>
+                                  </div>
+                                </div>
+                                <div className="bg-white rounded-lg overflow-hidden">
+                                  <iframe
+                                    src={browserTabs.find(tab => tab.id === activeTab)?.url}
+                                    className="w-full h-[calc(100vh-280px)]"
+                                    title="Preview"
+                                  />
+                                </div>
                               </div>
-                              {/* --- 移除旧的图标按钮 --- */}
-                            </div>
-                            {/* --- 结束修改 --- */}
-
-                            <div className="bg-white rounded-lg overflow-hidden">
-                              <iframe
-                                src={browserTabs.find(tab => tab.id === activeTab)?.url}
-                                className="w-full h-[calc(100vh-280px)]"
-                                title="Preview"
-                              />
-                            </div>
+                            )}
                           </div>
                         )}
                       </div>
                     )}
                   </div>
+                </div>
                 )}
-              </div>
-            </div>
             </div>
           )}
         </div>
