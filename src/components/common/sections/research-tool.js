@@ -200,6 +200,77 @@ const ResearchTool = () => {
   };
 
   const renderChatMessage = (message, index) => {
+    if (message.type === 'congrats') {
+      return (
+        <div key={message.id || index} className="my-6 flex flex-col items-start">
+          <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-blue-700/40 rounded-lg px-6 py-4 shadow-lg flex flex-col items-start max-w-lg w-full"
+               style={{
+                 boxShadow: '0 4px 24px 0 rgba(30,58,138,0.10)',
+                 marginLeft: '3rem' // 与 system message 对齐，去掉头像宽度间隔
+               }}>
+            <div className="text-blue-200 font-semibold text-base mb-2">
+              {message.text}
+            </div>
+            <div className="flex gap-3 mt-3">
+              {/* Copy the 3-button logic from the right panel */}
+              <Button
+                type="primary"
+                size="small"
+                icon={<EditOutlined />}
+                onClick={() => {
+                  if (browserTabs.length > 0) {
+                    window.open('https://altpage.ai?openPreviewModal=true&openHistoryList=true&action=edit', '_blank');
+                  } else {
+                    messageApi.info('Please wait until at least one page has finished generating.');
+                  }
+                }}
+                className="bg-yellow-600 hover:bg-yellow-500 border-yellow-700 hover:border-yellow-600"
+                style={{ fontSize: '10px', padding: '0 8px', height: '32px' }}
+              >
+                Edit
+              </Button>
+              <Button
+                type="default"
+                size="small"
+                icon={<ExportOutlined />}
+                onClick={() => window.open(browserTabs.find(tab => tab.id === activeTab)?.url, '_blank')}
+                className="bg-slate-600 hover:bg-slate-500 text-white border-slate-700 hover:border-slate-600"
+                style={{ fontSize: '10px', padding: '0 8px', height: '32px' }}
+              >
+                Preview
+              </Button>
+              <Button
+                type="primary"
+                size="small"
+                icon={<LinkOutlined />}
+                onClick={() => {
+                  if (browserTabs.length > 0) {
+                    window.open('https://altpage.ai?openPreviewModal=true&openHistoryList=true&action=bind', '_blank');
+                  } else {
+                    messageApi.info('Please wait until at least one page has finished generating.');
+                  }
+                }}
+                className={`transition-all duration-300 ${
+                  browserTabs.length == 0
+                    ? 'bg-gray-600 hover:bg-gray-600 cursor-not-allowed opacity-60'
+                    : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 shadow-md hover:shadow-lg'
+                }`}
+                style={{
+                  border: 'none',
+                  fontWeight: 300,
+                  fontSize: '10px',
+                  padding: '0 8px',
+                  height: '32px',
+                }}
+              >
+                Bind With Your Domain
+              </Button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     if (message.source === 'system') {
       return (
         <div
@@ -1851,6 +1922,9 @@ const ResearchTool = () => {
       log.step === 'GENERATION_FINISHED'
     );
     
+    console.log('finishedLog', finishedLog);
+    console.log('browserTabs.length', browserTabs.length);
+    console.log('startedTaskCountRef.current', startedTaskCountRef.current);
     if (finishedLog && isProcessingTask && browserTabs.length === startedTaskCountRef.current && startedTaskCountRef.current > 0) {
       setIsProcessingTask(false);
       (async () => {
@@ -1863,6 +1937,14 @@ const ResearchTool = () => {
 
             const thinkingMessageId = messageHandler.addAgentThinkingMessage();
             messageHandler.updateAgentMessage(answer, thinkingMessageId);
+
+            messageHandler.addCustomCongratsMessage({
+              text: "You can edit the page, bind your domain to deploy it directly, or ask our Agent to generate more.",
+              buttons: [
+                { label: "Go Edit", action: "edit" },
+                { label: "Go Bind With My Domain", action: "bind" }
+              ]
+            });
             
           } else {
             messageHandler.addSystemMessage(
@@ -1878,7 +1960,7 @@ const ResearchTool = () => {
         }
       })();
     }
-  }, [logs, canProcessCompetitors, currentWebsiteId, messageHandler, apiClient, isProcessingTask]);
+  }, [logs, browserTabs, canProcessCompetitors, currentWebsiteId, messageHandler, apiClient, isProcessingTask]);
 
   useEffect(() => {
     return () => {

@@ -23,6 +23,22 @@ class MessageHandler {
     }
   }
 
+  addCustomCongratsMessage(payload) {
+    const operation = async () => {
+      this.setMessages(prev => [
+        ...prev,
+        {
+          id: `congrats-${Date.now()}`,
+          type: 'congrats',
+          ...payload,
+          timestamp: new Date().toISOString(),
+        }
+      ]);
+    };
+    this.pendingOperations.push(operation);
+    this.processPendingOperations();
+  }
+
   // 添加用户消息
   addUserMessage(content) {
     const operation = async () => {
@@ -90,6 +106,7 @@ class MessageHandler {
     this.pendingOperations.push(operation);
     this.processPendingOperations();
   }
+
 
   // 处理错误消息
   handleErrorMessage(error, messageId) {
