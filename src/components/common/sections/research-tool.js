@@ -2789,9 +2789,21 @@ const ResearchTool = () => {
                                 {browserTabs.length > 0 && (
                                   <button
                                     onClick={() => {
-                                      setRightPanelTab('browser');
-                                      if (browserTabs.length > 0 && !activeTab) {
-                                        setActiveTab(browserTabs[0].id);
+                                      // 如果侧边栏未打开，先打开
+                                      if (!isBrowserSidebarOpen) {
+                                        setIsBrowserSidebarOpen(true);
+                                        // 切换 tab 和激活标签页的逻辑延迟到侧边栏打开后执行
+                                        setTimeout(() => {
+                                          setRightPanelTab('browser');
+                                          if (browserTabs.length > 0 && !activeTab) {
+                                            setActiveTab(browserTabs[0].id);
+                                          }
+                                        }, 0);
+                                      } else {
+                                        setRightPanelTab('browser');
+                                        if (browserTabs.length > 0 && !activeTab) {
+                                          setActiveTab(browserTabs[0].id);
+                                        }
                                       }
                                     }}
                                     className={`ml-2 px-3 py-0.5 text-[10px] font-medium rounded transition-all duration-300 flex items-center justify-center gap-1
