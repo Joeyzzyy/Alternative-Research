@@ -78,13 +78,6 @@ const ResearchTool = () => {
   const [isTaskActiveForLogs, setIsTaskActiveForLogs] = useState(false);
   const [isBrowserSidebarOpen, setIsBrowserSidebarOpen] = useState(true);
 
-  const latestLog = logs && logs.length > 0
-    ? logs[logs.length - 1]
-    : null;
-  const latestLogPreview = latestLog
-    ? `Agent is working, current step: ${latestLog.step || ''}, click for details`
-    : 'Agent is ready to work for you';
-
   useEffect(() => {
     const lastInput = localStorage.getItem('urlInput');
     if (lastInput) {
@@ -168,9 +161,13 @@ const ResearchTool = () => {
     }
   }
 
+  const [competitorTodoList, setCompetitorTodoList] = useState([]);
   const handleCompetitorListRequest = async (competitors) => {
     setIsMessageSending(true);
     const thinkingMessageId = messageHandler.addAgentThinkingMessage();
+
+    console.log('competitors', competitors);
+    setCompetitorTodoList(competitors);
 
     try {
       const response = await apiClient.chatWithAI(JSON.stringify(competitors), currentWebsiteId);
@@ -633,21 +630,46 @@ const ResearchTool = () => {
   
     return (
       <div className="h-full flex flex-row">
-        {/* 左侧目录 */}
-        <div className="w-66 flex-shrink-0 border-r border-gray-700/40 bg-gray-900/60 p-2">
-          <div className="font-bold text-xs text-gray-300 mb-2">Deep Research</div>
-          <ul className="space-y-1">
-            {Object.keys(typeCountMap).map(type => (
-              <li key={type}>
-                <button
-                  className="text-left w-full text-xs px-2 py-1 rounded hover:bg-blue-500/20 text-gray-200"
-                  onClick={() => handleTypeClick(type)}
-                >
-                  {typeNameMap[type] || type} <span className="text-gray-400">({typeCountMap[type] + ' actions'})</span>
-                </button>
-              </li>
-            ))}
-          </ul>
+        <div className="w-66 flex-shrink-0 border-r border-gray-700/40 bg-gray-900/60 p-2 flex flex-col justify-between h-full">
+          {/* 顶部导航区域 */}
+          <div>
+            <div className="font-bold text-xs text-gray-300 mb-2">Deep Research</div>
+            <ul className="space-y-1">
+              {Object.keys(typeCountMap).map(type => (
+                <li key={type}>
+                  <button
+                    className="text-left w-full text-xs px-2 py-1 rounded hover:bg-blue-500/20 text-gray-200"
+                    onClick={() => handleTypeClick(type)}
+                  >
+                    {typeNameMap[type] || type} <span className="text-gray-400">({typeCountMap[type] + ' actions'})</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+          {/* 沉底区域 */}
+          <div className="mt-4 pt-3 border-t border-gray-700/40">
+            {/* Placeholder for competitor list and progress (to be implemented as a todo list) */}
+            <div className="text-xs text-gray-400">Competitor List & Progress</div>
+            <ul className="text-xs text-gray-300 space-y-1">
+            {competitorTodoList.length === 0 ? (
+              <li className="text-gray-500 italic">No competitors yet.</li>
+            ) : (
+              competitorTodoList.map((item, idx) => (
+                <li key={item.url || idx} className="flex items-center gap-2">
+                  <Tooltip title={item.name || item.url || JSON.stringify(item)}>
+                    <span className="truncate max-w-[120px] cursor-pointer">
+                      {item.name || item.url || JSON.stringify(item)}
+                    </span>
+                  </Tooltip>
+                  {item.selected && (
+                    <span className="ml-2 px-2 py-0.5 bg-green-600 text-white rounded text-[10px]">Selected</span>
+                  )}
+                </li>
+              ))
+            )}
+            </ul>
+          </div>
         </div>
         {/* 右侧日志内容 */}
         <div className="flex-1 flex flex-col" ref={detailsRef}>
@@ -1193,12 +1215,34 @@ const ResearchTool = () => {
                     .replace(/\s+/g, '')          
                 ).filter(domain => domain.length > 0);  
 
+                function extractDomain(url) {
+                  try {
+                    if (!/^https?:\/\//.test(url)) {
+                      url = 'https://' + url;
+                    }
+                    return new URL(url).hostname.replace(/^www\./, '');
+                  } catch {
+                    return url.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0];
+                  }
+                }
+
                 if (domainArray.length > 0) {
                   const generateResponse = await apiClient.generateAlternative(currentWebsiteId, domainArray);
                   if (generateResponse?.code === 200) {
                     setCurrentStep(3);
                     setIsProcessingTask(true);
                     startedTaskCountRef.current += domainArray.length;
+
+                    console.log('domainArray', domainArray);
+                    console.log('competitorTodoList', competitorTodoList);
+                    setCompetitorTodoList(prev =>
+                      prev.map(item => {
+                        const itemDomain = extractDomain(item.url);
+                        return domainArray.includes(itemDomain)
+                          ? { ...item, selected: true }
+                          : item;
+                      })
+                    );
                   } else {
                     messageHandler.addSystemMessage(`⚠️ Failed to generate alternative page: Invalid server response`);
                   }
@@ -2994,10 +3038,10 @@ const ResearchTool = () => {
                           className={`text-sm ${
                             rightPanelTab === 'details'
                               ? 'text-blue-400 font-medium'
-                              : 'text-gray-400 hover:text-blue-300' // 修改 hover 颜色
+                              : 'text-gray-400 hover:text-blue-300' 
                           }`}
                         >
-                          Execution Log
+                          Log
                         </button>
                         <button
                           onClick={() => setRightPanelTab('browser')}
@@ -3063,13 +3107,10 @@ const ResearchTool = () => {
                 
                             {activeTab && (
                               <div>
-                                {/* --- 修改：将 URL 显示和按钮放在同一行，并调整布局 --- */}
                                 <div className={`flex items-center justify-between mb-2 rounded-lg p-2 bg-gray-800/50`}>
-                                  {/* URL 显示 */}
                                   <div className={`flex-1 px-3 py-1.5 text-xs rounded mr-2 overflow-hidden overflow-ellipsis whitespace-nowrap bg-gray-700/50 text-gray-300`}>
                                     {browserTabs.find(tab => tab.id === activeTab)?.url}
                                   </div>
-                                  {/* --- 新增：按钮组 --- */}
                                   <div className="flex items-center space-x-2 flex-shrink-0">
                                     <Button
                                       type="primary"
