@@ -650,7 +650,7 @@ const ResearchTool = () => {
           {/* 沉底区域 */}
           <div className="mt-4 pt-3 border-t border-gray-700/40">
             {/* Placeholder for competitor list and progress (to be implemented as a todo list) */}
-            <div className="text-xs text-gray-400">Competitor List & Progress</div>
+            <div className="text-xs text-gray-400">Competitor List Found</div>
             <ul className="text-xs text-gray-300 space-y-1">
             {competitorTodoList.length === 0 ? (
               <li className="text-gray-500 italic">No competitors yet.</li>
@@ -663,7 +663,7 @@ const ResearchTool = () => {
                     </span>
                   </Tooltip>
                   {item.selected && (
-                    <span className="ml-2 px-2 py-0.5 bg-green-600 text-white rounded text-[10px]">Selected</span>
+                    <span className="ml-2 px-2 py-0.5 bg-green-600 text-white rounded text-[10px]">Task Submitted</span>
                   )}
                 </li>
               ))
