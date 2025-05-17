@@ -662,7 +662,6 @@ const ResearchTool = () => {
               // 在每种类型的第一个日志加 ref
               const logRef = typeIndexMap[log.type] === index ? typeRefs.current[log.type] : null;
   
-              // ... 下面内容与原 renderDetails 保持一致 ...
               let difyContent = null;
               if (log.type === 'Dify' && typeof log.content === 'string') {
                 try {

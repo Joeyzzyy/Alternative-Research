@@ -416,7 +416,6 @@ const HistoryCardList = () => {
 
   return (
     <div id="result-preview-section" className="h-full flex flex-col from-slate-950 via-slate-900 to-black text-white relative overflow-hidden">
-      {/* 背景装饰 */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_#22d3ee20_0%,_transparent_50%)] opacity-70 pointer-events-none"></div>
       <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-purple-600/10 rounded-full filter blur-3xl opacity-40 animate-pulse pointer-events-none"></div>
       <div className="absolute bottom-1/4 right-1/4 w-72 h-72 bg-cyan-600/10 rounded-full filter blur-3xl opacity-40 animate-pulse pointer-events-none"></div>
@@ -500,39 +499,39 @@ const HistoryCardList = () => {
                       key={item.websiteId}
                       className={`
                         group relative rounded-lg bg-white/5 hover:bg-white/10 transition
-                        shadow-md p-2.5 flex flex-col items-center justify-between
-                        min-h-[80px] w-full max-w-md mx-auto
+                        shadow-md p-1.5 flex flex-col items-start justify-between
+                        min-h-[48px] w-full max-w-md mx-auto
                         border border-white/10 hover:border-primary-500
                         cursor-pointer
+                        pl-2 pr-2
                       `}
+                      style={{paddingTop: 6, paddingBottom: 6}} // 保持紧凑
                       onClick={() => handleCardClick(item)}
                     >
-                      <div className="w-full flex flex-col items-center">
-                        <div className="font-semibold text-[11px] text-gray-300 mb-0.5">
-                          Task Target Website
+                      <div className="w-full flex flex-col items-start">
+                        <div className="flex w-full justify-between items-center mb-0.5">
+                          <div className="font-semibold text-[10px] text-gray-300">
+                            Target Website
+                          </div>
                         </div>
-                        <div className="font-semibold text-xs text-white mb-1 truncate w-full text-center">
+                        <div className="font-semibold text-xs text-white mb-0.5 truncate w-full text-left">
                           {item.website}
                         </div>
-                        <div className={`text-[10px] font-bold mb-1 ${statusColor}`}>
-                          {statusText}
+                        <div className="mb-0.5">
+                          <span className={`text-[10px] font-bold ${statusColor}`}>{statusText}</span>
                         </div>
-                        <div className="text-[10px] text-gray-400 mb-0.5">
-                          ID: <span className="text-gray-300 font-mono">{item.websiteId}</span>
+                        <div className="flex w-full justify-between items-center text-[10px] text-gray-400 mb-0.5">
+                          <span>ID: <span className="text-gray-300 font-mono">{item.websiteId}</span></span>
+                          {item.created_at && (
+                            <span>Created: {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          )}
                         </div>
-                        {item.created_at && (
-                          <div className="text-[10px] text-gray-500 mb-0.5">
-                            Created: {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </div>
-                        )}
-                        <div className="text-[10px] text-gray-500 mb-0.5">
-                          Start: {item.generatedStart ? new Date(item.generatedStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
-                        </div>
-                        <div className="text-[10px] text-gray-500">
-                          End: {item.generatedEnd ? new Date(item.generatedEnd).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}
+                        <div className="flex w-full justify-between items-center text-[10px] text-gray-500 mb-0.5">
+                          <span>Start: {item.generatedStart ? new Date(item.generatedStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}</span>
+                          <span>End: {item.generatedEnd ? new Date(item.generatedEnd).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}</span>
                         </div>
                         {item.generatorStatus === 'finished' && item.resultId && (
-                          <div className="w-full h-16 rounded-md overflow-hidden border border-white/10 mb-2">
+                          <div className="w-full h-8 rounded-md overflow-hidden border border-white/10 mb-1">
                             <iframe
                               src={`https://preview.websitelm.site/en/${item.resultId}`}
                               title="Preview"
@@ -546,14 +545,14 @@ const HistoryCardList = () => {
                       <button
                         className="absolute top-1 right-1 bg-red-700/60 hover:bg-red-800/70 text-white rounded-full p-1 shadow transition"
                         title="Delete"
-                        style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        style={{ width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         onClick={e => {
                           e.stopPropagation();
                           setDeleteConfirm({ open: true, id: item.websiteId });
                         }}
                         disabled={deletingId === item.websiteId || isClearingAll}
                       >
-                        <DeleteOutlined style={{ fontSize: 12 }} />
+                        <DeleteOutlined style={{ fontSize: 10 }} />
                       </button>
                     </div>
                   );
