@@ -144,11 +144,18 @@ const ResearchTool = () => {
       if (response?.code === 200 && response.data?.answer) {
         const answer = filterMessageTags(response.data.answer);
         messageHandler.updateAgentMessage(answer, thinkingMessageId);
-        messageHandler.addSystemMessage('System starts analyzing competitors and generating alternative pages, please wait...');
-        console.log('competitors', competitors);
         if (competitors && competitors.length > 0) {
+          console.log('competitors', competitors);
+          console.log('competitors[0]', competitors[0]);
           messageHandler.addCompetitorCardMessage(competitors[0]);
+          setCompetitorTodoList(
+            competitors.map((item, idx) => ({
+              ...item,
+              selected: idx === 0
+            }))
+          );
         }
+        messageHandler.addSystemMessage('System starts analyzing competitors and generating alternative pages, please wait...');
         let firstCompetitorArray = [competitors[0].url];
         const generateResponse = await apiClient.generateAlternative(currentWebsiteId, firstCompetitorArray);
         if (generateResponse?.code === 200) {
@@ -207,10 +214,10 @@ const ResearchTool = () => {
           <div className="bg-gradient-to-br from-cyan-800 to-cyan-900 border border-cyan-500/40 rounded-lg px-6 py-4 shadow-lg flex flex-col items-start max-w-lg w-full"
                style={{
                  boxShadow: '0 4px 24px 0 rgba(6,182,212,0.10)',
-                 marginLeft: '3rem'
+                 marginLeft: '3rem',
+                 marginBottom: '1.5rem', // 新增：增加向下的间距
                }}>
             <div className="flex items-center gap-3 mb-2">
-              <Avatar src={competitor.logo || '/images/alternatively-logo.png'} size={36} />
               <div>
                 <div className="text-cyan-200 font-semibold text-base">{competitor.name || competitor.url}</div>
                 <div className="text-cyan-400 text-xs">{competitor.url}</div>
@@ -219,7 +226,7 @@ const ResearchTool = () => {
             {competitor.description && (
               <div className="text-cyan-100 text-sm mt-2">{competitor.description}</div>
             )}
-            <div className="mt-3 text-xs text-cyan-300">已为你自动选择此竞品，正在生成替代页面...</div>
+            <div className="mt-3 text-xs text-cyan-300">This competitor has been automatically selected for you, generating an alternative page...</div>
           </div>
         </div>
       );
