@@ -124,6 +124,24 @@ class MessageHandler {
     this.processPendingOperations();
   }
 
+  // 添加确认按钮消息
+  addConfirmButtonMessage(onConfirm) {
+    const operation = async () => {
+      this.setMessages(prev => [
+        ...prev,
+        {
+          id: `confirm-btn-${Date.now()}`,
+          type: 'confirm-button',
+          content: 'Please confirm to continue.',
+          onConfirm, // 传递回调
+          timestamp: new Date().toISOString(),
+        }
+      ]);
+    };
+    this.pendingOperations.push(operation);
+    this.processPendingOperations();
+  }
+
   // 处理错误消息
   handleErrorMessage(error, messageId) {
     this.updateAgentMessage(`⚠️ Failed to get response: ${error.message}`, messageId);

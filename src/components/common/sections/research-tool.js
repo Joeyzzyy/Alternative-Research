@@ -229,6 +229,22 @@ const ResearchTool = () => {
   };
 
   const renderChatMessage = (message, index) => {
+    if (message.type === 'confirm-button') {
+      return (
+        <div key={message.id || index} className="flex justify-center my-4">
+          <button
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+            onClick={() => {
+              if (typeof message.onConfirm === 'function') {
+                message.onConfirm();
+              }
+            }}
+          >
+            Yes, I confirm
+          </button>
+        </div>
+      );
+    }
     if (message.type === 'competitor-card') {
       const { competitor } = message;
       return (
@@ -737,7 +753,7 @@ const ResearchTool = () => {
           </div>
           {/* 沉底区域 */}
           <div className="mt-4 pt-3 border-t border-gray-700/40">
-          <div className="text-xs text-gray-400 font-semibold mb-1">Competitors To-Do List</div>
+          <div className="text-xs text-gray-400 font-semibold mb-1">Competitors List</div>
           <ul className="text-xs text-gray-300 space-y-1">
             {competitorTodoList.length === 0 ? (
               <li className="text-gray-500 italic">No competitors yet.</li>
@@ -1228,13 +1244,16 @@ const ResearchTool = () => {
     };
   }, []);
 
-  const handleUserInput = async (e) => {
-    if (e && e.preventDefault) {
-      e.preventDefault();
-      e.stopPropagation();
+  const handleUserInput = async (eOrString) => {
+    let formattedInput = '';
+    if (typeof eOrString === 'string') {
+      formattedInput = eOrString.trim();
+    } else if (eOrString && eOrString.preventDefault) {
+      eOrString.preventDefault();
+      eOrString.stopPropagation();
+      formattedInput = userInput.trim();
     }
-    if (!userInput.trim() || isMessageSending) return;
-    let formattedInput = userInput.trim();
+    if (!formattedInput || isMessageSending) return;
     messageHandler.addUserMessage(formattedInput);
     const thinkingMessageId = messageHandler.addAgentThinkingMessage();
     setUserInput('');
@@ -1273,6 +1292,12 @@ const ResearchTool = () => {
             await new Promise(resolve => setTimeout(resolve, 100));
           }
           setCanProcessCompetitors(true);
+        } else if (rawAnswer.includes('Say "yes"')) {
+          const answer = filterMessageTags(rawAnswer);
+          messageHandler.updateAgentMessage(answer, thinkingMessageId);
+          messageHandler.addConfirmButtonMessage(async () => {
+            await handleUserInput('yes i confirm');
+          });
         } else if (rawAnswer.includes('[COMPETITOR_SELECTED]')) {
           const messageBody = rawAnswer.replace(/\[COMPETITOR_SELECTED\].*$/s, '').trim();
           messageHandler.updateAgentMessage(messageBody, thinkingMessageId);
@@ -2071,7 +2096,7 @@ const ResearchTool = () => {
             messageHandler.updateAgentMessage(answer, thinkingMessageId);
 
             messageHandler.addCustomCongratsMessage({
-              text: "You can edit the page, bind your domain to deploy it directly, or ask our Agent to generate more.",
+              text: "You can edit the page, bind your domain to deploy it directly, or select more from the list above to generate.",
               buttons: [
                 { label: "Go Edit", action: "edit" },
                 { label: "Go Bind With My Domain", action: "bind" }
