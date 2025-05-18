@@ -650,7 +650,7 @@ const ResearchTool = () => {
           {/* 沉底区域 */}
           <div className="mt-4 pt-3 border-t border-gray-700/40">
             {/* Placeholder for competitor list and progress (to be implemented as a todo list) */}
-            <div className="text-xs text-gray-400">Competitor List Found</div>
+            <div className="text-xs text-gray-400">Competitors Found</div>
             <ul className="text-xs text-gray-300 space-y-1">
             {competitorTodoList.length === 0 ? (
               <li className="text-gray-500 italic">No competitors yet.</li>
