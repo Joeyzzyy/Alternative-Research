@@ -146,6 +146,9 @@ const ResearchTool = () => {
         messageHandler.updateAgentMessage(answer, thinkingMessageId);
         messageHandler.addSystemMessage('System starts analyzing competitors and generating alternative pages, please wait...');
         console.log('competitors', competitors);
+        if (competitors && competitors.length > 0) {
+          messageHandler.addCompetitorCardMessage(competitors[0]);
+        }
         let firstCompetitorArray = [competitors[0].url];
         const generateResponse = await apiClient.generateAlternative(currentWebsiteId, firstCompetitorArray);
         if (generateResponse?.code === 200) {
@@ -197,6 +200,30 @@ const ResearchTool = () => {
   };
 
   const renderChatMessage = (message, index) => {
+    if (message.type === 'competitor-card') {
+      const { competitor } = message;
+      return (
+        <div key={message.id || index} className="my-6 flex flex-col items-start">
+          <div className="bg-gradient-to-br from-cyan-800 to-cyan-900 border border-cyan-500/40 rounded-lg px-6 py-4 shadow-lg flex flex-col items-start max-w-lg w-full"
+               style={{
+                 boxShadow: '0 4px 24px 0 rgba(6,182,212,0.10)',
+                 marginLeft: '3rem'
+               }}>
+            <div className="flex items-center gap-3 mb-2">
+              <Avatar src={competitor.logo || '/images/alternatively-logo.png'} size={36} />
+              <div>
+                <div className="text-cyan-200 font-semibold text-base">{competitor.name || competitor.url}</div>
+                <div className="text-cyan-400 text-xs">{competitor.url}</div>
+              </div>
+            </div>
+            {competitor.description && (
+              <div className="text-cyan-100 text-sm mt-2">{competitor.description}</div>
+            )}
+            <div className="mt-3 text-xs text-cyan-300">已为你自动选择此竞品，正在生成替代页面...</div>
+          </div>
+        </div>
+      );
+    }
     if (message.type === 'congrats') {
       return (
         <div key={message.id || index} className="my-6 flex flex-col items-start">
@@ -649,9 +676,8 @@ const ResearchTool = () => {
           </div>
           {/* 沉底区域 */}
           <div className="mt-4 pt-3 border-t border-gray-700/40">
-            {/* Placeholder for competitor list and progress (to be implemented as a todo list) */}
-            <div className="text-xs text-gray-400">Competitors Found</div>
-            <ul className="text-xs text-gray-300 space-y-1">
+          <div className="text-xs text-gray-400 font-semibold mb-1">Competitors To-Do List</div>
+          <ul className="text-xs text-gray-300 space-y-1">
             {competitorTodoList.length === 0 ? (
               <li className="text-gray-500 italic">No competitors yet.</li>
             ) : (
@@ -662,14 +688,16 @@ const ResearchTool = () => {
                       {item.name || item.url || JSON.stringify(item)}
                     </span>
                   </Tooltip>
-                  {item.selected && (
-                    <span className="ml-2 px-2 py-0.5 bg-green-600 text-white rounded text-[10px]">Task Submitted</span>
+                  {item.selected ? (
+                    <span className="ml-2 px-2 py-0.5 bg-green-600 text-white rounded text-[10px]">Selected</span>
+                  ) : (
+                    <span className="ml-2 px-2 py-0.5 bg-gray-500 text-white rounded text-[10px]">Not Selected</span>
                   )}
                 </li>
               ))
             )}
-            </ul>
-          </div>
+          </ul>
+        </div>
         </div>
         {/* 右侧日志内容 */}
         <div className="flex-1 flex flex-col" ref={detailsRef}>

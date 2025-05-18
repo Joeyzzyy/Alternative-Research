@@ -107,6 +107,22 @@ class MessageHandler {
     this.processPendingOperations();
   }
 
+  // 添加竞品卡片消息
+  addCompetitorCardMessage(competitor) {
+    const operation = async () => {
+      this.setMessages(prev => [
+        ...prev,
+        {
+          id: `competitor-card-${Date.now()}`,
+          type: 'competitor-card',
+          competitor,
+          timestamp: new Date().toISOString(),
+        }
+      ]);
+    };
+    this.pendingOperations.push(operation);
+    this.processPendingOperations();
+  }
 
   // 处理错误消息
   handleErrorMessage(error, messageId) {
