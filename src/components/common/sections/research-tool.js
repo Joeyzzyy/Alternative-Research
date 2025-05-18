@@ -206,6 +206,28 @@ const ResearchTool = () => {
     );
   };
 
+  const handleCompetitorSelect = useCallback((competitor) => {
+    // 追加到输入框内容，而不是覆盖
+    setUserInput(prev => {
+      // 如果输入框已有内容，追加一个空格再加新内容，否则直接加
+      if (!prev) return competitor.name || competitor.url || '';
+      return prev.trim() + ' ' + (competitor.name || competitor.url || '');
+    });
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, []);
+
+  const extractDomains = (text) => {
+    const domainRegex = /([a-zA-Z0-9-]+\.[a-zA-Z]{2,})(?![^<]*>)/g;
+    const domains = [];
+    let match;
+    while ((match = domainRegex.exec(text)) !== null) {
+      domains.push(match[1]);
+    }
+    return domains;
+  };
+
   const renderChatMessage = (message, index) => {
     if (message.type === 'competitor-card') {
       const { competitor } = message;
@@ -215,7 +237,7 @@ const ResearchTool = () => {
                style={{
                  boxShadow: '0 4px 24px 0 rgba(6,182,212,0.10)',
                  marginLeft: '3rem',
-                 marginBottom: '1.5rem', // 新增：增加向下的间距
+                 marginBottom: '1.5rem', 
                }}>
             <div className="flex items-center gap-3 mb-2">
               <div>
@@ -364,9 +386,12 @@ const ResearchTool = () => {
       const filteredContent = linkifyDomains(
         filterMessageTags(message.content).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
       );
+      const domains = extractDomains(message.content);
 
+      console.log('current message', message.content);
+      
       return (
-        <div key={index} className="flex justify-start mb-8" style={{animation: 'fadeIn 0.5s ease-out forwards'}}>
+        <div key={index} className="flex flex-col justify-start mb-8" style={{animation: 'fadeIn 0.5s ease-out forwards'}}>
           <div className="flex max-w-[80%] flex-row group">
             <div className="flex-shrink-0" style={{animation: 'bounceIn 0.6s ease-out forwards'}}>
               <div className="relative">
@@ -417,6 +442,35 @@ const ResearchTool = () => {
               <div className="absolute -left-1 top-0 w-2 h-2 bg-slate-800 transform rotate-45"></div>
             </div>
           </div>
+          {/* 新增：如果有域名，渲染卡片组 */}
+          {domains.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-2 ml-8">
+            {domains.map((domain, idx) => (
+              <div
+                key={domain + idx}
+                className="cursor-pointer bg-gradient-to-br from-cyan-800 to-cyan-900 border border-cyan-500/40 rounded-md px-2 py-1 shadow-md flex flex-col items-start max-w-[220px] w-full hover:scale-[1.01] transition-transform"
+                style={{ minWidth: 0 }}
+                onClick={() => handleCompetitorSelect({ url: domain })}
+              >
+                <div className="flex items-center w-full">
+                  <a
+                    href={`https://${domain}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline text-cyan-400 text-[10px] ml-1 truncate"
+                    style={{ maxWidth: 100 }}
+                    onClick={e => e.stopPropagation()}
+                  >
+                    {domain}
+                  </a>
+                </div>
+                <div className="mt-0.5 text-[9px] text-cyan-300">
+                  Detected URL, click to select
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
         </div>
       );
     }
