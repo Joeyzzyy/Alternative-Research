@@ -206,12 +206,11 @@ const SubscriptionCard = () => {
         };
       }
 
-      // 组合最终的套餐列表: Free Trial 在最前，然后是 Standard, Professional, 最后是 Test (如果存在)
+      // 组合最终的套餐列表: Free Trial 在最前，然后是 Standard, Professional
       const combinedPlans = [freeTrialPlan, standardPlan, professionalPlan];
-      if (testPlan) {
-        combinedPlans.push(testPlan);
-      }
-
+      // if (testPlan) {
+      //   combinedPlans.push(testPlan);
+      // }
       setPlans(combinedPlans);
     });
   }, []);
