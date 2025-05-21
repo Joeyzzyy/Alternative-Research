@@ -15,6 +15,8 @@ import { useToolContext } from '../../contexts/ToolContext';
 import BottomBanner from '../common/sections/bottom-banner';
 import CompareTable from '../common/sections/compare-table';
 import KeyAdvantages from '../common/sections/key-advantages';
+import ResearchToolRecover from '../common/sections/research-tool-recover';
+import apiClient from '../../lib/api/index.js';
 
 const COMPONENT_MAP = {
   Faqs: FAQ,
@@ -27,6 +29,7 @@ const COMPONENT_MAP = {
   HowItWorks: HowItWorks,
   CompareTable: CompareTable,
   KeyAdvantages: KeyAdvantages,
+  ResearchToolRecover: ResearchToolRecover,
 };
 
 const generateSchemaMarkup = (article) => {
@@ -59,10 +62,43 @@ const CommonLayout = ({ article, keywords }) => {
     return article?.pageLayout?.pageFooters;
   }, [article?.pageLayout?.pageFooters]);
 
-  const [targetShowcaseTab, setTargetShowcaseTab] = useState(null);
+  const [shouldRecover, setShouldRecover] = useState(false);
+  const [recoverTaskId, setRecoverTaskId] = useState(null);
 
   useEffect(() => {
-  }, [article]);
+    const urlParams = new URLSearchParams(window.location.search);
+    const taskId = urlParams.get('taskId');
+    const taskStatus = urlParams.get('status');
+
+    if (taskId && taskStatus !== 'finished') {
+      setShouldRecover(true);
+      setRecoverTaskId(taskId);
+    } else {
+      // 没有 taskId，查最近的任务
+      (async () => {
+        try {
+          const token = localStorage.getItem('alternativelyAccessToken');
+          if (!token) {
+            setShouldRecover(false);
+            setRecoverTaskId(null);
+            return;
+          }
+          const res = await apiClient.getAlternativeWebsiteList(1, 1); // 只查最新的一个
+          const latestTask = res?.data?.[0] || res?.list?.[0];
+          if (latestTask && latestTask.generatorStatus === 'processing') {
+            setShouldRecover(true);
+            setRecoverTaskId(latestTask.websiteId);
+          } else {
+            setShouldRecover(false);
+            setRecoverTaskId(null);
+          }
+        } catch (e) {
+          setShouldRecover(false);
+          setRecoverTaskId(null);
+        }
+      })();
+    }
+  }, [window.location.search]);
 
   if (!article) {
     return null;
@@ -71,7 +107,6 @@ const CommonLayout = ({ article, keywords }) => {
   const sections = article?.sections || [];
   const author = article?.author || 'default';
 
-  // 新增：处理底部banner点击，弹出登录框
   const handleBottomBannerClick = () => {
     window.dispatchEvent(new Event('showAlternativelyLoginModal'));
   };
@@ -91,10 +126,10 @@ const CommonLayout = ({ article, keywords }) => {
                 key={`tool-section-${index}`}
                 className="w-full bg-white"
               >
-                {currentTool === 'restore' ? (
-                  <TaskRestoreTool />
+                {shouldRecover ? (
+                  <ResearchToolRecover websiteId={recoverTaskId} />
                 ) : (
-                  <ResearchTool setTargetShowcaseTab={setTargetShowcaseTab} />
+                  <ResearchTool/>
                 )}
               </div>
             );
@@ -102,40 +137,6 @@ const CommonLayout = ({ article, keywords }) => {
 
           const Component = COMPONENT_MAP[section.componentName];
           if (!Component) return null;
-
-          if (section.componentName === "ShowCase") {
-            return (
-              <div
-                key={`${section.componentName}-${section.sectionId}`}
-                className="w-full bg-white"
-                id={section.sectionId}
-              >
-                <Component
-                  data={section}
-                  author={author}
-                  date={article.createdAt}
-                  targetKey={targetShowcaseTab}
-                  initialActiveKey="hix"
-                />
-              </div>
-            );
-          }
-
-          if (section.componentName === "SubscriptionCard") {
-            return (
-              <div
-                key={`${section.componentName}-${section.sectionId}`}
-                className="w-full bg-white"
-                id={section.sectionId}
-              >
-                <Component
-                  data={section}
-                  author={author}
-                  date={article.createdAt}
-                />
-              </div>
-            );
-          }
 
           return (
             <div 
@@ -158,7 +159,6 @@ const CommonLayout = ({ article, keywords }) => {
           data={footerData}
         />
       )}
-      {/* 新增底部横幅 */}
       <BottomBanner onClick={handleBottomBannerClick} />
     </div>
   );

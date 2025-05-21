@@ -148,11 +148,10 @@ const HistoryCardList = () => {
   const handleDelete = async (id, closeModalOnSuccess = false) => {
     setDeletingId(id);
     try {
-      // 假设有 deleteHistory API
       const res = await apiClient.deletePage?.(id);
       if (res && res.code === 200) {
         messageApi.success('Deleted successfully');
-        await fetchHistory(); // 删除成功后刷新列表
+        await fetchHistory(); 
         if (closeModalOnSuccess) {
           handleModalClose();
         }
@@ -237,11 +236,10 @@ const HistoryCardList = () => {
       setFailedModal({ open: true, id: item.websiteId });
       return;
     }
+    
     if (item.generatorStatus === 'processing') {
-      messageApi.info({
-        content: 'Your Alternative Page is Being Generated. This usually takes 5-10 minutes. Please wait patiently!',
-        duration: 5,
-      });
+      // 修改：跳转到首页并传递任务ID和状态参数
+      window.location.href = `/?taskId=${item.websiteId}&status=processing&openHistoryList=true`;
       return;
     }
     
