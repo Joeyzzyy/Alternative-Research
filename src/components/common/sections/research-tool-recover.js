@@ -208,7 +208,10 @@ const ResearchToolRecover = ({ websiteId }) => {
     const domains = [];
     let match;
     while ((match = domainRegex.exec(text)) !== null) {
-      domains.push(match[1]);
+      // 添加过滤条件
+      if (match[1] !== 'abc.ai') {
+        domains.push(match[1]);
+      }
     }
     return domains;
   };
