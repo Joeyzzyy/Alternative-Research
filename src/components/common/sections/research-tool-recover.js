@@ -199,21 +199,64 @@ const ResearchToolRecover = ({ websiteId }) => {
       const names = selectedCompetitors.map(c => c.name || c.url);
       setUserInput(`compare ${names.join(', ')} with ${mainProduct}`);
     } else {
-      setUserInput(mainProduct); // 没有选择竞品时保持主产品名
+      setUserInput(''); // 没有选择竞品时保持主产品名
     }
   }, [selectedCompetitors, mainProduct]);
 
   const extractDomains = (text) => {
-    const domainRegex = /([a-zA-Z0-9-]+\.[a-zA-Z]{2,})(?![^<]*>)/g;
-    const domains = [];
-    let match;
-    while ((match = domainRegex.exec(text)) !== null) {
-      // 添加过滤条件
-      if (match[1] !== 'abc.ai') {
-        domains.push(match[1]);
+    const domainRegex = /(\b(?:https?:\/\/)?(?:www\.)?([a-zA-Z0-9-]+\.[a-zA-Z]{2,})(?:\/[^\s]*)?\b)/gi;
+  
+  // 新规则：严格匹配被**包裹的产品名或编号列表项
+  const productRegex = /(?:\d+\.\s+)?\*\*([^*]+)\*\*/g; // 严格匹配**包裹的内容
+
+  const domains = [];
+  const products = [];
+  let match;
+
+  // 提取域名（带过滤）
+  while ((match = domainRegex.exec(text)) !== null) {
+    const fullMatch = match[1].toLowerCase();
+    const cleanDomain = fullMatch
+      .replace(/^https?:\/\//, '')
+      .replace(/^www\./, '')
+      .split('/')[0];
+    
+    if (!['abc.ai', 'altpage.ai'].includes(cleanDomain)) {
+      domains.push(cleanDomain);
+    }
+  }
+
+  // 提取产品名称（严格模式）
+  while ((match = productRegex.exec(text)) !== null) {
+    const rawName = match[1].trim();
+    
+    // 清洗和验证
+    const productName = rawName
+      .replace(/\s{2,}/g, ' ')     // 清理多余空格
+      .replace(/^[^a-zA-Z]+/, '')  // 去除开头非字母字符
+      .replace(/[^a-zA-Z0-9& ]+$/, '') // 去除结尾特殊字符
+      .replace(/( AI| SEO)$/i, '') // 移除结尾的类型标识
+      .trim();
+
+    if (productName.length >= 3) {
+      // 排除纯域名的情况
+      if (!productName.includes('.') || productName.endsWith('.ai')) {
+        products.push(productName);
       }
     }
-    return domains;
+  }
+
+  // 合并去重（优先保留域名）
+  return [...new Set([
+    ...domains,
+    ...products.filter(p => 
+      p.length > 0 &&
+      !domains.some(d => d.includes(p.toLowerCase())) &&
+      !products.some((item, idx) => 
+        item.toLowerCase() === p.toLowerCase() && idx < products.indexOf(p)
+      )
+    )
+  ])];
   };
 
   const renderChatMessage = (message, index) => {
