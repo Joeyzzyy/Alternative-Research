@@ -71,6 +71,8 @@ const ResearchToolRecover = ({ websiteId }) => {
   const startedTaskCountRef = useRef(0);
   const [chatHistory, setChatHistory] = useState(null);
   const hasRunAutoChatRef = useRef(false);
+  const [selectedCompetitors, setSelectedCompetitors] = useState([]);
+  const [mainProduct, setMainProduct] = useState('');
 
   useEffect(() => {
     const lastInput = localStorage.getItem('urlInput');
@@ -179,14 +181,27 @@ const ResearchToolRecover = ({ websiteId }) => {
   };
 
   const handleCompetitorSelect = useCallback((competitor) => {
-    setUserInput(prev => {
-      if (!prev) return competitor.name || competitor.url || '';
-      return prev.trim() + ' ' + (competitor.name || competitor.url || '');
+    setSelectedCompetitors(prev => {
+      const exists = prev.some(c => c.url === competitor.url);
+      if (exists) {
+        return prev.filter(c => c.url !== competitor.url);
+      }
+      return [...prev, competitor];
     });
+    
     if (inputRef.current) {
       inputRef.current.focus();
     }
   }, []);
+  
+  useEffect(() => {
+    if (selectedCompetitors.length > 0 && mainProduct) {
+      const names = selectedCompetitors.map(c => c.name || c.url);
+      setUserInput(`compare ${names.join(', ')} with ${mainProduct}`);
+    } else {
+      setUserInput(mainProduct); // 没有选择竞品时保持主产品名
+    }
+  }, [selectedCompetitors, mainProduct]);
 
   const extractDomains = (text) => {
     const domainRegex = /([a-zA-Z0-9-]+\.[a-zA-Z]{2,})(?![^<]*>)/g;
@@ -2075,6 +2090,10 @@ const ResearchToolRecover = ({ websiteId }) => {
 
         setLogs(processedLogs); 
         setChatHistory(chatRes);
+
+        if (chatRes?.data?.length > 0) {
+          setMainProduct(chatRes.data[0].message);
+        }
         setShouldConnectSSE(true);
       } catch (err) {
         console.error('Failed to fetch histories:', err);

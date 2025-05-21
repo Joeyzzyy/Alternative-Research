@@ -77,6 +77,8 @@ const ResearchTool = () => {
   const [showBrandAssetsModal, setShowBrandAssetsModal] = useState(false);
   const [isTaskActiveForLogs, setIsTaskActiveForLogs] = useState(false);
   const [isBrowserSidebarOpen, setIsBrowserSidebarOpen] = useState(true);
+  const [mainProduct, setMainProduct] = useState('');
+  const [selectedCompetitors, setSelectedCompetitors] = useState([]);
 
   useEffect(() => {
     const lastInput = localStorage.getItem('urlInput');
@@ -207,16 +209,27 @@ const ResearchTool = () => {
   };
 
   const handleCompetitorSelect = useCallback((competitor) => {
-    // 追加到输入框内容，而不是覆盖
-    setUserInput(prev => {
-      // 如果输入框已有内容，追加一个空格再加新内容，否则直接加
-      if (!prev) return competitor.name || competitor.url || '';
-      return prev.trim() + ' ' + (competitor.name || competitor.url || '');
+    setSelectedCompetitors(prev => {
+      const exists = prev.some(c => c.url === competitor.url);
+      if (exists) {
+        return prev.filter(c => c.url !== competitor.url);
+      }
+      return [...prev, competitor];
     });
+    
     if (inputRef.current) {
       inputRef.current.focus();
     }
   }, []);
+  
+  useEffect(() => {
+    if (selectedCompetitors.length > 0 && mainProduct) {
+      const names = selectedCompetitors.map(c => c.name || c.url);
+      setUserInput(`compare ${names.join(', ')} with ${mainProduct}`);
+    } else {
+      setUserInput(mainProduct); // 没有选择竞品时保持主产品名
+    }
+  }, [selectedCompetitors, mainProduct]);
 
   const extractDomains = (text) => {
     const domainRegex = /([a-zA-Z0-9-]+\.[a-zA-Z]{2,})(?![^<]*>)/g;
@@ -1464,6 +1477,7 @@ const ResearchTool = () => {
   };
 
   const initializeChat = async (userInput) => {
+    setMainProduct(userInput.trim());
     let thinkingMessageId;
     try {
       setIsProcessingTask(true);
