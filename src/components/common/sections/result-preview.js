@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import apiClient from '../../../lib/api/index.js';
 import { Modal, Button, Spin, message, Select, Radio } from 'antd';
-import { DeleteOutlined, ExclamationCircleOutlined, ReloadOutlined, LeftOutlined, CopyOutlined, RightOutlined, CloseOutlined, ClearOutlined, EditOutlined, EyeOutlined, LinkOutlined } from '@ant-design/icons';
+import { DeleteOutlined, ExclamationCircleOutlined, ReloadOutlined, ExportOutlined, LeftOutlined, CopyOutlined, RightOutlined, CloseOutlined, ClearOutlined, EditOutlined, EyeOutlined, LinkOutlined } from '@ant-design/icons';
 import HtmlPreview from './page-edit';
 import PublishSettingsModal from './publish-setting-modal';
 
@@ -851,7 +851,7 @@ const HistoryCardList = () => {
                               title="Preview Page in New Tab"
                               disabled={!selectedPreviewId || resultLoading || !previewUrl}
                             >
-                              <EyeOutlined /> Preview
+                              <ExportOutlined /> Preview
                             </button>
                             <button
                               onClick={() => { 
