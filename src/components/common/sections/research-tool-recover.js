@@ -2184,6 +2184,7 @@ const ResearchToolRecover = ({ websiteId }) => {
         'System task detected: Page generation in progress. This may take 3-9 minutes.'
       );
     }
+    setIsProcessingTask(true);
   }, [messages]);
 
   

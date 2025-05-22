@@ -1004,8 +1004,8 @@ const ResearchTool = () => {
                     </div>
                   )}
   
-  {log.type === 'Color' && (
-                  log.content?.organic_data && typeof log.content.organic_data === 'string' ? (
+                  {log.type === 'Color' && (
+                    log.content?.organic_data && typeof log.content.organic_data === 'string' ? (
                     (() => {
                       let colorData = {};
                       try {
@@ -1429,11 +1429,12 @@ const ResearchTool = () => {
             await new Promise(resolve => setTimeout(resolve, 100));
           }
           setCanProcessCompetitors(true);
-        } else if (rawAnswer.includes('Say "yes"')) {
+        } else if (rawAnswer.includes('[AWAITING_CONFIRMATION]')) {
           const answer = filterMessageTags(rawAnswer);
           messageHandler.updateAgentMessage(answer, thinkingMessageId);
           messageHandler.addConfirmButtonMessage(async () => {
             await handleUserInput('yes i confirm');
+            setIsProcessingTask(true);
           });
         } else if (rawAnswer.includes('[COMPETITOR_SELECTED]')) {
           const messageBody = rawAnswer.replace(/\[COMPETITOR_SELECTED\].*$/s, '').trim();

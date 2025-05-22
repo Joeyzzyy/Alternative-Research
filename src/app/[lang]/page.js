@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { ClientWrapper } from '../../components/layouts/client-wrapper';
 import CommonLayout from '../../components/layouts/layout';
 import Script from 'next/script'
+import IntercomInit from '../../components/intercom-init';
 
 // 1. 确保动态渲染
 export const dynamic = 'force-dynamic'
@@ -55,8 +56,15 @@ export default async function ArticlePage({ params }) {
         <Script id="article-schema" type="application/ld+json">
           {JSON.stringify(articleSchema)}
         </Script>
+        <Script strategy="afterInteractive" id="intercom-script">
+          {`
+            window.intercomSettings = { app_id: "aqhtwkc5" };
+            (function(){var w=window;var ic=w.Intercom;if(typeof ic==="function"){ic('reattach_activator');ic('update',w.intercomSettings);}else{var d=document;var i=function(){i.c(arguments)};i.q=[];i.c=function(args){i.q.push(args)};w.Intercom=i;var l=function(){var s=d.createElement('script');s.type='text/javascript';s.async=true;s.src='https://widget.intercom.io/widget/aqhtwkc5';var x=d.getElementsByTagName('script')[0];x.parentNode.insertBefore(s,x);};if(document.readyState==='complete'){l();}else if(w.attachEvent){w.attachEvent('onload',l);}else{w.addEventListener('load',l,false);}}})();
+          `}
+        </Script>
         <ClientWrapper>
-            <CommonLayout article={article} />
+          <IntercomInit />
+          <CommonLayout article={article} />
         </ClientWrapper>
       </>
     );

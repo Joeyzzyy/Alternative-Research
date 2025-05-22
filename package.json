@@ -14,6 +14,7 @@
     "@emotion/styled": "^11.13.0",
     "@heroicons/react": "^2.2.0",
     "@iconify/react": "^5.2.0",
+    "@intercom/messenger-js-sdk": "^0.0.14",
     "@stripe/react-stripe-js": "^3.6.0",
     "@stripe/stripe-js": "^7.1.0",
     "antd": "^5.24.6",
