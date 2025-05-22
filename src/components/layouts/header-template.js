@@ -396,9 +396,7 @@ export default function Header() {
       messageApi.loading({ content: 'Authenticating...', key, duration: 0 });
       
       // 调用后端接口
-      const res = await apiClient.googleOneTapLogin({ 
-        credential: response.credential 
-      });
+      const res = await apiClient.googleOneTapLogin(response.credential);
 
       // 存储用户信息
       localStorage.setItem('alternativelyAccessToken', res.accessToken);
