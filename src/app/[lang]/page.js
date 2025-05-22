@@ -161,9 +161,8 @@ export async function generateMetadata({ params }) {
   }
 }
 
-// 修改数据获取函数，完全移除参数
 async function getPageData() {
-  const mockData = {
+  const pageData = {
     data: {
       title: "AltPage.ai - AI-Driven Competitor Alternative Pages",
       description: "Generate AI-powered pages that outrank competitors, boost conversions, and update automatically. Start with 5 free pages today.",
@@ -305,7 +304,7 @@ async function getPageData() {
         },
         {
           componentName: "CompareTable",
-          sectionId: "compare-table-1"
+          sectionId: "compare-table"
         },
         {
           componentName: "ShowCase",
@@ -317,7 +316,7 @@ async function getPageData() {
         },
         {
           componentName: "Recommendations",
-          sectionId: "recommendations-1",
+          sectionId: "recommendations",
         },
         {
           componentName: "Faqs",
@@ -325,11 +324,11 @@ async function getPageData() {
         },
         {
           componentName: "CallToAction",
-          sectionId: "cta-1",
+          sectionId: "cta",
         },
       ]
     }
   };
 
-  return mockData;
+  return pageData;
 }
