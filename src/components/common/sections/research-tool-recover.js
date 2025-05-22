@@ -1407,7 +1407,7 @@ const ResearchToolRecover = ({ websiteId }) => {
           while (messageHandler.isProcessing) {
             await new Promise(resolve => setTimeout(resolve, 100));
           }
-        } else if (rawAnswer.includes('Say "yes"')) {
+        } else if (rawAnswer.includes('[AWAITING_CONFIRMATION]')) {
           const answer = filterMessageTags(rawAnswer);
           messageHandler.updateAgentMessage(answer, thinkingMessageId);
           messageHandler.addConfirmButtonMessage(async () => {
