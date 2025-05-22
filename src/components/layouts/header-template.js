@@ -401,8 +401,8 @@ export default function Header() {
       // 存储用户信息
       localStorage.setItem('alternativelyAccessToken', res.accessToken);
       localStorage.setItem('alternativelyIsLoggedIn', 'true');
-      localStorage.setItem('alternativelyCustomerEmail', res.email);
-      localStorage.setItem('alternativelyCustomerId', res.customerId);
+      localStorage.setItem('alternativelyCustomerEmail', res.data.email);
+      localStorage.setItem('alternativelyCustomerId', res.data.customerId);
 
       // 更新状态
       setIsLoggedIn(true);
