@@ -22,6 +22,7 @@
     "date-fns": "^3.6.0",
     "event-source-polyfill": "^1.0.31",
     "eventsource-polyfill": "^0.9.6",
+    "jwt-decode": "^4.0.0",
     "next": "^15.0.3",
     "next-intl": "^3.25.3",
     "next-sitemap": "^4.2.3",

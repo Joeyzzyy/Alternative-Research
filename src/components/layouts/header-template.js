@@ -1,10 +1,10 @@
 "use client";
-import React, { useEffect } from 'react';
-import { useState } from "react";
+import React, { useEffect, useState, useCallback } from 'react';
 import Image from 'next/image';
 import apiClient from '../../lib/api/index.js';
 import { Spin, message } from 'antd';
 import { useUser } from '../../contexts/UserContext';
+import jwt_decode from "jwt-decode";
 
 import LoginModal from '../common/sections/login-modal.js';
 import BrandAssetsModal from '../common/sections/brand-assets.js';
@@ -98,6 +98,7 @@ export default function Header() {
   const [loading, setLoading] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showBrandAssetsModal, setShowBrandAssetsModal] = useState(false);
+  const [isOneTapShown, setIsOneTapShown] = useState(false);
 
   useEffect(() => {
     const storedIsLoggedIn = localStorage.getItem('alternativelyIsLoggedIn');
@@ -388,8 +389,104 @@ export default function Header() {
     setState(prevState => ({ ...prevState, isOpen: !prevState.isOpen }));
   };
 
+  // 添加Google One Tap处理函数
+  const handleGoogleOneTapSuccess = useCallback(async (response) => {
+    const key = 'googleOneTap';
+    try {
+      messageApi.loading({ content: 'Authenticating...', key, duration: 0 });
+      
+      // 调用后端接口
+      const res = await apiClient.googleOneTapLogin({ 
+        credential: response.credential 
+      });
+
+      // 存储用户信息
+      localStorage.setItem('alternativelyAccessToken', res.accessToken);
+      localStorage.setItem('alternativelyIsLoggedIn', 'true');
+      localStorage.setItem('alternativelyCustomerEmail', res.email);
+      localStorage.setItem('alternativelyCustomerId', res.customerId);
+
+      // 更新状态
+      setIsLoggedIn(true);
+      setUserEmail(res.email);
+      messageApi.success({ content: 'Login successful!', duration: 2 });
+
+      // 关闭可能打开的登录模态框
+      setShowLoginModal(false);
+      window.dispatchEvent(new CustomEvent('alternativelyLoginSuccess'));
+    } catch (error) {
+      console.error('Google One Tap login failed:', error);
+      messageApi.error({ 
+        content: error.response?.data?.error || 'Authentication failed',
+        duration: 2 
+      });
+    } finally {
+      messageApi.destroy(key);
+    }
+  }, [messageApi, setShowLoginModal]);
+
+  // 添加Google One Tap初始化逻辑
+  useEffect(() => {
+    let googleScript = null;
+
+    const initializeOneTap = () => {
+      if (!window.google || isLoggedIn || isOneTapShown) return;
+
+      window.google.accounts.id.initialize({
+        client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+        callback: handleGoogleOneTapSuccess,
+        cancel_on_tap_outside: false,
+        prompt_parent_id: "google-one-tap-button"
+      });
+
+      window.google.accounts.id.prompt(notification => {
+        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+          setIsOneTapShown(true);
+        }
+      });
+    };
+
+    const loadGoogleScript = () => {
+      if (!document.querySelector('#google-one-tap-script')) {
+        googleScript = document.createElement('script');
+        googleScript.id = 'google-one-tap-script';
+        googleScript.src = 'https://accounts.google.com/gsi/client';
+        googleScript.async = true;
+        googleScript.defer = true;
+        googleScript.onload = initializeOneTap;
+        document.head.appendChild(googleScript);
+      } else {
+        initializeOneTap();
+      }
+    };
+
+    if (!isLoggedIn) {
+      loadGoogleScript();
+    }
+
+    return () => {
+      if (googleScript) {
+        googleScript.remove();
+      }
+      if (window.google) {
+        window.google.accounts.id.cancel();
+      }
+    };
+  }, [isLoggedIn, isOneTapShown, handleGoogleOneTapSuccess]);
+
   return (
     <>
+      {/* 在页面顶部添加Google One Tap容器 */}
+      <div 
+        id="google-one-tap-button"
+        className="fixed top-4 right-4 z-[9999]"
+        style={{ 
+          display: isLoggedIn ? 'none' : 'block',
+          width: '400px', // 确保足够宽度显示完整提示
+          height: '50px'  // 防止布局抖动
+        }}
+      ></div>
+
       {/* 在根元素渲染 contextHolder */}
       {contextHolder}
       <nav
