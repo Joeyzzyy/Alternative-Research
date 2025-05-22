@@ -17,9 +17,7 @@ const SUPPORTED_LANGUAGES = ['en'];
 // 主页面组件
 export default async function ArticlePage({ params }) {
   try {
-    const { lang } = params;
     const articleData = await getPageData();
-
     if (!articleData?.data || articleData.data.publishStatus !== 'publish') {
       console.error(`Article not found or not published`);
       return notFound();
@@ -35,11 +33,12 @@ export default async function ArticlePage({ params }) {
       dateModified: article.updatedAt,
       author: {
         '@type': 'Person',
-        name: article.author
+        name: 'Joey.Z'
       },
       publisher: {
         '@type': 'Organization',
-        name: 'WebsiteLM',
+        name: 'altpage.ai',
+        url: 'https://altpage.ai'
       },
       mainEntityOfPage: {
         '@type': 'WebPage',
@@ -88,7 +87,7 @@ export async function generateMetadata({ params }) {
     }
 
     const article = articleData.data;
-    const host = process.env.NEXT_PUBLIC_HOST || 'https://yourwebsite.com';
+    const host = process.env.NEXT_PUBLIC_HOST || 'https://altpage.ai';
     const metadataBaseUrl = new URL(host);
     return {
       title: article.title, 
