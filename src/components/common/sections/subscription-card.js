@@ -549,7 +549,7 @@ function PaymentModal({ visible, onClose, plan, period, onSuccess }) {
               textAlign: "center"
             }}>
               <div style={{ fontSize: 13, color: "#888", fontWeight: 400, marginBottom: 2 }}>Total per year</div>
-              <div>¥{Number(plan.price[period]) * 12}</div>
+              <div>¥{Math.round(Number(plan.price[period]) * 12 * 100) / 100}</div>
             </div>
           )}
         </div>
