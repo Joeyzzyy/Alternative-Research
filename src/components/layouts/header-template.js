@@ -292,6 +292,13 @@ export default function Header() {
     
     // 关闭登录模态框
     setShowLoginModal(false);
+
+    window.dataLayer = window.dataLayer || [];
+    window.dataLayer.push({
+      'event': 'custom_event_signup_success', // 自定义事件名，用于GTM触发器
+      'registration_method': 'email',         // (可选) 描述注册方式
+      'user_id': userData.customerId,      // 如果需要可以加上用户ID
+    });
     
     // 触发登录成功事件，通知其他组件
     const loginSuccessEvent = new CustomEvent('alternativelyLoginSuccess');
