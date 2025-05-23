@@ -484,7 +484,7 @@ export default function Header() {
       {/* 在页面顶部添加Google One Tap容器 */}
       <div 
         id="google-one-tap-button"
-        className="fixed top-4 right-4 z-[9999]"
+        className="fixed top-24 right-4 z-[9999]"
         style={{ 
           display: isLoggedIn ? 'none' : 'block',
           width: '400px', // 确保足够宽度显示完整提示
