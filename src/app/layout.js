@@ -1,6 +1,7 @@
 import './globals.css'
 import { UserProvider } from '../contexts/UserContext';
 import { ToolProvider } from '../contexts/ToolContext';
+import Script from 'next/script';
 
 export default async function RootLayout({ children, keywords }) {
   let faviconUrl = '/images/alternatively-favicon.png'; 
@@ -42,7 +43,7 @@ export default async function RootLayout({ children, keywords }) {
           <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5THNMDPJ"
             height="0" width="0" style={{ display: 'none', visibility: 'hidden' }}></iframe>
         </noscript>
-      <UserProvider>
+        <UserProvider>
           <ToolProvider>
             {children}
           </ToolProvider>
