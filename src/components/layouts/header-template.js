@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import apiClient from '../../lib/api/index.js';
 import { Spin, message } from 'antd';
@@ -99,6 +99,11 @@ export default function Header() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showBrandAssetsModal, setShowBrandAssetsModal] = useState(false);
   const [isOneTapShown, setIsOneTapShown] = useState(false);
+
+  const isLoggedInRef = useRef(isLoggedIn);
+  useEffect(() => {
+    isLoggedInRef.current = isLoggedIn;
+  }, [isLoggedIn]);
 
   useEffect(() => {
     const storedIsLoggedIn = localStorage.getItem('alternativelyIsLoggedIn');
@@ -434,8 +439,14 @@ export default function Header() {
   useEffect(() => {
     let googleScript = null;
 
+    console.log('[OneTap] useEffect触发, isLoggedIn:', isLoggedIn, 'isOneTapShown:', isOneTapShown);
+
     const initializeOneTap = () => {
-      if (!window.google || isLoggedIn || isOneTapShown) return;
+      console.log('[OneTap] 尝试初始化 One Tap, isLoggedInRef.current:', isLoggedInRef.current, 'isOneTapShown:', isOneTapShown, 'window.google:', !!window.google);
+      if (!window.google || isLoggedInRef.current || isOneTapShown) {
+        console.log('[OneTap] 初始化终止（已登录/已弹出/无google）');
+        return;
+      }
 
       window.google.accounts.id.initialize({
         client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
@@ -445,35 +456,56 @@ export default function Header() {
       });
 
       window.google.accounts.id.prompt(notification => {
+        console.log('[OneTap] prompt回调, notification:', notification);
         if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
           setIsOneTapShown(true);
+          console.log('[OneTap] One Tap未显示或被跳过，设置isOneTapShown为true');
+        } else {
+          console.log('[OneTap] One Tap已弹出');
         }
       });
     };
 
     const loadGoogleScript = () => {
+      if (isLoggedInRef.current) {
+        console.log('[OneTap] 已登录，不加载Google脚本');
+        return;
+      }
       if (!document.querySelector('#google-one-tap-script')) {
+        console.log('[OneTap] 加载Google One Tap脚本');
         googleScript = document.createElement('script');
         googleScript.id = 'google-one-tap-script';
         googleScript.src = 'https://accounts.google.com/gsi/client';
         googleScript.async = true;
         googleScript.defer = true;
-        googleScript.onload = initializeOneTap;
+        googleScript.onload = () => {
+          console.log('[OneTap] Google脚本加载完成, isLoggedInRef.current:', isLoggedInRef.current);
+          if (!isLoggedInRef.current) {
+            initializeOneTap();
+          } else {
+            console.log('[OneTap] onload时已登录，不初始化');
+          }
+        };
         document.head.appendChild(googleScript);
       } else {
+        console.log('[OneTap] Google脚本已存在，直接初始化');
         initializeOneTap();
       }
     };
 
-    if (!isLoggedIn) {
+    if (!isLoggedInRef.current) {
       loadGoogleScript();
+    } else {
+      console.log('[OneTap] 已登录，不执行loadGoogleScript');
     }
 
     return () => {
       if (googleScript) {
+        console.log('[OneTap] 清理，移除Google脚本');
         googleScript.remove();
       }
-      if (window.google) {
+      if (window.google && window.google.accounts && window.google.accounts.id) {
+        console.log('[OneTap] 清理，取消One Tap');
         window.google.accounts.id.cancel();
       }
     };

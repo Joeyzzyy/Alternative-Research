@@ -148,13 +148,10 @@ const BrandAssetsModal = ({ showBrandAssetsModal, setShowBrandAssetsModal, onSav
     setErrorMessage(null);
     setIsCreatingNew(false); // 2. 默认不是创建新记录
     try {
-      console.log("Fetching brand assets via API...");
       const response = await apiClient.getBrandAssets();
-      console.log("API Response:", response);
 
       // 检查是否收到 "No matching records found" 响应
       if (response && response.code === 1021) {
-        console.log("API returned code 1021 (No matching records found), using defaults. Will create on save.");
         setBrandColors(defaultBrandColors);
         setIsCreatingNew(true); // 2. 设置标记，表示需要创建
       } else if (response && response.data) { // 确保 response.data 存在
@@ -172,10 +169,8 @@ const BrandAssetsModal = ({ showBrandAssetsModal, setShowBrandAssetsModal, onSav
         const newState = { ...defaultBrandColors, ...filteredMappedData };
         setBrandColors(newState);
         setIsCreatingNew(!newState.brandId); // 2. 如果没有 brandId，也视为创建
-        console.log("Fetched and mapped brand assets:", newState);
       } else {
         // 如果 API 调用在 apiClient 层返回 null 或响应格式不符
-        console.log("API call failed or returned unexpected data, using defaults. Will create on save.");
         setBrandColors(defaultBrandColors);
         setIsCreatingNew(true); // 2. 加载失败，也标记为创建
       }
@@ -273,24 +268,20 @@ const BrandAssetsModal = ({ showBrandAssetsModal, setShowBrandAssetsModal, onSav
     // 2. 映射状态数据到 API 格式
     // 创建时不包含 brandId，更新时包含
     const apiPayload = mapStateToApiKeys(brandColors, !isCreatingNew);
-    console.log(`Saving brand assets (${isCreatingNew ? 'CREATE' : 'UPDATE'}) with payload:`, apiPayload);
 
     try {
       let response;
       // --- 根据 isCreatingNew 调用不同 API ---
       if (isCreatingNew) {
-        console.log("Calling createBrandAssets...");
         response = await apiClient.createBrandAssets(apiPayload);
       } else {
         // 确保有 brandId 用于更新
         if (!brandColors.brandId) {
            throw new Error("Cannot update: Brand ID is missing.");
         }
-        console.log(`Calling upsertBrandAssets for brandId: ${brandColors.brandId}...`);
         // 注意：upsertBrandAssets 现在接收 brandId 作为第一个参数
         response = await apiClient.upsertBrandAssets(brandColors.brandId, apiPayload);
       }
-      console.log("Save response:", response);
       // --- 结束 API 调用 ---
 
       // 检查 API 响应是否表示成功

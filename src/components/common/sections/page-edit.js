@@ -146,10 +146,8 @@ export default function HtmlPreview({ pageId }) {
         }
         titleElement = doc.createElement('title');
         headElement.appendChild(titleElement);
-        console.log("Created missing <head> or <title> element.");
       }
       titleElement.textContent = newTitle;
-      console.log("Updated iframe title to:", newTitle);
     } else {
       console.warn("Cannot update iframe title: iframe or document not ready.");
     }
@@ -535,7 +533,6 @@ export default function HtmlPreview({ pageId }) {
 
   // --- 修改：使用 useCallback 包裹 fetchImageAssets ---
   const fetchImageAssets = useCallback(async (page = 1, pageSize = 20) => {
-    console.log('Fetching images - page:', page, 'pageSize:', pageSize);
     setImageLoading(true);
     try {
       // --- 修改：调用正确的 API 函数并传递独立参数 ---
@@ -554,7 +551,6 @@ export default function HtmlPreview({ pageId }) {
       );
       // --- API 调用修改结束 ---
 
-      console.log('API Response:', response);
 
       // --- 修改：根据实际 API 响应结构设置状态 (这里假设 getMedia 返回的结构与之前 getMediaList 预期的一致) ---
       // 注意：如果 getMedia 返回的结构不同 (例如直接是 { data: [...] } 而不是 { code: 200, data: [...], TotalCount: ... })，则需要调整下面的逻辑
@@ -586,7 +582,6 @@ export default function HtmlPreview({ pageId }) {
 
   // Load when opening the image library
   useEffect(() => {
-    console.log('Image Library Effect Triggered. showImageLibrary:', showImageLibrary); // 添加日志
     if (showImageLibrary) {
       fetchImageAssets(imagePage, imagePageSize);
     }
@@ -654,12 +649,10 @@ export default function HtmlPreview({ pageId }) {
           // 对于 fixed 或 sticky 定位的元素，滚动到页面顶部
           iframe.contentWindow.scrollTo({ top: 0, behavior: 'smooth' });
           // --- 修改：日志信息改为英文 ---
-          console.log(`Element ${sectionId} is fixed/sticky, scrolling window to top.`);
         } else {
           // 对于其他元素，正常滚动到元素位置
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
           // --- 修改：日志信息改为英文 ---
-          console.log(`Scrolling element ${sectionId} into view.`);
         }
       } else {
         // --- 修改：日志信息改为英文 ---
@@ -673,7 +666,6 @@ export default function HtmlPreview({ pageId }) {
 
   function handleInitiateEdit(sectionId) {
     // --- 修改：日志信息改为英文 ---
-    console.log(`Initiating AI edit for section: ${sectionId}`);
     const iframe = iframeRef.current;
     if (!iframe || !iframe.contentDocument) {
       // --- 修改：提示信息改为英文 ---
@@ -933,7 +925,6 @@ export default function HtmlPreview({ pageId }) {
 
     try {
       // --- 修改：日志信息改为英文 ---
-      console.log('Sending combined instructions to API:', combinedInstructions);
       const response = await apiClient.regenerateSection({
         instructions: combinedInstructions.trim(),
         sectionHtml: originalSectionHtml,
@@ -972,7 +963,6 @@ export default function HtmlPreview({ pageId }) {
   // --- 新增：开始预览编辑 ---
   function startPreviewingEdit(sectionId, newHtml) {
     // --- 修改：日志信息改为英文 ---
-    console.log(`Starting preview for section ${sectionId}`);
     const iframe = iframeRef.current;
     if (!iframe || !iframe.contentDocument) {
       // --- 修改：提示信息改为英文 ---
@@ -1022,7 +1012,6 @@ export default function HtmlPreview({ pageId }) {
   // --- 更新：取消预览编辑 ---
   function cancelPreviewEdit() {
     // --- 修改：日志信息改为英文 ---
-    console.log('Discarding edit...');
     const iframe = iframeRef.current;
     if (!iframe || !iframe.contentDocument || !editingSectionId || !originalSectionHtmlForPreview) {
       // --- 修改：日志信息改为英文 ---
@@ -1077,7 +1066,6 @@ export default function HtmlPreview({ pageId }) {
   // --- 新增：接受预览编辑 ---
   async function acceptPreviewEdit() {
     // --- 修改：日志和提示信息改为英文 ---
-    console.log('Accepting edit...');
     if (!editingSectionId || !proposedSectionHtml) {
       message.error("Cannot accept: Missing sectionId or proposed HTML.");
       return;
@@ -1099,7 +1087,6 @@ export default function HtmlPreview({ pageId }) {
     // **关键：确保当前显示的是 AI 建议的版本**
     if (isPreviewingOriginal) {
       // --- 修改：日志信息改为英文 ---
-      console.log("Switching back to proposed version before accepting...");
       const proposedElement = parseHtmlString(proposedSectionHtml, doc, editingSectionId);
       if (element && element.parentNode && proposedElement) {
         element.parentNode.replaceChild(proposedElement, element);
@@ -1186,7 +1173,6 @@ export default function HtmlPreview({ pageId }) {
         } else {
            // 如果有多个子节点，或者不是元素节点，创建一个新的 section 包裹它们
            // --- 修改：日志信息改为英文 ---
-           console.log("Wrapping parsed content in a new section tag.");
            const wrapperSection = doc.createElement('section');
            // 移动所有子节点到新的 section
            while (tempDiv.firstChild) {
@@ -1239,7 +1225,6 @@ export default function HtmlPreview({ pageId }) {
 
     if (newElement) {
       // --- 修改：日志信息改为英文 ---
-      console.log(`Toggling preview to: ${isPreviewingOriginal ? 'Proposed' : 'Original'}`);
       currentElement.parentNode.replaceChild(newElement, currentElement);
       setIsPreviewingOriginal(!isPreviewingOriginal); // 更新状态
 
@@ -1264,7 +1249,6 @@ export default function HtmlPreview({ pageId }) {
 
   // --- 新增：开始直接编辑 Section 代码 ---
   function handleInitiateCodeEdit(sectionId) {
-    console.log(`Initiating code edit for section: ${sectionId}`);
     const iframe = iframeRef.current;
     if (!iframe || !iframe.contentDocument) {
       message.error('Iframe content not ready.');
@@ -1348,7 +1332,6 @@ export default function HtmlPreview({ pageId }) {
 
         // 替换 DOM 中的元素
         originalElement.parentNode.replaceChild(newElement, originalElement);
-        console.log(`Section ${codeEditingSectionId} updated with new code.`);
 
         // --- 移除：不再在此处更新 title ---
         // updateIframeTitle(pageTitle);
