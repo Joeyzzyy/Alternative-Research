@@ -238,9 +238,10 @@ const HistoryCardList = () => {
     }
     
     if (item.generatorStatus === 'processing') {
-      // 修改：跳转到首页并传递任务ID和状态参数
-      window.location.href = `/?taskId=${item.websiteId}&status=processing&openHistoryList=true`;
+      // === 修改开始：不再跳转，改为 messageApi 提示 ===
+      messageApi.info('You are already in the current processing task.');
       return;
+      // === 修改结束 ===
     }
     
     setSelectedItem(item);
