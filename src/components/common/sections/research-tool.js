@@ -79,6 +79,12 @@ const ResearchTool = () => {
   const [isBrowserSidebarOpen, setIsBrowserSidebarOpen] = useState(true);
   const [mainProduct, setMainProduct] = useState('');
   const [selectedCompetitors, setSelectedCompetitors] = useState([]);
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const currentExample = examples[currentExampleIndex];
+
+  useEffect(() => {
+    setImgLoaded(false); // 每次切换图片时重置
+  }, [currentExample.image]);
 
   useEffect(() => {
     const lastInput = localStorage.getItem('urlInput');
@@ -2872,12 +2878,16 @@ const ResearchTool = () => {
                   </div>
                 </div>
                 {/* --- 修改：给图片容器添加固定高度和 overflow-hidden --- */}
-                <div className="pt-8 h-[400px] overflow-hidden"> {/* 你可以根据需要调整这个高度，例如 h-[350px] 或 h-[450px] */}
-                <img
+                <div className="pt-8 h-[400px] overflow-hidden" relative> {/* 你可以根据需要调整这个高度，例如 h-[350px] 或 h-[450px] */}
+                  <img
+                    key={currentExample.image} // 关键：切换时强制 React 重新渲染 img
                     src={currentExample.image}
                     alt={`Preview of ${currentExample.title}`}
-                    className="w-full h-full object-contain"
+                    className={`w-full h-full object-contain transition-opacity duration-500 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
                     loading="lazy"
+                    onLoad={() => setImgLoaded(true)}
+                    onError={() => setImgLoaded(true)}
+                    style={{ background: '#222' }} // 可选：加载时有底色
                   />
                 </div>
               </a>

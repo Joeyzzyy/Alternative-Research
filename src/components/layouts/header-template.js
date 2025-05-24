@@ -547,8 +547,7 @@ export default function Header() {
           <div className="flex items-center justify-between h-[4.2rem]">
             {/* Logo 添加光效 */}
             <div className="flex-shrink-0 flex items-center h-full group">
-              <a href="/" className="flex items-center h-full py-2 relative">
-                {/* 添加文字渐变容器 */}
+              <div className="flex items-center h-full py-2 relative cursor-default select-none">
                 <div className="relative z-10">
                   <Image
                     src="/images/alternatively-logo-tem.png"
@@ -561,13 +560,10 @@ export default function Header() {
                     priority
                   />
                 </div>
-                {/* 增强背景光效 */}
                 <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/50 to-purple-500/50 opacity-70 group-hover:opacity-90 transition-opacity duration-300 rounded-full blur-[20px]"></div>
-                {/* 添加动态光晕动画 */}
                 <div className="absolute inset-0 animate-pulse-slow opacity-30 bg-gradient-to-r from-cyan-400/30 to-purple-400/30 blur-[30px]"></div>
-                {/* 添加文字描边 */}
                 <div className="absolute inset-0 bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-200 opacity-30 mix-blend-overlay"></div>
-              </a>
+              </div>
             </div>
 
             {/* 右侧容器 (导航菜单 + 认证按钮) - 桌面端 */}
