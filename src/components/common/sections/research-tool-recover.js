@@ -18,6 +18,10 @@ const TAG_FILTERS = {
 const ALTERNATIVELY_LOGO = '/images/alternatively-logo.png';
 
 const ResearchToolRecover = ({ websiteId }) => {
+  const [errorModal, setErrorModal] = useState({
+    visible: false,
+    message: '',
+  });
   const [messageApi, contextHolder] = message.useMessage();
   const [loading, setLoading] = useState(true);
   const [messages, setMessages] = useState([]);
@@ -1531,64 +1535,10 @@ const ResearchToolRecover = ({ websiteId }) => {
     let eventSource = null;
 
     const showErrorModal = (errorMessage = 'An irreversible error occurred during the task.') => {
-      if (document.querySelector('.error-modal-container')) {
-        return;
-      }
-
-      const modalContainer = document.createElement('div');
-      modalContainer.className = 'error-modal-container fixed inset-0 z-[1000] flex items-center justify-center bg-black bg-opacity-75 backdrop-blur-sm p-4'; // 提高 z-index
-
-      const modalContent = document.createElement('div');
-      modalContent.className = 'bg-gradient-to-b from-slate-900 to-slate-950 rounded-lg shadow-xl p-6 max-w-md w-full border border-red-500/50 relative animate-fadeIn'; // 使用渐变背景和红色边框
-
-      const iconContainer = document.createElement('div');
-      iconContainer.className = 'mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4';
-      iconContainer.innerHTML = `
-        <svg class="h-6 w-6 text-red-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-        </svg>
-      `;
-
-      const title = document.createElement('h3');
-      title.className = 'text-xl font-semibold text-white mb-3 text-center flex items-center justify-center gap-2'; // 使用 flex 布局居中并添加间距
-      title.innerHTML = `
-        <span>Oops! Something Went Wrong...</span>
-        <span class="text-2xl">😭</span> 
-      `;
-
-      const description = document.createElement('p');
-      description.className = 'text-gray-300 mb-2 text-center text-sm';
-      description.textContent = `We encountered an irreversible error. Any pages already generated will be saved.`; 
-
-      const creditInfo = document.createElement('p');
-      creditInfo.className = 'text-green-400 mb-4 text-center text-sm font-medium';
-      creditInfo.textContent = 'Credits for unfinished pages will not be deducted.'; 
-
-      const instruction = document.createElement('p');
-      instruction.className = 'text-gray-400 mb-6 text-center text-sm';
-      instruction.textContent = 'Could you please try starting the task again from the homepage?'; 
-
-      const buttonContainer = document.createElement('div');
-      buttonContainer.className = 'flex justify-center'; // 居中按钮
-
-      const closeButton = document.createElement('button');
-      closeButton.className = 'px-5 py-2 bg-red-600 text-white rounded-md hover:bg-red-500 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-slate-900';
-      closeButton.textContent = 'Return to Homepage';
-
-      closeButton.onclick = () => {
-        document.body.removeChild(modalContainer);
-        window.location.href = '/'; // 或者你的首页路由
-      };
-
-      modalContent.appendChild(iconContainer);
-      modalContent.appendChild(title);
-      modalContent.appendChild(description);
-      modalContent.appendChild(creditInfo);
-      modalContent.appendChild(instruction);
-      buttonContainer.appendChild(closeButton);
-      modalContent.appendChild(buttonContainer);
-      modalContainer.appendChild(modalContent);
-      document.body.appendChild(modalContainer);
+      setErrorModal({
+        visible: true,
+        message: errorMessage || '',
+      });
 
       // 停止 SSE 连接并重置状态
       if (eventSource) {
@@ -2150,8 +2100,10 @@ const ResearchToolRecover = ({ websiteId }) => {
     fetchHistories();
   }, [currentWebsiteId, apiClient]);
 
+  const isRestoringHistoryRef = useRef(false);
   useEffect(() => {
     if (!chatHistory || !Array.isArray(chatHistory.data)) return;
+    isRestoringHistoryRef.current = true;
 
     const sorted = [...chatHistory.data].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
     const restoredMessages = [];
@@ -2172,19 +2124,21 @@ const ResearchToolRecover = ({ websiteId }) => {
     });
 
     setMessages(restoredMessages);
+    setTimeout(() => { isRestoringHistoryRef.current = false; }, 500);
   }, [chatHistory]);
 
   // 恢复完历史后，检查是否需要插入 system message
   useEffect(() => {
     if (!messages || messages.length === 0) return;
+    if (!isRestoringHistoryRef.current) return;
     const lastMsg = messages[messages.length - 1];
     const lastContent = (lastMsg.content || '').toLowerCase().replace(/[^a-z]/g, '');
     if (lastContent.includes('lockedin')) {
       messageHandler.addSystemMessage(
         'System task detected: Page generation in progress. This may take 3-9 minutes.'
       );
+      setIsProcessingTask(true);
     }
-    setIsProcessingTask(true);
   }, [messages]);
 
   
@@ -2226,6 +2180,7 @@ const ResearchToolRecover = ({ websiteId }) => {
     }
   }, [chatHistory, currentWebsiteId, apiClient]);
 
+  // 恢复competitorTodoList
   useEffect(() => {
     if (currentStep >= 2 && competitorTodoList.length === 0 && currentWebsiteId) {
       apiClient.getAlternativeStatus(currentWebsiteId).then(statusRes => {
@@ -2254,6 +2209,7 @@ const ResearchToolRecover = ({ websiteId }) => {
     }
   }, [currentStep, competitorTodoList.length, currentWebsiteId]);
 
+  // 恢复progress
   const hasRestoredProgressRef = useRef(false);
   useEffect(() => {
     if (
@@ -2265,13 +2221,15 @@ const ResearchToolRecover = ({ websiteId }) => {
   
     // 1. 默认 currentStep = 1
     let step = 1;
+    setIsProcessingTask(false);
   
     // 2. 判断是否进入选择竞品阶段（currentStep = 2）
     // chatHistory.data 只有两组对话（每组包含 message/answer）
     const validDialogCount = chatHistory.data.filter(item => item.message || item.answer).length;
     console.log('validDialogCount', validDialogCount);
-    if (validDialogCount === 2) {
+    if (validDialogCount >= 2) {
       step = 2;
+      setIsProcessingTask(false);
     }
   
     // 3. 判断是否进入内容生成阶段（currentStep = 3）
@@ -2284,6 +2242,8 @@ const ResearchToolRecover = ({ websiteId }) => {
     console.log('hasHtml', hasHtml);
     if (hasDify && !hasHtml) {
       step = 3;
+      setIsProcessingTask(true);
+      console.log('isProcessingTask here2', isProcessingTask);
     }
   
     // 4. 判断是否进入代码生成阶段（currentStep = 4）
@@ -2292,11 +2252,32 @@ const ResearchToolRecover = ({ websiteId }) => {
     console.log('hasCodes', hasCodes);
     if (hasHtml && !hasCodes) {
       step = 4;
+      setIsProcessingTask(true);
+      console.log('isProcessingTask here3', isProcessingTask);
     }
   
     // 设置 currentStep
     setCurrentStep(step);
-    startedTaskCountRef.current = browserTabs.length + 1;
+
+    console.log('current browserTabs', browserTabs);
+    
+    // === startedTaskCountRef 初始化逻辑 ===
+    if (browserTabs.length === 0) {
+      if ((step === 3 || step === 4) && isProcessingTask) {
+        startedTaskCountRef.current = 1;
+      } else if (step < 3 && !isProcessingTask) {
+        startedTaskCountRef.current = 0;
+      }
+    } else {
+      if (step === 3 || step === 4) {
+        startedTaskCountRef.current = browserTabs.length + 1;
+      } else if (step < 3) {
+        startedTaskCountRef.current = browserTabs.length;
+      }
+    }
+
+    console.log('startedTaskCountRef', startedTaskCountRef.current);
+
     hasRestoredProgressRef.current = true;
   
   }, [chatHistory, logs]);
@@ -2374,7 +2355,6 @@ const ResearchToolRecover = ({ websiteId }) => {
                     )}
                   </button>
                   <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
-                    {isProcessingTask && (
                       <div className="flex items-center gap-2">
                         <Tooltip title="Cancel Current Task" placement="top">
                           <button
@@ -2405,7 +2385,6 @@ const ResearchToolRecover = ({ websiteId }) => {
                           </button>
                         </Tooltip>
                       </div>
-                    )}
                   </div>
                 </div>
 
@@ -2436,7 +2415,7 @@ const ResearchToolRecover = ({ websiteId }) => {
                     ) : (
                       <>
                         <Tooltip
-                          title={(loading || isMessageSending) ? "Agent is working, please wait a sec." : ""}
+                          title={(loading || isMessageSending || isProcessingTask) ? "Agent is working, please wait a sec." : ""}
                           placement="bottomLeft"
                         >
                           <div className="relative">
@@ -2493,7 +2472,7 @@ const ResearchToolRecover = ({ websiteId }) => {
                                   ref={inputRef}
                                   value={userInput}
                                   onChange={(e) => setUserInput(e.target.value)}
-                                  disabled={loading || isMessageSending}
+                                  disabled={loading || isMessageSending || isProcessingTask}
                                   placeholder={
                                     !(loading || isMessageSending)
                                       ? "Waiting for your answer..."
@@ -2883,6 +2862,38 @@ const ResearchToolRecover = ({ websiteId }) => {
               )}
             </div>
           </Modal>
+
+          <Modal
+            open={errorModal.visible}
+            title={<span>Error <span style={{fontSize: 22}}>😭</span></span>}
+            onOk={() => {
+              setErrorModal({ visible: false, message: '' });
+              // 获取全局记录的产品 url
+              const url = mainProduct;
+              window.location.href = `/?url=${url}`; // 跳转到首页并带上 url 参数
+            }}
+            onCancel={() => {
+              setErrorModal({ visible: false, message: '' });
+              window.location.href = '/'; // 右侧按钮：回到首页
+            }}
+            okText="Restart This Task"
+            cancelText="Back to Home"
+            centered
+            closable={false} // 不显示右上角的叉
+            maskClosable={false}
+            width={420}
+            bodyStyle={{ textAlign: 'center' }}
+          >
+            <div style={{ marginBottom: 12, color: '#f87171', fontWeight: 500 }}>
+              {errorModal.message || 'An irreversible error occurred. The generated pages have been saved.'}
+            </div>
+            <div style={{ color: '#22c55e', marginBottom: 8 }}>
+              Unfinished pages will not consume your quota.
+            </div>
+            <div style={{ color: '#64748b', fontSize: 13 }}>
+              Please return to the homepage and start a new task.
+            </div>
+        </Modal>
 
           {/* 在这里添加 BrandAssetsModal */}
           {showBrandAssetsModal && (
