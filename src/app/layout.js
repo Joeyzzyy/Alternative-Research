@@ -14,7 +14,6 @@ export default async function RootLayout({ children, keywords }) {
         <meta name="keywords" content={keywords || "AI competitor analysis, alternative page finder, SEO alternatives, website comparison tool, AI-driven marketing"} />
         <meta property="og:title" content="AltPage.ai - AI-Powered Competitor Analysis & Alternative Page Generator" />
         <meta property="og:description" content="Discover competitor search traffic using AI-driven analysis and competitor alternative pages generator." />
-        <meta property="og:url" content="https://altpage.ai" />
         <meta name="twitter:site" content="@YueZhu0719" />
         <title>AltPage.ai - AI-Driven Competitor Alternative Pages</title>
         <link 

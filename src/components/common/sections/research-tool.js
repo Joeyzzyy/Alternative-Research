@@ -87,19 +87,19 @@ const ResearchTool = () => {
   const currentExample = examples[currentExampleIndex];
 
   useEffect(() => {
-    // 检查 URL 是否有 ?url=xxx 参数
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlParamValue = urlParams.get('url');
-    if (urlParamValue) {
-      // 移除 url 参数（不刷新页面）
-      urlParams.delete('url');
-      const newSearch = urlParams.toString();
-      const newUrl =
-        window.location.pathname + (newSearch ? `?${newSearch}` : '') + window.location.hash;
-      window.history.replaceState({}, '', newUrl);
+    // 只在客户端执行
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlParamValue = urlParams.get('url');
+      if (urlParamValue) {
+        urlParams.delete('url');
+        const newSearch = urlParams.toString();
+        const newUrl =
+          window.location.pathname + (newSearch ? `?${newSearch}` : '') + window.location.hash;
+        window.history.replaceState({}, '', newUrl);
   
-      // 调用 initializeChat 并传递参数
-      initializeChat(urlParamValue);
+        initializeChat(urlParamValue);
+      }
     }
   }, []);
 

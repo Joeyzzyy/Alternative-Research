@@ -98,7 +98,7 @@ const CommonLayout = ({ article, keywords }) => {
         }
       })();
     }
-  }, [window.location.search]);
+  }, []);
 
   if (!article) {
     return null;
