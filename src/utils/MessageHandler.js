@@ -142,6 +142,17 @@ class MessageHandler {
     this.processPendingOperations();
   }
 
+  removeConfirmButtonMessage() {
+    const operation = async () => {
+      this.setMessages(prev => {
+        // 过滤掉所有 type 为 'confirm-button' 的消息
+        return prev.filter(msg => msg.type !== 'confirm-button');
+      });
+    };
+    this.pendingOperations.push(operation);
+    this.processPendingOperations();
+  }
+
   // 处理错误消息
   handleErrorMessage(error, messageId) {
     this.updateAgentMessage(`⚠️ Failed to get response: ${error.message}`, messageId);

@@ -1415,6 +1415,8 @@ const ResearchToolRecover = ({ websiteId }) => {
           messageHandler.updateAgentMessage(answer, thinkingMessageId);
           messageHandler.addConfirmButtonMessage(async () => {
             await handleUserInput('yes i confirm');
+            setIsProcessingTask(true);
+            messageHandler.removeConfirmButtonMessage && messageHandler.removeConfirmButtonMessage();
           });
         } else if (rawAnswer.includes('[COMPETITOR_SELECTED]')) {
           const messageBody = rawAnswer.replace(/\[COMPETITOR_SELECTED\].*$/s, '').trim();
