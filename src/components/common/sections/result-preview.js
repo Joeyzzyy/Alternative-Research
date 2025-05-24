@@ -50,26 +50,20 @@ const HistoryCardList = () => {
     const shouldOpenModal = urlParams.get('openPreviewModal') === 'true';
     const actionType = urlParams.get('action');
     
-    console.log('URL检查 - 参数:', { shouldOpenModal, actionType });
-    console.log('URL检查 - 列表状态:', { listLength: list?.length });
-
     if (shouldOpenModal && list && list.length > 0) {
       const firstValidItem = list.find(item => item.generatorStatus === 'finished') || list[0];
-      console.log('URL检查 - 选中项:', firstValidItem);
       
       if (firstValidItem) {
         // 仅设置状态，不执行额外操作
         handleCardClick(firstValidItem, async () => {
           try {
             const res = await apiClient.getAlternativeWebsiteResultList(firstValidItem.websiteId);
-            console.log('URL检查 - 获取详情数据:', res);
             
             if (res?.data?.[0]?.resultId) {
               setSelectedPreviewId(res.data[0].resultId);
               // 移除这里的直接操作，让状态更新后通过 useEffect 处理
             }
           } catch (error) {
-            console.error('URL检查 - 获取详情数据失败:', error);
           }
         });
       }
@@ -230,7 +224,6 @@ const HistoryCardList = () => {
 
   // 点击卡片时，默认选中第一个 resultId
   const handleCardClick = async (item, callback) => {
-    console.log('处理卡片点击 - 开始:', { itemId: item.websiteId });
     
     if (item.generatorStatus === 'failed') {
       setFailedModal({ open: true, id: item.websiteId });
@@ -251,7 +244,6 @@ const HistoryCardList = () => {
     
     try {
       const res = await apiClient.getAlternativeWebsiteResultList(item.websiteId);
-      console.log('处理卡片点击 - 获取数据成功:', { hasData: !!res?.data?.length });
       
       setResultDetail(res);
       

@@ -61,17 +61,14 @@ const PublishSettingsModal = ({
       // 1. === 修改：获取根域名 ===
       try {
         const domainRes = await apiClient.getDomain(currentCustomerId);
-        console.log('getDomain response:', domainRes); // 增加日志方便调试
 
         // === 修改：根据新的响应结构判断域名是否已绑定并验证成功 ===
         if (domainRes?.code === 200 && domainRes.data && domainRes.data.verifiedStatus === 'SUCCESS' && domainRes.data.domainName) {
           fetchedRootDomain = domainRes.data.domainName;
           setRootDomain(fetchedRootDomain); // 设置根域名状态
           setRootDomainId(domainRes.data.domainId); // 修改：使用 domainId
-          console.log('Fetched and verified root domain:', fetchedRootDomain, 'with ID:', domainRes.data.domainId); // 修改：使用 domainId
         } else {
           // 可能是未绑定、验证未完成、API 返回 code 不为 200 或 data 结构不符
-          console.log('No verified root domain bound for this customer or failed to fetch.');
           // 不需要设置错误消息，因为这可能是正常情况（用户未绑定域名或验证中）
         }
       } catch (domainError) {
@@ -85,7 +82,6 @@ const PublishSettingsModal = ({
         setSubdomains([]);
         setDomainLoading(false);
         setActiveCollapseKey([]);
-        console.log('No verified root domain available, skipping Vercel domain checks.');
         return; // 没有已验证的根域名，不需要进行后续 Vercel 检查
       }
 

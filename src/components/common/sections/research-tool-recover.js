@@ -154,7 +154,6 @@ const ResearchToolRecover = ({ websiteId }) => {
     setIsMessageSending(true);
     const thinkingMessageId = messageHandler.addAgentThinkingMessage();
 
-    console.log('competitors', competitors);
     setCompetitorTodoList(competitors);
 
     try {
@@ -1467,8 +1466,6 @@ const ResearchToolRecover = ({ websiteId }) => {
                     setIsProcessingTask(true);
                     startedTaskCountRef.current += domainArray.length;
                     setShouldConnectSSE(true);
-                    console.log('domainArray', domainArray);
-                    console.log('competitorTodoList', competitorTodoList);
                     setCompetitorTodoList(prev =>
                       prev.map(item => {
                         const itemDomain = extractDomain(item.url);
@@ -1607,7 +1604,6 @@ const ResearchToolRecover = ({ websiteId }) => {
       eventSource.onmessage = (event) => {
         try {
           const logData = JSON.parse(event.data);
-          console.log('logData', logData);
           let currentStepNumber = currentStep;
 
           // 处理 Error 类型日志
@@ -1826,7 +1822,6 @@ const ResearchToolRecover = ({ websiteId }) => {
     connectSSE();
 
     return () => {
-      console.log('[DEBUG] Cleaning up SSE connection');
       if (eventSource) {
         eventSource.close();
         eventSource = null;
@@ -1851,7 +1846,6 @@ const ResearchToolRecover = ({ websiteId }) => {
       log.step === 'GENERATION_FINISHED' &&
       !processedStepLogIdsRef.current.has(log.id)
     );
-    console.log('generationFinishedLog', generationFinishedLog);
 
     let logToProcess = null;
     if (generationFinishedLog) {
@@ -1903,8 +1897,6 @@ const ResearchToolRecover = ({ websiteId }) => {
       log.content?.status === 'finished'
     );
 
-    console.log('apiLog', apiLog);
-    console.log('competitorListProcessedRef.current', competitorListProcessedRef.current);
     if (apiLog && apiLog.content?.data && !competitorListProcessedRef.current) {
       competitorListProcessedRef.current = true; 
       const competitors = apiLog.content.data;
@@ -2226,7 +2218,6 @@ const ResearchToolRecover = ({ websiteId }) => {
     // 2. 判断是否进入选择竞品阶段（currentStep = 2）
     // chatHistory.data 只有两组对话（每组包含 message/answer）
     const validDialogCount = chatHistory.data.filter(item => item.message || item.answer).length;
-    console.log('validDialogCount', validDialogCount);
     if (validDialogCount >= 2) {
       step = 2;
       setIsProcessingTask(false);
@@ -2237,29 +2228,22 @@ const ResearchToolRecover = ({ websiteId }) => {
     const hasDify = logs.some(
       log => log.type === 'Dify' && log.content && log.content.step === 'PAGE_GENERATION_AGENT'
     );
-    console.log('hasDify', hasDify);
     const hasHtml = logs.some(log => log.type === 'Html');
-    console.log('hasHtml', hasHtml);
     if (hasDify && !hasHtml) {
       step = 3;
       setIsProcessingTask(true);
-      console.log('isProcessingTask here2', isProcessingTask);
     }
   
     // 4. 判断是否进入代码生成阶段（currentStep = 4）
     // logs 里有 Html 但没有 Codes
     const hasCodes = logs.some(log => log.type === 'Codes');
-    console.log('hasCodes', hasCodes);
     if (hasHtml && !hasCodes) {
       step = 4;
       setIsProcessingTask(true);
-      console.log('isProcessingTask here3', isProcessingTask);
     }
   
     // 设置 currentStep
     setCurrentStep(step);
-
-    console.log('current browserTabs', browserTabs);
     
     // === startedTaskCountRef 初始化逻辑 ===
     if (browserTabs.length === 0) {
@@ -2275,8 +2259,6 @@ const ResearchToolRecover = ({ websiteId }) => {
         startedTaskCountRef.current = browserTabs.length;
       }
     }
-
-    console.log('startedTaskCountRef', startedTaskCountRef.current);
 
     hasRestoredProgressRef.current = true;
   

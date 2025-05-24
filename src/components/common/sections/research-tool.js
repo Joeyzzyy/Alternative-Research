@@ -174,8 +174,6 @@ const ResearchTool = () => {
         const answer = filterMessageTags(response.data.answer);
         messageHandler.updateAgentMessage(answer, thinkingMessageId);
         if (competitors && competitors.length > 0) {
-          console.log('competitors', competitors);
-          console.log('competitors[0]', competitors[0]);
           messageHandler.addCompetitorCardMessage(competitors[0]);
           setCompetitorTodoList(
             competitors.map((item, idx) => ({
@@ -205,7 +203,6 @@ const ResearchTool = () => {
     setIsMessageSending(true);
     const thinkingMessageId = messageHandler.addAgentThinkingMessage();
 
-    console.log('competitors', competitors);
     setCompetitorTodoList(competitors);
 
     try {
@@ -1513,8 +1510,6 @@ const ResearchTool = () => {
                     setIsProcessingTask(true);
                     startedTaskCountRef.current += domainArray.length;
 
-                    console.log('domainArray', domainArray);
-                    console.log('competitorTodoList', competitorTodoList);
                     setCompetitorTodoList(prev =>
                       prev.map(item => {
                         const itemDomain = extractDomain(item.url);
@@ -1883,7 +1878,6 @@ const ResearchTool = () => {
       eventSource.onmessage = (event) => {
         try {
           const logData = JSON.parse(event.data);
-          console.log('logData', logData);
           let currentStepNumber = currentStep;
 
           // 处理 Error 类型日志
