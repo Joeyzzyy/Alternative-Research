@@ -140,6 +140,7 @@ const ResearchToolRecover = ({ websiteId }) => {
           setCurrentStep(3);
           setIsProcessingTask(true);
           startedTaskCountRef.current += firstCompetitorArray.length;
+          console.log('startedTaskCountRef.current', startedTaskCountRef.current);
         } else {
           messageHandler.addSystemMessage(`⚠️ Failed to generate alternative page: Invalid server response`);
         }
@@ -1467,6 +1468,7 @@ const ResearchToolRecover = ({ websiteId }) => {
                     setCurrentStep(3);
                     setIsProcessingTask(true);
                     startedTaskCountRef.current += domainArray.length;
+                    console.log('startedTaskCountRef.current handle user input', startedTaskCountRef.current);
                     setShouldConnectSSE(true);
                     setCompetitorTodoList(prev =>
                       prev.map(item => {
@@ -2249,9 +2251,9 @@ const ResearchToolRecover = ({ websiteId }) => {
     
     // === startedTaskCountRef 初始化逻辑 ===
     if (browserTabs.length === 0) {
-      if ((step === 3 || step === 4) && isProcessingTask) {
+      if (step === 3 || step === 4) {
         startedTaskCountRef.current = 1;
-      } else if (step < 3 && !isProcessingTask) {
+      } else if (step < 3) {
         startedTaskCountRef.current = 0;
       }
     } else {
@@ -2263,6 +2265,7 @@ const ResearchToolRecover = ({ websiteId }) => {
     }
 
     hasRestoredProgressRef.current = true;
+    console.log('startedTaskCountRef.current initialized', startedTaskCountRef.current);
   
   }, [chatHistory, logs]);
 
