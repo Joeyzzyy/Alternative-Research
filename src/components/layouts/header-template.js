@@ -530,25 +530,6 @@ export default function Header() {
     };
   }, [isLoggedIn, isOneTapShown, handleGoogleOneTapSuccess]);
 
-  useEffect(() => {
-    // 检查本地是否有 token 且未推送过注册埋点
-    const token = localStorage.getItem('alternativelyAccessToken');
-    const customerId = localStorage.getItem('alternativelyCustomerId');
-    const email = localStorage.getItem('alternativelyCustomerEmail');
-    const hasPushed = localStorage.getItem('alternativelySignupTracked');
-
-    if (token && customerId && email && !hasPushed) {
-      window.dataLayer = window.dataLayer || [];
-      window.dataLayer.push({
-        'event': 'custom_event_signup_success',
-        'registration_method': 'email',
-        'user_id': customerId,
-      });
-      // 标记已推送，避免重复
-      localStorage.setItem('alternativelySignupTracked', 'true');
-    }
-  }, []);
-
   return (
     <>
       {/* 在页面顶部添加Google One Tap容器 */}

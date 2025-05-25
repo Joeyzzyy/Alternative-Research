@@ -1859,6 +1859,16 @@ const ResearchToolRecover = ({ websiteId }) => {
     if (logToProcess) {
       processedStepLogIdsRef.current.add(logToProcess.id);
 
+      if(isFirstTimeUser) {
+        if (browserTabs.length < 5) {
+          setCurrentStep(2);
+        }
+      } else {
+        if (browserTabs.length <6) {
+          setCurrentStep(2);
+        }
+      }
+
       const nextStepId = currentStep + 1;
       setCurrentStep(nextStepId); 
 
