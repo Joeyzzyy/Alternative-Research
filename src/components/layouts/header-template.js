@@ -167,6 +167,16 @@ export default function Header() {
           localStorage.removeItem('invitationCode');
         } catch (e) {}
         messageApi.destroy(key);
+
+        if (response.data.firstLogin) {
+          window.dataLayer = window.dataLayer || [];
+          window.dataLayer.push({
+            'event': 'custom_event_signup_success', // 自定义事件名，用于GTM触发器
+            'registration_method': 'google',        // 描述注册方式
+            'user_id': response.data.customerId,    // 用户ID
+          });
+        }
+
         window.location.href = response.data;
       } else {
         messageApi.error({ content: 'Failed to get Google login URL', key, duration: 2 });
@@ -415,6 +425,15 @@ export default function Header() {
       localStorage.setItem('alternativelyIsLoggedIn', 'true');
       localStorage.setItem('alternativelyCustomerEmail', res.data.email);
       localStorage.setItem('alternativelyCustomerId', res.data.customerId);
+
+      if (res.data.firstLogin) {
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push({
+          'event': 'custom_event_signup_success', // 自定义事件名，用于GTM触发器
+          'registration_method': 'google',        // 描述注册方式
+          'user_id': response.data.customerId,    // 用户ID
+        });
+      }
 
       // 更新状态
       setIsLoggedIn(true);
