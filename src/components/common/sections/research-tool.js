@@ -85,6 +85,38 @@ const ResearchTool = () => {
   const [selectedCompetitors, setSelectedCompetitors] = useState([]);
   const [imgLoaded, setImgLoaded] = useState(false);
   const currentExample = examples[currentExampleIndex];
+  const [phImageAvailable, setPhImageAvailable] = useState(false);
+  const [phCheckDone, setPhCheckDone] = useState(false);
+
+  useEffect(() => {
+    const checkNetwork = async () => {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        
+        // 同时检测 Product Hunt 和 Google 的可达性
+        await Promise.race([
+          fetch('https://api.producthunt.com/v1/docs', { 
+            signal: controller.signal,
+            mode: 'no-cors' 
+          }),
+          fetch('https://www.google.com/404__test', {
+            signal: controller.signal,
+            mode: 'no-cors'
+          })
+        ]);
+        
+        clearTimeout(timeoutId);
+        setPhImageAvailable(true);
+      } catch (error) {
+        setPhImageAvailable(false);
+      } finally {
+        setPhCheckDone(true);
+      }
+    };
+  
+    checkNetwork();
+  }, []);
 
   useEffect(() => {
     // 只在客户端执行
@@ -2519,6 +2551,60 @@ const ResearchTool = () => {
             </form>
           </div>
 
+          <div className="mb-6 w-full px-4 md:hidden">
+            <div className="flex flex-col items-center gap-3 bg-gradient-to-r from-blue-900/30 to-purple-900/20 rounded-xl p-4">
+              <div className="text-center">
+                <p className="text-sm bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent font-medium mb-1">
+                  🚀 We Are Live on Product Hunt!
+                </p>
+                <p className="text-xs text-gray-300">
+                  Help us reach #1<br/>
+                  Your vote matters!
+                </p>
+              </div>
+              <a 
+                href="https://www.producthunt.com/posts/altpage-ai" 
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block hover:scale-[1.02] transition-transform duration-300"
+              >
+                {phCheckDone ? (
+                  phImageAvailable ? (
+                    // 正常显示
+                    <img
+                      src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=967689&theme=light"
+                      alt="AltPage.ai on Product Hunt"
+                      className="drop-shadow-[0_2px_4px_rgba(0,0,0,0.1)]"
+                      style={{ width: '160px', height: 'auto' }}
+                    />
+                  ) : (
+                    // 移动端降级显示
+                    <div className="w-[160px] h-[34px] bg-white rounded-lg flex items-center justify-center border-2 border-orange-200 shadow-sm">
+                      <div className="flex items-center gap-1.5 px-2">
+                        <img 
+                          src="/images/ph-logo.png" 
+                          alt="Product Hunt" 
+                          className="w-12 h-auto opacity-90" 
+                        />
+                        <div className="flex flex-col items-start border-l border-orange-100 pl-1.5">
+                          <span className="text-[10px] font-bold text-orange-600 leading-tight">
+                            Find Us On
+                            <span className="block text-[8px] font-normal text-orange-500 mt-[-1px]">
+                              on PH
+                            </span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                ) : (
+                  // 加载占位
+                  <div className="w-[160px] h-[34px] bg-gradient-to-r from-orange-50 to-orange-100 animate-pulse rounded-lg border-2 border-orange-100/30"/>
+                )}
+              </a>
+            </div>
+          </div>
+
           <div className="mb-6 mx-auto w-fit">
             <div className="inline-flex items-center px-2.5 py-1.5 rounded text-yellow-400 text-xs" style={{ minWidth: 0, fontWeight: 400 }}>
               <svg className="w-4 h-4 mr-1 text-yellow-400" viewBox="0 0 24 24" fill="currentColor"> <path d="M12 2L4 5v6.09c0 5.05 3.41 9.76 8 10.91 4.59-1.15 8-5.86 8-10.91V5l-8-3zm-1.06 13.54L7.4 12l1.41-1.41 2.12 2.12 4.24-4.24 1.41 1.41-5.64 5.66z"/> </svg>
@@ -2801,6 +2887,69 @@ const ResearchTool = () => {
                 Generate and deploy <span className="mx-1 underline decoration-wavy decoration-yellow-200">6 free alternative pages</span> – no credit card required.
               </div>
             </div>
+
+            <div className="mb-8 text-right">
+              <div className="flex items-center justify-end gap-4">
+                <div className="text-right mr-4">
+                  <p className="text-sm text-blue-200 mb-1">We're currently featured on Product Hunt!</p>
+                  <p className="text-xs text-gray-300">Please support us with your vote 🚀</p>
+                </div>
+                <a 
+                  href="https://www.producthunt.com/posts/altpage-ai" 
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block hover:scale-105 transition-transform duration-300"
+                >
+                  {phCheckDone ? (
+                    phImageAvailable ? (
+                      // 正常显示外部图片
+                      <img
+                        src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=967689&theme=light"
+                        alt="AltPage.ai on Product Hunt"
+                        style={{ 
+                          width: '180px',
+                          height: 'auto',
+                          filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'
+                        }}
+                        width="200"
+                        height="43"
+                      />
+                    ) : (
+                      // 降级显示本地组合内容
+                      <div className="relative w-[180px] h-[43px] bg-white rounded-lg flex items-center justify-center border-2 border-orange-200 shadow-md hover:shadow-lg transition-all group">
+                        <div className="flex items-center gap-2 px-3">
+                          {/* 缩小后的本地logo */}
+                          <img 
+                            src="/images/ph-logo.png" 
+                            alt="Product Hunt" 
+                            className="w-16 h-auto object-contain" 
+                          />
+                          {/* 文字部分 */}
+                          <div className="flex flex-col items-start border-l border-orange-100 pl-2">
+                            <span className="text-[11px] font-bold text-orange-600 leading-tight">
+                              Find Us On
+                              <span className="block text-[9px] font-normal text-orange-500 mt-[-2px]">
+                                on Product Hunt
+                              </span>
+                            </span>
+                          </div>
+                        </div>
+                        {/* 悬停提示 */}
+                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                          <span className="text-xs font-medium text-orange-100">View →</span>
+                        </div>
+                      </div>
+                    )
+                  ) : (
+                    // 加载中的占位
+                    <div className="w-[180px] h-[43px] bg-gradient-to-r from-orange-50 to-orange-100 animate-pulse rounded-lg border-2 border-orange-100/30 flex items-center justify-center">
+                      <div className="w-6 h-6 bg-orange-200 rounded-full animate-pulse"/>
+                    </div>
+                  )}
+                </a>
+              </div>
+            </div>
+
           </div>
           {/* === 结束左侧栏 === */}
 
