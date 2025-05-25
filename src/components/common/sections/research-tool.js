@@ -2142,13 +2142,20 @@ const ResearchTool = () => {
     if (logToProcess) {
       processedStepLogIdsRef.current.add(logToProcess.id);
 
-      const nextStepId = currentStep + 1;
-      setCurrentStep(nextStepId); 
+      if(isFirstTimeUser) {
+        if (browserTabs.length < 5) {
+          setCurrentStep(2);
+        }
+      } else {
+        if (browserTabs.length <6) {
+          setCurrentStep(2);
+        }
+      }
 
       if (isFirstTimeUser && browserTabs.length >= 6) {
         setTaskSteps(prevSteps => {
           const newStep = {
-            id: nextStepId,
+            id: currentStep + 1,
             name: "Current Task Finished",
             gradient: "from-gray-500/40 to-slate-500/40",
             borderColor: "border-gray-500/60",
@@ -2162,7 +2169,7 @@ const ResearchTool = () => {
       } else if (!isFirstTimeUser && browserTabs.length >= 5) {
         setTaskSteps(prevSteps => {
           const newStep = {
-            id: nextStepId,
+            id: currentStep + 1,
             name: "Current Task Finished",
             gradient: "from-gray-500/40 to-slate-500/40",
             borderColor: "border-gray-500/60",
