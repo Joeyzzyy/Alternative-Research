@@ -127,7 +127,7 @@ const SubscriptionCard = () => {
             title: "Everything in Standard, plus:",
             items: [
               <>
-                <span className="font-bold text-2xl text-purple-400 inline-block animate-bounce-subtle">300</span> credits/month (approx. <span className="font-bold text-2xl text-purple-400 inline-block animate-bounce-subtle">300</span> pages for alternative page or blog generation)
+                <span className="font-bold text-2xl text-purple-400 inline-block animate-bounce-subtle">300</span> credits/month (approx. <span className="font-bold text-2xl text-purple-400 inline-block animate-bounce-subtle">30</span> pages for alternative page or blog generation)
               </>,
               `Generate up to ${planMap.Professional.monthly?.pageLimit ?? 30} pages in total /month`,
               `Freely hosting ${planMap.Professional.monthly?.pageLimit ?? 30} pages on our server`,
