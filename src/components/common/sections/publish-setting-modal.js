@@ -67,9 +67,11 @@ const PublishSettingsModal = ({
           fetchedRootDomain = domainRes.data.domainName;
           setRootDomain(fetchedRootDomain); // 设置根域名状态
           setRootDomainId(domainRes.data.domainId); // 修改：使用 domainId
+          console.log('[loadData] Root domain fetched successfully:', fetchedRootDomain, 'ID:', domainRes.data.domainId);
         } else {
           // 可能是未绑定、验证未完成、API 返回 code 不为 200 或 data 结构不符
           // 不需要设置错误消息，因为这可能是正常情况（用户未绑定域名或验证中）
+          console.log('[loadData] No verified root domain found. Response:', domainRes);
         }
       } catch (domainError) {
         console.error("Error fetching root domain:", domainError);
@@ -82,39 +84,67 @@ const PublishSettingsModal = ({
         setSubdomains([]);
         setDomainLoading(false);
         setActiveCollapseKey([]);
+        console.log('[loadData] No root domain, skipping Vercel domain checks.');
         return; // 没有已验证的根域名，不需要进行后续 Vercel 检查
       }
 
       // 3. 获取 Vercel 项目的 projectId (硬编码或从配置获取)
       const projectId = VERCEL_PROJECT_ID;
+      console.log('[loadData] Using Vercel project ID:', projectId);
 
       // 4. 获取 Vercel 域名列表
       const domainResp = await apiClient.getVercelDomainInfo(projectId);
       const domains = domainResp?.domains || [];
+      console.log('[loadData] Vercel domains response:', domainResp);
+      console.log('[loadData] Total domains from Vercel:', domains.length);
 
       // 5. === 修改：使用 fetchedRootDomain ===
       const currentRootDomain = fetchedRootDomain; // 使用从 getDomain 获取的根域名
+      console.log('[loadData] Current root domain for filtering:', currentRootDomain);
 
       // 6. 过滤并检查域名 (包括根域名和子域名)
-      const verifiedDomainsPromises = domains
-        .filter(domain =>
-          domain.verified && // 必须是 vercel 验证通过的
-          !domain.name.includes('vercel.app') && // 排除 vercel 默认域名
-          (domain.name === currentRootDomain || domain.name.endsWith(`.${currentRootDomain}`)) // 必须是根域名或其子域名
-        )
-        .map(async domain => {
-          try {
-            // 再次检查配置，确保没有 misconfigured
-            const config = await apiClient.getVercelDomainConfig(domain.name);
-            return !config?.misconfigured ? domain.name : null;
-          } catch (error) {
-            // 获取配置失败，视为未完全验证通过
-            console.warn(`Could not get config for ${domain.name}, excluding from verified list.`);
-            return null;
-          }
+      console.log('[loadData] Starting domain filtering and verification...');
+      
+      // === 新增：先过滤出相关域名，添加详细日志 ===
+      const relevantDomains = domains.filter(domain => {
+        const isVerified = domain.verified;
+        const isNotVercelApp = !domain.name.includes('vercel.app');
+        const isRootOrSubdomain = domain.name === currentRootDomain || domain.name.endsWith(`.${currentRootDomain}`);
+        
+        console.log(`[loadData] Checking domain: ${domain.name}`, {
+          verified: isVerified,
+          notVercelApp: isNotVercelApp,
+          isRootOrSubdomain: isRootOrSubdomain,
+          apexName: domain.apexName,
+          createdAt: domain.createdAt
         });
+        
+        return isVerified && isNotVercelApp && isRootOrSubdomain;
+      });
+      
+      console.log('[loadData] Relevant domains after initial filter:', relevantDomains.map(d => d.name));
+
+      const verifiedDomainsPromises = relevantDomains.map(async domain => {
+        try {
+          console.log(`[loadData] Getting config for domain: ${domain.name}`);
+          // 再次检查配置，确保没有 misconfigured
+          const config = await apiClient.getVercelDomainConfig(domain.name);
+          console.log(`[loadData] Config for ${domain.name}:`, config);
+          
+          const isNotMisconfigured = !config?.misconfigured;
+          console.log(`[loadData] Domain ${domain.name} misconfigured: ${config?.misconfigured}, will include: ${isNotMisconfigured}`);
+          
+          return isNotMisconfigured ? domain.name : null;
+        } catch (error) {
+          // 获取配置失败，视为未完全验证通过
+          console.warn(`[loadData] Could not get config for ${domain.name}, excluding from verified list. Error:`, error);
+          return null;
+        }
+      });
 
       const verifiedDomainsList = (await Promise.all(verifiedDomainsPromises)).filter(Boolean);
+
+      console.log('[loadData] Final verified domains list:', verifiedDomainsList);
 
       // 7. 设置验证通过的域名列表
       setVerifiedDomains(verifiedDomainsList);
@@ -122,20 +152,28 @@ const PublishSettingsModal = ({
       // 8. 设置默认选中项
       // 过滤掉根域名，只在子域名中选择
       const selectableSubdomains = verifiedDomainsList.filter(d => d !== currentRootDomain); // 使用 currentRootDomain
+      console.log('[loadData] Selectable subdomains (excluding root):', selectableSubdomains);
 
       if (selectableSubdomains.length > 0) {
         // 尝试保持之前的选择 (如果它仍然在可选列表中)
         if (!selectedPublishUrl || !selectableSubdomains.includes(selectedPublishUrl)) {
+           console.log('[loadData] Setting default selected URL to first subdomain:', selectableSubdomains[0]);
            setSelectedPublishUrl(selectableSubdomains[0]); // 否则选第一个子域名
+        } else {
+           console.log('[loadData] Keeping previous selection:', selectedPublishUrl);
         }
         // 如果之前的选择还在，则保持不变
       } else {
+        console.log('[loadData] No selectable subdomains, clearing selection');
         setSelectedPublishUrl(''); // 没有可选的子域名了
       }
 
       // === 修改：在 loadData 结束时，如果根域名存在，则加载子域名 ===
       if (currentRootDomain) { // 使用 currentRootDomain
+        console.log('[loadData] Loading subdomains for root domain:', currentRootDomain);
         await loadSubdomains(currentRootDomain); // 传递根域名给 loadSubdomains
+        console.log('[loadData] Subdomains loaded, setting collapse key');
+        setActiveCollapseKey(['subdomains']);
         // 如果有子域名或根域名已验证，则展开 Collapse
         if (subdomains.length > 0 || verifiedDomainsList.includes(currentRootDomain)) {
            setActiveCollapseKey(['subdomains']);
@@ -164,53 +202,110 @@ const PublishSettingsModal = ({
   };
 
   const loadSubdomains = async (currentRootDomain) => {
-    if (!currentRootDomain) { // 使用传入的参数判断
+    if (!currentRootDomain) {
       console.log("No root domain provided, skipping subdomain load.");
       setSubdomains([]);
       return;
     }
     setSubdomainLoading(true);
-    setSubdomains([]); // 重置
-    const projectId = 'prj_wzQuo0EarALY8MsjNvPotb4wYO8S'; // 保持和 loadData 一致
+    setSubdomains([]);
+    const projectId = 'prj_wzQuo0EarALY8MsjNvPotb4wYO8S';
 
     try {
       // 1. 获取项目下的所有域名
       const domainResp = await apiClient.getVercelDomainInfo(projectId);
       const allDomains = domainResp?.domains || [];
 
-      // 2. === 修改：使用传入的 currentRootDomain 过滤 ===
+      // 2. 过滤出子域名
       const potentialSubdomains = allDomains.filter(domain =>
         domain.apexName === currentRootDomain && domain.name !== currentRootDomain
       );
 
+      console.log('[loadSubdomains] Potential subdomains found:', potentialSubdomains.map(d => ({ 
+        name: d.name, 
+        verified: d.verified,
+        hasVerification: !!d.verification?.length 
+      })));
+
       // 3. 获取每个子域名的详细配置信息
       const subdomainsWithConfigPromises = potentialSubdomains.map(async (domain) => {
         try {
+          console.log(`[loadSubdomains] Processing subdomain: ${domain.name}`);
+          console.log(`[loadSubdomains] - Vercel verified: ${domain.verified}`);
+          console.log(`[loadSubdomains] - Has verification array: ${!!domain.verification?.length}`);
+          console.log(`[loadSubdomains] - Verification records:`, domain.verification);
+
           const config = await apiClient.getVercelDomainConfig(domain.name);
+          console.log(`[loadSubdomains] Config for ${domain.name}:`, config);
+          
+          // === 修改：综合判断域名状态 ===
+          const configOk = !config?.misconfigured; // DNS 配置是否正确
+          const needsVerification = !!domain.verification?.length; // 是否需要额外验证
+          const fullyVerified = domain.verified && !needsVerification; // 完全验证通过
+          
+          // === 新增：确定最终的验证状态和需要显示的记录 ===
+          let finalVerified = fullyVerified;
+          let recordsToShow = null;
+          
+          if (needsVerification) {
+            // 如果有 verification 数组，说明需要额外验证，显示为未验证状态
+            finalVerified = false;
+            recordsToShow = domain.verification;
+          } else if (!configOk) {
+            // 如果没有 verification 数组但 config 有问题，可能需要 CNAME 记录
+            finalVerified = false;
+            recordsToShow = [{
+              type: 'CNAME',
+              domain: domain.name.replace(`.${domain.apexName}`, ''),
+              value: 'cname.vercel-dns.com.',
+              reason: 'dns_configuration'
+            }];
+          }
+          
+          console.log(`[loadSubdomains] Final status for ${domain.name}:`, {
+            configOk,
+            needsVerification,
+            fullyVerified,
+            finalVerified,
+            recordsToShow: recordsToShow?.length || 0
+          });
+          
           return {
-            ...domain, // 保留 Vercel 返回的基础信息 (name, apexName, createdAt, etc.)
-            verified: !config?.misconfigured, // 根据 misconfigured 判断验证状态
-            configDetails: config, // 存储完整的配置信息
+            ...domain,
+            verified: finalVerified, // === 修改：使用综合判断的结果 ===
+            configDetails: config,
+            verificationRecords: recordsToShow, // === 修改：使用需要显示的记录 ===
+            needsVerification: needsVerification, // === 新增：标记是否需要验证 ===
+            configOk: configOk, // === 新增：标记配置是否正确 ===
           };
         } catch (error) {
           console.error(`Failed to get config for subdomain ${domain.name}:`, error);
-          // 即使获取配置失败，也返回基础信息，标记为未验证
           return {
             ...domain,
             verified: false,
-            configDetails: null, // 表示配置获取失败
+            configDetails: null,
+            verificationRecords: domain.verification || null, // 即使配置获取失败，也保留验证记录
+            needsVerification: !!domain.verification?.length,
+            configOk: false,
           };
         }
       });
 
       const resolvedSubdomains = await Promise.all(subdomainsWithConfigPromises);
+      console.log('[loadSubdomains] Final resolved subdomains:', resolvedSubdomains.map(d => ({ 
+        name: d.name, 
+        verified: d.verified,
+        needsVerification: d.needsVerification,
+        configOk: d.configOk,
+        recordsCount: d.verificationRecords?.length || 0
+      })));
+      
       setSubdomains(resolvedSubdomains);
-      console.log('Loaded subdomains:', resolvedSubdomains);
 
     } catch (error) {
       console.error("Error loading subdomains:", error);
       messageApi.error('Failed to load subdomain information.');
-      setSubdomains([]); // 出错时清空
+      setSubdomains([]);
     } finally {
       setSubdomainLoading(false);
     }
@@ -605,15 +700,20 @@ const PublishSettingsModal = ({
     };
 
   const getDomainStatusInfo = (domain) => {
-    if (domain.verified) {
+    if (domain.verified && !domain.needsVerification) {
       return { color: 'success', text: 'Verified' };
     }
-    // 如果 configDetails 存在且 misconfigured 为 false，也视为已验证（可能 Vercel 验证逻辑稍有延迟）
-    if (domain.configDetails && !domain.configDetails.misconfigured) {
-       return { color: 'success', text: 'Verified' };
+    
+    if (domain.needsVerification) {
+      return { color: 'warning', text: 'Needs Verification' };
     }
-    // 如果 configDetails 不存在（获取失败）或 misconfigured 为 true
-    return { color: 'warning', text: 'Pending DNS' };
+    
+    if (!domain.configOk) {
+      return { color: 'warning', text: 'Pending DNS' };
+    }
+    
+    // 默认情况
+    return { color: 'warning', text: 'Pending' };
   };
 
   const handleDeleteSubdomain = (domainName) => {
@@ -755,13 +855,18 @@ const PublishSettingsModal = ({
       >
         <div className="flex items-center gap-2 mb-4">
           <div className="flex flex-grow items-center rounded border border-slate-600 bg-slate-700 focus-within:border-cyan-500 focus-within:ring-1 focus-within:ring-cyan-500">
-            <Input
+            <input
+              type="text"
               placeholder="e.g., blog"
               value={subdomainPrefix}
               onChange={(e) => setSubdomainPrefix(e.target.value)}
-              className="flex-grow bg-transparent border-none placeholder-gray-500 focus:ring-0 px-3 py-1.5"
+              className="flex-grow bg-transparent border-none placeholder-gray-500 focus:outline-none focus:ring-0 px-3 py-1.5 text-white"
               disabled={isAddingSubdomain || subdomainLoading}
-              onPressEnter={handleAddSubdomain}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleAddSubdomain();
+                }
+              }}
             />
             {rootDomain && (
               <span className="px-3 py-1.5 text-sm text-gray-400 bg-slate-600 flex-shrink-0 rounded-r">
@@ -782,7 +887,7 @@ const PublishSettingsModal = ({
             onClick={loadData}
             loading={domainLoading && !isAddingSubdomain}
             disabled={isAddingSubdomain || domainLoading}
-            className="text-gray-300 hover:text-white border-slate-600 bg-slate-700 hover:bg-slate-600 px-3 py-1.5 text-xs"
+            className="bg-green-600 hover:bg-green-500 border-green-600 hover:border-green-500 text-white font-semibold px-4 py-1.5 text-sm shadow-md hover:shadow-lg transition-all duration-200"
           >
             Records added, refresh
           </Button>
@@ -793,39 +898,60 @@ const PublishSettingsModal = ({
             <div className="space-y-3">
               {subdomains.map(domain => {
                 const status = getDomainStatusInfo(domain);
-                const dnsData = domain.configDetails?.misconfigured ? [{
-                  type: 'CNAME',
-                  name: domain.name.replace(`.${domain.apexName}`, ''),
-                  value: 'cname.vercel-dns.com.',
-                  key: 'cname-record'
-                }] : [];
+                
+                // === 修改：根据不同情况显示不同的 DNS 记录 ===
+                let dnsData = [];
+                let alertMessage = '';
+                let alertDescription = '';
+                
+                if (domain.needsVerification && domain.verificationRecords) {
+                  // 需要额外验证（如域名在其他项目中使用过）
+                  dnsData = domain.verificationRecords.map((record, index) => ({
+                    type: record.type,
+                    name: record.domain || record.name,
+                    value: record.value,
+                    key: `${record.type}-${index}`
+                  }));
+                  alertMessage = 'Domain Verification Required';
+                  alertDescription = 'This domain may be used in another Vercel project. Add the following TXT record to verify ownership for this project.';
+                } else if (!domain.configOk && domain.verificationRecords) {
+                  // DNS 配置问题
+                  dnsData = domain.verificationRecords.map((record, index) => ({
+                    type: record.type,
+                    name: record.domain || record.name,
+                    value: record.value,
+                    key: `${record.type}-${index}`
+                  }));
+                  alertMessage = 'DNS Configuration Required';
+                  alertDescription = 'Add the following DNS record(s) to your domain provider to configure this subdomain.';
+                }
 
                 return (
                   <div key={domain.name} className="p-4 bg-slate-700/50 rounded border border-slate-600 shadow-sm">
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-base font-medium text-cyan-300 break-all">{domain.name}</span>
-                        <Tag color={status.color} className="font-mono text-xs">{status.text}</Tag>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="font-medium text-white">{domain.name}</span>
+                        <Tag color={status.color} className="text-xs">
+                          {status.text}
+                        </Tag>
                       </div>
                       <Button
+                        icon={<DeleteOutlined />}
+                        size="small"
                         type="text"
                         danger
-                        icon={isDeletingSubdomain ? <Spin size="small" /> : <DeleteOutlined className="text-red-400 hover:text-red-300"/>}
-                        size="small"
                         onClick={() => handleDeleteSubdomain(domain.name)}
-                        className="flex-shrink-0 ml-2"
-                        disabled={isDeletingSubdomain || isAddingSubdomain || subdomainLoading}
+                        disabled={isDeletingSubdomain}
+                        className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
                       />
                     </div>
-                    <p className="text-xs text-gray-400 mb-3">
-                      Added on {new Date(domain.createdAt).toLocaleDateString()}
-                    </p>
 
-                    {domain.configDetails?.misconfigured && (
+                    {/* === 修改：显示需要的 DNS 记录 === */}
+                    {dnsData.length > 0 && (
                       <div className="mt-3 pt-3 border-t border-slate-600/50">
                          <Alert
-                          message={<span className="font-semibold text-yellow-100">DNS Configuration Required</span>}
-                          description={<span className="text-yellow-200/90 text-xs">Add the following CNAME record to your domain provider (e.g., GoDaddy, Namecheap) to verify this subdomain. DNS changes can take some time to propagate.</span>}
+                          message={<span className="font-semibold text-yellow-100">{alertMessage}</span>}
+                          description={<span className="text-yellow-200/90 text-xs">{alertDescription} DNS changes can take some time to propagate.</span>}
                           type="warning"
                           showIcon
                           className="bg-yellow-600/20 border-yellow-500/30 text-yellow-200 mb-3"
@@ -859,7 +985,7 @@ const PublishSettingsModal = ({
       onCancel={onClose}
       title={<span className="text-white font-semibold text-base">Publish Settings</span>}
       footer={null}
-      width={650}
+      width={800}
       centered
       styles={{
         body: { background: '#1e293b', padding: '24px', borderRadius: '8px' },
