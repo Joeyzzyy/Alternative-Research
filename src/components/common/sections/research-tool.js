@@ -70,8 +70,8 @@ const ResearchTool = () => {
     { id: 4, name: "Page Generation", gradient: "from-green-500/40 to-lime-500/40", borderColor: "border-green-500/60", shadowColor: "shadow-green-500/20" },
   ]);
   const examples = [
-    { url: 'https://alternative.nytgames.top/nyt-games-original-alternative', title: 'Play NYT Games Free: The Ultimate Word Puzzle Collection Without Subscriptions', image: '/images/preview-nytgames.png', timestamp: 'Generated 2 hours ago' },
     { url: 'https://alternative.neobund.com/doba-alternative', title: 'NeoBund: The Smarter Alternative to Doba with Guaranteed 2-Day US Shipping', image: '/images/preview-neobund.png', timestamp: 'Generated on April 26' },
+    { url: 'https://alternative.nytgames.top/nyt-games-original-alternative', title: 'Play NYT Games Free: The Ultimate Word Puzzle Collection Without Subscriptions', image: '/images/preview-nytgames.png', timestamp: 'Generated 2 hours ago' },
     { url: 'https://www.dreambrand.studio/luxury-jewelry-influencer-ai-platform', title: 'Turn Your Influence into a Luxury Jewelry Empire with Al-Powered Design & Zero Hassle', image: '/images/preview-dreambrand.png', timestamp: 'Generated on April 30' }
   ];
   const processedStepLogIdsRef = useRef(new Set());
@@ -2451,6 +2451,7 @@ const ResearchTool = () => {
     if (!showInitialScreen) return;
 
     const intervalId = setInterval(() => {
+      setImgLoaded(false); // 重置图片加载状态
       setCurrentExampleIndex(prevIndex => (prevIndex + 1) % examples.length);
     }, 5000);
 
@@ -2568,12 +2569,6 @@ const ResearchTool = () => {
                   Your vote matters!
                 </p>
               </div>
-              <a 
-                href="https://www.producthunt.com/posts/altpage-ai?embed=true&utm_source=badge-top-post-badge&utm_medium=badge&utm_source=badge-altpage&#0045;ai" 
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block hover:scale-105 transition-transform duration-300"
-              >
                 {phCheckDone ? (
                     phImageAvailable ? (
                       // 正常显示外部图片
@@ -2616,7 +2611,6 @@ const ResearchTool = () => {
                     <div className="w-6 h-6 bg-orange-200 rounded-full animate-pulse"/>
                   </div>
                 )}
-              </a>
               <a 
                 href="https://www.producthunt.com/posts/altpage-ai" 
                 target="_blank"
@@ -2715,6 +2709,11 @@ const ResearchTool = () => {
                   alt={`Preview of ${currentExample.title}`}
                   className="w-full h-full object-cover" /* 移动端使用 cover */
                   loading="lazy"
+                  onLoad={() => setImgLoaded(true)}
+                  onError={() => setImgLoaded(true)}
+                  style={{ 
+                    background: '#222'
+                  }}
                 />
               </div>
             </a>
@@ -2952,12 +2951,6 @@ const ResearchTool = () => {
             <div className="mb-8 text-right">
               <div className="flex items-center justify-end gap-4">
                 <div className="flex items-center gap-3">
-                <a 
-                  href="https://www.producthunt.com/posts/altpage-ai?embed=true&utm_source=badge-top-post-badge&utm_medium=badge&utm_source=badge-altpage&#0045;ai" 
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block hover:scale-105 transition-transform duration-300"
-                >
                   {phCheckDone ? (
                       phImageAvailable ? (
                         // 正常显示外部图片
@@ -2976,22 +2969,22 @@ const ResearchTool = () => {
                         // 降级显示本地组合内容
                         <div className="relative">
                           <div className="w-[220px] h-[60px] bg-white rounded-lg flex items-center justify-center border-2 border-orange-200 shadow-md hover:shadow-lg transition-all group">
-                            <div className="flex flex-col items-center justify-center px-3 py-2 w-full">
-                              <div className="text-[8px] text-orange-500 font-medium mb-0.5">
-                                Featured on Product Hunt
-                              </div>
-                              <div className="text-[13px] font-bold text-orange-600 leading-none mb-0.5">
-                                #1 Product of the Day
-                              </div>
-                              <div className="text-[9px] text-orange-500 font-medium">
-                                25th May 2024
-                              </div>
+                          <div className="flex flex-col items-center justify-center px-3 py-2 w-full">
+                            <div className="text-[8px] text-orange-500 font-medium mb-0.5">
+                              Featured on Product Hunt
                             </div>
-                            {/* 悬停提示 */}
-                            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                              <span className="text-xs font-medium text-orange-100">View →</span>
+                            <div className="text-[13px] font-bold text-orange-600 leading-none mb-0.5">
+                              #1 Product of the Day
+                            </div>
+                            <div className="text-[9px] text-orange-500 font-medium">
+                              25th May 2024
                             </div>
                           </div>
+                          {/* 悬停提示 */}
+                          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                            <span className="text-xs font-medium text-orange-100">View →</span>
+                          </div>
+                        </div>
                         </div>
                       )
                     ) : (
@@ -3000,7 +2993,6 @@ const ResearchTool = () => {
                         <div className="w-6 h-6 bg-orange-200 rounded-full animate-pulse"/>
                       </div>
                     )}
-                  </a>                
                   <a 
                     href="https://www.producthunt.com/posts/altpage-ai" 
                     target="_blank"
@@ -3097,16 +3089,16 @@ const ResearchTool = () => {
                   </div>
                 </div>
                 {/* --- 修改：给图片容器添加固定高度和 overflow-hidden --- */}
-                <div className="pt-8 h-[400px] overflow-hidden" relative> {/* 你可以根据需要调整这个高度，例如 h-[350px] 或 h-[450px] */}
+                <div className="pt-8 h-[400px] overflow-hidden" relative>
                   <img
-                    key={currentExample.image} // 关键：切换时强制 React 重新渲染 img
+                    key={currentExample.image} // 保持这个 key
                     src={currentExample.image}
                     alt={`Preview of ${currentExample.title}`}
-                    className={`w-full h-full object-contain transition-opacity duration-500 ${imgLoaded ? 'opacity-100' : 'opacity-0'}`}
+                    className={`w-full h-full object-contain transition-opacity duration-500`}
                     loading="lazy"
                     onLoad={() => setImgLoaded(true)}
                     onError={() => setImgLoaded(true)}
-                    style={{ background: '#222' }} // 可选：加载时有底色
+                    style={{ background: '#222' }}
                   />
                 </div>
               </a>

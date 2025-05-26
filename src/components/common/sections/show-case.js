@@ -1,57 +1,90 @@
 'use client';
-import React, { forwardRef, useState } from 'react';
-import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/solid';
+import React, { forwardRef } from 'react';
 
 const CustomizableResearchUI = forwardRef(({}, ref) => {
-  // Define testimonial data (Example data, replace with real data)
-  const testimonials = [
+  const topRowTestimonials = [
     {
       id: 1,
-      image: '/images/testimonials/customer-1.jpg', // Replace with actual image path
-      quote: "AltPage.ai revolutionized our SEO strategy. The alternative pages targeting competitor weaknesses gave us the edge we needed, resulting in a 45% traffic increase.",
-      avatar: '/images/by.jpg', // Updated avatar path
-      name: 'Olivia Smith',
-      role: 'Marketing Director, Tech Startup',
+      quote: "Wow, this is the kind of next level thinking and execution in Ai that is exciting and original. As a solo-preneur I've wanted to build this for years but never have organized the material. Thank you 🙏 now I have no excuses!",
+      avatar: 'https://ph-avatars.imgix.net/679713/11a4f6e0-d541-4266-83ec-f7e9cc2d3a66.jpeg?auto=compress&codec=mozjpeg&cs=strip&auto=format&w=32&h=32&fit=crop&frame=1&dpr=1',
+      name: 'Terrence Kelleman',
+      role: 'Inventor, Mighty Wallet',
     },
     {
       id: 2,
-      image: '/images/testimonials/customer-2.jpg', // Replace with actual image path
-      quote: "We struggled with converting comparison shoppers. AltPage.ai's tailored landing pages significantly boosted our sign-up rate by 25%. Highly recommended!",
-      avatar: '/images/youssef.jpg', // Updated avatar path
-      name: 'Noah Johnson',
-      role: 'Founder, E-commerce Brand',
+      quote: "🎉 Huge congrats on the launch, @joey_zhu1 & AltPage.ai team! Love how you empower brands to steal competitor traffic with SEO-optimized comparison pages—genius use of AI to automate analysis and deployment! 🔥 One suggestion: Could you add dynamic \"alternative page\" performance dashboards (e.g., real-time keyword ranking vs competitors)? This would help users tweak content faster. 👀",
+      avatar: 'https://ph-avatars.imgix.net/7267714/d2baf1e8-56f4-4ba1-8958-77b856fc8e66.jpeg?auto=compress&codec=mozjpeg&cs=strip&auto=format&w=32&h=32&fit=crop&frame=1&dpr=1',
+      name: 'Zepeng She',
+      role: 'Co-founder of Tate-A-Tate AI',
     },
     {
       id: 3,
-      image: '/images/testimonials/customer-3.jpg', // Replace with actual image path
-      quote: "Our SEM campaigns saw a dramatic improvement in lead quality and ROI after using AltPage.ai for landing pages. The +15% conversion lift speaks for itself.",
-      avatar: '/images/hy.jpg', // Updated avatar path
-      name: 'Henry Rodriguez',
-      role: 'PPC Manager, Marketing Agency',
+      quote: "interesting. seems like a good example for what marketing philosophy finally leads to, intellectually, morally, creatively and in terms of its understanding of \"productivity\"",
+      avatar: 'https://ph-avatars.imgix.net/5749734/3b7eb273-0c9a-4b4f-93ab-e09782b05bc8.png?auto=compress&codec=mozjpeg&cs=strip&auto=format&w=32&h=32&fit=crop&frame=1&dpr=1',
+      name: 'O Schultz',
+      role: 'creative research',
     },
-    // Add more testimonials as needed (remember to update their avatar path too)
+    {
+      id: 4,
+      quote: "Kudos to the team for creating a tool that simplifies a complex task.",
+      avatar: 'https://ph-avatars.imgix.net/5307889/1a99b696-14ad-4a29-aeac-3c77ab3ca62d.png?auto=compress&codec=mozjpeg&cs=strip&auto=format&w=32&h=32&fit=crop&frame=1&dpr=1',
+      name: 'lynn',
+      role: 'Co-founder and hacker',
+    },
+    {
+      id: 5,
+      quote: "No tech skills needed, just smart positioning and fast execution. Big congrats on the launch!",
+      avatar: 'https://ph-avatars.imgix.net/6122443/89760908-17a1-4da7-8966-e4f2d4d66513.jpeg?auto=compress&codec=mozjpeg&cs=strip&auto=format&w=32&h=32&fit=crop&frame=1&dpr=1',
+      name: 'Supa Liu',
+      role: 'Please call me Supa Cool',
+    },
   ];
 
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  const goToPrevious = () => {
-    const isFirstSlide = currentIndex === 0;
-    const newIndex = isFirstSlide ? testimonials.length - 1 : currentIndex - 1;
-    setCurrentIndex(newIndex);
-  };
-
-  const goToNext = () => {
-    const isLastSlide = currentIndex === testimonials.length - 1;
-    const newIndex = isLastSlide ? 0 : currentIndex + 1;
-    setCurrentIndex(newIndex);
-  };
-
-  // Define stats data
-  const stats = [
-    { value: '350+', label: 'Companies using AltPage.ai' },
-    { value: '5,200+', label: 'Alternative pages generated' },
-    { value: '14,500+', label: 'Monthly conversions' },
+  const bottomRowTestimonials = [
+    {
+      id: 6,
+      quote: "Wow, that's impressive! It sounds like your product goes above and beyond expectations by not only providing analysis but also bringing ideas to life. Congrats on creating something that truly innovates. Can't wait to see how it impacts businesses. 🚀",
+      avatar: 'https://ph-avatars.imgix.net/3514778/ef1ea7f1-4c38-4980-be27-c29d415139fd.jpeg?auto=compress&codec=mozjpeg&cs=strip&auto=format&w=32&h=32&fit=crop&frame=1&dpr=1',
+      name: 'Alex Cloudstar',
+      role: 'Solo dev. PH #4. Let\'s go.',
+    },
+    {
+      id: 7,
+      quote: "This looks like a really smart way to tackle competitor traffic, AltPage.ai! The AI agent concept is cool. How does it determine the key advantages to highlight on the alternative pages, especially if features are quite similar?",
+      avatar: 'https://ph-avatars.imgix.net/8539542/original.jpeg?auto=compress&codec=mozjpeg&cs=strip&auto=format&w=32&h=32&fit=crop&frame=1&dpr=1',
+      name: 'YX Cathy',
+      role: 'GTM @viralt',
+    },
+    {
+      id: 8,
+      quote: "This tool is great! It's easy to use and highly efficient, significantly improving work efficiency. I truly find it very useful!",
+      avatar: 'https://ph-avatars.imgix.net/8481607/a0558407-f13d-426d-99be-25d32d06af98.jpeg?auto=compress&codec=mozjpeg&cs=strip&auto=format&w=32&h=32&fit=crop&frame=1&dpr=1',
+      name: 'Alex Liju',
+      role: 'Attribuly attribution for Shopify',
+    },
+    {
+      id: 9,
+      quote: "Cool! AltPageai presents a compelling solution for businesses aiming to strategically capture competitor brand traffic. Congrats on your launch.",
+      avatar: 'https://ph-avatars.imgix.net/7984703/bbc4d274-78c2-4aa8-ab53-71f32f92a39d.jpeg?auto=compress&codec=mozjpeg&cs=strip&auto=format&w=32&h=32&fit=crop&frame=1&dpr=1',
+      name: 'Alex Liu',
+      role: 'Developer',
+    },
+    {
+      id: 10,
+      quote: "This product angle is so amazing that it might be criticized on the suspicion of plagiarism, but it does bring in the most intuitive traffic. I wonder how search engines will face this trend.....:D",
+      avatar: 'https://ph-avatars.imgix.net/5178508/dbdebeb2-0666-4f4a-a0a7-927c28157e39.png?auto=compress&codec=mozjpeg&cs=strip&auto=format&w=32&h=32&fit=crop&frame=1&dpr=1',
+      name: 'Yan Bingbing',
+      role: 'Founder at UIPaaS',
+    },
   ];
+
+  // 创建重复内容用于无缝滚动
+  const createRepeatedItems = (items) => {
+    return [...items, ...items, ...items];
+  };
+
+  const topRowItems = createRepeatedItems(topRowTestimonials);
+  const bottomRowItems = createRepeatedItems(bottomRowTestimonials);
 
   return (
     <div id="showcase-section" ref={ref} className="bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 py-24 relative overflow-hidden">
@@ -61,45 +94,31 @@ const CustomizableResearchUI = forwardRef(({}, ref) => {
       <div className="max-w-7xl mx-auto px-4 relative z-10">
         <div className="text-center mb-16">
           <h2 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-6 bg-gradient-to-r from-cyan-400 to-purple-500 text-transparent bg-clip-text">
-            Results That Speak Volumes
+            People are talking
           </h2>
-          <p className="text-gray-300 max-w-3xl mx-auto">
-            Hear directly from customers who achieved remarkable growth with AltPage.ai.
-          </p>
         </div>
 
-        {/* Testimonial Carousel Container */}
-        <div className="relative max-w-3xl mx-auto">
-          {/* Carousel Inner Container - Handles Sliding */}
-          <div className="overflow-hidden">
-            <div 
-              className="flex transition-transform ease-out duration-300" 
-              style={{ transform: `translateX(-${currentIndex * 100}%)` }}
-            >
-              {testimonials.map((testimonial) => (
-                <div key={testimonial.id} className="flex-shrink-0 w-full">
-                  <div className="bg-slate-800/50 rounded-xl shadow-lg overflow-hidden border border-slate-700/50 mx-2">
-                    {/* Removed the outer md:flex container as it's less necessary without the image */}
-                    {/* Removed Left Side: Image div */}
-                    {/* <div className="md:flex-shrink-0"> ... </div> */}
-                    
-                    {/* Right Side: Content - Now takes full width */}
-                    <div className="p-6 md:p-8 flex flex-col justify-between"> {/* Kept padding */}
-                      {/* Top: Quote */}
-                      <blockquote className="text-xl text-gray-300 mb-6 italic">
-                        "{testimonial.quote}"
-                      </blockquote>
-                      {/* Bottom: Avatar, Name, Role */}
-                      <div className="flex items-center mt-4"> {/* Added top margin for spacing */}
-                        <img
-                          className="h-12 w-12 rounded-full mr-4 border-2 border-cyan-500/50 object-cover"
-                          src={testimonial.avatar}
-                          alt={testimonial.name}
-                        />
-                        <div>
-                          <p className="font-semibold text-white">{testimonial.name}</p>
-                          <p className="text-sm text-cyan-400">{testimonial.role}</p>
-                        </div>
+        {/* Top Row - 从左到右滚动 */}
+        <div className="mb-8 relative overflow-hidden">
+          <div className="scroll-container-left">
+            <div className="scroll-content">
+              {topRowItems.map((item, index) => (
+                <div 
+                  key={`top-${item.id}-${index}`} 
+                  className="testimonial-card"
+                >
+                  <div className="flex flex-col h-full justify-between">
+                    <p className="text-gray-300 mb-4 text-sm leading-relaxed line-clamp-4 flex-1">{item.quote}</p>
+                    <div className="flex items-center mt-auto">
+                      <img 
+                        src={item.avatar} 
+                        alt={item.name} 
+                        className="w-10 h-10 rounded-full object-cover mr-3 flex-shrink-0"
+                        onError={(e) => {e.target.src = 'https://via.placeholder.com/40';}} 
+                      />
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-white font-medium text-sm truncate">{item.name}</h4>
+                        <p className="text-cyan-400 text-xs truncate">{item.role}</p>
                       </div>
                     </div>
                   </div>
@@ -107,58 +126,109 @@ const CustomizableResearchUI = forwardRef(({}, ref) => {
               ))}
             </div>
           </div>
+        </div>
 
-          {/* Left Arrow */}
-          <button 
-            onClick={goToPrevious} 
-            className="absolute top-1/2 left-[-20px] md:left-[-40px] transform -translate-y-1/2 bg-slate-700/50 hover:bg-slate-600/70 text-white p-2 rounded-full z-20 transition-colors"
-            aria-label="Previous testimonial"
-          >
-            <ChevronLeftIcon className="h-6 w-6" />
-          </button>
-
-          {/* Right Arrow */}
-          <button 
-            onClick={goToNext} 
-            className="absolute top-1/2 right-[-20px] md:right-[-40px] transform -translate-y-1/2 bg-slate-700/50 hover:bg-slate-600/70 text-white p-2 rounded-full z-20 transition-colors"
-            aria-label="Next testimonial"
-          >
-            <ChevronRightIcon className="h-6 w-6" />
-          </button>
-
-          {/* Optional: Dots Indicator */}
-          <div className="flex justify-center mt-8 space-x-2">
-            {testimonials.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentIndex(index)}
-                className={`h-2 w-2 rounded-full ${currentIndex === index ? 'bg-cyan-400' : 'bg-slate-600/50 hover:bg-slate-500/50'} transition-colors`}
-                aria-label={`Go to testimonial ${index + 1}`}
-              />
-            ))}
+        {/* Bottom Row - 从右到左滚动 */}
+        <div className="relative overflow-hidden">
+          <div className="scroll-container-right">
+            <div className="scroll-content">
+              {bottomRowItems.map((item, index) => (
+                <div 
+                  key={`bottom-${item.id}-${index}`} 
+                  className="testimonial-card"
+                >
+                  <div className="flex flex-col h-full justify-between">
+                    <p className="text-gray-300 mb-4 text-sm leading-relaxed line-clamp-4 flex-1">{item.quote}</p>
+                    <div className="flex items-center mt-auto">
+                      <img 
+                        src={item.avatar} 
+                        alt={item.name} 
+                        className="w-10 h-10 rounded-full object-cover mr-3 flex-shrink-0"
+                        onError={(e) => {e.target.src = 'https://via.placeholder.com/40';}} 
+                      />
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-white font-medium text-sm truncate">{item.name}</h4>
+                        <p className="text-cyan-400 text-xs truncate">{item.role}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
-        {/* Stats Section */}
-        <div className="mt-20 pt-16 border-t border-slate-700/50">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-            {stats.map((stat, index) => (
-              <div key={index}>
-                <p className="text-4xl font-bold bg-gradient-to-r from-cyan-400 to-purple-500 text-transparent bg-clip-text mb-2">
-                  {stat.value}
-                </p>
-                <p className="text-gray-400 text-sm">
-                  {stat.label}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
+        <style jsx global>{`
+          .scroll-container-left,
+          .scroll-container-right {
+            overflow: hidden;
+            white-space: nowrap;
+          }
+
+          .scroll-content {
+            display: flex;
+            gap: 1rem;
+            animation-duration: 15s;
+            animation-timing-function: linear;
+            animation-iteration-count: infinite;
+          }
+
+          .scroll-container-left .scroll-content {
+            animation-name: scrollLeft;
+          }
+
+          .scroll-container-right .scroll-content {
+            animation-name: scrollRight;
+          }
+
+          .testimonial-card {
+            flex-shrink: 0;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(4px);
+            border-radius: 0.75rem;
+            width: 24rem;
+            height: 12rem;
+            padding: 1.5rem;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            white-space: normal;
+          }
+
+          @keyframes scrollLeft {
+            0% {
+              transform: translateX(0);
+            }
+            100% {
+              transform: translateX(-33.333%);
+            }
+          }
+
+          @keyframes scrollRight {
+            0% {
+              transform: translateX(-33.333%);
+            }
+            100% {
+              transform: translateX(0);
+            }
+          }
+
+          .line-clamp-4 {
+            display: -webkit-box;
+            -webkit-line-clamp: 4;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            white-space: normal;
+          }
+
+          /* 暂停动画当鼠标悬停时 */
+          .scroll-container-left:hover .scroll-content,
+          .scroll-container-right:hover .scroll-content {
+            animation-play-state: paused;
+          }
+        `}</style>
       </div>
     </div>
   );
 });
 
 CustomizableResearchUI.displayName = 'CustomizableResearchUI';
-
 export default CustomizableResearchUI;
