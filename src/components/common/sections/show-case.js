@@ -10,7 +10,7 @@ const CustomizableResearchUI = forwardRef(({}, ref) => {
       image: '/images/testimonials/customer-1.jpg', // Replace with actual image path
       quote: "AltPage.ai revolutionized our SEO strategy. The alternative pages targeting competitor weaknesses gave us the edge we needed, resulting in a 45% traffic increase.",
       avatar: '/images/by.jpg', // Updated avatar path
-      name: 'Jane Doe',
+      name: 'Olivia Smith',
       role: 'Marketing Director, Tech Startup',
     },
     {
@@ -18,7 +18,7 @@ const CustomizableResearchUI = forwardRef(({}, ref) => {
       image: '/images/testimonials/customer-2.jpg', // Replace with actual image path
       quote: "We struggled with converting comparison shoppers. AltPage.ai's tailored landing pages significantly boosted our sign-up rate by 25%. Highly recommended!",
       avatar: '/images/youssef.jpg', // Updated avatar path
-      name: 'John Smith',
+      name: 'Noah Johnson',
       role: 'Founder, E-commerce Brand',
     },
     {
@@ -26,7 +26,7 @@ const CustomizableResearchUI = forwardRef(({}, ref) => {
       image: '/images/testimonials/customer-3.jpg', // Replace with actual image path
       quote: "Our SEM campaigns saw a dramatic improvement in lead quality and ROI after using AltPage.ai for landing pages. The +15% conversion lift speaks for itself.",
       avatar: '/images/hy.jpg', // Updated avatar path
-      name: 'Alex Johnson',
+      name: 'Henry Rodriguez',
       role: 'PPC Manager, Marketing Agency',
     },
     // Add more testimonials as needed (remember to update their avatar path too)
