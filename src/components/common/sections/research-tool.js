@@ -2744,11 +2744,11 @@ const ResearchTool = () => {
           {contextHolder}
           {isUserLoggedIn && (
             <>
-              {/* 折叠时只显示小按钮，icon为两条杠且靠左 */}
               {!isSidebarOpen && (
+                <div className="fixed top-20 left-4 z-50 flex items-center gap-2">
                 <button
                   onClick={toggleSidebar}
-                  className="fixed top-20 left-4 z-50 bg-slate-700 hover:bg-slate-600 text-white w-8 h-8 rounded-full flex items-center justify-center transition-colors shadow-md"
+                  className="bg-slate-700 hover:bg-slate-600 text-white w-8 h-8 rounded-full flex items-center justify-center transition-colors shadow-md"
                   title="Expand History"
                   style={{ outline: 'none' }}
                 >
@@ -2760,6 +2760,15 @@ const ResearchTool = () => {
                     <rect x="2" y="12" width="6" height="2" rx="1" fill="currentColor" />
                   </svg>
                 </button>
+                <button
+                  onClick={toggleSidebar}
+                  className="text-sm font-medium text-slate-200 bg-slate-800/70 backdrop-blur-sm px-2.5 py-1 rounded-md shadow-sm border border-slate-600/40 hover:bg-slate-700/80 hover:text-white transition-all duration-200 cursor-pointer"
+                  title="Expand History"
+                  style={{ outline: 'none' }}
+                >
+                  My Task List
+                </button>
+              </div>
               )}
               {isSidebarOpen && (
                 <div
