@@ -129,8 +129,8 @@ const SubscriptionCard = () => {
               <>
                 <span className="font-bold text-2xl text-purple-400 inline-block animate-bounce-subtle">300</span> credits/month (approx. <span className="font-bold text-2xl text-purple-400 inline-block animate-bounce-subtle">300</span> pages for alternative page or blog generation)
               </>,
-              `Generate up to ${planMap.Professional.monthly?.pageLimit ?? 300} pages in total /month`,
-              `Freely hosting ${planMap.Professional.monthly?.pageLimit ?? 300} pages on our server`,
+              `Generate up to ${planMap.Professional.monthly?.pageLimit ?? 30} pages in total /month`,
+              `Freely hosting ${planMap.Professional.monthly?.pageLimit ?? 30} pages on our server`,
               "Auto images grabbing and matching",
               "Auto internal links insertion",
               "AI page design and generation",
