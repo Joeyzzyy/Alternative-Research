@@ -1812,6 +1812,28 @@ const ResearchTool = () => {
   };
 
   useEffect(() => {
+    // 监听重试任务事件
+    const handleRetryTask = async (event) => {
+      const { website } = event.detail;
+      try {
+        await initializeChat(website);
+        // 发送任务启动成功事件
+        window.dispatchEvent(new CustomEvent('taskStarted'));
+      } catch (error) {
+        console.error('Failed to initialize chat:', error);
+        window.dispatchEvent(new CustomEvent('taskStartFailed', { detail: { error } }));
+      }
+    };
+  
+    window.addEventListener('retryTask', handleRetryTask);
+    
+    return () => {
+      window.removeEventListener('retryTask', handleRetryTask);
+    };
+  }, [initializeChat]);
+
+
+  useEffect(() => {
     // --- 添加 currentWebsiteId 到依赖项 ---
     if (!shouldConnectSSE || !currentWebsiteId) {
       // --- 新增：如果不需要连接，确保停止重连提示 ---

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import apiClient from '../../../lib/api/index.js';
-import { Modal, Button, Spin, message, Select, Radio } from 'antd';
+import { Modal, Button, Spin, message, Tooltip, Radio } from 'antd';
 import { DeleteOutlined, ExclamationCircleOutlined, ReloadOutlined, ExportOutlined, LeftOutlined, CopyOutlined, RightOutlined, CloseOutlined, ClearOutlined, EditOutlined, EyeOutlined, LinkOutlined } from '@ant-design/icons';
 import HtmlPreview from './page-edit';
 import PublishSettingsModal from './publish-setting-modal';
@@ -28,6 +28,7 @@ const HistoryCardList = () => {
   const [isSidebarVisible, setIsSidebarVisible] = useState(true); // 新增：控制详情弹窗侧边栏可见性
   const [isPublishSettingsModalVisible, setIsPublishSettingsModalVisible] = useState(false); // 新增：控制发布设置弹窗
   const currentItem = resultDetail?.data?.find(item => item.resultId === selectedPreviewId) || {};
+  const [retryConfirm, setRetryConfirm] = useState({ open: false, website: null }); // 新增：重试确认弹窗状态
 
   // === 新增：统一样式的确认弹窗 ===
   const confirmationModalStyles = {
@@ -401,6 +402,44 @@ const HistoryCardList = () => {
     }
   }, [selectedPreviewId]); // 依赖于 selectedPreviewId
 
+  // === 新增：替代方案：使用自定义事件 ===
+  const handleRetryTask = async (website) => {
+    try {
+      messageApi.loading({ content: 'Restarting task...', key: 'retryTask', duration: 0 });
+      
+      // 发送自定义事件
+      const retryEvent = new CustomEvent('retryTask', { 
+        detail: { website } 
+      });
+      window.dispatchEvent(retryEvent);
+      
+      // 监听任务启动成功事件
+      const handleTaskStarted = () => {
+        messageApi.destroy('retryTask');
+        messageApi.success('Task restarted successfully');
+        setRetryConfirm({ open: false, website: null });
+        setTimeout(() => {
+          fetchHistory();
+        }, 2000);
+        window.removeEventListener('taskStarted', handleTaskStarted);
+      };
+      
+      window.addEventListener('taskStarted', handleTaskStarted);
+      
+      // 设置超时，防止无限等待
+      setTimeout(() => {
+        window.removeEventListener('taskStarted', handleTaskStarted);
+        messageApi.destroy('retryTask');
+        messageApi.error('Task restart timeout. Please try again.');
+      }, 10000); // 10秒超时
+      
+    } catch (error) {
+      console.error('Failed to restart task:', error);
+      messageApi.destroy('retryTask');
+      messageApi.error('Failed to restart task');
+    }
+  };
+
   if (!hasToken) {
     return null;
   }
@@ -545,6 +584,30 @@ const HistoryCardList = () => {
                       >
                         <DeleteOutlined style={{ fontSize: 10 }} />
                       </button>
+                      {/* === 新增：失败任务的重新开始按钮 === */}
+                      {item.generatorStatus === 'failed' && (
+                        <Tooltip title="Restart Task" placement="left">
+                          <button
+                            className="absolute top-1 right-7 bg-gradient-to-r from-orange-600 to-yellow-600 hover:from-orange-500 hover:to-yellow-500 text-white rounded-full p-1 shadow-lg transition-all duration-200 border border-orange-400/50 hover:border-orange-300"
+                            title="Restart Task"
+                            style={{ 
+                              width: 20, 
+                              height: 20, 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              justifyContent: 'center',
+                              boxShadow: '0 2px 8px rgba(251, 146, 60, 0.4)' // 橙色阴影
+                            }}
+                            onClick={e => {
+                              e.stopPropagation();
+                              setRetryConfirm({ open: true, website: item.website });
+                            }}
+                            disabled={deletingId === item.websiteId || isClearingAll}
+                          >
+                            <ReloadOutlined style={{ fontSize: 10 }} />
+                          </button>
+                        </Tooltip>
+                      )}
                     </div>
                   );
                 })
@@ -648,6 +711,34 @@ const HistoryCardList = () => {
             <div className="mt-2 text-slate-300 text-center">
               No details are available for this task.<br />
               Would you like to delete it?
+            </div>
+          </div>
+        </Modal>
+        {/* === 新增：重试确认弹窗 === */}
+        <Modal
+          open={retryConfirm.open}
+          onCancel={() => setRetryConfirm({ open: false, website: null })}
+          footer={[
+            <Button
+              key="retry"
+              type="primary"
+              onClick={() => handleRetryTask(retryConfirm.website)}
+            >
+              Yes, Restart
+            </Button>,
+            <Button key="cancel" onClick={() => setRetryConfirm({ open: false, website: null })} className="ant-btn-modal-cancel-dark">
+              Cancel
+            </Button>
+          ]}
+          centered
+          title={null}
+          styles={confirmationModalStyles}
+        >
+          <div className="flex flex-col items-center justify-center py-6">
+            <ReloadOutlined style={{ fontSize: 40, color: '#3b82f6' }} />
+            <div className="mt-4 text-lg font-semibold text-blue-400">Restart Task</div>
+            <div className="mt-2 text-slate-300 text-center">
+              Do you want to restart the task with <span className="text-cyan-400 font-semibold">{retryConfirm.website}</span> as the target URL?
             </div>
           </div>
         </Modal>
