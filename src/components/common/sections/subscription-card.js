@@ -531,7 +531,7 @@ function PaymentModal({ visible, onClose, plan, period, onSuccess }) {
                 fontWeight: 800,
                 color: "#6f3ff5"
               }}>
-                ¥{plan?.price?.[period] ?? '-'}
+                ${plan?.price?.[period] ?? '-'}
               </span>
               <span style={{ color: "#888", fontSize: 16 }}>/mo</span>
             </div>
@@ -549,7 +549,7 @@ function PaymentModal({ visible, onClose, plan, period, onSuccess }) {
               textAlign: "center"
             }}>
               <div style={{ fontSize: 13, color: "#888", fontWeight: 400, marginBottom: 2 }}>Total per year</div>
-              <div>¥{Math.round(Number(plan.price[period]) * 12 * 100) / 100}</div>
+              <div>${Math.round(Number(plan.price[period]) * 12 * 100) / 100}</div>
             </div>
           )}
         </div>

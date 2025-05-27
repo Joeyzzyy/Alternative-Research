@@ -93,9 +93,28 @@ const CustomizableResearchUI = forwardRef(({}, ref) => {
       
       <div className="max-w-7xl mx-auto px-4 relative z-10">
         <div className="text-center mb-16">
-          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-6 bg-gradient-to-r from-cyan-400 to-purple-500 text-transparent bg-clip-text">
-            People are talking
-          </h2>
+          <div className="flex flex-col items-center mb-6">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold mb-4 bg-gradient-to-r from-cyan-400 to-purple-500 text-transparent bg-clip-text">
+              🎉 We Got #1 Product of the Day! 🚀
+            </h2>
+            <a 
+              href="https://www.producthunt.com/posts/altpage-ai?embed=true&utm_source=badge-top-post-badge&utm_medium=badge&utm_source=badge-altpage&#0045;ai" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="mb-6 hover:scale-105 transition-transform duration-200"
+            >
+              <img 
+                src="https://api.producthunt.com/widgets/embed-image/v1/top-post-badge.svg?post_id=967689&theme=dark&period=daily&t=1748270618907" 
+                alt="AltPage.ai - Steal competitor brand traffic with alternative pages | Product Hunt" 
+                className="w-[250px] h-[54px]"
+                width="250" 
+                height="54" 
+              />
+            </a>
+          </div>
+          <p className="text-xl sm:text-2xl text-gray-300 font-medium">
+            👀 Let's see what users are really talking about 💬
+          </p>
         </div>
 
         {/* Top Row - 从左到右滚动 */}
@@ -103,9 +122,12 @@ const CustomizableResearchUI = forwardRef(({}, ref) => {
           <div className="scroll-container-left">
             <div className="scroll-content">
               {topRowItems.map((item, index) => (
-                <div 
-                  key={`top-${item.id}-${index}`} 
-                  className="testimonial-card"
+                <a
+                  key={`top-${item.id}-${index}`}
+                  href="https://www.producthunt.com/posts/altpage-ai?embed=true&utm_source=badge-top-post-badge&utm_medium=badge&utm_source=badge-altpage-ai"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="testimonial-card cursor-pointer hover:scale-105 transition-transform duration-200"
                 >
                   <div className="flex flex-col h-full justify-between">
                     <p className="text-gray-300 mb-4 text-sm leading-relaxed line-clamp-4 flex-1">{item.quote}</p>
@@ -122,10 +144,13 @@ const CustomizableResearchUI = forwardRef(({}, ref) => {
                       </div>
                     </div>
                   </div>
-                </div>
+                </a>
               ))}
             </div>
           </div>
+          {/* 左右淡出遮罩 */}
+          <div className="absolute top-0 left-0 w-32 h-full bg-gradient-to-r from-slate-950 to-transparent pointer-events-none z-10"></div>
+          <div className="absolute top-0 right-0 w-32 h-full bg-gradient-to-l from-slate-950 to-transparent pointer-events-none z-10"></div>
         </div>
 
         {/* Bottom Row - 从右到左滚动 */}
@@ -133,9 +158,12 @@ const CustomizableResearchUI = forwardRef(({}, ref) => {
           <div className="scroll-container-right">
             <div className="scroll-content">
               {bottomRowItems.map((item, index) => (
-                <div 
-                  key={`bottom-${item.id}-${index}`} 
-                  className="testimonial-card"
+                <a
+                  key={`bottom-${item.id}-${index}`}
+                  href="https://www.producthunt.com/posts/altpage-ai?embed=true&utm_source=badge-top-post-badge&utm_medium=badge&utm_source=badge-altpage-ai"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="testimonial-card cursor-pointer hover:scale-105 transition-transform duration-200"
                 >
                   <div className="flex flex-col h-full justify-between">
                     <p className="text-gray-300 mb-4 text-sm leading-relaxed line-clamp-4 flex-1">{item.quote}</p>
@@ -152,10 +180,13 @@ const CustomizableResearchUI = forwardRef(({}, ref) => {
                       </div>
                     </div>
                   </div>
-                </div>
+                </a>
               ))}
             </div>
           </div>
+          {/* 左右淡出遮罩 */}
+          <div className="absolute top-0 left-0 w-32 h-full bg-gradient-to-r from-slate-950 to-transparent pointer-events-none z-10"></div>
+          <div className="absolute top-0 right-0 w-32 h-full bg-gradient-to-l from-slate-950 to-transparent pointer-events-none z-10"></div>
         </div>
 
         <style jsx global>{`
@@ -191,6 +222,13 @@ const CustomizableResearchUI = forwardRef(({}, ref) => {
             padding: 1.5rem;
             border: 1px solid rgba(148, 163, 184, 0.3);
             white-space: normal;
+            text-decoration: none;
+            display: block;
+          }
+
+          .testimonial-card:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(34, 211, 238, 0.4);
           }
 
           @keyframes scrollLeft {
