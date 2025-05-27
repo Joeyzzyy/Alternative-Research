@@ -86,30 +86,12 @@ export default function Footer() {
     {
       title: "Resources", // Section Title from page.js
       links: [
-        { label: "Generate SEO Blogs", url: "https://websitelm.com/" }, // 旧的链接，已被下方列表替换
         {
-            "label": "Will Google Penalize AI Content in 2025?",
-            "url": "https://websitelm.com/blog/google-ai-content-penalty-2025"
-        },
-        {
-            "label": "How to Fix Pages Not Indexing in Google (Step-by-Step Guide)",
-            "url": "https://websitelm.com/blog/fix-google-indexing-issues-guide"
-        },
-        {
-            "label": "How to Optimize Content for Google’s Featured Snippets in 2025",
-            "url": "https://websitelm.com/blog/optimize-content-google-featured-snippets"
-        },
-        {
-            "label": "Core Web Vitals in 2025: How UX Impacts Your Google Rankings",
-            "url": "https://websitelm.com/blog/core-web-vitals-ux-google-rankings"
-        },
-        {
-            "label": "Can AI Tools Replace Human Writers in SEO?",
-            "url": "https://websitelm.com/blog/ai-human-writers-seo-content"
+            "label": "Privacy Policy",
+            "url": "/privacy-policy"
         }
       ],
     }
-    // 如果需要，可以在这里添加更多 section
   ];
 
   return (
