@@ -89,6 +89,10 @@ export default function Footer() {
         {
             "label": "Privacy Policy",
             "url": "/privacy-policy"
+        },
+        {
+            "label": "Terms and Conditions",
+            "url": "/terms-and-conditions"
         }
       ],
     }
