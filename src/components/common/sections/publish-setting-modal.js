@@ -993,7 +993,7 @@ const PublishSettingsModal = ({
         content: { background: '#1e293b', padding: 0 },
       }}
       closable={true}
-      maskClosable={true}
+      maskClosable={false} // 修改：禁用点击遮罩关闭
       destroyOnClose
       closeIcon={<CloseOutlined style={{ color: 'white', fontSize: '16px' }} />}
     >
@@ -1470,6 +1470,7 @@ const PublishSettingsModal = ({
                       className="w-full domain-select-override"
                       placeholder="Choose a verified subdomain"
                       dropdownStyle={{ background: '#2a3a50', border: '1px solid #475569' }}
+                      getPopupContainer={(triggerNode) => triggerNode.parentNode} // 新增：确保下拉框渲染在正确的容器内
                       allowClear
                       disabled={domainLoading || isDeletingSubdomain || isAddingSubdomain}
                     >
