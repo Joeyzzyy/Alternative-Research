@@ -258,9 +258,12 @@ const ResearchTool = () => {
 
   const linkifyDomains = (text) => {
     return text.replace(
-      /([a-zA-Z0-9-]+\.[a-zA-Z]{2,})(?![^<]*>)/g,
+      // 匹配完整URL或纯域名，避免重复添加协议
+      /\b(?:https?:\/\/)?([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}\b(?![^<]*>)/g,
       (match) => {
-        return `<a href="https://${match}" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;text-decoration:underline;">${match}</a>`;
+        // 如果已经包含协议，直接使用；否则添加 https://
+        const href = match.startsWith('http') ? match : `https://${match}`;
+        return `<a href="${href}" target="_blank" rel="noopener noreferrer" style="color:#60a5fa;text-decoration:underline;">${match}</a>`;
       }
     );
   };
@@ -290,7 +293,7 @@ const ResearchTool = () => {
 
   const extractDomains = (text) => {
     // 匹配标准域名格式（增强版）
-    const domainRegex = /(\b(?:https?:\/\/)?(?:www\.)?([a-zA-Z0-9-]+\.[a-zA-Z]{2,})(?:\/[^\s]*)?\b)/gi;
+    const domainRegex = /(\b(?:https?:\/\/)?(?:www\.)?([a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*\.[a-zA-Z]{2,})(?:\/[^\s]*)?\b)/gi;
     
     // 新规则：严格匹配被**包裹的产品名或编号列表项
     const productRegex = /(?:\d+\.\s+)?\*\*([^*]+)\*\*/g; // 严格匹配**包裹的内容
