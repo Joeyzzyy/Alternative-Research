@@ -89,6 +89,12 @@ const ResearchTool = () => {
   const currentExample = examples[currentExampleIndex];
   const [phImageAvailable, setPhImageAvailable] = useState(false);
   const [phCheckDone, setPhCheckDone] = useState(false);
+  const taskTimeEstimates = {
+    1: { name: "Find Competitors", time: "1-3 mins", tip: "Perfect time to grab a coffee ☕" },
+    2: { name: "Select Competitor", time: "time that depends on you", tip: "Take your time to choose wisely 🤔" },
+    3: { name: "Analyze Competitor", time: "3-5 mins", tip: "Great time to stretch or check emails 📧" },
+    4: { name: "Page Generation", time: "2-3 mins", tip: "Almost done! You can close this tab if needed 🎉" },
+  };
 
   useEffect(() => {
     const checkNetwork = async () => {
@@ -1926,18 +1932,17 @@ const ResearchTool = () => {
           retryTimeoutRef.current = null;
         }
 
-        // --- 新增：停止重连提示并在成功时通知 ---
         isShowingReconnectNoticeRef.current = false;
         if (sseReconnectNoticeTimeoutRef.current) {
           clearTimeout(sseReconnectNoticeTimeoutRef.current);
           sseReconnectNoticeTimeoutRef.current = null;
         }
-        // --- 结束新增 ---
       };
 
       eventSource.onmessage = (event) => {
         try {
           const logData = JSON.parse(event.data);
+          console.log('logData', logData);
           let currentStepNumber = currentStep;
 
           // 处理 Error 类型日志
@@ -3316,6 +3321,25 @@ const ResearchTool = () => {
                             </div>
                           )}
                           {/* === 进度条 Progress 结束 === */}
+                          {/* === 新增：任务时间预估区域 === */}
+                          {!showInitialScreen && currentStep > 0 && taskTimeEstimates[currentStep] && (
+                            <div className="flex justify-center mb-3">
+                              <div className="flex items-center gap-2 px-4 py-2 bg-slate-800/60 border border-slate-700/50 rounded-lg">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span className="text-xs text-gray-300">
+                                  <span className="text-blue-300 font-medium">{taskTimeEstimates[currentStep].name}</span> usually takes{' '}
+                                  <span className="text-yellow-400 font-medium">{taskTimeEstimates[currentStep].time}</span> -{' '}
+                                  <span className="text-gray-400 italic">{taskTimeEstimates[currentStep].tip}</span>
+                                  {(currentStep === 3 || currentStep === 4) && (
+                                    <span className="text-gray-400"> - You can leave to do other things, we'll email you when it's done</span>
+                                  )}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                          {/* === 任务时间预估区域结束 === */}
                           <div className="rounded-2xl shadow-lg px-5 py-4 flex flex-col gap-2"
                             style={{
                               border: '1.5px solid #e0e7ef', // 只保留边框
