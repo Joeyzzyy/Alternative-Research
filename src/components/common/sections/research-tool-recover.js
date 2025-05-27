@@ -2352,36 +2352,26 @@ const ResearchToolRecover = ({ websiteId }) => {
                     )}
                   </button>
                   <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
-                      <div className="flex items-center gap-2">
-                        <Tooltip title="Cancel Current Task" placement="top">
-                          <button
-                            type="button"
-                            className="p-0"
-                            title="Abort Task"
-                            onClick={() => setShowAbortModal(true)}
-                            style={{
-                              height: '28px',
-                              width: '28px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              background: 'linear-gradient(135deg, #7f1d1d 0%, #b91c1c 100%)',
-                              borderRadius: '50%',
-                              boxShadow: '0 0 8px 1.5px rgba(185, 28, 28, 0.4), 0 2px 4px 0 rgba(127,29,29,0.10)',
-                              border: 'none',
-                              transition: 'box-shadow 0.3s ease-in-out',
-                            }}
-                          >
-                            <div style={{
-                              width: '10px',
-                              height: '10px',
-                              background: 'white',
-                              borderRadius: '2px',
-                              boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
-                            }} />
-                          </button>
-                        </Tooltip>
-                      </div>
+                    <button
+                    type="button"
+                    onClick={() => window.location.href = '/'}
+                    className="px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 bg-slate-600 hover:bg-slate-500 text-white border border-slate-700 hover:border-slate-600"
+                    style={{ height: '28px' }}
+                  >
+                    Back To Homepage
+                  </button>
+                  <div className="flex items-center gap-2">
+                    <Tooltip title="Cancel Current Task" placement="top">
+                      <button
+                        type="button"
+                        onClick={() => setShowAbortModal(true)}
+                        className="px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 bg-red-600 hover:bg-red-500 text-white border border-red-700 hover:border-red-600"
+                        style={{ height: '28px' }}
+                      >
+                        Abort Task
+                      </button>
+                    </Tooltip>
+                    </div>
                   </div>
                 </div>
 
