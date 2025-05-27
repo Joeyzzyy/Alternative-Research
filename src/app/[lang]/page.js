@@ -322,10 +322,10 @@ async function getPageData() {
           componentName: "SubscriptionCard", 
           sectionId: "pricing",
         },
-        {
-          componentName: "Recommendations",
-          sectionId: "recommendations",
-        },
+        // {
+        //   componentName: "Recommendations",
+        //   sectionId: "recommendations",
+        // },
         {
           componentName: "Faqs",
           sectionId: "faq",
