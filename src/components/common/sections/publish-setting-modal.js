@@ -1040,153 +1040,441 @@ const PublishSettingsModal = ({
           {/* === 条件渲染：根据 publishMode 显示不同内容 === */}
           {publishMode === 'subdomain' && (
             <>
-              {/* Domain Section */}
+              {/* Step-by-step Guide for Subdomain Mode */}
+              <div className="pb-5 border-b border-slate-700">
+                <h3 className="text-lg font-semibold text-white mb-4">Setup Guide</h3>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${rootDomain ? 'bg-green-600 text-white' : 'bg-slate-600 text-gray-300'}`}>
+                      {rootDomain ? '✓' : '1'}
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-white">Bind Your Domain</h4>
+                      <p className="text-sm text-gray-400">Connect your domain to enable subdomain publishing</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${rootDomain && verifiedDomains.filter(d => d !== rootDomain).length > 0 ? 'bg-green-600 text-white' : rootDomain ? 'bg-blue-600 text-white' : 'bg-slate-600 text-gray-300'}`}>
+                      {rootDomain && verifiedDomains.filter(d => d !== rootDomain).length > 0 ? '✓' : rootDomain ? '2' : '2'}
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-white">Create Subdomains</h4>
+                      <p className="text-sm text-gray-400">Add subdomains like blog.yourdomain.com for publishing</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${selectedPublishUrl && slugInput ? 'bg-green-600 text-white' : rootDomain && verifiedDomains.filter(d => d !== rootDomain).length > 0 ? 'bg-blue-600 text-white' : 'bg-slate-600 text-gray-300'}`}>
+                      {selectedPublishUrl && slugInput ? '✓' : rootDomain && verifiedDomains.filter(d => d !== rootDomain).length > 0 ? '3' : '3'}
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-medium text-white">Configure & Publish</h4>
+                      <p className="text-sm text-gray-400">Select subdomain, set page slug, and publish your content</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 1: Domain Binding */}
               <Spin spinning={domainLoading} tip={<span className="text-gray-300">Loading domains...</span>}>
                 <div className="pb-5 border-b border-slate-700">
-                  <h3 className="text-lg font-semibold text-white mb-4">Domain Binding</h3>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${rootDomain ? 'bg-green-600 text-white' : 'bg-blue-600 text-white'}`}>
+                      {rootDomain ? '✓' : '1'}
+                    </div>
+                    <h3 className="text-lg font-semibold text-white">Step 1: Bind Your Domain</h3>
+                  </div>
                   {rootDomain ? (
                     <div className="space-y-4">
-                      <div className="p-3 bg-slate-700/50 rounded border border-slate-600 flex items-center justify-between flex-wrap gap-2">
-                        <div>
-                          <span className="text-sm font-medium text-gray-300">Bound Root Domain: </span>
-                          <span className="text-sm font-semibold text-cyan-300">{rootDomain}</span>
+                      <div className="p-4 bg-green-900/20 border border-green-700/50 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+                          <span className="text-sm font-medium text-green-300">Domain Successfully Bound</span>
                         </div>
-                        <Button
-                          type="link"
-                          danger
-                          size="small"
-                          onClick={handleDeleteDomainVerification}
-                          loading={isDeletingVerification}
-                          className="text-red-400 hover:text-red-300 flex-shrink-0"
-                        >
-                          Remove Binding
-                        </Button>
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div>
+                            <span className="text-sm text-gray-300">Root Domain: </span>
+                            <span className="text-sm font-semibold text-green-300">{rootDomain}</span>
+                          </div>
+                          <Button
+                            type="link"
+                            danger
+                            size="small"
+                            onClick={handleDeleteDomainVerification}
+                            loading={isDeletingVerification}
+                            className="text-red-400 hover:text-red-300 flex-shrink-0"
+                          >
+                            Remove Binding
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-sm text-gray-400">✓ Great! Your domain is ready. Now let's create some subdomains.</p>
                       </div>
                     </div>
                   ) : (
-                    <Spin spinning={verificationLoading} tip={<span className="text-gray-300">{verificationStatus === 'verifying' ? "Verifying..." : "Processing..."}</span>}>
-                      {verificationError && <p className="text-red-400 text-sm mb-3">{verificationError}</p>}
-                      {verificationStatus === 'idle' && (
-                        <div className="space-y-3">
-                          <p className="text-sm text-gray-300">Enter the domain name you want to associate with your site (e.g., mydomain.com).</p>
-                          <input
-                            type="text"
-                            placeholder="example.com"
-                            value={domainToVerify}
-                            onChange={(e) => {
-                              setDomainToVerify(e.target.value.trim());
-                              setVerificationError(null);
-                            }}
-                            className="w-full px-3 py-2 rounded bg-slate-700 border border-slate-600 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500"
-                            disabled={verificationLoading || !currentCustomerId}
-                          />
-                          <Button
-                            type="primary"
-                            onClick={handleAddDomain}
-                            loading={verificationLoading}
-                            disabled={!domainToVerify || verificationLoading || !currentCustomerId}
-                            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border-none text-white font-semibold"
-                          >
-                            Get Verification Record
-                          </Button>
-                          {!currentCustomerId && <p className="text-yellow-400 text-xs mt-1">Customer ID is not available, cannot add domain.</p>}
-                        </div>
-                      )}
-                      {(verificationStatus === 'pending_txt' || verificationStatus === 'verifying') && txtRecord && (
-                        <div className="space-y-3">
-                          <p className="text-sm text-gray-300">
-                            Add the following TXT record to your domain's DNS settings.
-                            <span className="block text-xs text-yellow-400/80 mt-1">
-                              If verification repeatedly fails, please delete the existing TXT record for this host in your DNS settings and add it again.
-                            </span>
-                          </p>
-                          <div className="space-y-1 bg-slate-700/50 p-3 rounded border border-slate-600">
-                            <p><strong className="text-gray-200">Type:</strong> <code className="text-cyan-300 bg-slate-800 px-1 rounded">TXT</code></p>
-                            <p><strong className="text-gray-200">Name/Host:</strong></p>
-                            <div className="flex items-center justify-between bg-slate-800 px-2 py-1 rounded">
-                              <code className="text-cyan-300 break-all mr-2">{txtRecord.name}</code>
-                              <Button icon={<CopyOutlined className="text-gray-300 hover:text-white"/>} type="text" size="small" onClick={() => copyToClipboard(txtRecord.name)} />
+                    <div className="space-y-4">
+                      <div className="p-4 bg-blue-900/20 border border-blue-700/50 rounded-lg">
+                        <p className="text-sm text-blue-200 mb-3">
+                          First, you need to bind a domain to your account. This will be your root domain (e.g., yourdomain.com) 
+                          that we'll use to create subdomains for publishing.
+                        </p>
+                      </div>
+                      <Spin spinning={verificationLoading} tip={<span className="text-gray-300">{verificationStatus === 'verifying' ? "Verifying..." : "Processing..."}</span>}>
+                        {verificationError && (
+                          <div className="p-3 bg-red-900/20 border border-red-700/50 rounded text-red-300 text-sm">
+                            {verificationError}
+                          </div>
+                        )}
+                        {verificationStatus === 'idle' && (
+                          <div className="space-y-3">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-300 mb-2">Enter your domain name</label>
+                              <input
+                                type="text"
+                                placeholder="example.com"
+                                value={domainToVerify}
+                                onChange={(e) => {
+                                  setDomainToVerify(e.target.value.trim());
+                                  setVerificationError(null);
+                                }}
+                                className="w-full px-3 py-2 rounded bg-slate-700 border border-slate-600 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                disabled={verificationLoading || !currentCustomerId}
+                              />
                             </div>
-                            <p><strong className="text-gray-200">Value/Content:</strong></p>
-                            <div className="flex items-center justify-between bg-slate-800 px-2 py-1 rounded">
-                              <code className="text-cyan-300 break-all mr-2">{txtRecord.value}</code>
-                              <Button icon={<CopyOutlined className="text-gray-300 hover:text-white"/>} type="text" size="small" onClick={() => copyToClipboard(txtRecord.value)} />
+                            <Button
+                              type="primary"
+                              onClick={handleAddDomain}
+                              loading={verificationLoading}
+                              disabled={!domainToVerify || verificationLoading || !currentCustomerId}
+                              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border-none text-white font-semibold"
+                            >
+                              Get Verification Record
+                            </Button>
+                            {!currentCustomerId && <p className="text-yellow-400 text-xs mt-1">Customer ID is not available, cannot add domain.</p>}
+                          </div>
+                        )}
+                        {(verificationStatus === 'pending_txt' || verificationStatus === 'verifying') && txtRecord && (
+                          <div className="space-y-4">
+                            <div className="p-4 bg-yellow-900/20 border border-yellow-700/50 rounded-lg">
+                              <h4 className="font-medium text-yellow-200 mb-2">DNS Verification Required</h4>
+                              <p className="text-sm text-yellow-200/80 mb-3">
+                                Add the following TXT record to your domain's DNS settings to verify ownership.
+                              </p>
+                              <div className="space-y-2 bg-slate-800 p-3 rounded border border-slate-600">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
+                                  <div>
+                                    <span className="text-gray-400">Type:</span>
+                                    <div className="flex items-center justify-between">
+                                      <code className="text-cyan-300 bg-slate-700 px-2 py-1 rounded">TXT</code>
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-400">Name/Host:</span>
+                                    <div className="flex items-center justify-between">
+                                      <code className="text-cyan-300 bg-slate-700 px-2 py-1 rounded break-all mr-1">{txtRecord.name}</code>
+                                      <Button icon={<CopyOutlined />} type="text" size="small" onClick={() => copyToClipboard(txtRecord.name)} />
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-400">Value:</span>
+                                    <div className="flex items-center justify-between">
+                                      <code className="text-cyan-300 bg-slate-700 px-2 py-1 rounded break-all mr-1">{txtRecord.value}</code>
+                                      <Button icon={<CopyOutlined />} type="text" size="small" onClick={() => copyToClipboard(txtRecord.value)} />
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                              <p className="text-xs text-yellow-300/80 mt-2">
+                                💡 Tip: DNS changes can take 5-30 minutes to propagate. If verification fails, wait a bit and try again.
+                              </p>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                type="primary"
+                                onClick={handleVerifyDomain}
+                                loading={verificationLoading && verificationStatus === 'verifying'}
+                                disabled={verificationLoading}
+                                className="flex-1 bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-500 hover:to-teal-500 border-none text-white font-semibold"
+                              >
+                                {verificationLoading && verificationStatus === 'verifying' ? 'Verifying...' : 'Verify Domain'}
+                              </Button>
+                              <Button
+                                type="default"
+                                onClick={() => {
+                                  setVerificationStatus('idle');
+                                  setTxtRecord(null);
+                                  setVerificationError(null);
+                                }}
+                                disabled={verificationLoading}
+                                className="bg-slate-600 hover:bg-slate-500 border-slate-500 text-white"
+                              >
+                                Change Domain
+                              </Button>
                             </div>
                           </div>
-                          <p className="text-xs text-gray-400">Once added, click the button below to verify.</p>
-                          <Button
-                            type="primary"
-                            onClick={handleVerifyDomain}
-                            loading={verificationLoading && verificationStatus === 'verifying'}
-                            disabled={verificationLoading}
-                            className="w-full bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-500 hover:to-teal-500 border-none text-white font-semibold"
-                          >
-                            {verificationLoading && verificationStatus === 'verifying' ? 'Verifying...' : 'Verify DNS Record'}
-                          </Button>
-                          <Button
-                            type="default"
-                            onClick={() => {
-                              setVerificationStatus('idle');
-                              setTxtRecord(null);
-                              setVerificationError(null);
-                            }}
-                            disabled={verificationLoading}
-                            className="w-full bg-slate-600 hover:bg-slate-500 border-slate-500 text-white"
-                          >
-                            Change Domain
-                          </Button>
-                        </div>
-                      )}
-                      {verificationStatus === 'failed' && (
-                         <div className="space-y-3">
-                           <Button
-                             type="primary"
-                             onClick={() => {
-                               setVerificationStatus('idle');
-                               setVerificationError(null);
-                             }}
-                             className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border-none text-white font-semibold"
-                           >
-                             Try Again
-                           </Button>
-                         </div>
-                      )}
-                    </Spin>
+                        )}
+                        {verificationStatus === 'failed' && (
+                           <div className="space-y-3">
+                             <Button
+                               type="primary"
+                               onClick={() => {
+                                 setVerificationStatus('idle');
+                                 setVerificationError(null);
+                               }}
+                               className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border-none text-white font-semibold"
+                             >
+                               Try Again
+                             </Button>
+                           </div>
+                        )}
+                      </Spin>
+                    </div>
                   )}
                 </div>
               </Spin>
 
-              {/* 子域名管理区域 (仅在根域名绑定后显示) */}
+              {/* Step 2: Subdomain Management (only show when root domain exists) */}
               {rootDomain && (
-                <Collapse
-                  ghost
-                  activeKey={activeCollapseKey}
-                  onChange={(keys) => setActiveCollapseKey(Array.isArray(keys) ? keys : [keys])}
-                  expandIcon={({ isActive }) => <CaretRightOutlined rotate={isActive ? 90 : 0} style={{ color: 'white', fontSize: '12px' }} />}
-                  className="domain-collapse-override"
-                >
-                  {getSubdomainPanel()}
-                </Collapse>
+                <div className="pb-5 border-b border-slate-700">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${verifiedDomains.filter(d => d !== rootDomain).length > 0 ? 'bg-green-600 text-white' : 'bg-blue-600 text-white'}`}>
+                      {verifiedDomains.filter(d => d !== rootDomain).length > 0 ? '✓' : '2'}
+                    </div>
+                    <h3 className="text-lg font-semibold text-white">Step 2: Create Subdomains</h3>
+                  </div>
+                  
+                  {verifiedDomains.filter(d => d !== rootDomain).length === 0 ? (
+                    <div className="p-4 bg-blue-900/20 border border-blue-700/50 rounded-lg mb-4">
+                      <p className="text-sm text-blue-200 mb-2">
+                        Now let's create your first subdomain! Subdomains allow you to publish content at addresses like 
+                        <code className="mx-1 px-1 bg-slate-700 rounded text-cyan-300">blog.{rootDomain}</code> or 
+                        <code className="mx-1 px-1 bg-slate-700 rounded text-cyan-300">docs.{rootDomain}</code>.
+                      </p>
+                      <p className="text-xs text-blue-300">
+                        💡 You can create multiple subdomains for different types of content.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-green-900/20 border border-green-700/50 rounded-lg mb-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+                        <span className="text-sm font-medium text-green-300">
+                          {verifiedDomains.filter(d => d !== rootDomain).length} subdomain(s) ready for publishing
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  <Collapse
+                    ghost
+                    activeKey={activeCollapseKey}
+                    onChange={(keys) => setActiveCollapseKey(Array.isArray(keys) ? keys : [keys])}
+                    expandIcon={({ isActive }) => <CaretRightOutlined rotate={isActive ? 90 : 0} style={{ color: 'white', fontSize: '12px' }} />}
+                    className="domain-collapse-override"
+                  >
+                    <Collapse.Panel
+                      header={
+                        <div className="flex items-center justify-between w-full pr-4">
+                          <span className="text-base font-semibold text-white">Manage Subdomains</span>
+                          <span className="text-xs text-gray-400">
+                            {subdomains.length} total • {verifiedDomains.filter(d => d !== rootDomain).length} verified
+                          </span>
+                        </div>
+                      }
+                      key="subdomains"
+                      className="subdomain-collapse-panel"
+                    >
+                      <div className="space-y-4">
+                        {/* Add Subdomain Section */}
+                        <div className="p-4 bg-slate-800/50 rounded-lg border border-slate-600">
+                          <h4 className="text-sm font-medium text-white mb-3">Create New Subdomain</h4>
+                          <div className="flex items-center gap-2">
+                            <div className="flex flex-grow items-center rounded border border-slate-600 bg-slate-700 focus-within:border-cyan-500 focus-within:ring-1 focus-within:ring-cyan-500">
+                              <input
+                                type="text"
+                                placeholder="blog"
+                                value={subdomainPrefix}
+                                onChange={(e) => setSubdomainPrefix(e.target.value)}
+                                className="flex-grow bg-transparent border-none placeholder-gray-500 focus:outline-none focus:ring-0 px-3 py-2 text-white"
+                                disabled={isAddingSubdomain || subdomainLoading}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    handleAddSubdomain();
+                                  }
+                                }}
+                              />
+                              <span className="px-3 py-2 text-sm text-gray-400 bg-slate-600 flex-shrink-0 rounded-r">
+                                .{rootDomain}
+                              </span>
+                            </div>
+                            <Button
+                              type="primary"
+                              onClick={handleAddSubdomain}
+                              loading={isAddingSubdomain}
+                              disabled={!subdomainPrefix.trim() || subdomainLoading}
+                              className="bg-cyan-600 hover:bg-cyan-500 border-none flex-shrink-0"
+                            >
+                              Add Subdomain
+                            </Button>
+                          </div>
+                          <p className="text-xs text-gray-400 mt-2">
+                            Examples: blog, docs, app, landing, etc. Use lowercase letters, numbers, and hyphens only.
+                          </p>
+                        </div>
+
+                        {/* Existing Subdomains */}
+                        <Spin spinning={subdomainLoading && !isAddingSubdomain} tip={<span className="text-gray-300">Loading subdomains...</span>}>
+                          {subdomains.length > 0 ? (
+                            <div className="space-y-3">
+                              <h4 className="text-sm font-medium text-white">Your Subdomains</h4>
+                              {subdomains.map(domain => {
+                                const status = getDomainStatusInfo(domain);
+                                
+                                let dnsData = [];
+                                let alertMessage = '';
+                                let alertDescription = '';
+                                
+                                if (domain.needsVerification && domain.verificationRecords) {
+                                  dnsData = domain.verificationRecords.map((record, index) => ({
+                                    type: record.type,
+                                    name: record.domain || record.name,
+                                    value: record.value,
+                                    key: `${record.type}-${index}`
+                                  }));
+                                  alertMessage = 'Domain Verification Required';
+                                  alertDescription = 'This domain may be used in another Vercel project. Add the following TXT record to verify ownership for this project.';
+                                } else if (!domain.configOk && domain.verificationRecords) {
+                                  dnsData = domain.verificationRecords.map((record, index) => ({
+                                    type: record.type,
+                                    name: record.domain || record.name,
+                                    value: record.value,
+                                    key: `${record.type}-${index}`
+                                  }));
+                                  alertMessage = 'DNS Configuration Required';
+                                  alertDescription = 'Add the following DNS record(s) to your domain provider to configure this subdomain.';
+                                }
+
+                                return (
+                                  <div key={domain.name} className="p-4 bg-slate-700/50 rounded border border-slate-600 shadow-sm">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <div className="flex items-center gap-3">
+                                        <span className="font-medium text-white">{domain.name}</span>
+                                        <Tag color={status.color} className="text-xs">
+                                          {status.text}
+                                        </Tag>
+                                      </div>
+                                      <Button
+                                        icon={<DeleteOutlined />}
+                                        size="small"
+                                        type="text"
+                                        danger
+                                        onClick={() => handleDeleteSubdomain(domain.name)}
+                                        disabled={isDeletingSubdomain}
+                                        className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                      />
+                                    </div>
+
+                                    {dnsData.length > 0 && (
+                                      <div className="mt-3 pt-3 border-t border-slate-600/50">
+                                         <Alert
+                                          message={<span className="font-semibold text-yellow-100">{alertMessage}</span>}
+                                          description={
+                                            <div className="space-y-2">
+                                              <span className="text-yellow-200/90 text-xs">{alertDescription}</span>
+                                              <div className="text-xs text-yellow-300/80">
+                                                💡 After adding the DNS records, click "Records added, refresh" below to check verification status.
+                                              </div>
+                                            </div>
+                                          }
+                                          type="warning"
+                                          showIcon
+                                          className="bg-yellow-600/20 border-yellow-500/30 text-yellow-200 mb-3"
+                                          icon={<ExclamationCircleOutlined className="text-yellow-300" />}
+                                        />
+                                        <Table
+                                          dataSource={dnsData}
+                                          columns={dnsColumns}
+                                          pagination={false}
+                                          size="small"
+                                          className="subdomain-dns-table-override"
+                                          rowKey="key"
+                                        />
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                              
+                              {/* Refresh Button */}
+                              <div className="flex justify-center pt-2">
+                                <Button
+                                  onClick={loadData}
+                                  loading={domainLoading && !isAddingSubdomain}
+                                  disabled={isAddingSubdomain || domainLoading}
+                                  className="bg-green-600 hover:bg-green-500 border-green-600 hover:border-green-500 text-white font-semibold px-6 py-2 shadow-md hover:shadow-lg transition-all duration-200"
+                                  icon={<ReloadOutlined />}
+                                >
+                                  Records added, refresh status
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            !subdomainLoading && (
+                              <div className="text-center py-6">
+                                <p className="text-sm text-gray-400 mb-2">No subdomains created yet</p>
+                                <p className="text-xs text-gray-500">Create your first subdomain above to get started!</p>
+                              </div>
+                            )
+                          )}
+                        </Spin>
+                      </div>
+                    </Collapse.Panel>
+                  </Collapse>
+                </div>
               )}
 
-              {/* URL 选择 Section (仅在有验证域名时显示) */}
+              {/* Step 3: Configure & Publish (only show when verified domains exist) */}
               {verifiedDomains.length > 0 && (
                 <div className="space-y-5">
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${selectedPublishUrl && slugInput ? 'bg-green-600 text-white' : 'bg-blue-600 text-white'}`}>
+                      {selectedPublishUrl && slugInput ? '✓' : '3'}
+                    </div>
+                    <h3 className="text-lg font-semibold text-white">Step 3: Configure & Publish</h3>
+                  </div>
+
+                  {!selectedPublishUrl || !slugInput ? (
+                    <div className="p-4 bg-blue-900/20 border border-blue-700/50 rounded-lg">
+                      <p className="text-sm text-blue-200">
+                        Almost there! Now select which subdomain to publish to and set a unique page slug.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-green-900/20 border border-green-700/50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+                        <span className="text-sm font-medium text-green-300">Ready to publish!</span>
+                      </div>
+                    </div>
+                  )}
+
                   {/* URL Selection */}
                   <div>
-                    <label htmlFor="publish-url-select" className="block text-sm font-medium text-gray-300 mb-2">Select Publish URL</label>
+                    <label htmlFor="publish-url-select" className="block text-sm font-medium text-gray-300 mb-2">
+                      Select Publishing Subdomain <span className="text-red-400">*</span>
+                    </label>
                     <Select
                       id="publish-url-select"
                       value={selectedPublishUrl}
                       onChange={(value) => setSelectedPublishUrl(value)}
                       className="w-full domain-select-override"
-                      placeholder="Select a verified subdomain"
+                      placeholder="Choose a verified subdomain"
                       dropdownStyle={{ background: '#2a3a50', border: '1px solid #475569' }}
-                      allowClear // 允许清空选择
-                      disabled={domainLoading || isDeletingSubdomain || isAddingSubdomain} // 加载或操作时禁用
+                      allowClear
+                      disabled={domainLoading || isDeletingSubdomain || isAddingSubdomain}
                     >
                       {verifiedDomains
-                        .filter(url => url !== rootDomain) // 仍然排除根域名本身作为可选发布 URL
+                        .filter(url => url !== rootDomain)
                         .map(url => (
                           <Select.Option
                             key={url}
@@ -1197,89 +1485,102 @@ const PublishSettingsModal = ({
                           </Select.Option>
                       ))}
                     </Select>
-                     {/* 提示：当有 verifiedDomains 但过滤后没有可选子域名时 */}
                      {verifiedDomains.length > 0 && verifiedDomains.filter(url => url !== rootDomain).length === 0 && (
-                       <p className="text-xs text-yellow-400 mt-1">No available subdomains to select. Add a subdomain below.</p>
+                       <p className="text-xs text-yellow-400 mt-1">⚠️ No verified subdomains available. Please create and verify a subdomain first.</p>
                      )}
                   </div>
 
-                  {/* === Slug Section (仅在绑定根域名后显示) === */}
-                  {rootDomain && ( // 新增条件：只要 rootDomain 存在就显示 Slug 部分
-                    <div className="mt-5"> {/* 添加一些上边距 */}
-                      <h3 className="text-base font-semibold text-white mb-2">Page Slug</h3>
-                      <p className="text-sm text-gray-300 mb-2">Set a unique slug for this page version (e.g., 'main-landing-page').</p>
-                      {slugEditing ? (
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            value={slugInput}
-                            onChange={(e) => setSlugInput(e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, ''))}
-                            className="flex-grow px-3 py-1.5 rounded bg-slate-700 border border-slate-600 text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 text-sm"
-                            placeholder="e.g., main-landing-page"
-                            disabled={slugSaving}
-                          />
-                          <div className="flex gap-1 flex-shrink-0">
-                            <button
-                              className="px-3 py-1.5 rounded bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
-                              disabled={slugSaving || !slugInput}
-                              onClick={handleSaveSlug}
-                            >
-                              {slugSaving ? <Spin size="small" /> : 'Save Slug'}
-                            </button>
-                            <button
-                              className="px-3 py-1.5 rounded bg-slate-600 hover:bg-slate-500 text-white text-xs font-semibold transition"
-                              onClick={() => {
-                                setSlugInput(currentItem?.slug || '');
-                                setSlugEditing(false);
-                              }}
-                              disabled={slugSaving}
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-between gap-2 bg-slate-700/60 px-3 py-2 rounded border border-slate-600 min-h-[38px]">
-                          <span className="text-gray-100 text-sm break-all mr-2">{slugInput || <span className="text-gray-400 italic">No slug set</span>}</span>
+                  {/* Slug Section */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">
+                      Page Slug <span className="text-red-400">*</span>
+                    </label>
+                    <p className="text-sm text-gray-400 mb-3">
+                      Create a unique identifier for this page version (e.g., 'main-landing-page', 'product-launch').
+                    </p>
+                    {slugEditing ? (
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={slugInput}
+                          onChange={(e) => setSlugInput(e.target.value.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, ''))}
+                          className="flex-grow px-3 py-2 rounded bg-slate-700 border border-slate-600 text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500"
+                          placeholder="e.g., main-landing-page"
+                          disabled={slugSaving}
+                        />
+                        <div className="flex gap-1 flex-shrink-0">
                           <button
-                            className="px-3 py-1 rounded bg-slate-600 hover:bg-slate-500 text-white text-xs font-semibold transition flex-shrink-0 flex items-center gap-1"
-                            onClick={() => setSlugEditing(true)}
+                            className="px-4 py-2 rounded bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled={slugSaving || !slugInput}
+                            onClick={handleSaveSlug}
                           >
-                            <EditOutlined className="text-gray-300" />
-                            Edit
+                            {slugSaving ? <Spin size="small" /> : 'Save'}
+                          </button>
+                          <button
+                            className="px-4 py-2 rounded bg-slate-600 hover:bg-slate-500 text-white text-sm font-semibold transition"
+                            onClick={() => {
+                              setSlugInput(currentItem?.slug || '');
+                              setSlugEditing(false);
+                            }}
+                            disabled={slugSaving}
+                          >
+                            Cancel
                           </button>
                         </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between gap-2 bg-slate-700/60 px-3 py-2 rounded border border-slate-600 min-h-[42px]">
+                        <span className="text-gray-100 break-all mr-2">
+                          {slugInput || <span className="text-gray-400 italic">Click edit to set a slug</span>}
+                        </span>
+                        <button
+                          className="px-3 py-1.5 rounded bg-slate-600 hover:bg-slate-500 text-white text-sm font-semibold transition flex-shrink-0 flex items-center gap-1"
+                          onClick={() => setSlugEditing(true)}
+                        >
+                          <EditOutlined className="text-gray-300" />
+                          Edit
+                        </button>
+                      </div>
+                    )}
+                  </div>
 
-              {/* Publish Button and Preview URL (仅在子域名模式且有选中 URL 时显示) */}
-              {verifiedDomains.length > 0 && (
-                <div className="mt-6 pt-6 flex flex-col gap-4 border-t border-slate-700">
-                   {/* Preview URL (依赖 selectedPublishUrl 和 slugInput) */}
-                   {selectedPublishUrl && slugInput && (
-                    <div className="bg-slate-800/50 p-3 rounded-md border border-slate-700/50">
-                      <div className="text-sm font-semibold text-cyan-300 mb-1">Publish Preview URL</div>
-                      <div className="text-cyan-400 underline break-all hover:text-cyan-300 transition cursor-default text-sm">
-                        {`https://${selectedPublishUrl}/${slugInput}`}
+                  {/* Preview URL */}
+                  {selectedPublishUrl && slugInput && (
+                    <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700/50">
+                      <div className="text-sm font-semibold text-cyan-300 mb-2">📍 Your page will be published at:</div>
+                      <div className="text-lg text-cyan-400 underline break-all hover:text-cyan-300 transition cursor-default font-mono">
+                        https://{selectedPublishUrl}/{slugInput}
                       </div>
                     </div>
                   )}
-                  {/* Publish Button (依赖 selectedPublishUrl 和 slugInput) */}
-                  <button
-                    disabled={!selectedPublishUrl || !slugInput || deployLoading || isDeletingVerification || slugEditing || verificationLoading || domainLoading}
-                    onClick={handlePublish}
-                    className={`
-                      w-full px-4 py-2.5 rounded font-semibold transition text-base shadow-lg
-                      ${(!selectedPublishUrl || !slugInput || deployLoading || isDeletingVerification || slugEditing || verificationLoading || domainLoading)
-                        ? 'bg-cyan-800/70 text-cyan-400/80 cursor-not-allowed opacity-80'
-                        : 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-cyan-500/30'}
-                    `}
-                  >
-                    {deployLoading ? <Spin /> : 'Publish Now'}
-                  </button>
+
+                  {/* Publish Button */}
+                  <div className="pt-4 border-t border-slate-700">
+                    <button
+                      disabled={!selectedPublishUrl || !slugInput || deployLoading || isDeletingVerification || slugEditing || verificationLoading || domainLoading}
+                      onClick={handlePublish}
+                      className={`
+                        w-full px-6 py-3 rounded-lg font-semibold transition text-lg shadow-lg
+                        ${(!selectedPublishUrl || !slugInput || deployLoading || isDeletingVerification || slugEditing || verificationLoading || domainLoading)
+                          ? 'bg-slate-700 text-slate-400 cursor-not-allowed opacity-60'
+                          : 'bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-cyan-500/30 hover:shadow-cyan-500/50 transform hover:scale-[1.02]'}
+                      `}
+                    >
+                      {deployLoading ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <Spin size="small" />
+                          <span>Publishing...</span>
+                        </div>
+                      ) : (
+                        '🚀 Publish Now'
+                      )}
+                    </button>
+                    {(!selectedPublishUrl || !slugInput) && (
+                      <p className="text-xs text-center text-gray-400 mt-2">
+                        Please complete all required fields above to enable publishing.
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
             </>
