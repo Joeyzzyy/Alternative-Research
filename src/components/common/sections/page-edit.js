@@ -1721,7 +1721,6 @@ export default function HtmlPreview({ pageId }) {
                   footer={null}
                   width={1800} // 保持宽度 1200px (如果需要更宽请告知)
                   destroyOnClose={true}
-                  // --- 修改：使用 styles.body 替代 bodyStyle ---
                   styles={{
                     body: {
                       maxHeight: '65vh', // 保持最大高度

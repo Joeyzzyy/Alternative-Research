@@ -3756,7 +3756,7 @@ const ResearchTool = () => {
         closable={false} // 不显示右上角的叉
         maskClosable={false}
         width={420}
-        bodyStyle={{ textAlign: 'center' }}
+        styles={{ body: { textAlign: 'center' } }}
       >
         <div style={{ marginBottom: 12, color: '#f87171', fontWeight: 500 }}>
           {errorModal.message || 'An irreversible error occurred. The generated pages have been saved.'}
