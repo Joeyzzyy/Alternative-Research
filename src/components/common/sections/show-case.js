@@ -199,7 +199,7 @@ const CustomizableResearchUI = forwardRef(({}, ref) => {
           .scroll-content {
             display: flex;
             gap: 1rem;
-            animation-duration: 15s;
+            animation-duration: 30s;
             animation-timing-function: linear;
             animation-iteration-count: infinite;
           }
