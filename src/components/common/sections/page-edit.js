@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import apiClient from '../../../lib/api/index.js';
-import { Button, Modal, Spin, Row, Col, Pagination, Popconfirm, Input, Form, message, Drawer, Tag } from 'antd';
+import { Button, Modal, Spin, Row, Col, Pagination, Popconfirm, Input, Form, message, Drawer, Tag, Select } from 'antd';
 import { UploadOutlined, DeleteOutlined, CheckOutlined, EditOutlined, CloseOutlined, CheckCircleFilled, LoadingOutlined, SaveOutlined } from '@ant-design/icons';
 
 // --- 新增：定义常用提示 ---
@@ -199,7 +199,7 @@ export default function HtmlPreview({ pageId }) {
     if (!currentEdit || !currentEdit.element) return;
 
     setSaving(true);
-    const { element, content, originalContent, elementType, linkHref, originalLinkHref } = currentEdit;
+    const { element, content, originalContent, elementType, linkHref, originalLinkHref, linkTarget, originalLinkTarget } = currentEdit;
 
     try {
       // --- 修改：根据 elementType 更新 DOM ---
@@ -209,19 +209,29 @@ export default function HtmlPreview({ pageId }) {
           element.setAttribute('src', content);
         }
       } else if (elementType === 'a') {
-        // 更新链接文本和 href
+        // 更新链接文本、href 和 target
         let changed = false;
         if (content !== originalContent) {
           element.textContent = content;
           changed = true;
         }
-        // 如果 href 有变化 (包括从无到有，从有到无，或值改变)
+        // 如果 href 有变化
         if (linkHref !== originalLinkHref) {
-          element.setAttribute('href', linkHref || '#'); // 如果为空则设置为 '#'，避免无效链接
+          element.setAttribute('href', linkHref || '#');
+          changed = true;
+        }
+        // --- 新增：保存 target 设置 ---
+        if (linkTarget !== originalLinkTarget) {
+          if (linkTarget === '_blank') {
+            element.setAttribute('target', '_blank');
+            element.setAttribute('rel', 'noopener noreferrer'); // 安全性最佳实践
+          } else {
+            element.removeAttribute('target');
+            element.removeAttribute('rel');
+          }
           changed = true;
         }
         if (!changed) {
-          // 如果文本和链接都没变，则不保存
           closeSidebar();
           return;
         }
@@ -457,6 +467,8 @@ export default function HtmlPreview({ pageId }) {
           // --- 如果是链接，获取 href ---
           linkHref: isLink ? (canEditEl.getAttribute('href') || '') : null,
           originalLinkHref: isLink ? (canEditEl.getAttribute('href') || '') : null,
+          linkTarget: isLink ? (canEditEl.getAttribute('target') || '') : null,
+          originalLinkTarget: isLink ? (canEditEl.getAttribute('target') || '') : null,
         });
         setShowSidebar(true);
         return;
@@ -476,6 +488,8 @@ export default function HtmlPreview({ pageId }) {
           originalContent: targetElement.getAttribute('src'),
           linkHref: null,
           originalLinkHref: null,
+          linkTarget: null,
+          originalLinkTarget: null,
         });
         setShowSidebar(true);
         return;
@@ -490,6 +504,8 @@ export default function HtmlPreview({ pageId }) {
           selector: '',
           originalContent: targetElement.textContent, // 原始文本
           originalLinkHref: targetElement.getAttribute('href') || '', // 原始 URL
+          linkTarget: targetElement.getAttribute('target') || '',
+          originalLinkTarget: targetElement.getAttribute('target') || '',
         });
         setShowSidebar(true);
         return;
@@ -510,6 +526,8 @@ export default function HtmlPreview({ pageId }) {
           originalContent: targetElement.textContent,
           linkHref: null,
           originalLinkHref: null,
+          linkTarget: null,
+          originalLinkTarget: null,
         });
         setShowSidebar(true);
         return;
@@ -1945,7 +1963,7 @@ export default function HtmlPreview({ pageId }) {
             ) : currentEdit.elementType === 'a' ? (
               // --- 新增：链接编辑区域 ---
               <>
-                {/* --- 修改：仅当 content 不为空时显示 Link Text 编辑 --- */}
+                {/* Link Text */}
                 {currentEdit.content && currentEdit.content.trim().length > 0 && (
                   <div style={{ marginBottom: 16 }}>
                     <label style={{ display: 'block', marginBottom: 4, fontWeight: 500, color: '#4b5563' }}>Link Text</label>
@@ -1961,7 +1979,7 @@ export default function HtmlPreview({ pageId }) {
                     />
                   </div>
                 )}
-                {/* --- Link URL 编辑 (始终显示) --- */}
+                {/* Link URL */}
                 <div style={{ marginBottom: 16 }}>
                   <label style={{ display: 'block', marginBottom: 4, fontWeight: 500, color: '#4b5563' }}>Link URL (href)</label>
                   <Input
@@ -1970,6 +1988,18 @@ export default function HtmlPreview({ pageId }) {
                     style={{ width: '100%' }}
                     placeholder="e.g., https://example.com or /page"
                   />
+                </div>
+                {/* --- 新增：打开方式选择 --- */}
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: 'block', marginBottom: 8, fontWeight: 500, color: '#4b5563' }}>Open in:</label>
+                  <Select
+                    value={currentEdit.linkTarget || 'current'}
+                    onChange={value => setCurrentEdit({ ...currentEdit, linkTarget: value === 'current' ? '' : '_blank' })}
+                    style={{ width: '100%' }}
+                  >
+                    <Select.Option value="current">Current tab</Select.Option>
+                    <Select.Option value="new">New tab</Select.Option>
+                  </Select>
                 </div>
               </>
             ) : (

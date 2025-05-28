@@ -164,6 +164,25 @@ const ResearchTool = () => {
     };
   }, []);
 
+  const checkForRunningTasks = async () => {
+    try {
+      const token = localStorage.getItem('alternativelyAccessToken');
+      if (!token) {
+        return false;
+      }
+      const res = await apiClient.getAlternativeWebsiteList(1, 1);
+      const latestTask = res?.data?.[0] || res?.list?.[0];
+      if (latestTask && latestTask.generatorStatus === 'processing') {
+        setConflictingTask(latestTask);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      console.error('Failed to check for running tasks:', e);
+      return false;
+    }
+  };
+
   const validateDomain = (input) => {
     if (!input || !input.trim()) return false;
     let domain = input.trim();
@@ -2538,10 +2557,20 @@ const ResearchTool = () => {
                 window.dispatchEvent(showLoginEvent);
                 return;
               } else {
-                // 4. 已登录，显示提示信息
-                const formattedInput = userInput.trim();
-                initializeChat(formattedInput); // 调用 initializeChat 来启动任务
-                return; // 结束执行
+                (() => {
+                  // 将立即执行函数改为异步函数
+                  return (async () => {
+                    // 4. 检查是否有正在执行的任务
+                    const hasRunningTask = await checkForRunningTasks();
+                    if (hasRunningTask) {
+                      setShowTaskConflictModal(true);
+                      return;
+                    }
+                    const formattedInput = userInput.trim();
+                    initializeChat(formattedInput); // 调用 initializeChat 来启动任务
+                    return; // 结束执行
+                  })();
+                })()
               }
             }}>
               <div className="flex flex-col items-stretch gap-2">
@@ -3781,7 +3810,46 @@ const ResearchTool = () => {
         <div style={{ color: '#64748b', fontSize: 13 }}>
           Please return to the homepage and start a new task.
         </div>
-    </Modal>
+      </Modal>
+
+      <Modal
+        open={showTaskConflictModal}
+        title="Task Already Running"
+        onCancel={() => setShowTaskConflictModal(false)}
+        footer={[
+          <Button key="cancel" onClick={() => setShowTaskConflictModal(false)}>
+            Cancel
+          </Button>,
+          <Button
+            key="viewTask"
+            type="primary"
+            onClick={() => {
+              if (conflictingTask?.websiteId) {
+                window.location.href = `/?taskId=${conflictingTask.websiteId}&status=processing`;
+              }
+              setShowTaskConflictModal(false);
+            }}
+          >
+            View Current Task
+          </Button>
+        ]}
+        zIndex={2000}
+      >
+        <div>
+          <p>You can only run one task at a time. There is currently a task in progress.</p>
+          <p>Please wait for the current task to complete or abort it before starting a new one.</p>
+          {conflictingTask && (
+            <div className="mt-3 p-3 bg-gray-50 rounded-md">
+              <p className="text-sm text-gray-600">
+                <strong>Current Task:</strong> {conflictingTask.website || 'Unknown'}
+              </p>
+              <p className="text-sm text-gray-600">
+                <strong>Status:</strong> {conflictingTask.generatorStatus}
+              </p>
+            </div>
+          )}
+        </div>
+      </Modal>
 
       {/* 在这里添加 BrandAssetsModal */}
       {showBrandAssetsModal && (

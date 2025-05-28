@@ -1,5 +1,6 @@
 'use client';
 import React, { useEffect, useMemo, memo, useState } from 'react';
+import { Modal } from 'antd';
 import Header from './header-template';
 import Footer from './footer-template';
 /* divider */
@@ -64,6 +65,8 @@ const CommonLayout = ({ article, keywords }) => {
 
   const [shouldRecover, setShouldRecover] = useState(false);
   const [recoverTaskId, setRecoverTaskId] = useState(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingTask, setPendingTask] = useState(null);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -74,7 +77,7 @@ const CommonLayout = ({ article, keywords }) => {
       setShouldRecover(true);
       setRecoverTaskId(taskId);
     } else {
-      // 没有 taskId，查最近的任务
+      // Check for recent unfinished tasks
       (async () => {
         try {
           const token = localStorage.getItem('alternativelyAccessToken');
@@ -83,11 +86,11 @@ const CommonLayout = ({ article, keywords }) => {
             setRecoverTaskId(null);
             return;
           }
-          const res = await apiClient.getAlternativeWebsiteList(1, 1); // 只查最新的一个
+          const res = await apiClient.getAlternativeWebsiteList(1, 1);
           const latestTask = res?.data?.[0] || res?.list?.[0];
           if (latestTask && latestTask.generatorStatus === 'processing') {
-            setShouldRecover(true);
-            setRecoverTaskId(latestTask.websiteId);
+            setPendingTask(latestTask);
+            setShowConfirmModal(true);
           } else {
             setShouldRecover(false);
             setRecoverTaskId(null);
@@ -99,6 +102,20 @@ const CommonLayout = ({ article, keywords }) => {
       })();
     }
   }, []);
+
+  const handleConfirmRecover = () => {
+    setShouldRecover(true);
+    setRecoverTaskId(pendingTask.websiteId);
+    setShowConfirmModal(false);
+    setPendingTask(null);
+  };
+
+  const handleCancelRecover = () => {
+    setShouldRecover(false);
+    setRecoverTaskId(null);
+    setShowConfirmModal(false);
+    setPendingTask(null);
+  };
 
   if (!article) {
     return null;
@@ -160,6 +177,17 @@ const CommonLayout = ({ article, keywords }) => {
         />
       )}
       <BottomBanner onClick={handleBottomBannerClick} />
+      
+      <Modal
+        title="Resume Unfinished Task"
+        open={showConfirmModal}
+        onOk={handleConfirmRecover}
+        onCancel={handleCancelRecover}
+        okText="Resume Task"
+        cancelText="Cancel"
+      >
+        <p>We found an unfinished task from your recent session. Would you like to resume it?</p>
+      </Modal>
     </div>
   );
 };

@@ -4,8 +4,6 @@ import Image from 'next/image';
 import apiClient from '../../lib/api/index.js';
 import { Spin, message } from 'antd';
 import { useUser } from '../../contexts/UserContext';
-import jwt_decode from "jwt-decode";
-
 import LoginModal from '../common/sections/login-modal.js';
 import BrandAssetsModal from '../common/sections/brand-assets.js';
 
