@@ -32,7 +32,7 @@ const PublishSettingsModal = ({
   const [subdomainLoading, setSubdomainLoading] = useState(false);
   const [subdomainPrefix, setSubdomainPrefix] = useState('');
   const [isAddingSubdomain, setIsAddingSubdomain] = useState(false);
-  const [activeCollapseKey, setActiveCollapseKey] = useState([]); // 用于控制 Collapse 组件的展开/收起
+  const [activeCollapseKey, setActiveCollapseKey] = useState(['subdomains']); // 修改：默认打开 subdomains
   const [isDeletingSubdomain, setIsDeletingSubdomain] = useState(false); // 添加删除子域名的 loading 状态
   const [publishMode, setPublishMode] = useState('subdomain'); // 'subdomain' 或 'subdirectory'
   const [baseDomainInput, setBaseDomainInput] = useState(''); // 用于子目录模式的基础域名输入
@@ -47,7 +47,6 @@ const PublishSettingsModal = ({
     setRootDomain(null); // 重置根域名
     setRootDomainId(null); // 新增：重置根域名 ID
     setSubdomains([]); // 重置子域名
-    setActiveCollapseKey([]); // 重置 Collapse
 
     if (!currentCustomerId) {
       console.warn("Cannot load data without customerId.");
@@ -173,13 +172,7 @@ const PublishSettingsModal = ({
         console.log('[loadData] Loading subdomains for root domain:', currentRootDomain);
         await loadSubdomains(currentRootDomain); // 传递根域名给 loadSubdomains
         console.log('[loadData] Subdomains loaded, setting collapse key');
-        setActiveCollapseKey(['subdomains']);
-        // 如果有子域名或根域名已验证，则展开 Collapse
-        if (subdomains.length > 0 || verifiedDomainsList.includes(currentRootDomain)) {
-           setActiveCollapseKey(['subdomains']);
-        } else {
-           setActiveCollapseKey([]);
-        }
+        setActiveCollapseKey(['subdomains']); // 修改：确保有根域名时展开
       } else {
          setSubdomains([]); // 确保没有根域名时子域名列表为空
          setActiveCollapseKey([]); // 没有根域名则不展开
@@ -192,7 +185,7 @@ const PublishSettingsModal = ({
       setVerifiedDomains([]);
       setSelectedPublishUrl('');
       setSubdomains([]); // 出错时也清空子域名
-      setActiveCollapseKey([]);
+      setActiveCollapseKey([]); // 出错时收起
       // 新增：出错时也清空 rootDomainId
       setRootDomainId(null);
       messageApi.error('Failed to load domain information.');
@@ -395,7 +388,7 @@ const PublishSettingsModal = ({
        setSubdomainLoading(false);
        setSubdomainPrefix('alternative');
        setIsAddingSubdomain(false);
-       setActiveCollapseKey([]);
+       setActiveCollapseKey([]); // 关闭时重置为空
        setIsDeletingSubdomain(false);
        setBaseDomainInput('');
        setSubdirectoryName('alternative');
@@ -899,36 +892,75 @@ const PublishSettingsModal = ({
               {subdomains.map(domain => {
                 const status = getDomainStatusInfo(domain);
                 
-                // === 修改：根据不同情况显示不同的 DNS 记录 ===
+                // === 修改：合并显示所有需要的 DNS 记录 ===
                 let dnsData = [];
                 let alertMessage = '';
                 let alertDescription = '';
                 
+                // 收集所有需要的 DNS 记录
+                const allRecords = [];
+                
+                // 1. 如果需要验证（TXT 记录）
                 if (domain.needsVerification && domain.verificationRecords) {
-                  // 需要额外验证（如域名在其他项目中使用过）
-                  dnsData = domain.verificationRecords.map((record, index) => ({
+                  domain.verificationRecords.forEach(record => {
+                    allRecords.push({
+                      ...record,
+                      purpose: 'verification' // 标记用途
+                    });
+                  });
+                }
+                
+                // 2. 如果需要 DNS 配置（CNAME/A 记录）
+                if (!domain.configOk && domain.configRecords) {
+                  domain.configRecords.forEach(record => {
+                    allRecords.push({
+                      ...record,
+                      purpose: 'config' // 标记用途
+                    });
+                  });
+                }
+                
+                // 3. 如果 verificationRecords 中包含了配置记录（兼容旧数据结构）
+                if (!domain.configOk && domain.verificationRecords && !domain.configRecords) {
+                  domain.verificationRecords.forEach(record => {
+                    if (record.type !== 'TXT') { // 非 TXT 记录通常是配置记录
+                      allRecords.push({
+                        ...record,
+                        purpose: 'config'
+                      });
+                    }
+                  });
+                }
+                
+                // 转换为表格数据格式
+                if (allRecords.length > 0) {
+                  dnsData = allRecords.map((record, index) => ({
                     type: record.type,
                     name: record.domain || record.name,
                     value: record.value,
-                    key: `${record.type}-${index}`
+                    purpose: record.purpose,
+                    key: `${record.type}-${record.purpose}-${index}`
                   }));
-                  alertMessage = 'Domain Verification Required';
-                  alertDescription = 'This domain may be used in another Vercel project. Add the following TXT record to verify ownership for this project.';
-                } else if (!domain.configOk && domain.verificationRecords) {
-                  // DNS 配置问题
-                  dnsData = domain.verificationRecords.map((record, index) => ({
-                    type: record.type,
-                    name: record.domain || record.name,
-                    value: record.value,
-                    key: `${record.type}-${index}`
-                  }));
-                  alertMessage = 'DNS Configuration Required';
-                  alertDescription = 'Add the following DNS record(s) to your domain provider to configure this subdomain.';
+                  
+                  // 根据记录类型设置提示信息
+                  const hasVerification = allRecords.some(r => r.purpose === 'verification');
+                  const hasConfig = allRecords.some(r => r.purpose === 'config');
+                  
+                  if (hasVerification && hasConfig) {
+                    alertMessage = 'Domain Verification & DNS Configuration Required';
+                    alertDescription = 'This domain needs both ownership verification (TXT) and DNS configuration (CNAME/A) records. Add all records below to complete the setup.';
+                  } else if (hasVerification) {
+                    alertMessage = 'Domain Verification Required';
+                    alertDescription = 'This domain may be used in another Vercel project. Add the following TXT record to verify ownership for this project.';
+                  } else if (hasConfig) {
+                    alertMessage = 'DNS Configuration Required';
+                    alertDescription = 'Add the following DNS record(s) to your domain provider to configure this subdomain.';
+                  }
                 }
 
                 return (
                   <div key={domain.name} className="p-4 bg-slate-700/50 rounded border border-slate-600 shadow-sm">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-3">
                         <span className="font-medium text-white">{domain.name}</span>
                         <Tag color={status.color} className="text-xs">
@@ -946,12 +978,19 @@ const PublishSettingsModal = ({
                       />
                     </div>
 
-                    {/* === 修改：显示需要的 DNS 记录 === */}
+                    {/* === 修改：显示所有需要的 DNS 记录 === */}
                     {dnsData.length > 0 && (
                       <div className="mt-3 pt-3 border-t border-slate-600/50">
                          <Alert
                           message={<span className="font-semibold text-yellow-100">{alertMessage}</span>}
-                          description={<span className="text-yellow-200/90 text-xs">{alertDescription} DNS changes can take some time to propagate.</span>}
+                          description={
+                            <div className="space-y-2">
+                              <span className="text-yellow-200/90 text-xs">{alertDescription}</span>
+                              <div className="text-xs text-yellow-300/80">
+                                💡 After adding all DNS records, click "Records added, refresh" below to check verification status.
+                              </div>
+                            </div>
+                          }
                           type="warning"
                           showIcon
                           className="bg-yellow-600/20 border-yellow-500/30 text-yellow-200 mb-3"
@@ -959,7 +998,31 @@ const PublishSettingsModal = ({
                         />
                         <Table
                           dataSource={dnsData}
-                          columns={dnsColumns}
+                          columns={[
+                            { title: 'Type', dataIndex: 'type', key: 'type', width: '15%' },
+                            { title: 'Name', dataIndex: 'name', key: 'name', width: '30%' },
+                            { 
+                              title: 'Value', 
+                              dataIndex: 'value', 
+                              key: 'value', 
+                              width: '45%', 
+                              render: (text) => <code className="text-xs break-all">{text}</code> 
+                            },
+                            {
+                              title: 'Purpose',
+                              dataIndex: 'purpose',
+                              key: 'purpose',
+                              width: '10%',
+                              render: (purpose) => (
+                                <Tag 
+                                  color={purpose === 'verification' ? 'orange' : 'blue'} 
+                                  className="text-xs"
+                                >
+                                  {purpose === 'verification' ? 'Verify' : 'Config'}
+                                </Tag>
+                              )
+                            }
+                          ]}
                           pagination={false}
                           size="small"
                           className="subdomain-dns-table-override"
@@ -1043,32 +1106,38 @@ const PublishSettingsModal = ({
               {/* Step-by-step Guide for Subdomain Mode */}
               <div className="pb-5 border-b border-slate-700">
                 <h3 className="text-lg font-semibold text-white mb-4">Setup Guide</h3>
-                <div className="space-y-3">
-                  <div className="flex items-start gap-3">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 flex-1">
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${rootDomain ? 'bg-green-600 text-white' : 'bg-slate-600 text-gray-300'}`}>
                       {rootDomain ? '✓' : '1'}
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-medium text-white">Bind Your Domain</h4>
-                      <p className="text-sm text-gray-400">Connect your domain to enable subdomain publishing</p>
+                      <h4 className="font-medium text-white text-sm">Bind Your Domain</h4>
+                      <p className="text-xs text-gray-400">Connect your domain to enable subdomain publishing</p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3">
+                  
+                  <div className="w-8 h-px bg-slate-600"></div>
+                  
+                  <div className="flex items-center gap-3 flex-1">
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${rootDomain && verifiedDomains.filter(d => d !== rootDomain).length > 0 ? 'bg-green-600 text-white' : rootDomain ? 'bg-blue-600 text-white' : 'bg-slate-600 text-gray-300'}`}>
                       {rootDomain && verifiedDomains.filter(d => d !== rootDomain).length > 0 ? '✓' : rootDomain ? '2' : '2'}
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-medium text-white">Create Subdomains</h4>
-                      <p className="text-sm text-gray-400">Add subdomains like blog.yourdomain.com for publishing</p>
+                      <h4 className="font-medium text-white text-sm">Create Subdomains</h4>
+                      <p className="text-xs text-gray-400">Add subdomains like blog.yourdomain.com for publishing</p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3">
+                  
+                  <div className="w-8 h-px bg-slate-600"></div>
+                  
+                  <div className="flex items-center gap-3 flex-1">
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${selectedPublishUrl && slugInput ? 'bg-green-600 text-white' : rootDomain && verifiedDomains.filter(d => d !== rootDomain).length > 0 ? 'bg-blue-600 text-white' : 'bg-slate-600 text-gray-300'}`}>
                       {selectedPublishUrl && slugInput ? '✓' : rootDomain && verifiedDomains.filter(d => d !== rootDomain).length > 0 ? '3' : '3'}
                     </div>
                     <div className="flex-1">
-                      <h4 className="font-medium text-white">Configure & Publish</h4>
-                      <p className="text-sm text-gray-400">Select subdomain, set page slug, and publish your content</p>
+                      <h4 className="font-medium text-white text-sm">Configure & Publish</h4>
+                      <p className="text-xs text-gray-400">Select subdomain, set page slug, and publish your content</p>
                     </div>
                   </div>
                 </div>
@@ -1330,28 +1399,70 @@ const PublishSettingsModal = ({
                               {subdomains.map(domain => {
                                 const status = getDomainStatusInfo(domain);
                                 
+                                // === 修改：合并显示所有需要的 DNS 记录 ===
                                 let dnsData = [];
                                 let alertMessage = '';
                                 let alertDescription = '';
                                 
+                                // 收集所有需要的 DNS 记录
+                                const allRecords = [];
+                                
+                                // 1. 如果需要验证（TXT 记录）
                                 if (domain.needsVerification && domain.verificationRecords) {
-                                  dnsData = domain.verificationRecords.map((record, index) => ({
+                                  domain.verificationRecords.forEach(record => {
+                                    allRecords.push({
+                                      ...record,
+                                      purpose: 'verification' // 标记用途
+                                    });
+                                  });
+                                }
+                                
+                                // 2. 如果需要 DNS 配置（CNAME/A 记录）
+                                if (!domain.configOk && domain.configRecords) {
+                                  domain.configRecords.forEach(record => {
+                                    allRecords.push({
+                                      ...record,
+                                      purpose: 'config' // 标记用途
+                                    });
+                                  });
+                                }
+                                
+                                // 3. 如果 verificationRecords 中包含了配置记录（兼容旧数据结构）
+                                if (!domain.configOk && domain.verificationRecords && !domain.configRecords) {
+                                  domain.verificationRecords.forEach(record => {
+                                    if (record.type !== 'TXT') { // 非 TXT 记录通常是配置记录
+                                      allRecords.push({
+                                        ...record,
+                                        purpose: 'config'
+                                      });
+                                    }
+                                  });
+                                }
+                                
+                                // 转换为表格数据格式
+                                if (allRecords.length > 0) {
+                                  dnsData = allRecords.map((record, index) => ({
                                     type: record.type,
                                     name: record.domain || record.name,
                                     value: record.value,
-                                    key: `${record.type}-${index}`
+                                    purpose: record.purpose,
+                                    key: `${record.type}-${record.purpose}-${index}`
                                   }));
-                                  alertMessage = 'Domain Verification Required';
-                                  alertDescription = 'This domain may be used in another Vercel project. Add the following TXT record to verify ownership for this project.';
-                                } else if (!domain.configOk && domain.verificationRecords) {
-                                  dnsData = domain.verificationRecords.map((record, index) => ({
-                                    type: record.type,
-                                    name: record.domain || record.name,
-                                    value: record.value,
-                                    key: `${record.type}-${index}`
-                                  }));
-                                  alertMessage = 'DNS Configuration Required';
-                                  alertDescription = 'Add the following DNS record(s) to your domain provider to configure this subdomain.';
+                                  
+                                  // 根据记录类型设置提示信息
+                                  const hasVerification = allRecords.some(r => r.purpose === 'verification');
+                                  const hasConfig = allRecords.some(r => r.purpose === 'config');
+                                  
+                                  if (hasVerification && hasConfig) {
+                                    alertMessage = 'Domain Verification & DNS Configuration Required';
+                                    alertDescription = 'This domain needs both ownership verification (TXT) and DNS configuration (CNAME/A) records. Add all records below to complete the setup.';
+                                  } else if (hasVerification) {
+                                    alertMessage = 'Domain Verification Required';
+                                    alertDescription = 'This domain may be used in another Vercel project. Add the following TXT record to verify ownership for this project.';
+                                  } else if (hasConfig) {
+                                    alertMessage = 'DNS Configuration Required';
+                                    alertDescription = 'Add the following DNS record(s) to your domain provider to configure this subdomain.';
+                                  }
                                 }
 
                                 return (
@@ -1374,6 +1485,7 @@ const PublishSettingsModal = ({
                                       />
                                     </div>
 
+                                    {/* === 修改：显示所有需要的 DNS 记录 === */}
                                     {dnsData.length > 0 && (
                                       <div className="mt-3 pt-3 border-t border-slate-600/50">
                                          <Alert
@@ -1382,7 +1494,7 @@ const PublishSettingsModal = ({
                                             <div className="space-y-2">
                                               <span className="text-yellow-200/90 text-xs">{alertDescription}</span>
                                               <div className="text-xs text-yellow-300/80">
-                                                💡 After adding the DNS records, click "Records added, refresh" below to check verification status.
+                                                💡 After adding all DNS records, click "Records added, refresh" below to check verification status.
                                               </div>
                                             </div>
                                           }
@@ -1393,7 +1505,31 @@ const PublishSettingsModal = ({
                                         />
                                         <Table
                                           dataSource={dnsData}
-                                          columns={dnsColumns}
+                                          columns={[
+                                            { title: 'Type', dataIndex: 'type', key: 'type', width: '15%' },
+                                            { title: 'Name', dataIndex: 'name', key: 'name', width: '30%' },
+                                            { 
+                                              title: 'Value', 
+                                              dataIndex: 'value', 
+                                              key: 'value', 
+                                              width: '45%', 
+                                              render: (text) => <code className="text-xs break-all">{text}</code> 
+                                            },
+                                            {
+                                              title: 'Purpose',
+                                              dataIndex: 'purpose',
+                                              key: 'purpose',
+                                              width: '10%',
+                                              render: (purpose) => (
+                                                <Tag 
+                                                  color={purpose === 'verification' ? 'orange' : 'blue'} 
+                                                  className="text-xs"
+                                                >
+                                                  {purpose === 'verification' ? 'Verify' : 'Config'}
+                                                </Tag>
+                                              )
+                                            }
+                                          ]}
                                           pagination={false}
                                           size="small"
                                           className="subdomain-dns-table-override"
