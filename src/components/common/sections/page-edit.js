@@ -199,14 +199,45 @@ export default function HtmlPreview({ pageId }) {
     if (!currentEdit || !currentEdit.element) return;
 
     setSaving(true);
-    const { element, content, originalContent, elementType, linkHref, originalLinkHref, linkTarget, originalLinkTarget } = currentEdit;
+    const { element, content, originalContent, elementType, linkHref, linkTarget } = currentEdit;
 
     try {
-      // --- 修改：根据 elementType 更新 DOM ---
       if (elementType === 'img') {
         // 更新图片 src
         if (content !== originalContent) {
           element.setAttribute('src', content);
+        }
+        
+        // --- 新增：处理图片链接 ---
+        const parent = element.parentNode;
+        const isWrappedInLink = parent && parent.tagName.toLowerCase() === 'a';
+        const hasLinkUrl = linkHref && linkHref.trim() !== '';
+
+        if (hasLinkUrl && !isWrappedInLink) {
+          // 需要添加链接：用 <a> 包裹图片
+          const link = element.ownerDocument.createElement('a');
+          link.href = linkHref;
+          if (linkTarget === '_blank') {
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+          }
+          parent.insertBefore(link, element);
+          link.appendChild(element);
+        } else if (hasLinkUrl && isWrappedInLink) {
+          // 更新现有链接
+          parent.href = linkHref;
+          if (linkTarget === '_blank') {
+            parent.target = '_blank';
+            parent.rel = 'noopener noreferrer';
+          } else {
+            parent.removeAttribute('target');
+            parent.removeAttribute('rel');
+          }
+        } else if (!hasLinkUrl && isWrappedInLink) {
+          // 移除链接：把图片从 <a> 中取出
+          const grandParent = parent.parentNode;
+          grandParent.insertBefore(element, parent);
+          grandParent.removeChild(parent);
         }
       } else if (elementType === 'a') {
         // 更新链接文本、href 和 target
@@ -456,40 +487,57 @@ export default function HtmlPreview({ pageId }) {
       if (canEditEl) {
         // 可编辑元素 (带有 canEdit 属性)
         const isImage = canEditEl.tagName.toLowerCase() === 'img';
-        const isLink = canEditEl.tagName.toLowerCase() === 'a'; // 检查 canEdit 元素是否是 a 标签
+        const isLink = canEditEl.tagName.toLowerCase() === 'a';
+        
+        // --- 新增：为图片检查父级链接 ---
+        let parentLink = null;
+        if (isImage) {
+          const parent = canEditEl.parentNode;
+          if (parent && parent.tagName.toLowerCase() === 'a') {
+            parentLink = parent;
+          }
+        }
+        
         setCurrentEdit({
           element: canEditEl,
-          // --- 修改：处理 canEdit 元素是 a 标签的情况 ---
           elementType: isImage ? 'img' : (isLink ? 'a' : 'text'),
           content: isImage ? canEditEl.getAttribute('src') : canEditEl.textContent,
           selector: '',
           originalContent: isImage ? canEditEl.getAttribute('src') : canEditEl.textContent,
-          // --- 如果是链接，获取 href ---
-          linkHref: isLink ? (canEditEl.getAttribute('href') || '') : null,
-          originalLinkHref: isLink ? (canEditEl.getAttribute('href') || '') : null,
-          linkTarget: isLink ? (canEditEl.getAttribute('target') || '') : null,
-          originalLinkTarget: isLink ? (canEditEl.getAttribute('target') || '') : null,
+          // --- 修改：为图片获取链接信息 ---
+          linkHref: isImage ? (parentLink ? parentLink.getAttribute('href') || '' : '') : 
+                    (isLink ? (canEditEl.getAttribute('href') || '') : null),
+          originalLinkHref: isImage ? (parentLink ? parentLink.getAttribute('href') || '' : '') : 
+                            (isLink ? (canEditEl.getAttribute('href') || '') : null),
+          linkTarget: isImage ? (parentLink ? parentLink.getAttribute('target') || '' : '') : 
+                      (isLink ? (canEditEl.getAttribute('target') || '') : null),
+          originalLinkTarget: isImage ? (parentLink ? parentLink.getAttribute('target') || '' : '') : 
+                              (isLink ? (canEditEl.getAttribute('target') || '') : null),
         });
         setShowSidebar(true);
         return;
       }
 
       // 没有canEdit属性，判断是否是独立的文字、图片或链接区域
-      const targetElement = e.target; // 使用一个变量存储 e.target
+      const targetElement = e.target;
       const tag = targetElement.tagName.toLowerCase();
 
       if (tag === 'img') {
-        // 图片元素
+        // --- 修改：检查图片的父级链接 ---
+        const parent = targetElement.parentNode;
+        const parentLink = parent && parent.tagName.toLowerCase() === 'a' ? parent : null;
+        
         setCurrentEdit({
           element: targetElement,
           elementType: 'img',
           content: targetElement.getAttribute('src'),
           selector: '',
           originalContent: targetElement.getAttribute('src'),
-          linkHref: null,
-          originalLinkHref: null,
-          linkTarget: null,
-          originalLinkTarget: null,
+          // --- 新增：获取父级链接信息 ---
+          linkHref: parentLink ? parentLink.getAttribute('href') || '' : '',
+          originalLinkHref: parentLink ? parentLink.getAttribute('href') || '' : '',
+          linkTarget: parentLink ? parentLink.getAttribute('target') || '' : '',
+          originalLinkTarget: parentLink ? parentLink.getAttribute('target') || '' : '',
         });
         setShowSidebar(true);
         return;
@@ -1704,7 +1752,7 @@ export default function HtmlPreview({ pageId }) {
             {/* --- 修改：根据 elementType 渲染不同内容 --- */}
             {currentEdit.elementType === 'img' ? (
               <>
-                {/* 图片编辑相关 UI (保持不变) */}
+                {/* Image Source */}
                 <Input.TextArea
                   value={currentEdit.content}
                   onChange={e => setCurrentEdit({ ...currentEdit, content: e.target.value })}
@@ -1712,11 +1760,30 @@ export default function HtmlPreview({ pageId }) {
                     width: '100%',
                     marginBottom: 12,
                     fontFamily: 'monospace',
-                    height: '150px', // 调整高度
+                    height: '150px',
                     resize: 'none',
                   }}
                   placeholder="Enter image URL or select an image"
                 />
+                
+                {/* --- 新增：图片链接URL --- */}
+                <Input
+                  value={currentEdit.linkHref || ''}
+                  onChange={e => setCurrentEdit({ ...currentEdit, linkHref: e.target.value })}
+                  style={{ width: '100%', marginBottom: 12 }}
+                  placeholder="Link URL (optional)"
+                />
+                
+                {/* --- 新增：链接打开方式 --- */}
+                <Select
+                  value={currentEdit.linkTarget || 'current'}
+                  onChange={value => setCurrentEdit({ ...currentEdit, linkTarget: value === 'current' ? '' : '_blank' })}
+                  style={{ width: '100%', marginBottom: 12 }}
+                >
+                  <Select.Option value="current">Current tab</Select.Option>
+                  <Select.Option value="new">New tab</Select.Option>
+                </Select>
+
                 <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
                   <Button
                     type="primary"
@@ -1725,12 +1792,14 @@ export default function HtmlPreview({ pageId }) {
                     Select/Upload Image
                   </Button>
                 </div>
-                {/* Image Preview (保持不变) */}
+                
+                {/* Image Preview */}
                 {currentEdit.content && (
                   <div style={{ textAlign: 'center', background: '#f0f0f0', padding: 8, borderRadius: 8, marginBottom: 16 }}>
                     <img src={currentEdit.content} alt="Preview" style={{ maxWidth: '100%', maxHeight: 180, borderRadius: 4, display: 'block', margin: 'auto' }} />
                   </div>
                 )}
+                
                 {/* Image Library Modal (保持不变) */}
                 <Modal
                   open={showImageLibrary}
