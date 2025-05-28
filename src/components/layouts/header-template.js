@@ -84,7 +84,7 @@ const animationStyles = `
 
 export default function Header() {
   const [messageApi, contextHolder] = message.useMessage();
-  const { userCredits, loading: userCreditsLoading } = useUser();
+  const { userCredits, loading: userCreditsLoading, packageType, packageInfo } = useUser();
   const [state, setState] = useState({
     isOpen: false,
     activeDropdown: null
@@ -99,6 +99,7 @@ export default function Header() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [showBrandAssetsModal, setShowBrandAssetsModal] = useState(false);
   const [isOneTapShown, setIsOneTapShown] = useState(false);
+  const [removeWatermark, setRemoveWatermark] = useState(false);
 
   const isLoggedInRef = useRef(isLoggedIn);
   useEffect(() => {
@@ -530,6 +531,92 @@ export default function Header() {
     };
   }, [isLoggedIn, isOneTapShown, handleGoogleOneTapSuccess]);
 
+  // 修改积分弹窗点击处理函数
+  const handleCreditsTooltipClick = async () => {
+    setShowCreditsTooltip(!showCreditsTooltip);
+    
+    // 每次打开弹窗时调用接口获取用户信息
+    if (!showCreditsTooltip) { // 只在打开弹窗时调用
+      try {
+        console.log('正在获取用户信息...');
+        console.log('当前 packageType:', packageType); // 添加调试信息
+        
+        // 只获取customer信息来获取removeWatermark状态
+        const customerInfo = await apiClient.getCustomerInfo();
+        console.log('用户信息:', customerInfo);
+        console.log('用户信息字段:', Object.keys(customerInfo || {}));
+        
+        // 获取removeWatermark字段从customer接口
+        if (customerInfo && customerInfo.data) {
+          const watermarkStatus = customerInfo.data.removeWatermark;
+          console.log('removeWatermark状态:', watermarkStatus);
+          setRemoveWatermark(watermarkStatus);
+        }
+      } catch (error) {
+        console.error('获取用户信息失败:', error);
+      }
+    }
+  };
+
+  // 添加点击外部关闭弹窗的处理
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showCreditsTooltip) {
+        // 检查点击是否在弹窗外部
+        const tooltipElement = document.querySelector('[data-tooltip="credits"]');
+        const triggerElement = event.target.closest('[data-trigger="credits"]');
+        
+        if (tooltipElement && !tooltipElement.contains(event.target) && !triggerElement) {
+          setShowCreditsTooltip(false);
+        }
+      }
+    };
+
+    if (showCreditsTooltip) {
+      document.addEventListener('click', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [showCreditsTooltip]);
+
+  // 修改：切换水印状态的函数
+  const handleToggleWatermark = async (e) => {
+    // 阻止事件冒泡，防止关闭popup
+    e.stopPropagation();
+    
+    // 只有付费用户(packageType 1或2)才能切换
+    if (packageType !== 1 && packageType !== 2) {
+      return;
+    }
+
+    try {
+      const newWatermarkStatus = !removeWatermark;
+      console.log('切换水印状态到:', newWatermarkStatus);
+      
+      // 调用新的水印设置接口
+      const response = await apiClient.setWatermark(newWatermarkStatus);
+      console.log('水印设置响应:', response);
+      
+      // 更新本地状态
+      setRemoveWatermark(newWatermarkStatus);
+      
+      // 显示成功提示
+      messageApi.success({ 
+        content: `Watermark ${newWatermarkStatus ? 'hidden' : 'shown'} successfully`, 
+        duration: 2 
+      });
+      
+    } catch (error) {
+      console.error('切换水印状态失败:', error);
+      messageApi.error({ 
+        content: 'Failed to update watermark setting', 
+        duration: 2 
+      });
+    }
+  };
+
   return (
     <>
       {/* 在页面顶部添加Google One Tap容器 */}
@@ -625,7 +712,8 @@ export default function Header() {
                     {/* 合并用户名和积分显示为一个可点击区域 */}
                     <div
                       className="relative flex items-center gap-2 cursor-pointer text-gray-300 hover:text-white transition-colors"
-                      onClick={() => setShowCreditsTooltip(!showCreditsTooltip)}
+                      onClick={handleCreditsTooltipClick}
+                      data-trigger="credits"
                     >
                       {/* 用户名显示 */}
                       <div className="text-sm">
@@ -647,112 +735,252 @@ export default function Header() {
 
                       {/* 积分工具提示 */}
                       {showCreditsTooltip && (
-                        <div className="absolute right-0 top-10 w-64 bg-gray-800 border border-gray-700 rounded-lg shadow-xl p-4 z-50 text-xs"
-                             style={{animation: 'fadeIn 0.2s ease-out forwards'}}>
-                          <div className="flex items-center justify-between mb-3">
-                            <span className="font-medium text-purple-300">Page Generation Credits</span>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setShowCreditsTooltip(false);
-                              }}
-                              className="text-gray-400 hover:text-white transition-colors"
-                            >
-                              ✕
-                            </button>
-                          </div>
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-white font-bold text-lg">
-                              {userCreditsLoading ? (
-                                <Spin size="small" />
-                              ) : (
-                                `${(userCredits.pageGeneratorLimit - userCredits.pageGeneratorUsage) * 10} Available`
-                              )}
-                            </span>
-                          </div>
-                          <div className="h-2 bg-gray-700 rounded-full overflow-hidden mb-3">
-                            <div
-                              className="h-full bg-gradient-to-r from-purple-500 to-blue-500"
-                              style={{
-                                width: `${Math.min(100, ((userCredits.pageGeneratorLimit - userCredits.pageGeneratorUsage) / userCredits.pageGeneratorLimit) * 100)}%`
-                              }}
-                            ></div>
-                          </div>
-                          <p className="mb-3 text-gray-300">Total Credits: {userCredits.pageGeneratorLimit * 10}</p>
-                          <p className="mb-3 text-gray-300">Used: {userCredits.pageGeneratorUsage * 10}</p>
-                          <p className="text-gray-400 text-xs mb-4">
-                            Generating a new alternative page or changing the overall color scheme/style consumes <span className="font-bold text-white">10 credits</span>.
-                          </p>
-
-                          {/* 添加购买更多积分按钮 */}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              window.location.href = "/#pricing";
-                              setShowCreditsTooltip(false);
-                            }}
-                            className="w-full py-2 px-4 mb-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-sm font-medium rounded-md transition-all duration-300 flex items-center justify-center"
-                          >
-                            <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                            </svg>
-                            Buy More Credits
-                          </button>
-
-                          {/* --- 新增：水印控制部分 --- */}
-                          <div className="border-t border-gray-700 pt-3 mt-3">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="font-medium text-orange-300 flex items-center">
-                                Remove Footer Watermark
-                                <span className="ml-2 px-2 py-0.5 bg-yellow-500/20 text-yellow-300 text-xs rounded-full border border-yellow-500/30">
-                                  COMING SOON
-                                </span>
-                              </span>
-                            </div>
-                            <p className="text-gray-400 text-xs mb-3">
-                              Hide the "Powered by AltPage.ai" footer watermark on your generated pages.
-                            </p>
-                            
-                            {/* 显示 Coming Soon 状态 */}
-                            <div className="p-3 bg-gray-700/30 rounded-md opacity-60">
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm text-gray-400">Hide Watermark</span>
-                                <div className="relative w-11 h-6 bg-gray-600 rounded-full opacity-50">
-                                  <div className="absolute top-[2px] left-[2px] bg-gray-400 rounded-full h-5 w-5"></div>
+                        <div 
+                          className="absolute right-0 top-10 w-[620px] bg-gradient-to-br from-gray-900 to-gray-800 border border-gray-600 rounded-xl shadow-2xl overflow-hidden z-50"
+                          style={{animation: 'fadeIn 0.2s ease-out forwards'}}
+                          onClick={(e) => e.stopPropagation()}
+                          data-tooltip="credits"
+                        >
+                          
+                          {/* 顶部标题栏 */}
+                          <div className="bg-gradient-to-r from-indigo-600/20 to-purple-600/20 p-4 border-b border-gray-700">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-cyan-500/30 to-purple-500/30 flex items-center justify-center mr-3">
+                                  <span className="text-lg">⚡</span>
+                                </div>
+                                <div>
+                                  <h3 className="font-semibold text-white text-lg">Account Dashboard</h3>
+                                  <p className="text-gray-300 text-sm">Manage your subscription and settings</p>
                                 </div>
                               </div>
-                              <div className="text-center py-2">
-                                <span className="text-yellow-400 text-sm font-medium">🚧 Coming Soon</span>
-                                <p className="text-gray-500 text-xs mt-1">
-                                  This feature will be available in a future update
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setShowCreditsTooltip(false);
+                                }}
+                                className="text-gray-400 hover:text-white transition-colors p-2 rounded-full hover:bg-gray-700/50"
+                              >
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* 主要内容区域 - 左右布局 */}
+                          <div className="flex">
+                            {/* 左侧 - 套餐信息区域 */}
+                            <div className="flex-1 p-5 border-r border-gray-700">
+                              <div className="space-y-4">
+                                {/* 套餐状态卡片 */}
+                                <div className={`p-4 rounded-lg border ${
+                                  packageType === 1 ? 'bg-blue-500/10 border-blue-500/30' :
+                                  packageType === 2 ? 'bg-purple-500/10 border-purple-500/30' :
+                                  'bg-gray-500/10 border-gray-500/30'
+                                }`}>
+                                  <div className="flex items-center mb-3">
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${
+                                      packageType === 1 ? 'bg-blue-500/30' :
+                                      packageType === 2 ? 'bg-purple-500/30' :
+                                      'bg-gray-500/30'
+                                    }`}>
+                                      <span className="text-xl">
+                                        {packageType === 1 ? '📅' : packageType === 2 ? '👑' : '🆓'}
+                                      </span>
+                                    </div>
+                                    <div className="flex-1">
+                                      <h4 className="font-semibold text-white text-base">
+                                        {packageInfo?.packageName || 
+                                         (packageType === 1 ? 'Monthly Plan' : 
+                                          packageType === 2 ? 'Annual Plan' : 
+                                          'Free Plan')}
+                                      </h4>
+                                      <div className="flex items-center gap-2 mt-1">
+                                        <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${
+                                          packageType === 1 ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' :
+                                          packageType === 2 ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30' :
+                                          'bg-gray-500/20 text-gray-300 border border-gray-500/30'
+                                        }`}>
+                                          {packageType === 1 ? 'Monthly' : packageType === 2 ? 'Annual' : 'Free'}
+                                        </span>
+                                        <span className={`text-xs font-medium ${
+                                          packageType === 1 || packageType === 2 ? 'text-green-400' : 'text-gray-400'
+                                        }`}>
+                                          {packageType === 1 || packageType === 2 ? '● Active' : '● Limited'}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* 套餐详细信息 */}
+                                  {(packageType === 1 || packageType === 2) && packageInfo?.packageStartTime && packageInfo?.packageEndTime ? (
+                                    <div className="space-y-3">
+                                      <div className="grid grid-cols-2 gap-3">
+                                        <div className="bg-black/20 p-3 rounded-lg">
+                                          <p className="text-gray-400 text-xs mb-1">Start Date</p>
+                                          <p className="text-white font-medium text-sm">{packageInfo.packageStartTime}</p>
+                                        </div>
+                                        <div className="bg-black/20 p-3 rounded-lg">
+                                          <p className="text-gray-400 text-xs mb-1">End Date</p>
+                                          <p className="text-white font-medium text-sm">{packageInfo.packageEndTime}</p>
+                                        </div>
+                                      </div>
+                                      
+                                      {/* 续费提醒 */}
+                                      <div className="bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-500/20 rounded-lg p-3">
+                                        <div className="flex items-center">
+                                          <svg className="w-4 h-4 text-orange-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                          </svg>
+                                          <span className="text-orange-300 text-xs font-medium">Auto-renewal enabled</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-lg p-3">
+                                      <div className="text-center">
+                                        <p className="text-blue-300 text-sm font-medium mb-2">🚀 Upgrade to unlock premium features</p>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            window.location.href = "/#pricing";
+                                            setShowCreditsTooltip(false);
+                                          }}
+                                          className="w-full py-2 px-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white text-xs font-medium rounded-lg transition-all duration-300"
+                                        >
+                                          View Plans
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Brand Assets 控制区域 */}
+                              <div className="bg-gray-800/30 p-3 rounded-lg border border-gray-600/30 mt-4">
+                                <div className="flex items-center mb-2">
+                                  <svg className="w-4 h-4 text-cyan-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                                  </svg>
+                                  <span className="font-medium text-cyan-300 text-sm">Brand Assets</span>
+                                </div>
+                                <p className="text-gray-400 text-xs mb-3">
+                                  Customize color schemes and styling for generated websites
                                 </p>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowBrandAssetsModal(true);
+                                    setShowCreditsTooltip(false);
+                                  }}
+                                  className="w-full py-2.5 px-4 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white text-sm font-medium rounded-lg transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-cyan-500/25"
+                                >
+                                  <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a1 1 0 01-1-1V9a1 1 0 011-1h1a2 2 0 100-4H4a1 1 0 01-1-1V4a1 1 0 011-1h3a1 1 0 001-1z" />
+                                  </svg>
+                                  Edit Brand Settings
+                                </button>
+                              </div>
+
+                              {/* 水印控制 */}
+                              <div className="bg-gray-800/30 p-3 rounded-lg border border-gray-600/30 mt-4 mb-4">
+                                <div className="flex items-center mb-2">
+                                  <svg className="w-4 h-4 text-orange-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                                  </svg>
+                                  <span className="font-medium text-orange-300 text-sm">Watermark</span>
+                                  {packageType === 3 && (
+                                    <span className="ml-2 px-1.5 py-0.5 bg-red-500/20 text-red-300 text-xs rounded-full border border-red-500/30">
+                                      PRO
+                                    </span>
+                                  )}
+                                </div>
+
+                                {packageType === 1 || packageType === 2 ? (
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center">
+                                      <span className="text-xs text-white mr-2">Hide Footer</span>
+                                      <span className={`text-xs font-medium ${
+                                        removeWatermark ? 'text-green-400' : 'text-gray-400'
+                                      }`}>
+                                        {removeWatermark ? '✅ Hidden' : '👁️ Visible'}
+                                      </span>
+                                    </div>
+                                    <button
+                                      onClick={handleToggleWatermark}
+                                      className={`relative w-10 h-5 rounded-full transition-colors ${
+                                        removeWatermark ? 'bg-green-600' : 'bg-gray-600'
+                                      }`}
+                                    >
+                                      <div className={`absolute top-[2px] bg-white rounded-full h-4 w-4 transition-transform ${
+                                        removeWatermark ? 'translate-x-[20px]' : 'translate-x-[2px]'
+                                      }`}></div>
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div className="text-center">
+                                    <span className="text-red-400 text-xs font-medium">🔒 Upgrade Required</span>
+                                    <p className="text-red-300 text-xs mt-1">Remove branding from pages</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* 右侧 - 积分和功能区域 */}
+                            <div className="w-64 p-5 space-y-4">
+                              {/* 积分显示 */}
+                              <div className="text-center">
+                                <div className="w-16 h-16 rounded-full bg-gradient-to-r from-purple-500/30 to-blue-500/30 flex items-center justify-center mx-auto mb-3 border-2 border-purple-500/20">
+                                  <span className="text-2xl">💎</span>
+                                </div>
+                                <div className="text-3xl font-bold text-white mb-1">
+                                  {userCreditsLoading ? (
+                                    <Spin size="small" />
+                                  ) : (
+                                    `${(userCredits.pageGeneratorLimit - userCredits.pageGeneratorUsage) * 10}`
+                                  )}
+                                </div>
+                                <p className="text-gray-300 text-sm">Available Credits</p>
+                                <p className="text-gray-400 text-xs mt-1">
+                                  Total: {userCredits.pageGeneratorLimit * 10}
+                                </p>
+                                {/* 新增：显示可生成页面数 */}
+                                <p className="text-cyan-400 text-xs mt-2 font-medium">
+                                  ≈ {Math.floor((userCredits.pageGeneratorLimit - userCredits.pageGeneratorUsage))} pages left
+                                </p>
+                              </div>
+
+                              {/* 使用提示 */}
+                              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+                                <div className="flex items-start">
+                                  <svg className="w-4 h-4 text-blue-400 mt-0.5 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                  <p className="text-blue-300 text-xs leading-relaxed">
+                                    Each generation costs <span className="font-semibold text-white">10 credits</span>
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* 快速操作按钮 */}
+                              <div className="space-y-3">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.location.href = "/#pricing";
+                                    setShowCreditsTooltip(false);
+                                  }}
+                                  className="w-full py-2.5 px-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-sm font-medium rounded-lg transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-purple-500/25"
+                                >
+                                  <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                  </svg>
+                                  Get Credits
+                                </button>
                               </div>
                             </div>
                           </div>
-                          {/* --- 结束：水印控制部分 --- */}
-
-                          {/* --- 新增：品牌颜色资产部分 --- */}
-                          <div className="border-t border-gray-700 pt-3 mt-3">
-                            <span className="font-medium text-cyan-300 block mb-2">Brand Color Assets</span>
-                            <p className="text-gray-400 text-xs mb-3">Access your saved brand colors and palettes.</p>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                // 修改：点击时显示 BrandAssetsModal
-                                setShowBrandAssetsModal(true);
-                                // 关闭积分提示框
-                                setShowCreditsTooltip(false);
-                              }}
-                              className="w-full py-2 px-4 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white text-sm font-medium rounded-md transition-all duration-300 flex items-center justify-center"
-                            >
-                              <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
-                              </svg>
-                              Manage Brand Colors
-                            </button>
-                          </div>
-                          {/* --- 结束：品牌颜色资产部分 --- */}
-
                         </div>
                       )}
                     </div>

@@ -698,6 +698,34 @@ const createBrandAssets = async (brandAssetData) => {
   }
 };
 
+// 新增：获取用户信息
+const getCustomerInfo = async () => {
+  try {
+    // 发送 GET 请求到 /customer/info
+    // Authorization 头已由拦截器自动添加
+    const response = await apiClient.get('/customer/info');
+    // 返回响应数据
+    return response.data;
+  } catch (error) {
+    // 记录错误信息并返回 null 或根据需要抛出错误
+    console.error('Failed to get customer info:', error);
+    return null; // 或者 throw error;
+  }
+};
+
+// 新增：设置去除水印
+const setWatermark = async (removeWatermark) => {
+  try {
+    const response = await apiClient.put('/customer/watermark', {
+      removeWatermark
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Failed to set watermark:', error);
+    throw error;
+  }
+};
+
 apiClient.getCompetitorResearch = getCompetitorResearch;
 apiClient.login = login;
 apiClient.register = register;
@@ -746,5 +774,7 @@ apiClient.deleteDomain = deleteDomain;
 apiClient.getBrandAssets = getBrandAssets;
 apiClient.upsertBrandAssets = upsertBrandAssets;
 apiClient.createBrandAssets = createBrandAssets;
+apiClient.getCustomerInfo = getCustomerInfo;
+apiClient.setWatermark = setWatermark;
 
 export default apiClient;

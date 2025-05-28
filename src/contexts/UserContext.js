@@ -12,6 +12,12 @@ export const UserProvider = ({ children }) => {
     pageGeneratorLimit: 0,
     pageGeneratorUsage: 0
   });
+  const [packageType, setPackageType] = useState(null);
+  const [packageInfo, setPackageInfo] = useState({
+    packageName: null,
+    packageStartTime: null,
+    packageEndTime: null
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -20,14 +26,31 @@ export const UserProvider = ({ children }) => {
     try {
       setLoading(true);
       const response = await apiClient.getCustomerPackage();
+      console.log('UserContext - getCustomerPackage response:', response);
+      
       if (response?.code === 200 && response.data) {
-        const { pageGeneratorLimit, pageGeneratorUsage } = response.data;
+        const { 
+          pageGeneratorLimit, 
+          pageGeneratorUsage, 
+          packageType: pkgType,
+          packageName,
+          packageStartTime,
+          packageEndTime
+        } = response.data;
+        console.log('UserContext - packageType from API:', pkgType);
+        
         setUserCredits({
           pageGeneratorLimit,
           pageGeneratorUsage
         });
+        setPackageType(pkgType);
+        setPackageInfo({
+          packageName,
+          packageStartTime,
+          packageEndTime
+        });
       } else {
-        setError('Unable to get user package information  ');
+        setError('Unable to get user package information');
       }
     } catch (err) {
       console.error('Failed to get user package:', err);
@@ -53,6 +76,12 @@ export const UserProvider = ({ children }) => {
         pageGeneratorLimit: 0,
         pageGeneratorUsage: 0
       });
+      setPackageType(null);
+      setPackageInfo({
+        packageName: null,
+        packageStartTime: null,
+        packageEndTime: null
+      });
       setLoading(false);
     }
     
@@ -72,6 +101,8 @@ export const UserProvider = ({ children }) => {
   // 提供的上下文值
   const value = {
     userCredits,
+    packageType,
+    packageInfo,
     loading,
     error,
     refreshUserPackage
