@@ -699,6 +699,38 @@ export default function Header() {
                             Buy More Credits
                           </button>
 
+                          {/* --- 新增：水印控制部分 --- */}
+                          <div className="border-t border-gray-700 pt-3 mt-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="font-medium text-orange-300 flex items-center">
+                                Remove Footer Watermark
+                                <span className="ml-2 px-2 py-0.5 bg-yellow-500/20 text-yellow-300 text-xs rounded-full border border-yellow-500/30">
+                                  COMING SOON
+                                </span>
+                              </span>
+                            </div>
+                            <p className="text-gray-400 text-xs mb-3">
+                              Hide the "Powered by AltPage.ai" footer watermark on your generated pages.
+                            </p>
+                            
+                            {/* 显示 Coming Soon 状态 */}
+                            <div className="p-3 bg-gray-700/30 rounded-md opacity-60">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-sm text-gray-400">Hide Watermark</span>
+                                <div className="relative w-11 h-6 bg-gray-600 rounded-full opacity-50">
+                                  <div className="absolute top-[2px] left-[2px] bg-gray-400 rounded-full h-5 w-5"></div>
+                                </div>
+                              </div>
+                              <div className="text-center py-2">
+                                <span className="text-yellow-400 text-sm font-medium">🚧 Coming Soon</span>
+                                <p className="text-gray-500 text-xs mt-1">
+                                  This feature will be available in a future update
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          {/* --- 结束：水印控制部分 --- */}
+
                           {/* --- 新增：品牌颜色资产部分 --- */}
                           <div className="border-t border-gray-700 pt-3 mt-3">
                             <span className="font-medium text-cyan-300 block mb-2">Brand Color Assets</span>

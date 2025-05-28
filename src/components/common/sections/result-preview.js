@@ -836,7 +836,7 @@ const HistoryCardList = () => {
                   <div>
                     <div className="text-sm font-semibold text-cyan-400 mb-1 pl-1 pt-3">Deploy Status</div>
                     {currentItem.deploymentStatus === 'publish' ? (
-                      <div className="flex flex-col gap-1">
+                      <div className="flex flex-col gap-2 items-start">
                         <span className="text-green-300 font-semibold text-xs">Published</span>
                         {currentItem.siteUrl && currentItem.slug && (
                           <div className="text-cyan-400 text-xxs mt-0.5 break-all">
@@ -851,10 +851,47 @@ const HistoryCardList = () => {
                             </a>
                           </div>
                         )}
+                        <button
+                          onClick={async () => {
+                            try {
+                              setResultLoading(true);
+                              const resp = await apiClient.updateAlternativePublishStatus(
+                                currentItem.resultId,
+                                'unpublish',
+                                '', // 取消发布时不需要URL
+                                ''  // 取消发布时不需要slug
+                              );
+                              
+                              if (resp?.code === 200) {
+                                messageApi.success('Unpublished successfully!');
+                                handlePublishSuccess(); // 刷新数据
+                              } else {
+                                messageApi.error(resp?.message || 'Unpublish failed');
+                              }
+                            } catch (e) {
+                              messageApi.error(e.message || 'Unpublish failed');
+                            } finally {
+                              setResultLoading(false);
+                            }
+                          }}
+                          className="px-2 py-1 rounded text-xs font-semibold text-white shadow-sm transition duration-200 inline-flex items-center gap-1 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-500 hover:to-pink-500 border border-red-500/50 hover:border-red-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-600 disabled:to-gray-700"
+                          title="Unpublish this page"
+                          disabled={!selectedPreviewId || resultLoading}
+                        >
+                          <CloseOutlined /> Unpublish
+                        </button>
                       </div>
                     ) : (
-                      <div>
+                      <div className="flex flex-col gap-2 items-start">
                         <span className="text-slate-400 text-xs">Not Published</span>
+                        <button
+                          onClick={() => setIsPublishSettingsModalVisible(true)}
+                          className="px-2 py-1 rounded text-xs font-semibold text-white shadow-sm transition duration-200 inline-flex items-center gap-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border border-blue-500/50 hover:border-blue-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-600 disabled:to-gray-700"
+                          title="Bind with your domain"
+                          disabled={!selectedPreviewId || resultLoading}
+                        >
+                          <LinkOutlined /> Bind With Your Domain
+                        </button>
                       </div>
                     )}
                   </div>

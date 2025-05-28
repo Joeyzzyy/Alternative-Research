@@ -70,6 +70,7 @@ const ResearchTool = () => {
     { id: 4, name: "Page Generation", gradient: "from-green-500/40 to-lime-500/40", borderColor: "border-green-500/60", shadowColor: "shadow-green-500/20" },
   ]);
   const examples = [
+    { url: 'https://blog.typicalkiffer.com/deutschland-cannabis-arzte-apotheken-produkte', title: "Deutschland's Führende Cannabis-Plattform: Über 1700 Medikamente in Echtzeit Verfügbar", image: '/images/preview-weed-de.png', timestamp: 'Generated on May 28'},
     { url: 'https://blog.entertainmentus.online/entertainment-news-digital-hub-platform', title: 'EntertainmentUS: Your Complete Digital Entertainment Hub Beyond Traditional Networks', image: '/images/preview-entertainment-us.png', timestamp: 'Generated on May 27'},
     { url: 'https://landing.takebreak.app/supercharge-breaks-boost-productivity-methods', title: 'Supercharge Your Breaks with 100+ Science-Backed Methods to Boost Productivity', image: '/images/preview-take-a-break.png', timestamp: 'Generated on May 27'},
     { url: 'https://laparoscopy.suzhoufrank.com/superior-3d-endoscopy-medical-visualization-1', title: 'Superior 3D Endoscopy & AI-Driven Training: The Advanced Alternative to Basic Laparoscopy Systems', image: '/images/preview-suzhou-frank.png', timestamp: 'Generated on May 03'},
