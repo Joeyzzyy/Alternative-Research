@@ -29,6 +29,7 @@ const HistoryCardList = () => {
   const [isPublishSettingsModalVisible, setIsPublishSettingsModalVisible] = useState(false); // 新增：控制发布设置弹窗
   const currentItem = resultDetail?.data?.find(item => item.resultId === selectedPreviewId) || {};
   const [retryConfirm, setRetryConfirm] = useState({ open: false, website: null }); // 新增：重试确认弹窗状态
+  const [deletePageConfirm, setDeletePageConfirm] = useState({ open: false, resultId: null });
 
   // === 新增：统一样式的确认弹窗 ===
   const confirmationModalStyles = {
@@ -748,6 +749,75 @@ const HistoryCardList = () => {
             </div>
           </div>
         </Modal>
+
+        <Modal
+          open={deletePageConfirm.open}
+          onCancel={() => setDeletePageConfirm({ open: false, resultId: null })}
+          footer={[
+            <Button
+              key="delete"
+              type="primary"
+              danger
+              onClick={async () => {
+                try {
+                  console.log('Delete confirmed, calling API with resultId:', deletePageConfirm.resultId);
+                  messageApi.loading({ content: 'Deleting page...', key: 'deletePage', duration: 0 });
+                  
+                  // 检查 API 方法是否存在
+                  if (!apiClient.deleteAlternativeResult) {
+                    throw new Error('deleteAlternativeResult method not found in apiClient');
+                  }
+                  
+                  // 调用删除API
+                  const result = await apiClient.deleteAlternativeResult(deletePageConfirm.resultId);
+                  console.log('Delete API response:', result);
+                  
+                  messageApi.destroy('deletePage');
+                  messageApi.success('Page deleted successfully');
+                  
+                  // 关闭确认弹窗
+                  setDeletePageConfirm({ open: false, resultId: null });
+                  
+                  // 刷新任务详情
+                  if (selectedItem?.websiteId) {
+                    const res = await apiClient.getAlternativeWebsiteResultList(selectedItem.websiteId);
+                    setResultDetail(res);
+                    
+                    // 如果还有其他页面，选中第一个；否则关闭弹窗
+                    if (Array.isArray(res?.data) && res.data.length > 0) {
+                      setSelectedPreviewId(res.data[0].resultId);
+                      setSlugInput(res.data[0].slug || '');
+                    } else {
+                      // 没有页面了，关闭弹窗
+                      handleModalClose();
+                    }
+                  }
+                } catch (error) {
+                  console.error('Delete operation failed:', error);
+                  messageApi.destroy('deletePage');
+                  messageApi.error('Failed to delete page: ' + error.message);
+                }
+              }}
+            >
+              Delete
+            </Button>,
+            <Button key="cancel" onClick={() => setDeletePageConfirm({ open: false, resultId: null })} className="ant-btn-modal-cancel-dark">
+              Cancel
+            </Button>
+          ]}
+          centered
+          title={null}
+          styles={confirmationModalStyles}
+        >
+          <div className="flex flex-col items-center justify-center py-6">
+            <ExclamationCircleOutlined style={{ fontSize: 40, color: '#f87171' }} />
+            <div className="mt-4 text-lg font-semibold text-red-400">Confirm Delete</div>
+            <div className="mt-2 text-slate-300 text-center">
+              Are you sure you want to delete this page? This action cannot be undone.
+            </div>
+          </div>
+        </Modal>
+
         {/* Detailed Modal */}
         {selectedItem && (
           <Modal
@@ -967,6 +1037,27 @@ const HistoryCardList = () => {
                           </div>
                           {/* Action Buttons (现在会根据 selectedPreviewId 自动更新 currentItem) */}
                           <div className="flex items-center gap-2 flex-shrink-0">
+                          <button
+                            onClick={() => {
+                              console.log('Delete button clicked, selectedPreviewId:', selectedPreviewId);
+                              if (selectedPreviewId) {
+                                console.log('Opening delete page confirmation modal');
+                                setDeletePageConfirm({ open: true, resultId: selectedPreviewId });
+                              } else {
+                                console.log('No selectedPreviewId, button should be disabled');
+                              }
+                            }}
+                              className={`
+                                px-2 py-1 rounded text-xs font-semibold text-white shadow-sm transition duration-200 flex items-center gap-1
+                                bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600
+                                border border-red-500/50 hover:border-red-400
+                                disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-600 disabled:to-gray-700
+                              `}
+                              title="Delete This Page"
+                              disabled={!selectedPreviewId || resultLoading}
+                            >
+                              <DeleteOutlined /> Delete Page
+                            </button>
                             <button
                               onClick={() => { if (previewUrl) window.open(previewUrl, '_blank'); }}
                               className={`
