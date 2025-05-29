@@ -1387,7 +1387,7 @@ const PublishSettingsModal = ({
                             </Button>
                           </div>
                           <p className="text-xs text-gray-400 mt-2">
-                            Examples: blog, docs, app, landing, etc. Use lowercase letters, numbers, and hyphens only.
+                            Examples: alterntaive, alt, etc. Use lowercase letters only.
                           </p>
                         </div>
 
@@ -1632,9 +1632,14 @@ const PublishSettingsModal = ({
                     <label className="block text-sm font-medium text-gray-300 mb-2">
                       Page Slug <span className="text-red-400">*</span>
                     </label>
-                    <p className="text-sm text-gray-400 mb-3">
-                      Create a unique identifier for this page version (e.g., 'main-landing-page', 'product-launch').
+                    <p className="text-sm text-gray-400 mb-2">
+                      Create a unique identifier for this page version.
                     </p>
+                    <div className="text-xs text-gray-500 mb-3 space-y-1">
+                      <p>• Only lowercase letters, numbers, and hyphens allowed</p>
+                      <p>• Cannot start or end with hyphens</p>
+                      <p>• Examples: <code className="text-cyan-400 bg-slate-700 px-1 rounded">best-chatgpt-alternative</code></p>
+                    </div>
                     {slugEditing ? (
                       <div className="flex items-center gap-2">
                         <input
