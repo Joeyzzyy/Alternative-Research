@@ -1497,10 +1497,13 @@ const ResearchTool = () => {
             false,
             currentWebsiteId
           );
-          // 新增：处理 code 1075 的情况
           if (searchResponse?.code === 1075) {
             messageHandler.updateAgentMessage("⚠️ There are already tasks in progress. Please wait for the current task to finish or delete it before starting a new one.", thinkingMessageId);
-            return;
+            messageApi.warning('There are already tasks in progress. Redirecting to homepage...', 1);
+              setTimeout(() => {
+                window.location.href = '/';
+              }, 3000);
+              return;
           }
           if (searchResponse?.code === 1058) {
             messageHandler.updateAgentMessage("⚠️ Network error occurred. Please try again.", thinkingMessageId);
@@ -1756,7 +1759,11 @@ const ResearchTool = () => {
           // 新增：处理 code 1075 的情况
           if (searchResponse?.code === 1075) {
             messageHandler.updateAgentMessage("⚠️ There are already tasks in progress. Please wait for the current task to finish or delete it before starting a new one.", thinkingMessageId);
-            return;
+            messageApi.warning('There are already tasks in progress. Redirecting to homepage...', 1);
+              setTimeout(() => {
+                window.location.href = '/';
+              }, 3000);
+              return;
           }
           if (searchResponse?.code === 1058) {
             messageHandler.updateAgentMessage("Oops! The service encountered a temporary issue. Could you please try sending your message again?", thinkingMessageId);
@@ -2387,28 +2394,6 @@ const ResearchTool = () => {
       clearTimers();
     };
   }, [showInitialScreen]); // Rerun effect when showInitialScreen changes
-
-  useEffect(() => {
-    const shouldWarnOnRefresh = isProcessingTask;
-
-    const handleBeforeUnload = (e) => {
-      if (shouldWarnOnRefresh) {
-        e.preventDefault();
-        e.returnValue = 'Task is running, refreshing may cause the task to be cleaned up, continue?';
-        return e.returnValue;
-      }
-    };
-
-    if (shouldWarnOnRefresh) {
-      window.addEventListener('beforeunload', handleBeforeUnload);
-    } else {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    }
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [isProcessingTask, currentStep, canProcessCompetitors]);
 
   const toggleSidebar = useCallback(() => {
     setIsSidebarOpen(prev => !prev);

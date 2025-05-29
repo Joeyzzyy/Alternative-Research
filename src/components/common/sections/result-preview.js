@@ -232,8 +232,14 @@ const HistoryCardList = () => {
     }
     
     if (item.generatorStatus === 'processing') {
-      // === 修改开始：不再跳转，改为 messageApi 提示 ===
-      messageApi.info('You are already in the current processing task.');
+      // === 修改开始：触发recover模式，参考layout的实现 ===
+      // 构建带有taskId和status参数的URL
+      const currentUrl = new URL(window.location);
+      currentUrl.searchParams.set('taskId', item.websiteId);
+      currentUrl.searchParams.set('status', 'processing');
+      
+      // 更新URL并刷新页面以触发recover模式
+      window.location.href = currentUrl.toString();
       return;
       // === 修改结束 ===
     }
