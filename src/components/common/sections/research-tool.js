@@ -91,13 +91,15 @@ const ResearchTool = () => {
   const currentExample = examples[currentExampleIndex];
   const [phImageAvailable, setPhImageAvailable] = useState(false);
   const [phCheckDone, setPhCheckDone] = useState(false);
+  const [showTaskConflictModal, setShowTaskConflictModal] = useState(false);
+  const [conflictingTask, setConflictingTask] = useState(null);
   const taskTimeEstimates = {
     1: { name: "Find Competitors", time: "1-3 mins", tip: "Perfect time to grab a coffee ☕" },
     2: { name: "Select Competitor", time: "time that depends on you", tip: "Take your time to choose wisely 🤔" },
     3: { name: "Analyze Competitor", time: "3-5 mins", tip: "Great time to stretch or check emails 📧" },
     4: { name: "Page Generation", time: "2-3 mins", tip: "Almost done! You can close this tab if needed 🎉" },
   };
-
+  
   useEffect(() => {
     const checkNetwork = async () => {
       try {
@@ -1652,63 +1654,6 @@ const ResearchTool = () => {
       } catch (creditError) {
         console.error('Error checking user credit:', creditError);
         // Optionally handle this error, e.g., show a generic error message
-      }
-
-      // Check for existing processing tasks (unchanged logic)
-      try {
-        const historyResponse = await apiClient.getAlternativeWebsiteList(1, 3);
-        if (historyResponse?.code === 200 && historyResponse.data) {
-          const processingTasks = historyResponse.data.filter(item =>
-            item.generatorStatus === 'processing'
-          );
-          for (const task of processingTasks) {
-            const statusResponse = await apiClient.getAlternativeStatus(task.websiteId);
-            if (statusResponse?.code === 200 && statusResponse.data) {
-              const planningStatuses = statusResponse.data;
-              const productComparisonStatus = planningStatuses.find(planning =>
-                planning.planningName === 'PRODUCT_COMPARISON'
-              );
-              if (productComparisonStatus && productComparisonStatus.status !== 'init') {
-                const modalContainer = document.createElement('div');
-                modalContainer.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm';
-                const modalContent = document.createElement('div');
-                modalContent.className = 'bg-slate-800 rounded-lg shadow-xl p-6 max-w-sm w-full border border-slate-700 animate-fadeIn';
-                const title = document.createElement('h3');
-                title.className = 'text-xl font-semibold text-white mb-4';
-                title.textContent = 'Your Task Is In Progress';
-                const description = document.createElement('p');
-                description.className = 'text-gray-300 mb-3';
-                description.textContent = 'You already have a generation task in progress. Please wait for it to complete before starting a new one.';
-                const limitNote = document.createElement('p');
-                limitNote.className = 'text-gray-400 text-sm mb-2';
-                limitNote.textContent = 'Our system currently allows only one active task at a time to ensure optimal performance.';
-                const emailNote = document.createElement('p');
-                emailNote.className = 'text-gray-400 text-sm mb-6';
-                emailNote.textContent = 'You will receive an email notification when your current task is complete.';
-                const buttonContainer = document.createElement('div');
-                buttonContainer.className = 'flex justify-end';
-                const closeButton = document.createElement('button');
-                closeButton.className = 'px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-500 transition-colors';
-                closeButton.textContent = 'Got it';
-                closeButton.onclick = () => {
-                  document.body.removeChild(modalContainer);
-                };
-                buttonContainer.appendChild(closeButton);
-                modalContent.appendChild(title);
-                modalContent.appendChild(description);
-                modalContent.appendChild(limitNote);
-                modalContent.appendChild(emailNote);
-                modalContent.appendChild(buttonContainer);
-                modalContainer.appendChild(modalContent);
-                document.body.appendChild(modalContainer);
-                setIsProcessingTask(false);
-                return;
-              }
-            }
-          }
-        }
-      } catch (error) {
-        console.error('[DEBUG] Error checking task status:', error);
       }
 
       // Fade out initial screen (unchanged logic)

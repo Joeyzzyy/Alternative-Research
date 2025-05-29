@@ -2180,6 +2180,7 @@ const ResearchToolRecover = ({ websiteId }) => {
             // 以该对象的 data 作为 chatWithAI 的内容
             apiClient.chatWithAI(finishedItem.data, currentWebsiteId).then(response => {
               if (response?.code === 200 && response.data?.answer) {
+                setCurrentStep(2);
                 setMessages(prev => [
                   ...prev,
                   {

@@ -726,6 +726,17 @@ const setWatermark = async (removeWatermark) => {
   }
 };
 
+// 新增：删除替代方案结果
+const deleteAlternativeResult = async (resultId) => {
+  try {
+    const response = await apiClient.delete(`/alternatively/result/${resultId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to delete alternative result:', error);
+    throw error;
+  }
+};
+
 apiClient.getCompetitorResearch = getCompetitorResearch;
 apiClient.login = login;
 apiClient.register = register;
@@ -776,5 +787,6 @@ apiClient.upsertBrandAssets = upsertBrandAssets;
 apiClient.createBrandAssets = createBrandAssets;
 apiClient.getCustomerInfo = getCustomerInfo;
 apiClient.setWatermark = setWatermark;
+apiClient.deleteAlternativeResult = deleteAlternativeResult;
 
 export default apiClient;
