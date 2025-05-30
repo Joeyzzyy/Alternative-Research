@@ -98,6 +98,7 @@ export default function Header() {
   const [showBrandAssetsModal, setShowBrandAssetsModal] = useState(false);
   const [isOneTapShown, setIsOneTapShown] = useState(false);
   const [removeWatermark, setRemoveWatermark] = useState(false);
+  const [taskNotificationEmail, setTaskNotificationEmail] = useState(false);
 
   const isLoggedInRef = useRef(isLoggedIn);
   useEffect(() => {
@@ -549,6 +550,11 @@ export default function Header() {
           const watermarkStatus = customerInfo.data.removeWatermark;
           console.log('removeWatermark状态:', watermarkStatus);
           setRemoveWatermark(watermarkStatus);
+          
+          // 获取任务完成通知邮件状态
+          const emailNotificationStatus = customerInfo.data.notificationReference?.preferences?.page_task_finished?.email;
+          console.log('任务完成邮件通知状态:', emailNotificationStatus);
+          setTaskNotificationEmail(emailNotificationStatus || false);
         }
       } catch (error) {
         console.error('获取用户信息失败:', error);
@@ -610,6 +616,41 @@ export default function Header() {
       console.error('切换水印状态失败:', error);
       messageApi.error({ 
         content: 'Failed to update watermark setting', 
+        duration: 2 
+      });
+    }
+  };
+
+  // 修改：切换任务通知邮件状态的函数
+  const handleToggleTaskNotification = async (e) => {
+    // 阻止事件冒泡，防止关闭popup
+    e.stopPropagation();
+    
+    try {
+      const newNotificationStatus = !taskNotificationEmail;
+      console.log('切换任务通知邮件状态到:', newNotificationStatus);
+      
+      // 使用正确的接口格式调用通知设置接口
+      const response = await apiClient.updateNotificationPreferences({
+        channel: "email",
+        enabled: newNotificationStatus,
+        notificationType: "page_task_finished"
+      });
+      console.log('通知设置响应:', response);
+      
+      // 更新本地状态
+      setTaskNotificationEmail(newNotificationStatus);
+      
+      // 显示成功提示
+      messageApi.success({ 
+        content: `Task completion email ${newNotificationStatus ? 'enabled' : 'disabled'} successfully`, 
+        duration: 2 
+      });
+      
+    } catch (error) {
+      console.error('切换任务通知邮件状态失败:', error);
+      messageApi.error({ 
+        content: 'Failed to update notification setting', 
         duration: 2 
       });
     }
@@ -882,7 +923,7 @@ export default function Header() {
                               </div>
 
                               {/* 水印控制 */}
-                              <div className="bg-gray-800/30 p-3 rounded-lg border border-gray-600/30 mt-4 mb-4">
+                              <div className="bg-gray-800/30 p-3 rounded-lg border border-gray-600/30 mt-4">
                                 <div className="flex items-center mb-2">
                                   <svg className="w-4 h-4 text-orange-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
@@ -922,6 +963,40 @@ export default function Header() {
                                     <p className="text-red-300 text-xs mt-1">Remove branding from pages</p>
                                   </div>
                                 )}
+                              </div>
+
+                              {/* 新增：任务完成邮件通知控制 */}
+                              <div className="bg-gray-800/30 p-3 rounded-lg border border-gray-600/30 mb-4">
+                                <div className="flex items-center mb-2">
+                                  <svg className="w-4 h-4 text-blue-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                  </svg>
+                                  <span className="font-medium text-blue-300 text-sm">Email Notifications</span>
+                                </div>
+                                <p className="text-gray-400 text-xs mb-3">
+                                  Get notified when your page generation is complete
+                                </p>
+
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center">
+                                    <span className="text-xs text-white mr-2">Task Completion</span>
+                                    <span className={`text-xs font-medium ${
+                                      taskNotificationEmail ? 'text-green-400' : 'text-gray-400'
+                                    }`}>
+                                      {taskNotificationEmail ? '📧 Enabled' : '🔕 Disabled'}
+                                    </span>
+                                  </div>
+                                  <button
+                                    onClick={handleToggleTaskNotification}
+                                    className={`relative w-10 h-5 rounded-full transition-colors ${
+                                      taskNotificationEmail ? 'bg-blue-600' : 'bg-gray-600'
+                                    }`}
+                                  >
+                                    <div className={`absolute top-[2px] bg-white rounded-full h-4 w-4 transition-transform ${
+                                      taskNotificationEmail ? 'translate-x-[20px]' : 'translate-x-[2px]'
+                                    }`}></div>
+                                  </button>
+                                </div>
                               </div>
                             </div>
 

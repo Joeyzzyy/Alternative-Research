@@ -737,6 +737,21 @@ const deleteAlternativeResult = async (resultId) => {
   }
 };
 
+// 新增：更新通知偏好设置
+const updateNotificationPreferences = async (notificationData) => {
+  try {
+    const response = await apiClient.put('/customer/notification-preferences', {
+      channel: notificationData.channel,
+      enabled: notificationData.enabled,
+      notificationType: notificationData.notificationType
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Failed to update notification preferences:', error);
+    throw error;
+  }
+};
+
 apiClient.getCompetitorResearch = getCompetitorResearch;
 apiClient.login = login;
 apiClient.register = register;
@@ -788,5 +803,6 @@ apiClient.createBrandAssets = createBrandAssets;
 apiClient.getCustomerInfo = getCustomerInfo;
 apiClient.setWatermark = setWatermark;
 apiClient.deleteAlternativeResult = deleteAlternativeResult;
+apiClient.updateNotificationPreferences = updateNotificationPreferences;
 
 export default apiClient;
