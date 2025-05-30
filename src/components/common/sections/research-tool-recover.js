@@ -234,7 +234,7 @@ const ResearchToolRecover = ({ websiteId }) => {
         .replace(/^www\./, '')
         .split('/')[0];
       
-      if (!['abc.ai', 'altpage.ai'].includes(cleanDomain)) {
+      if (!['abc.ai', 'example.com', 'altpage.ai'].includes(cleanDomain)) {
         domains.push(cleanDomain);
       }
     }
