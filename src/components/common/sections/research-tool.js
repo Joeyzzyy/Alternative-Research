@@ -455,7 +455,7 @@ const ResearchTool = () => {
                 className="bg-slate-600 hover:bg-slate-500 text-white border-slate-700 hover:border-slate-600"
                 style={{ fontSize: '10px', padding: '0 8px', height: '32px' }}
               >
-                Preview
+                Preview This Page In New Tab
               </Button>
               <Button
                 type="primary"
@@ -3572,6 +3572,27 @@ const ResearchTool = () => {
                                   </div>
                                   <div className="flex items-center space-x-2 flex-shrink-0">
                                     <Button
+                                      type="default"
+                                      size="small"
+                                      icon={<ExportOutlined />}
+                                      onClick={() => window.open(browserTabs.find(tab => tab.id === activeTab)?.url, '_blank')}
+                                      style={{ fontSize: '10px', padding: '0 8px', height: '24px' }}
+                                      className={`
+                                        px-2 py-1 rounded text-xs font-semibold text-white shadow-sm transition duration-200 flex items-center gap-1
+                                        bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500
+                                        border border-cyan-500/50 hover:border-cyan-400
+                                        disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-600 disabled:to-gray-700
+                                        shadow-cyan-500/50 hover:shadow-cyan-400/60 shadow-lg hover:shadow-xl
+                                        animate-pulse hover:animate-none
+                                        ring-2 ring-cyan-500/30 hover:ring-cyan-400/50
+                                        relative overflow-hidden
+                                        before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent
+                                        before:translate-x-[-100%] hover:before:translate-x-[100%] before:transition-transform before:duration-700
+                                      `}
+                                    >
+                                      Preview This Page In New Tab
+                                    </Button>
+                                    <Button
                                       type="primary"
                                       size="small"
                                       icon={<EditOutlined />}
@@ -3586,16 +3607,6 @@ const ResearchTool = () => {
                                       style={{ fontSize: '10px', padding: '0 8px', height: '24px' }}
                                     >
                                       Edit
-                                    </Button>
-                                    <Button
-                                      type="default"
-                                      size="small"
-                                      icon={<ExportOutlined />}
-                                      onClick={() => window.open(browserTabs.find(tab => tab.id === activeTab)?.url, '_blank')}
-                                      className="bg-slate-600 hover:bg-slate-500 text-white border-slate-700 hover:border-slate-600"
-                                      style={{ fontSize: '10px', padding: '0 8px', height: '24px' }}
-                                    >
-                                      Preview
                                     </Button>
                                     <Button
                                       type="primary"

@@ -1038,38 +1038,23 @@ const HistoryCardList = () => {
                           {/* Action Buttons (现在会根据 selectedPreviewId 自动更新 currentItem) */}
                           <div className="flex items-center gap-2 flex-shrink-0">
                           <button
-                            onClick={() => {
-                              console.log('Delete button clicked, selectedPreviewId:', selectedPreviewId);
-                              if (selectedPreviewId) {
-                                console.log('Opening delete page confirmation modal');
-                                setDeletePageConfirm({ open: true, resultId: selectedPreviewId });
-                              } else {
-                                console.log('No selectedPreviewId, button should be disabled');
-                              }
-                            }}
-                              className={`
-                                px-2 py-1 rounded text-xs font-semibold text-white shadow-sm transition duration-200 flex items-center gap-1
-                                bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600
-                                border border-red-500/50 hover:border-red-400
-                                disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-600 disabled:to-gray-700
-                              `}
-                              title="Delete This Page"
-                              disabled={!selectedPreviewId || resultLoading}
-                            >
-                              <DeleteOutlined /> Delete Page
-                            </button>
-                            <button
                               onClick={() => { if (previewUrl) window.open(previewUrl, '_blank'); }}
                               className={`
                                 px-2 py-1 rounded text-xs font-semibold text-white shadow-sm transition duration-200 flex items-center gap-1
                                 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500
                                 border border-cyan-500/50 hover:border-cyan-400
                                 disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-600 disabled:to-gray-700
+                                shadow-cyan-500/50 hover:shadow-cyan-400/60 shadow-lg hover:shadow-xl
+                                animate-pulse hover:animate-none
+                                ring-2 ring-cyan-500/30 hover:ring-cyan-400/50
+                                relative overflow-hidden
+                                before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent
+                                before:translate-x-[-100%] hover:before:translate-x-[100%] before:transition-transform before:duration-700
                               `}
                               title="Preview Page in New Tab"
                               disabled={!selectedPreviewId || resultLoading || !previewUrl}
                             >
-                              <ExportOutlined /> Preview
+                              <ExportOutlined /> Preview This Page In New Tab
                             </button>
                             <button
                               onClick={() => { 
@@ -1102,10 +1087,29 @@ const HistoryCardList = () => {
                             >
                               <LinkOutlined /> Bind With Your Domain
                             </button>
+                            <button
+                            onClick={() => {
+                              console.log('Delete button clicked, selectedPreviewId:', selectedPreviewId);
+                              if (selectedPreviewId) {
+                                console.log('Opening delete page confirmation modal');
+                                setDeletePageConfirm({ open: true, resultId: selectedPreviewId });
+                              } else {
+                                console.log('No selectedPreviewId, button should be disabled');
+                              }
+                            }}
+                              className={`
+                                px-2 py-1 rounded text-xs font-semibold text-white shadow-sm transition duration-200 flex items-center gap-1
+                                bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600
+                                border border-red-500/50 hover:border-red-400
+                                disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-600 disabled:to-gray-700
+                              `}
+                              title="Delete This Page"
+                              disabled={!selectedPreviewId || resultLoading}
+                            >
+                              <DeleteOutlined /> Delete Page
+                            </button>
                           </div>
-                          {/* --- 结束修改：Header Bar --- */}
                         </div>
-
                         {/* Iframe Preview (key 确保在 selectedPreviewId 变化时刷新) */}
                         <div className="flex-1 overflow-hidden bg-slate-900">
                           <iframe
