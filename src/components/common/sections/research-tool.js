@@ -5,7 +5,6 @@ import { ArrowRightOutlined, InfoCircleOutlined, UserOutlined, LeftOutlined, Rig
 import apiClient from '../../../lib/api/index.js';
 import { EventSourcePolyfill } from 'event-source-polyfill';
 import MessageHandler from '../../../utils/MessageHandler';
-import HistoryCardList from './result-preview.js';
 import { useMediaQuery } from 'react-responsive';
 import BrandAssetsModal from './brand-assets';
 
@@ -2734,127 +2733,9 @@ const ResearchTool = () => {
       <div className={`w-full h-screen flex items-center justify-center relative bg-cover bg-center bg-no-repeat bg-gradient-to-br from-slate-900 via-slate-950 to-black overflow-hidden`}>
           <div className="absolute top-1/4 left-0 right-0 h-1/2 -translate-y-1/2 animate-shimmer pointer-events-none z-0"></div>
           {contextHolder}
-          {isUserLoggedIn && (
-            <>
-              {!isSidebarOpen && (
-                <div className="fixed top-20 left-4 z-50 flex items-center gap-2">
-                <button
-                  onClick={toggleSidebar}
-                  className="bg-slate-700 hover:bg-slate-600 text-white w-8 h-8 rounded-full flex items-center justify-center transition-colors shadow-md"
-                  title="Expand History"
-                  style={{ outline: 'none' }}
-                >
-                  {/* 两条杠靠左的SVG图标 */}
-                  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                    {/* 上面一条长，靠左 */}
-                    <rect x="2" y="7" width="12" height="2" rx="1" fill="currentColor" />
-                    {/* 下面一条短，靠左 */}
-                    <rect x="2" y="12" width="6" height="2" rx="1" fill="currentColor" />
-                  </svg>
-                </button>
-                <button
-                  onClick={toggleSidebar}
-                  className="text-sm font-medium text-slate-200 bg-slate-800/70 backdrop-blur-sm px-2.5 py-1 rounded-md shadow-sm border border-slate-600/40 hover:bg-slate-700/80 hover:text-white transition-all duration-200 cursor-pointer"
-                  title="Expand History"
-                  style={{ outline: 'none' }}
-                >
-                  My Task List
-                </button>
-              </div>
-              )}
-              {isSidebarOpen && (
-                <div
-                  ref={sidebarRef}
-                  className="fixed top-[72px] left-4 bottom-4 z-50 w-72 bg-slate-900/60 backdrop-blur-md rounded-lg shadow-xl border border-slate-700/50 flex flex-col transition-all duration-300 ease-in-out overflow-visible max-h-[80vh]" 
-                >
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleSidebar();
-                    }}
-                    className="absolute top-2 right-2 z-[51] bg-slate-700 hover:bg-slate-600 text-white w-8 h-8 rounded-full flex items-center justify-center transition-colors shadow-md"
-                    title="Collapse History"
-                    style={{ outline: 'none' }}
-                  >
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                      <rect x="2" y="7" width="12" height="2" rx="1" fill="currentColor" />
-                      <rect x="2" y="12" width="6" height="2" rx="1" fill="currentColor" />
-                    </svg>
-                  </button>
-                  <div
-                    className="absolute inset-0 flex items-center justify-center transition-opacity duration-200 ease-in-out pointer-events-none opacity-100"
-                    aria-hidden={!isSidebarOpen}
-                  >
-                    <span
-                      className="text-xs font-semibold text-slate-400"
-                      style={{
-                        writingMode: 'vertical-rl',
-                        textOrientation: 'mixed',
-                        transform: 'rotate(180deg)',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                    </span>
-                  </div>
-                  <div className="flex-1 overflow-y-auto transition-opacity duration-200 opacity-100 h-full">
-                    <HistoryCardList />
-                  </div>
-                </div>
-              )}
-            </>
-          )}
-          {/* === 结束修改侧边栏 === */}
-          <style jsx>{`
-            .vertical-text {
-              writing-mode: vertical-rl;
-              text-orientation: mixed;
-              transform: rotate(180deg);
-            }
-            @keyframes shimmer {
-              0% {
-                opacity: 0.6; /* 保持之前的设置 */
-                transform: translateX(-100%) rotate(-12deg);
-                /* 保持之前的柔和渐变 */
-                background: linear-gradient(90deg,
-                  transparent 0%,
-                  rgba(130, 100, 255, 0.05) 20%,
-                  rgba(255, 255, 255, 0.3) 50%,
-                  rgba(130, 100, 255, 0.05) 80%,
-                  transparent 100%
-                );
-              }
-              50% {
-                opacity: 0.8; /* 保持之前的设置 */
-              }
-              100% {
-                opacity: 0.6; /* 保持之前的设置 */
-                transform: translateX(100%) rotate(12deg);
-                /* 保持渐变一致 */
-                 background: linear-gradient(90deg,
-                  transparent 0%,
-                  rgba(130, 100, 255, 0.05) 20%,
-                  rgba(255, 255, 255, 0.3) 50%,
-                  rgba(130, 100, 255, 0.05) 80%,
-                  transparent 100%
-                );
-              }
-            }
-            .animate-shimmer {
-              animation: shimmer 7s infinite linear;
-              filter: blur(100px); /* 保持强模糊 */
-              transform: scale(1.1); /* ★★★ 恢复并设置缩放 ★★★ */
-              /* 保持之前的遮罩 */
-              mask-image: radial-gradient(ellipse at center, black 5%, transparent 75%);
-              -webkit-mask-image: radial-gradient(ellipse at center, black 5%, transparent 75%);
-            }
-          `}</style>
-
-        {/* Ensure content is above the effects - 保持原有布局不变 */}
         <div className={`relative z-10 w-full max-w-8xl px-8 py-12 initial-screen-content rounded-xl bg-transparent flex flex-row items-start gap-12`}>
-          {/* === 左侧栏 (恢复到之前的状态) === */}
-          <div className="w-1/2 flex flex-col"> {/* 设置左栏宽度并设为 flex 容器 */}
+          <div className="w-1/2 flex flex-col"> 
             <div className={`mb-8`}>
-              {/* --- 修改：改为 items-end 实现右对齐 --- */}
               <h1 className={`text-4xl font-bold mb-6 text-right`}>
                 <div className="relative inline-block"> {/* inline-block 使其宽度适应内容 */}
                   <span className="text-6xl font-bold bg-gradient-to-b from-white via-gray-200 to-gray-400 bg-clip-text text-transparent [text-shadow:0_0_10px_rgba(255,255,255,0.4)]">
@@ -2866,13 +2747,11 @@ const ResearchTool = () => {
                   </span>
                 </div>
               </h1>
-              {/* --- 段落保持右对齐 --- */}
               <p className="text-lg text-gray-300 mt-2 mb-8 text-right">
                 Own all your competitor's brand search traffic with AI-generated pages that outrank.
               </p>
             </div>
 
-            {/* 将表单和提示移到左栏 */}
             <div className="relative max-w-[44rem] ml-auto w-full"> {/* 父容器，定义了最大宽度 */}
               <form onSubmit={(e) => {
                 e.preventDefault();

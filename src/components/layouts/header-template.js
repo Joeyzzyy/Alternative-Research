@@ -6,6 +6,9 @@ import { Spin, message } from 'antd';
 import { useUser } from '../../contexts/UserContext';
 import LoginModal from '../common/sections/login-modal.js';
 import BrandAssetsModal from '../common/sections/brand-assets.js';
+import TodoSection from '../common/sections/todo-section';
+import PublishSettingsModal from '../common/sections/publish-setting-modal.js';
+import HistoryCardList from '../common/sections/result-preview';
 
 const animationStyles = `
   @keyframes fadeIn {
@@ -99,6 +102,10 @@ export default function Header() {
   const [isOneTapShown, setIsOneTapShown] = useState(false);
   const [removeWatermark, setRemoveWatermark] = useState(false);
   const [taskNotificationEmail, setTaskNotificationEmail] = useState(false);
+  const [publishModalOpen, setPublishModalOpen] = useState(false);
+  const [isPublishSettingsModalVisible, setIsPublishSettingsModalVisible] = useState(false);
+  const [customerId, setCustomerId] = useState(null);
+  const [isTaskListModalVisible, setIsTaskListModalVisible] = useState(false);
 
   const isLoggedInRef = useRef(isLoggedIn);
   useEffect(() => {
@@ -656,6 +663,28 @@ export default function Header() {
     }
   };
 
+  // 打开 publish modal 的函数
+  const handleOpenPublishModal = () => {
+    setIsPublishSettingsModalVisible(true);
+  };
+
+  // 在现有的 useEffect 中添加获取 customerId 的逻辑
+  useEffect(() => {
+    // 获取 customerId
+    const storedCustomerId = localStorage.getItem('alternativelyCustomerId');
+    setCustomerId(storedCustomerId);
+  }, []);
+
+  // 修改：打开任务列表弹窗的函数
+  const handleOpenTaskList = () => {
+    setIsTaskListModalVisible(true);
+  };
+
+  // 新增：关闭任务列表弹窗的函数
+  const handleCloseTaskList = () => {
+    setIsTaskListModalVisible(false);
+  };
+
   return (
     <>
       {/* 在页面顶部添加Google One Tap容器 */}
@@ -671,6 +700,7 @@ export default function Header() {
 
       {/* 在根元素渲染 contextHolder */}
       {contextHolder}
+
       <nav
         className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-slate-950 to-black border-b border-slate-800/50"
         style={{
@@ -703,24 +733,50 @@ export default function Header() {
 
         <div className="max-w-[1450px] mx-auto px-6 relative z-10">
           <div className="flex items-center justify-between h-[4.2rem]">
-            {/* Logo 添加光效 */}
-            <div className="flex-shrink-0 flex items-center h-full group">
-              <div className="flex items-center h-full py-2 relative cursor-default select-none">
-                <div className="relative z-10">
-                  <Image
-                    src="/images/alternatively-logo-tem.png"
-                    alt="Logo"
-                    width={120}
-                    height={30}
-                    className="object-contain transition-transform duration-300 group-hover:scale-105 mix-blend-lighten"
-                    style={{ width: 'auto', height: 'auto' }}
-                    quality={100}
-                    priority
-                  />
+            {/* Logo 和 Todo 容器 */}
+            <div className="flex items-center gap-4">
+              {/* Logo 添加光效 */}
+              <div className="flex-shrink-0 flex items-center h-full group">
+                <div className="flex items-center h-full py-2 relative cursor-default select-none">
+                  <div className="relative z-10">
+                    <Image
+                      src="/images/alternatively-logo-tem.png"
+                      alt="Logo"
+                      width={120}
+                      height={30}
+                      className="object-contain transition-transform duration-300 group-hover:scale-105 mix-blend-lighten"
+                      style={{ width: 'auto', height: 'auto' }}
+                      quality={100}
+                      priority
+                    />
+                  </div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/50 to-purple-500/50 opacity-70 group-hover:opacity-90 transition-opacity duration-300 rounded-full blur-[20px]"></div>
+                  <div className="absolute inset-0 animate-pulse-slow opacity-30 bg-gradient-to-r from-cyan-400/30 to-purple-400/30 blur-[30px]"></div>
+                  <div className="absolute inset-0 bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-200 opacity-30 mix-blend-overlay"></div>
                 </div>
-                <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/50 to-purple-500/50 opacity-70 group-hover:opacity-90 transition-opacity duration-300 rounded-full blur-[20px]"></div>
-                <div className="absolute inset-0 animate-pulse-slow opacity-30 bg-gradient-to-r from-cyan-400/30 to-purple-400/30 blur-[30px]"></div>
-                <div className="absolute inset-0 bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-200 opacity-30 mix-blend-overlay"></div>
+              </div>
+
+              {/* Todo Section - 收起状态时显示在这里，移动端隐藏 */}
+              <div className="hidden md:flex items-center gap-3">
+                <TodoSection 
+                  isInHeader={true} 
+                  onOpenPublishModal={handleOpenPublishModal}
+                  onOpenResultPreview={handleOpenTaskList}
+                />
+                
+                {/* 新增：My Task List 按钮 */}
+                {isLoggedIn && (
+                  <button
+                    onClick={handleOpenTaskList}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-slate-800/50 hover:bg-slate-700/60 border border-slate-700/50 hover:border-slate-600/70 rounded-lg transition-all duration-200 text-gray-300 hover:text-white text-sm font-medium backdrop-blur-sm"
+                    title="View My Task List"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                    </svg>
+                    Task History
+                  </button>
+                )}
               </div>
             </div>
 
@@ -758,18 +814,11 @@ export default function Header() {
                       <div className="text-sm">
                         Hi, {userEmail ? userEmail.split('@')[0] : 'User'}
                       </div>
-                      {/* 积分图标和数量 */}
-                      <div className="flex items-center">
-                        <div className="w-8 h-8 rounded-full bg-purple-500/30 flex items-center justify-center">
-                          <span className="text-sm font-medium">💎</span>
-                        </div>
-                        <span className="ml-1.5 text-sm font-medium">
-                          {userCreditsLoading ? (
-                            <Spin size="small" />
-                          ) : (
-                            `${(userCredits.pageGeneratorLimit - userCredits.pageGeneratorUsage) * 10}/${userCredits.pageGeneratorLimit * 10}`
-                          )}
-                        </span>
+                      <div
+                        className="flex items-center cursor-pointer hover:text-white transition-colors"
+                        onClick={handleCreditsTooltipClick}
+                      >
+                        <span className="mr-1.5">⚙️</span>
                       </div>
 
                       {/* 积分工具提示 */}
@@ -923,7 +972,7 @@ export default function Header() {
                               </div>
 
                               {/* 水印控制 */}
-                              <div className="bg-gray-800/30 p-3 rounded-lg border border-gray-600/30 mt-4">
+                              <div className="bg-gray-800/30 p-3 rounded-lg border border-gray-600/30 mt-4 mb-4">
                                 <div className="flex items-center mb-2">
                                   <svg className="w-4 h-4 text-orange-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
@@ -966,7 +1015,7 @@ export default function Header() {
                               </div>
 
                               {/* 新增：任务完成邮件通知控制 */}
-                              <div className="bg-gray-800/30 p-3 rounded-lg border border-gray-600/30 mb-4">
+                              <div className="bg-gray-800/30 p-3 rounded-lg border border-gray-600/30 mt-4 mb-4">
                                 <div className="flex items-center mb-2">
                                   <svg className="w-4 h-4 text-blue-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -1051,20 +1100,26 @@ export default function Header() {
                                   </svg>
                                   Get Credits
                                 </button>
+                                
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowCreditsTooltip(false);
+                                    handleLogout();
+                                  }}
+                                  className="w-full py-2.5 px-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white text-sm font-medium rounded-lg transition-all duration-300 flex items-center justify-center shadow-lg hover:shadow-red-500/25"
+                                >
+                                  <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                  </svg>
+                                  Log Out
+                                </button>
                               </div>
                             </div>
                           </div>
                         </div>
                       )}
                     </div>
-
-                    {/* 登出按钮 */}
-                    <button
-                      onClick={handleLogout}
-                      className="px-4 py-2 rounded-lg bg-gradient-to-r from-cyan-600/80 to-blue-600/80 text-white hover:from-cyan-500 hover:to-blue-500 transition-all duration-300 shadow-lg hover:shadow-cyan-500/20"
-                    >
-                      Log Out
-                    </button>
                   </div>
                 ) : (
                   <div className="flex items-center space-x-4">
@@ -1165,20 +1220,8 @@ export default function Header() {
                       <span>Hi, {userEmail ? userEmail.split('@')[0] : 'User'}</span>
                       <div
                         className="flex items-center cursor-pointer hover:text-white transition-colors"
-                        onClick={() => {
-                          // 在移动端点击积分也跳转到 pricing
-                          window.location.href = "/#pricing";
-                          toggleMobileMenu(); // 关闭菜单
-                        }}
+                        onClick={handleCreditsTooltipClick}
                       >
-                        <span className="mr-1.5">💎</span>
-                        <span>
-                          {userCreditsLoading ? (
-                            <Spin size="small" />
-                          ) : (
-                            `${(userCredits.pageGeneratorLimit - userCredits.pageGeneratorUsage) * 10}/${userCredits.pageGeneratorLimit * 10}`
-                          )} Credits
-                        </span>
                       </div>
                     </div>
                     {/* 登出按钮 */}
@@ -1303,32 +1346,25 @@ export default function Header() {
         />
       )}
 
+      {/* 修改：参考 result-preview 的 modal 渲染方式 */}
+      {isPublishSettingsModalVisible && customerId && (
+        <PublishSettingsModal
+          open={isPublishSettingsModalVisible}
+          onClose={() => setIsPublishSettingsModalVisible(false)}
+          apiClient={apiClient}
+          messageApi={messageApi}
+          currentCustomerId={customerId}
+          onPublishSuccess={() => {
+            setIsPublishSettingsModalVisible(false);
+          }}
+        />
+      )}
+
+      {isTaskListModalVisible && (
+        <HistoryCardList onClose={handleCloseTaskList} />
+      )}
+
       <style>{animationStyles}</style>
-      <style jsx global>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: rgba(15, 23, 42, 0.3);
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background-color: rgba(100, 116, 139, 0.5);
-          border-radius: 20px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background-color: rgba(100, 116, 139, 0.7);
-        }
-        
-        @keyframes pulse-border {
-          0% { border-color: rgba(59, 130, 246, 0.3); }
-          50% { border-color: rgba(59, 130, 246, 0.6); }
-          100% { border-color: rgba(59, 130, 246, 0.3); }
-        }
-        
-        .active-preview {
-          animation: pulse-border 2s infinite;
-        }
-      `}</style>
     </>
   );
 }

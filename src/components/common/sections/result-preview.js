@@ -1,11 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import apiClient from '../../../lib/api/index.js';
 import { Modal, Button, Spin, message, Tooltip, Radio } from 'antd';
-import { DeleteOutlined, ExclamationCircleOutlined, ReloadOutlined, ExportOutlined, LeftOutlined, CopyOutlined, RightOutlined, CloseOutlined, ClearOutlined, EditOutlined, EyeOutlined, LinkOutlined } from '@ant-design/icons';
-import HtmlPreview from './page-edit';
+import { DeleteOutlined, ExclamationCircleOutlined, ReloadOutlined, ExportOutlined, CloseOutlined, ClearOutlined, EditOutlined, SettingOutlined, ClockCircleOutlined, CheckCircleOutlined, WarningOutlined } from '@ant-design/icons';
 import PublishSettingsModal from './publish-setting-modal';
 
-const HistoryCardList = () => {
+const HistoryCardList = ({ onClose }) => {
   const [historyList, setHistoryList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -30,8 +29,19 @@ const HistoryCardList = () => {
   const currentItem = resultDetail?.data?.find(item => item.resultId === selectedPreviewId) || {};
   const [retryConfirm, setRetryConfirm] = useState({ open: false, website: null }); // 新增：重试确认弹窗状态
   const [deletePageConfirm, setDeletePageConfirm] = useState({ open: false, resultId: null });
+  const [slugEditing, setSlugEditing] = useState(false);
+  const [slugSaving, setSlugSaving] = useState(false);
+  const [availableDomains, setAvailableDomains] = useState([]);
+  const [domainsLoading, setDomainsLoading] = useState(false);
+  const [publishingToUrl, setPublishingToUrl] = useState('');
+  const [domainEditing, setDomainEditing] = useState(false);
+  const [selectedDomainInput, setSelectedDomainInput] = useState('');
+  const [unpublishConfirm, setUnpublishConfirm] = useState({ open: false, resultId: null });
+  const [deployMode, setDeployMode] = useState('subdomain'); // 新增：部署模式状态
+  const [subfolderPath, setSubfolderPath] = useState(''); // 新增：subfolder 路径状态（不保存，仅用于输入）
+  const [rootDomain, setRootDomain] = useState(''); // 新增：根域名状态
 
-  // === 新增：统一样式的确认弹窗 ===
+  // === 修改：统一样式的确认弹窗，降低 zIndex ===
   const confirmationModalStyles = {
     mask: {
       backdropFilter: 'blur(5px)',
@@ -46,11 +56,9 @@ const HistoryCardList = () => {
     // body 样式由 Tailwind class 控制，默认 padding 即可
   };
 
-  // === 修改：扩展函数用于检查URL参数并执行相应操作 ===
   const checkUrlAndOpenModal = (list) => {
     const urlParams = new URLSearchParams(window.location.search);
     const shouldOpenModal = urlParams.get('openPreviewModal') === 'true';
-    const actionType = urlParams.get('action');
     
     if (shouldOpenModal && list && list.length > 0) {
       const firstValidItem = list.find(item => item.generatorStatus === 'finished') || list[0];
@@ -93,11 +101,22 @@ const HistoryCardList = () => {
         list = res.list;
       }
 
-      // === 修改：直接设置历史列表，不再分批查询 status，也不再过滤 init 状态 ===
       setHistoryList(list);
+      
+      if (list.length === 0) {
+        // 修改：即使没有任务也要显示弹窗，设置一个空的 selectedItem
+        setSelectedItem({ isEmpty: true });
+      } else {
+        const firstItem = list[0];
+        await handleCardClick(firstItem);
+      }
+      
       checkUrlAndOpenModal(list);
     } catch (e) {
       setHistoryList([]);
+      // 修改：出错时也显示弹窗
+      setSelectedItem({ isEmpty: true });
+      messageApi.error('Failed to load tasks. Please try again.');
     }
     setLoading(false);
   };
@@ -110,34 +129,10 @@ const HistoryCardList = () => {
       return;
     }
     setHasToken(true);
-    // 新增：获取 Customer ID
     const customerId = localStorage.getItem('alternativelyCustomerId');
     setCurrentCustomerId(customerId);
 
-    fetchHistory();
-    // === 新增：每隔1分钟自动刷新任务列表 ===
-    const intervalId = setInterval(() => {
-      fetchHistory();
-    }, 60000); // 60,000 毫秒 = 1分钟
-
-    // 清理定时器
-    return () => clearInterval(intervalId);
-  }, []);
-
-  // === 新增：监听登录成功事件，自动刷新历史数据 ===
-  useEffect(() => {
-    const handleLoginSuccess = () => {
-      // 检查 token 是否存在
-      const token = localStorage.getItem('alternativelyAccessToken');
-      if (token) {
-        setHasToken(true);
-        fetchHistory();
-      }
-    };
-    window.addEventListener('alternativelyLoginSuccess', handleLoginSuccess);
-    return () => {
-      window.removeEventListener('alternativelyLoginSuccess', handleLoginSuccess);
-    };
+    fetchHistory(); // 只在组件初始化时获取一次
   }, []);
 
   // 删除历史记录
@@ -215,34 +210,12 @@ const HistoryCardList = () => {
     setIsClearingAll(false);
   };
 
-  // 暗色+浅色+低透明度卡片背景
-  const cardColors = [
-    'rgba(30, 41, 59, 0.7)',   // dark blue-gray
-    'rgba(71, 85, 105, 0.6)',  // slate
-    'rgba(203, 213, 225, 0.5)',// light slate
-    'rgba(255, 255, 255, 0.4)',// white low opacity
-    'rgba(100, 116, 139, 0.5)' // blue-gray
-  ];
-
   // 点击卡片时，默认选中第一个 resultId
   const handleCardClick = async (item, callback) => {
     
     if (item.generatorStatus === 'failed') {
       setFailedModal({ open: true, id: item.websiteId });
       return;
-    }
-    
-    if (item.generatorStatus === 'processing') {
-      // === 修改开始：触发recover模式，参考layout的实现 ===
-      // 构建带有taskId和status参数的URL
-      const currentUrl = new URL(window.location);
-      currentUrl.searchParams.set('taskId', item.websiteId);
-      currentUrl.searchParams.set('status', 'processing');
-      
-      // 更新URL并刷新页面以触发recover模式
-      window.location.href = currentUrl.toString();
-      return;
-      // === 修改结束 ===
     }
     
     setSelectedItem(item);
@@ -283,7 +256,11 @@ const HistoryCardList = () => {
     setSelectedItem(null);
     setResultDetail(null);
     setSelectedPreviewId(null);
-    setIsSidebarVisible(true); // 新增：关闭弹窗时重置侧边栏状态
+    setIsSidebarVisible(true);
+    // 调用外部传入的 onClose 函数而不是直接关闭
+    if (onClose) {
+      onClose();
+    }
   };
 
   useEffect(() => {
@@ -331,21 +308,20 @@ const HistoryCardList = () => {
   // === 新增：函数用于渲染任务状态标签 ===
   const renderStatusBadge = (status) => {
     let statusColor = "text-blue-400 bg-blue-900/50 border-blue-700";
-    let statusText = "Processing";
+    let statusText = "processing";
     if (status === "finished") {
       statusColor = "text-green-400 bg-green-900/50 border-green-700";
-      statusText = "Finished";
+      statusText = "finished";
     } else if (status === "failed") {
       statusColor = "text-red-400 bg-red-900/50 border-red-700";
-      statusText = "Failed";
+      statusText = "failed";
     }
     return (
-      <span className={`px-2 py-0.5 rounded-full text-xxs font-bold border ${statusColor}`}>
+      <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-bold border ${statusColor}`}>
         {statusText}
       </span>
     );
   };
-
 
   // === 新增：发布成功后的回调函数 ===
   const handlePublishSuccess = async () => {
@@ -377,13 +353,6 @@ const HistoryCardList = () => {
     }
     // 可选：也可以刷新整个列表，如果发布状态影响列表显示
     // await fetchHistory();
-  };
-
-  // === 新增：域名更改后的回调函数 ===
-  const handleDomainChange = async () => {
-    messageApi.info('Domain settings changed, refreshing product info...');
-    // 重新获取产品信息，这会更新传递给 Modal 的 currentProductInfo
-    // await fetchProductInfo(); // 删除：不再调用获取产品信息
   };
 
   // 新增：使用 useEffect 监听 URL 参数和选中状态的变化
@@ -447,706 +416,1426 @@ const HistoryCardList = () => {
     }
   };
 
+  // 添加保存 slug 的函数
+  const handleSaveSlug = async () => {
+    setSlugSaving(true);
+    try {
+      if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slugInput)) {
+        messageApi.error('Slug can only contain lowercase letters, numbers, and hyphens, and cannot start or end with a hyphen.');
+        setSlugSaving(false);
+        return;
+      }
+      const resp = await apiClient.updateAlternativeSlug(selectedPreviewId, slugInput);
+      if (resp?.code === 1071) {
+        messageApi.error('Slug already exists. Please choose a different slug.');
+      } else if (resp?.code === 200) {
+        messageApi.success('Slug updated successfully');
+        setSlugEditing(false);
+        // 重新获取数据以更新显示
+        if (selectedItem?.websiteId) {
+          const res = await apiClient.getAlternativeWebsiteResultList(selectedItem.websiteId);
+          setResultDetail(res);
+        }
+      } else {
+        messageApi.error(resp?.message || 'Failed to update slug');
+      }
+    } catch (e) {
+      messageApi.error('Failed to update slug');
+    }
+    setSlugSaving(false);
+  };
+
+  // 添加获取可用域名的函数
+  const loadAvailableDomains = async () => {
+    if (!currentCustomerId) return;
+    
+    setDomainsLoading(true);
+    try {
+      // 1. 获取用户的根域名 - 修改：使用与 publish-setting-modal 相同的 API
+      const domainRes = await apiClient.getDomain(currentCustomerId);
+      
+      // 修改：根据新的响应结构判断域名是否已绑定并验证成功
+      let currentRootDomain = null;
+      if (domainRes?.code === 200 && domainRes.data && domainRes.data.verifiedStatus === 'SUCCESS' && domainRes.data.domainName) {
+        currentRootDomain = domainRes.data.domainName;
+        console.log('[loadAvailableDomains] Root domain fetched successfully:', currentRootDomain);
+      } else {
+        console.log('[loadAvailableDomains] No verified root domain found. Response:', domainRes);
+        setAvailableDomains([]);
+        return;
+      }
+
+      // 2. 获取 Vercel 项目下的所有域名
+      const projectId = 'prj_wzQuo0EarALY8MsjNvPotb4wYO8S';
+      const domainResp = await apiClient.getVercelDomainInfo(projectId);
+      const allDomains = domainResp?.domains || [];
+      console.log('[loadAvailableDomains] Total domains from Vercel:', allDomains.length);
+
+      // 3. 修改：使用与 publish-setting-modal 相同的过滤逻辑
+      const relevantDomains = allDomains.filter(domain => {
+        const isVerified = domain.verified;
+        const isNotVercelApp = !domain.name.includes('vercel.app');
+        const isRootOrSubdomain = domain.name === currentRootDomain || domain.name.endsWith(`.${currentRootDomain}`);
+        
+        console.log(`[loadAvailableDomains] Checking domain: ${domain.name}`, {
+          verified: isVerified,
+          notVercelApp: isNotVercelApp,
+          isRootOrSubdomain: isRootOrSubdomain
+        });
+        
+        return isVerified && isNotVercelApp && isRootOrSubdomain;
+      });
+      
+      console.log('[loadAvailableDomains] Relevant domains after initial filter:', relevantDomains.map(d => d.name));
+
+      // 4. 修改：使用更宽松的配置检查逻辑
+      const verifiedDomainsPromises = relevantDomains.map(async domain => {
+        try {
+          console.log(`[loadAvailableDomains] Getting config for domain: ${domain.name}`);
+          const config = await apiClient.getVercelDomainConfig(domain.name);
+          console.log(`[loadAvailableDomains] Config for ${domain.name}:`, config);
+          
+          const isNotMisconfigured = !config?.misconfigured;
+          console.log(`[loadAvailableDomains] Domain ${domain.name} misconfigured: ${config?.misconfigured}, will include: ${isNotMisconfigured}`);
+          
+          return isNotMisconfigured ? domain.name : null;
+        } catch (error) {
+          console.warn(`[loadAvailableDomains] Could not get config for ${domain.name}, excluding from verified list. Error:`, error);
+          return null;
+        }
+      });
+
+      const verifiedDomainsList = (await Promise.all(verifiedDomainsPromises)).filter(Boolean);
+      console.log('[loadAvailableDomains] Final verified domains list:', verifiedDomainsList);
+      
+      // 5. 过滤掉根域名，只保留子域名
+      const selectableSubdomains = verifiedDomainsList.filter(d => d !== currentRootDomain);
+      console.log('[loadAvailableDomains] Selectable subdomains (excluding root):', selectableSubdomains);
+      
+      setAvailableDomains(selectableSubdomains);
+    } catch (error) {
+      console.error('Failed to load available domains:', error);
+      setAvailableDomains([]);
+    } finally {
+      setDomainsLoading(false);
+    }
+  };
+
+  // 添加发布到指定域名的函数
+  const handlePublishToDomain = async (domainUrl) => {
+    if (!selectedPreviewId || !slugInput.trim()) {
+      messageApi.error('Please ensure page is selected and slug is set');
+      return;
+    }
+
+    setPublishingToUrl(domainUrl);
+    try {
+      const publishUrl = `https://${domainUrl}`;
+      const response = await apiClient.updateAlternativePublishStatus(
+        selectedPreviewId,
+        'publish',
+        publishUrl,
+        slugInput
+      );
+
+      if (response?.code === 200) {
+        messageApi.success(`Page published successfully to ${domainUrl}`);
+        
+        // 重新获取数据以更新显示
+        if (selectedItem?.websiteId) {
+          const res = await apiClient.getAlternativeWebsiteResultList(selectedItem.websiteId);
+          setResultDetail(res);
+        }
+      } else {
+        messageApi.error(response?.message || 'Failed to publish page');
+      }
+    } catch (error) {
+      console.error('Publish error:', error);
+      messageApi.error('Failed to publish page');
+    } finally {
+      setPublishingToUrl('');
+    }
+  };
+
+  // 修改 handleUnpublish 函数
+  const handleUnpublish = async () => {
+    if (!selectedPreviewId) return;
+    
+    setPublishingToUrl('unpublishing');
+    try {
+      const response = await apiClient.updateAlternativePublishStatus(
+        selectedPreviewId,
+        'unpublish',
+        '',
+        ''
+      );
+
+      if (response?.code === 200) {
+        messageApi.success('Page unpublished successfully');
+        
+        // 重新获取数据以更新显示
+        if (selectedItem?.websiteId) {
+          const res = await apiClient.getAlternativeWebsiteResultList(selectedItem.websiteId);
+          setResultDetail(res);
+        }
+      } else {
+        messageApi.error(response?.message || 'Failed to unpublish page');
+      }
+    } catch (error) {
+      console.error('Unpublish error:', error);
+      messageApi.error('Failed to unpublish page');
+    } finally {
+      setPublishingToUrl('');
+      setUnpublishConfirm({ open: false, resultId: null });
+    }
+  };
+
+  // 修改 useEffect，在打开弹窗时加载域名
+  useEffect(() => {
+    if (!!selectedItem && currentCustomerId) {
+      loadAvailableDomains();
+      loadRootDomain(); // 新增：加载根域名
+    }
+  }, [selectedItem, currentCustomerId]);
+
+  // 添加保存域名选择的函数
+  const handleSaveDomainSelection = async () => {
+    if (!selectedPreviewId || !slugInput.trim() || !selectedDomainInput) {
+      messageApi.error('Please ensure page is selected, slug is set, and domain is chosen');
+      return;
+    }
+
+    setPublishingToUrl('updating-domain');
+    try {
+      const publishUrl = `https://${selectedDomainInput}`;
+      const response = await apiClient.updateAlternativePublishStatus(
+        selectedPreviewId,
+        'publish',
+        publishUrl,
+        slugInput
+      );
+
+      if (response?.code === 200) {
+        messageApi.success(`Domain updated successfully to ${selectedDomainInput}`);
+        setDomainEditing(false);
+        
+        // 重新获取数据以更新显示
+        if (selectedItem?.websiteId) {
+          const res = await apiClient.getAlternativeWebsiteResultList(selectedItem.websiteId);
+          setResultDetail(res);
+        }
+      } else {
+        messageApi.error(response?.message || 'Failed to update domain');
+      }
+    } catch (error) {
+      console.error('Domain update error:', error);
+      messageApi.error('Failed to update domain');
+    } finally {
+      setPublishingToUrl('');
+    }
+  };
+
+  // 新增：从 URL 中解析 subfolder path 的函数
+  const parseSubfolderFromUrl = (siteUrl, slug) => {
+    if (!siteUrl || !slug) return '';
+    
+    try {
+      const url = new URL(siteUrl);
+      const pathname = url.pathname;
+      
+      // 移除开头和结尾的斜杠
+      const cleanPath = pathname.replace(/^\/+|\/+$/g, '');
+      
+      // 如果路径为空，说明没有 subfolder
+      if (!cleanPath) return '';
+      
+      // 如果路径就是 slug，说明没有 subfolder
+      if (cleanPath === slug) return '';
+      
+      // 如果路径以 slug 结尾，提取前面的部分作为 subfolder
+      if (cleanPath.endsWith(`/${slug}`)) {
+        return cleanPath.substring(0, cleanPath.length - slug.length - 1);
+      }
+      
+      // 其他情况，返回整个路径作为 subfolder（可能是特殊情况）
+      return cleanPath;
+    } catch (error) {
+      console.error('Error parsing subfolder from URL:', error);
+      return '';
+    }
+  };
+
+  // 修改：在选中项变化时初始化部署模式和 subfolder path
+  useEffect(() => {
+    if (currentItem?.siteUrl) {
+      const domain = currentItem.siteUrl.replace(/^https?:\/\//, '');
+      setSelectedDomainInput(domain);
+      
+      // 新增：检测是否为 subfolder 模式并回填路径
+      if (rootDomain && currentItem.siteUrl.includes(rootDomain)) {
+        // 如果 siteUrl 包含根域名，可能是 subfolder 模式
+        const extractedSubfolder = parseSubfolderFromUrl(currentItem.siteUrl, currentItem.slug);
+        if (extractedSubfolder) {
+          setDeployMode('subfolder');
+          setSubfolderPath(extractedSubfolder);
+          console.log('Detected subfolder mode, extracted path:', extractedSubfolder);
+        } else {
+          // 如果没有 subfolder，可能是根域名直接发布，也设为 subfolder 模式但路径为空
+          // 或者保持 subdomain 模式，这里需要根据实际业务逻辑决定
+        }
+      }
+    }
+    
+    // 如果弹窗已打开且有 customerId，确保域名列表已加载
+    if (open && currentCustomerId && availableDomains.length === 0 && !domainsLoading) {
+      loadAvailableDomains();
+    }
+  }, [currentItem, open, currentCustomerId, rootDomain]); // 新增：依赖 rootDomain
+
+  // 新增：当根域名加载完成后，重新检查当前项的部署模式
+  useEffect(() => {
+    if (rootDomain && currentItem?.siteUrl && currentItem?.slug) {
+      // 检查当前 siteUrl 是否使用了根域名
+      const url = new URL(currentItem.siteUrl);
+      const hostname = url.hostname;
+      
+      if (hostname === rootDomain) {
+        // 如果 hostname 就是根域名，说明是 subfolder 模式
+        const extractedSubfolder = parseSubfolderFromUrl(currentItem.siteUrl, currentItem.slug);
+        setDeployMode('subfolder');
+        setSubfolderPath(extractedSubfolder || '');
+        console.log('Root domain match detected, setting subfolder mode. Path:', extractedSubfolder);
+      } else if (hostname.endsWith(`.${rootDomain}`)) {
+        // 如果是子域名，保持 subdomain 模式
+        setDeployMode('subdomain');
+        setSubfolderPath('');
+        console.log('Subdomain detected, keeping subdomain mode');
+      }
+    }
+  }, [rootDomain, currentItem]);
+
+  // 修改域名编辑的处理函数
+  const handleStartDomainEditing = () => {
+    setDomainEditing(true);
+    // 进入编辑模式时加载可用域名
+    loadAvailableDomains();
+  };
+
+  // 新增：获取根域名的函数
+  const loadRootDomain = async () => {
+    if (!currentCustomerId) return;
+    
+    try {
+      const domainRes = await apiClient.getDomain(currentCustomerId);
+      if (domainRes?.code === 200 && domainRes.data && domainRes.data.verifiedStatus === 'SUCCESS' && domainRes.data.domainName) {
+        setRootDomain(domainRes.data.domainName);
+      } else {
+        setRootDomain('');
+      }
+    } catch (error) {
+      console.error('Failed to load root domain:', error);
+      setRootDomain('');
+    }
+  };
+
+  // 新增：subfolder 模式发布函数
+  const handlePublishToSubfolder = async () => {
+    if (!selectedPreviewId || !slugInput.trim() || !subfolderPath.trim() || !rootDomain) {
+      messageApi.error('Please ensure page is selected, slug is set, subfolder path is entered, and root domain is available');
+      return;
+    }
+
+    setPublishingToUrl('subfolder-publishing');
+    try {
+      // 构建完整的发布 URL：rootDomain/subfolderPath/slug
+      const publishUrl = `https://${rootDomain}/${subfolderPath}`;
+      
+      const response = await apiClient.updateAlternativePublishStatus(
+        selectedPreviewId,
+        'publish',
+        publishUrl,
+        slugInput
+      );
+
+      if (response?.code === 200) {
+        messageApi.success(`Page published successfully to ${rootDomain}/${subfolderPath}/${slugInput}`);
+        
+        // 重新获取数据以更新显示
+        if (selectedItem?.websiteId) {
+          const res = await apiClient.getAlternativeWebsiteResultList(selectedItem.websiteId);
+          setResultDetail(res);
+        }
+      } else {
+        messageApi.error(response?.message || 'Failed to publish page');
+      }
+    } catch (error) {
+      console.error('Subfolder publish error:', error);
+      messageApi.error('Failed to publish page');
+    } finally {
+      setPublishingToUrl('');
+    }
+  };
+
+  // 新增：subfolder 模式取消发布函数
+  const handleUnpublishFromSubfolder = async () => {
+    if (!selectedPreviewId) return;
+    
+    setPublishingToUrl('subfolder-unpublishing');
+    try {
+      const response = await apiClient.updateAlternativePublishStatus(
+        selectedPreviewId,
+        'unpublish',
+        '',
+        ''
+      );
+
+      if (response?.code === 200) {
+        messageApi.success('Page unpublished successfully');
+        
+        // 重新获取数据以更新显示
+        if (selectedItem?.websiteId) {
+          const res = await apiClient.getAlternativeWebsiteResultList(selectedItem.websiteId);
+          setResultDetail(res);
+        }
+      } else {
+        messageApi.error(response?.message || 'Failed to unpublish page');
+      }
+    } catch (error) {
+      console.error('Subfolder unpublish error:', error);
+      messageApi.error('Failed to unpublish page');
+    } finally {
+      setPublishingToUrl('');
+    }
+  };
+
   if (!hasToken) {
-    return null;
+    return (
+      <div className="h-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-black text-white">
+        <div className="text-center">
+          <div className="text-6xl mb-4">🔐</div>
+          <h3 className="text-xl font-semibold mb-2">Please Login</h3>
+          <p className="text-gray-400">You need to login to view your task history</p>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div id="result-preview-section" className="h-full flex flex-col from-slate-950 via-slate-900 to-black text-white relative overflow-hidden">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_#22d3ee20_0%,_transparent_50%)] opacity-70 pointer-events-none"></div>
-      <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-purple-600/10 rounded-full filter blur-3xl opacity-40 animate-pulse pointer-events-none"></div>
-      <div className="absolute bottom-1/4 right-1/4 w-72 h-72 bg-cyan-600/10 rounded-full filter blur-3xl opacity-40 animate-pulse pointer-events-none"></div>
-      <div className="relative z-10 w-full flex flex-col">
-        {contextHolder}
-        <div className="w-full max-w-7xl px-4 mt-4 mb-2 flex justify-center items-center mx-auto">
-          <div
-            className="text-base font-semibold tracking-wide text-transparent bg-clip-text mr-3"
-            style={{
-              backgroundImage: 'linear-gradient(90deg, #38bdf8 0%, #a78bfa 100%)'
+      {contextHolder}
+      <Modal
+        open={deleteConfirm.open}
+        onCancel={() => setDeleteConfirm({ open: false, id: null })}
+        footer={[
+          <Button
+            key="delete"
+            type="primary"
+            danger
+            loading={deletingId === deleteConfirm.id}
+            onClick={async () => {
+              const shouldCloseModal = !!selectedItem && selectedItem.websiteId === deleteConfirm.id;
+              await handleDelete(deleteConfirm.id, shouldCloseModal);
+              setDeleteConfirm({ open: false, id: null });
             }}
           >
-            My Tasks
+            Delete
+          </Button>,
+          <Button key="cancel" onClick={() => setDeleteConfirm({ open: false, id: null })} className="ant-btn-modal-cancel-dark">
+            Cancel
+          </Button>
+        ]}
+        centered
+        title={null}
+        zIndex={1050} // 修改：从 10100 降低到 1050
+        styles={confirmationModalStyles}
+      >
+        <div className="flex flex-col items-center justify-center py-6">
+          <ExclamationCircleOutlined style={{ fontSize: 40, color: '#f87171' }} />
+          <div className="mt-4 text-lg font-semibold text-red-400">Are you sure you want to delete this task, this action will remove all the pages under this task?</div>
+          <div className="mt-2 text-slate-300 text-center">
+            This action cannot be undone.
           </div>
-          {/* 刷新按钮 */}
-          <button
-            className="flex items-center justify-center bg-slate-800/80 hover:bg-slate-700/80 rounded-full p-2 transition border border-slate-700 mr-2"
-            style={{ width: 32, height: 32 }}
-            onClick={fetchHistory}
-            disabled={loading || isClearingAll}
-            title="Refresh"
-          >
-            {loading ? (
-              <Spin size="small" />
-            ) : (
-              <ReloadOutlined style={{ fontSize: 18, color: '#38bdf8' }} />
-            )}
-          </button>
-          {/* === 新增：全部清除按钮 === */}
-          <button
-            className="flex items-center justify-center bg-red-800/70 hover:bg-red-700/80 rounded-full p-2 transition border border-red-700 mr-2"
-            style={{ width: 32, height: 32 }}
-            onClick={() => setClearAllConfirmOpen(true)}
-            disabled={loading || isClearingAll || historyList.length === 0}
-            title="Clear All"
-          >
-            {isClearingAll ? (
-              <Spin size="small" />
-            ) : (
-              <ClearOutlined style={{ fontSize: 18, color: '#fca5a5' }} />
-            )}
-          </button>
         </div>
-        <div
-          className={`
-            w-full max-w-4xl px-4 py-2 relative mx-auto
-            transition-opacity duration-300 ease-in-out opacity-100
-          `}
-        >
-          <div
-            className="overflow-y-auto"
-            ref={scrollRef}
-            style={{
-              scrollBehavior: 'smooth',
-              maxHeight: 'calc(100vh - 180px)'
+      </Modal>
+      {/* Clear All confirmation modal */}
+      <Modal
+        open={clearAllConfirmOpen}
+        onCancel={() => setClearAllConfirmOpen(false)}
+        footer={[
+          <Button
+            key="confirm"
+            type="primary"
+            danger
+            loading={isClearingAll}
+            onClick={executeClearAll}
+          >
+            Confirm Delete All
+          </Button>,
+          <Button key="cancel" onClick={() => setClearAllConfirmOpen(false)} disabled={isClearingAll} className="ant-btn-modal-cancel-dark">
+            Cancel
+          </Button>
+        ]}
+        centered
+        title={null}
+        closable={!isClearingAll}
+        maskClosable={!isClearingAll}
+        zIndex={1050} // 修改：从 10100 降低到 1050
+        styles={confirmationModalStyles}
+      >
+        <div className="flex flex-col items-center justify-center py-6">
+          <ExclamationCircleOutlined style={{ fontSize: 40, color: '#f87171' }} />
+          <div className="mt-4 text-lg font-semibold text-red-400">Are you sure you want to delete ALL records?</div>
+          <div className="mt-2 text-slate-300 text-center">
+            This action cannot be undone. All history items will be permanently removed.
+          </div>
+        </div>
+      </Modal>
+      {/* failed status modal */}
+      <Modal
+        open={failedModal.open}
+        onCancel={() => setFailedModal({ open: false, id: null })}
+        footer={[
+          <Button
+            key="delete"
+            type="primary"
+            danger
+            onClick={() => {
+              handleDelete(failedModal.id);
+              setFailedModal({ open: false, id: null });
             }}
           >
-            <div className="space-y-3 py-2">
-              {loading ? (
-                <div className="flex items-center justify-center w-full h-[120px]">
-                  <Spin />
-                </div>
-              ) : historyList.length === 0 ? (
-                <div className="flex items-center justify-center w-full text-gray-400 text-lg h-[120px]">
-                  No history available
-                </div>
-              ) : (
-                historyList.map((item, idx) => {
-                  // 状态颜色
-                  let statusColor = "text-blue-400";
-                  let statusText = "Processing";
-                  if (item.generatorStatus === "finished") {
-                    statusColor = "text-green-400";
-                    statusText = "Finished";
-                  } else if (item.generatorStatus === "failed") {
-                    statusColor = "text-red-400";
-                    statusText = "Failed";
-                  }
-                  return (
-                    <div
-                      key={item.websiteId}
-                      className={`
-                        group relative rounded-lg bg-white/5 hover:bg-white/10 transition
-                        shadow-md p-1.5 flex flex-col items-start justify-between
-                        min-h-[48px] w-full max-w-md mx-auto
-                        border border-white/10 hover:border-primary-500
-                        cursor-pointer
-                        pl-2 pr-2
-                      `}
-                      style={{paddingTop: 6, paddingBottom: 6}} // 保持紧凑
-                      onClick={() => handleCardClick(item)}
-                    >
-                      <div className="w-full flex flex-col items-start">
-                        <div className="flex w-full justify-between items-center mb-0.5">
-                          <div className="font-semibold text-[10px] text-gray-300">
-                            Target Website
-                          </div>
-                        </div>
-                        <div className="font-semibold text-xs text-white mb-0.5 truncate w-full text-left">
-                          {item.website}
-                        </div>
-                        <div className="mb-0.5">
-                          <span className={`text-[10px] font-bold ${statusColor}`}>{statusText}</span>
-                        </div>
-                        <div className="flex w-full justify-between items-center text-[10px] text-gray-400 mb-0.5">
-                          <span>ID: <span className="text-gray-300 font-mono">{item.websiteId}</span></span>
-                          {item.created_at && (
-                            <span>Created: {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                          )}
-                        </div>
-                        <div className="flex w-full justify-between items-center text-[10px] text-gray-500 mb-0.5">
-                          <span>Start: {item.generatedStart ? new Date(item.generatedStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}</span>
-                          <span>End: {item.generatedEnd ? new Date(item.generatedEnd).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}</span>
-                        </div>
-                        {item.generatorStatus === 'finished' && item.resultId && (
-                          <div className="w-full h-8 rounded-md overflow-hidden border border-white/10 mb-1">
-                            <iframe
-                              src={`https://preview.websitelm.site/en/${item.resultId}`}
-                              title="Preview"
-                              className="w-full h-full"
-                              frameBorder="0"
-                            />
-                          </div>
-                        )}
-                      </div>
-                      {/* Delete button */}
-                      <button
-                        className="absolute top-1 right-1 bg-red-700/60 hover:bg-red-800/70 text-white rounded-full p-1 shadow transition"
-                        title="Delete"
-                        style={{ width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        onClick={e => {
-                          e.stopPropagation();
-                          setDeleteConfirm({ open: true, id: item.websiteId });
-                        }}
-                        disabled={deletingId === item.websiteId || isClearingAll}
-                      >
-                        <DeleteOutlined style={{ fontSize: 10 }} />
-                      </button>
-                      {/* === 新增：失败任务的重新开始按钮 === */}
-                      {item.generatorStatus === 'failed' && (
-                        <Tooltip title="Restart Task" placement="left">
-                          <button
-                            className="absolute top-1 right-7 bg-gradient-to-r from-orange-600 to-yellow-600 hover:from-orange-500 hover:to-yellow-500 text-white rounded-full p-1 shadow-lg transition-all duration-200 border border-orange-400/50 hover:border-orange-300"
-                            title="Restart Task"
-                            style={{ 
-                              width: 20, 
-                              height: 20, 
-                              display: 'flex', 
-                              alignItems: 'center', 
-                              justifyContent: 'center',
-                              boxShadow: '0 2px 8px rgba(251, 146, 60, 0.4)' // 橙色阴影
-                            }}
-                            onClick={e => {
-                              e.stopPropagation();
-                              setRetryConfirm({ open: true, website: item.website });
-                            }}
-                            disabled={deletingId === item.websiteId || isClearingAll}
-                          >
-                            <ReloadOutlined style={{ fontSize: 10 }} />
-                          </button>
-                        </Tooltip>
-                      )}
-                    </div>
-                  );
-                })
-              )}
-            </div>
+            Delete
+          </Button>,
+          <Button key="cancel" onClick={() => setFailedModal({ open: false, id: null })} className="ant-btn-modal-cancel-dark">
+            Cancel
+          </Button>
+        ]}
+        centered
+        title={null}
+        zIndex={1050} // 修改：从 10100 降低到 1050
+        styles={confirmationModalStyles}
+      >
+        <div className="flex flex-col items-center justify-center py-6">
+          <ExclamationCircleOutlined style={{ fontSize: 40, color: '#f87171' }} />
+          <div className="mt-4 text-lg font-semibold text-red-400">Task failed</div>
+          <div className="mt-2 text-slate-300 text-center">
+            No details are available for this task.<br />
+            Would you like to delete it?
           </div>
         </div>
-        {/* Delete confirmation modal */}
-        <Modal
-          open={deleteConfirm.open}
-          onCancel={() => setDeleteConfirm({ open: false, id: null })}
-          footer={[
-            <Button
-              key="delete"
-              type="primary"
-              danger
-              loading={deletingId === deleteConfirm.id}
-              onClick={async () => {
-                const shouldCloseModal = !!selectedItem && selectedItem.websiteId === deleteConfirm.id;
-                await handleDelete(deleteConfirm.id, shouldCloseModal);
-                setDeleteConfirm({ open: false, id: null });
-              }}
-            >
-              Delete
-            </Button>,
-            <Button key="cancel" onClick={() => setDeleteConfirm({ open: false, id: null })} className="ant-btn-modal-cancel-dark">
-              Cancel
-            </Button>
-          ]}
-          centered
-          title={null}
-          styles={confirmationModalStyles}
-        >
-          <div className="flex flex-col items-center justify-center py-6">
-            <ExclamationCircleOutlined style={{ fontSize: 40, color: '#f87171' }} />
-            <div className="mt-4 text-lg font-semibold text-red-400">Are you sure you want to delete this task, this action will remove all the pages under this task?</div>
-            <div className="mt-2 text-slate-300 text-center">
-              This action cannot be undone.
-            </div>
+      </Modal>
+      {/* === 新增：重试确认弹窗 === */}
+      <Modal
+        open={retryConfirm.open}
+        onCancel={() => setRetryConfirm({ open: false, website: null })}
+        footer={[
+          <Button
+            key="retry"
+            type="primary"
+            onClick={() => handleRetryTask(retryConfirm.website)}
+          >
+            Yes, Restart
+          </Button>,
+          <Button key="cancel" onClick={() => setRetryConfirm({ open: false, website: null })} className="ant-btn-modal-cancel-dark">
+            Cancel
+          </Button>
+        ]}
+        centered
+        title={null}
+        zIndex={1050} // 修改：从 10100 降低到 1050
+        styles={confirmationModalStyles}
+      >
+        <div className="flex flex-col items-center justify-center py-6">
+          <ReloadOutlined style={{ fontSize: 40, color: '#3b82f6' }} />
+          <div className="mt-4 text-lg font-semibold text-blue-400">Restart Task</div>
+          <div className="mt-2 text-slate-300 text-center">
+            Do you want to restart the task with <span className="text-cyan-400 font-semibold">{retryConfirm.website}</span> as the target URL?
           </div>
-        </Modal>
-        {/* Clear All confirmation modal */}
-        <Modal
-          open={clearAllConfirmOpen}
-          onCancel={() => setClearAllConfirmOpen(false)}
-          footer={[
-            <Button
-              key="confirm"
-              type="primary"
-              danger
-              loading={isClearingAll}
-              onClick={executeClearAll}
-            >
-              Confirm Delete All
-            </Button>,
-            <Button key="cancel" onClick={() => setClearAllConfirmOpen(false)} disabled={isClearingAll} className="ant-btn-modal-cancel-dark">
-              Cancel
-            </Button>
-          ]}
-          centered
-          title={null}
-          closable={!isClearingAll}
-          maskClosable={!isClearingAll}
-          styles={confirmationModalStyles}
-        >
-          <div className="flex flex-col items-center justify-center py-6">
-            <ExclamationCircleOutlined style={{ fontSize: 40, color: '#f87171' }} />
-            <div className="mt-4 text-lg font-semibold text-red-400">Are you sure you want to delete ALL records?</div>
-            <div className="mt-2 text-slate-300 text-center">
-              This action cannot be undone. All history items will be permanently removed.
-            </div>
-          </div>
-        </Modal>
-        {/* failed status modal */}
-        <Modal
-          open={failedModal.open}
-          onCancel={() => setFailedModal({ open: false, id: null })}
-          footer={[
-            <Button
-              key="delete"
-              type="primary"
-              danger
-              onClick={() => {
-                handleDelete(failedModal.id);
-                setFailedModal({ open: false, id: null });
-              }}
-            >
-              Delete
-            </Button>,
-            <Button key="cancel" onClick={() => setFailedModal({ open: false, id: null })} className="ant-btn-modal-cancel-dark">
-              Cancel
-            </Button>
-          ]}
-          centered
-          title={null}
-          styles={confirmationModalStyles}
-        >
-          <div className="flex flex-col items-center justify-center py-6">
-            <ExclamationCircleOutlined style={{ fontSize: 40, color: '#f87171' }} />
-            <div className="mt-4 text-lg font-semibold text-red-400">Task failed</div>
-            <div className="mt-2 text-slate-300 text-center">
-              No details are available for this task.<br />
-              Would you like to delete it?
-            </div>
-          </div>
-        </Modal>
-        {/* === 新增：重试确认弹窗 === */}
-        <Modal
-          open={retryConfirm.open}
-          onCancel={() => setRetryConfirm({ open: false, website: null })}
-          footer={[
-            <Button
-              key="retry"
-              type="primary"
-              onClick={() => handleRetryTask(retryConfirm.website)}
-            >
-              Yes, Restart
-            </Button>,
-            <Button key="cancel" onClick={() => setRetryConfirm({ open: false, website: null })} className="ant-btn-modal-cancel-dark">
-              Cancel
-            </Button>
-          ]}
-          centered
-          title={null}
-          styles={confirmationModalStyles}
-        >
-          <div className="flex flex-col items-center justify-center py-6">
-            <ReloadOutlined style={{ fontSize: 40, color: '#3b82f6' }} />
-            <div className="mt-4 text-lg font-semibold text-blue-400">Restart Task</div>
-            <div className="mt-2 text-slate-300 text-center">
-              Do you want to restart the task with <span className="text-cyan-400 font-semibold">{retryConfirm.website}</span> as the target URL?
-            </div>
-          </div>
-        </Modal>
-
-        <Modal
-          open={deletePageConfirm.open}
-          onCancel={() => setDeletePageConfirm({ open: false, resultId: null })}
-          footer={[
-            <Button
-              key="delete"
-              type="primary"
-              danger
-              onClick={async () => {
-                try {
-                  console.log('Delete confirmed, calling API with resultId:', deletePageConfirm.resultId);
-                  messageApi.loading({ content: 'Deleting page...', key: 'deletePage', duration: 0 });
-                  
-                  // 检查 API 方法是否存在
-                  if (!apiClient.deleteAlternativeResult) {
-                    throw new Error('deleteAlternativeResult method not found in apiClient');
-                  }
-                  
-                  // 调用删除API
-                  const result = await apiClient.deleteAlternativeResult(deletePageConfirm.resultId);
-                  console.log('Delete API response:', result);
-                  
-                  messageApi.destroy('deletePage');
-                  messageApi.success('Page deleted successfully');
-                  
-                  // 关闭确认弹窗
-                  setDeletePageConfirm({ open: false, resultId: null });
-                  
-                  // 刷新任务详情
-                  if (selectedItem?.websiteId) {
-                    const res = await apiClient.getAlternativeWebsiteResultList(selectedItem.websiteId);
-                    setResultDetail(res);
-                    
-                    // 如果还有其他页面，选中第一个；否则关闭弹窗
-                    if (Array.isArray(res?.data) && res.data.length > 0) {
-                      setSelectedPreviewId(res.data[0].resultId);
-                      setSlugInput(res.data[0].slug || '');
-                    } else {
-                      // 没有页面了，关闭弹窗
-                      handleModalClose();
-                    }
-                  }
-                } catch (error) {
-                  console.error('Delete operation failed:', error);
-                  messageApi.destroy('deletePage');
-                  messageApi.error('Failed to delete page: ' + error.message);
+        </div>
+      </Modal>
+      <Modal
+        open={deletePageConfirm.open}
+        onCancel={() => setDeletePageConfirm({ open: false, resultId: null })}
+        footer={[
+          <Button
+            key="delete"
+            type="primary"
+            danger
+            onClick={async () => {
+              try {
+                console.log('Delete confirmed, calling API with resultId:', deletePageConfirm.resultId);
+                messageApi.loading({ content: 'Deleting page...', key: 'deletePage', duration: 0 });
+                
+                // 检查 API 方法是否存在
+                if (!apiClient.deleteAlternativeResult) {
+                  throw new Error('deleteAlternativeResult method not found in apiClient');
                 }
-              }}
-            >
-              Delete
-            </Button>,
-            <Button key="cancel" onClick={() => setDeletePageConfirm({ open: false, resultId: null })} className="ant-btn-modal-cancel-dark">
-              Cancel
-            </Button>
-          ]}
-          centered
-          title={null}
-          styles={confirmationModalStyles}
-        >
-          <div className="flex flex-col items-center justify-center py-6">
-            <ExclamationCircleOutlined style={{ fontSize: 40, color: '#f87171' }} />
-            <div className="mt-4 text-lg font-semibold text-red-400">Confirm Delete</div>
-            <div className="mt-2 text-slate-300 text-center">
-              Are you sure you want to delete this page? This action cannot be undone.
-            </div>
-          </div>
-        </Modal>
-
-        {/* Detailed Modal */}
-        {selectedItem && (
-          <Modal
-            title={
-              <span className="text-lg font-semibold text-slate-100">
-                Generated Alternative Pages For: <span className="text-cyan-400">{selectedItem.website}</span>
-              </span>
-            }
-            open={!!selectedItem}
-            onCancel={handleModalClose}
-            footer={null}
-            width="90vw"
-            destroyOnClose
-            maskClosable={true}
-            centered
-            closeIcon={<CloseOutlined style={{ color: '#fff', fontSize: 20 }} />}
-            styles={{
-              mask: {
-                backdropFilter: 'blur(8px)',
-                backgroundColor: 'rgba(0, 0, 0, 0.75)',
-              },
-              wrapper: {
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              },
-              header: {
-                backgroundColor: 'rgba(15, 23, 42, 0.85)',
-                borderBottom: '1px solid rgba(51, 65, 85, 0.6)',
-                padding: '12px 20px',
-                backdropFilter: 'blur(5px)',
-              },
-              body: {
-                padding: 0,
-                background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.9) 0%, rgba(3, 7, 18, 0.95) 100%)',
-                height: '80vh',
-                maxHeight: '80vh',
-                overflow: 'hidden',
-                display: 'flex',
-              },
-              content: {
-                padding: 0,
-                boxShadow: '0 15px 40px rgba(0, 0, 0, 0.4)',
-                backgroundColor: 'transparent',
-                maxHeight: '90vh',
-              },
+                
+                // 调用删除API
+                const result = await apiClient.deleteAlternativeResult(deletePageConfirm.resultId);
+                console.log('Delete API response:', result);
+                
+                messageApi.destroy('deletePage');
+                messageApi.success('Page deleted successfully');
+                
+                // 关闭确认弹窗
+                setDeletePageConfirm({ open: false, resultId: null });
+                
+                // 刷新任务详情
+                if (selectedItem?.websiteId) {
+                  const res = await apiClient.getAlternativeWebsiteResultList(selectedItem.websiteId);
+                  setResultDetail(res);
+                  
+                  // 如果还有其他页面，选中第一个；否则关闭弹窗
+                  if (Array.isArray(res?.data) && res.data.length > 0) {
+                    setSelectedPreviewId(res.data[0].resultId);
+                    setSlugInput(res.data[0].slug || '');
+                  } else {
+                    // 没有页面了，关闭弹窗
+                    handleModalClose();
+                  }
+                }
+              } catch (error) {
+                console.error('Delete operation failed:', error);
+                messageApi.destroy('deletePage');
+                messageApi.error('Failed to delete page: ' + error.message);
+              }
             }}
           >
-            {resultLoading ? (
-              <div className="flex h-[80vh] items-center justify-center w-full"> {/* Ensure loading takes full width */}
-                <Spin size="large" />
-              </div>
-            ) : resultDetail && Array.isArray(resultDetail.data) && resultDetail.data.length > 0 ? (
-              <>
-                {/* Left Sidebar - Task Details */}
-                <div className="w-[280px] p-4 flex flex-col gap-4 overflow-y-auto border-r border-slate-700/40 bg-slate-950/50 backdrop-blur-md scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-800/50 text-xs flex-shrink-0">
-                  {/* Task Details Title */}
-                  <div className="flex justify-between items-center pb-2 border-b border-slate-700/60 mb-2">
-                    <div className="text-base font-semibold text-cyan-300 tracking-wide">
-                      Task Details
-                    </div>
+            Delete
+          </Button>,
+          <Button key="cancel" onClick={() => setDeletePageConfirm({ open: false, resultId: null })} className="ant-btn-modal-cancel-dark">
+            Cancel
+          </Button>
+        ]}
+        centered
+        title={null}
+        zIndex={1050} // 修改：从 10100 降低到 1050
+        styles={confirmationModalStyles}
+      >
+        <div className="flex flex-col items-center justify-center py-6">
+          <ExclamationCircleOutlined style={{ fontSize: 40, color: '#f87171' }} />
+          <div className="mt-4 text-lg font-semibold text-red-400">Confirm Delete</div>
+          <div className="mt-2 text-slate-300 text-center">
+            Are you sure you want to delete this page? This action cannot be undone.
+          </div>
+        </div>
+      </Modal>
+      {/* Detailed Modal */}
+        <Modal
+          title={
+            <div className="flex flex-col gap-2">
+              {/* 任务切换栏 */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-slate-300 flex-shrink-0">Task List:</span>
+                {/* === 新增：刷新和批量删除按钮 === */}
+                {historyList.length > 0 && (
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <button
+                      className="flex items-center justify-center bg-slate-800/80 hover:bg-slate-700/80 rounded-full p-1 transition border border-slate-700"
+                      style={{ width: 24, height: 24 }}
+                      onClick={fetchHistory}
+                      disabled={loading || isClearingAll}
+                      title="Refresh"
+                    >
+                      {loading ? (
+                        <Spin size="small" />
+                      ) : (
+                        <ReloadOutlined style={{ fontSize: 12, color: '#38bdf8' }} />
+                      )}
+                    </button>
+                    <button
+                      className="flex items-center justify-center bg-red-800/70 hover:bg-red-700/80 rounded-full p-1 transition border border-red-700"
+                      style={{ width: 24, height: 24 }}
+                      onClick={() => setClearAllConfirmOpen(true)}
+                      disabled={loading || isClearingAll}
+                      title="Clear All"
+                    >
+                      {isClearingAll ? (
+                        <Spin size="small" />
+                      ) : (
+                        <ClearOutlined style={{ fontSize: 12, color: '#fca5a5' }} />
+                      )}
+                    </button>
                   </div>
-
-                  {/* Basic Task Info */}
-                  <div className="space-y-1.5 text-slate-300">
-                     <div className="font-medium text-cyan-400 text-sm pt-2 mb-1">Task ID:</div>
-                     <div className="text-xs font-mono text-slate-100 select-all">{selectedItem.websiteId}</div>
-                     {selectedItem.generatedStart && (
-                       <>
-                         <div className="font-medium text-cyan-400 text-sm pt-2 mb-1">Start Time:</div>
-                         <div className="text-xs text-slate-100">
-                           {new Date(selectedItem.generatedStart).toLocaleString([], { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
-                         </div>
-                       </>
-                     )}
-                     {selectedItem.generatedEnd && (
-                       <>
-                         <div className="font-medium text-cyan-400 text-sm pt-2 mb-1">End Time:</div>
-                         <div className="text-xs text-slate-100">
-                           {new Date(selectedItem.generatedEnd).toLocaleString([], { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })}
-                         </div>
-                       </>
-                     )}
-                     <>
-                       <div className="font-medium text-cyan-400 text-sm pt-2 mb-1">Pages Generated:</div>
-                       <div className="text-xs text-slate-100">
-                         {resultDetail.data.length}
-                       </div>
-                     </>
+                )}
+                {/* 修改：当没有任务时显示提示信息 */}
+                {historyList.length === 0 ? (
+                  <div className="flex-1 text-slate-400 text-sm italic">
+                    No tasks available. Please create a new task to get started.
                   </div>
-
-                  <div>
-                    <div className="text-sm font-semibold text-cyan-400 mb-1 pl-1 pt-3">Deploy Status</div>
-                    {currentItem.deploymentStatus === 'publish' ? (
-                      <div className="flex flex-col gap-2 items-start">
-                        <span className="text-green-300 font-semibold text-xs">Published</span>
-                        {currentItem.siteUrl && currentItem.slug && (
-                          <div className="text-cyan-400 text-xxs mt-0.5 break-all">
-                            View:&nbsp;
-                            <a
-                              href={`${currentItem.siteUrl.replace(/\/$/, '')}/${currentItem.slug}`}
-                              className="underline hover:text-cyan-300 transition"
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              {`${currentItem.siteUrl.replace(/\/$/, '')}/${currentItem.slug}`}
-                            </a>
-                          </div>
-                        )}
-                        <button
-                          onClick={async () => {
-                            try {
-                              setResultLoading(true);
-                              const resp = await apiClient.updateAlternativePublishStatus(
-                                currentItem.resultId,
-                                'unpublish',
-                                '', // 取消发布时不需要URL
-                                ''  // 取消发布时不需要slug
-                              );
-                              
-                              if (resp?.code === 200) {
-                                messageApi.success('Unpublished successfully!');
-                                handlePublishSuccess(); // 刷新数据
-                              } else {
-                                messageApi.error(resp?.message || 'Unpublish failed');
+                ) : (
+                  <div className="flex items-center gap-2 overflow-x-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent flex-1 py-1">
+                    {historyList
+                      .map((item, idx) => {
+                        const isSelected = selectedItem && !selectedItem.isEmpty && item.websiteId === selectedItem.websiteId;
+                        return (
+                          <div
+                            key={item.websiteId}
+                            className={`
+                              group relative rounded-lg transition-all duration-200 cursor-pointer flex-shrink-0
+                              shadow-md p-2 flex flex-col items-start justify-between
+                              min-h-[80px] w-[280px] border
+                              ${isSelected
+                                ? 'bg-cyan-600/20 border-cyan-500 shadow-cyan-500/30' // 当前选中的任务
+                                : 'bg-white/5 hover:bg-white/10 border-white/10 hover:border-primary-500' // 其他任务
                               }
-                            } catch (e) {
-                              messageApi.error(e.message || 'Unpublish failed');
-                            } finally {
-                              setResultLoading(false);
+                            `}
+                            onClick={async () => {
+                              if (!selectedItem || selectedItem.isEmpty || item.websiteId === selectedItem.websiteId) return; // 如果是当前任务，不执行操作
+                              await handleCardClick(item);
+                            }}
+                            title={`Switch to: ${item.website}`}
+                          >
+                            <div className="w-full flex flex-col items-start">
+                              {/* 网站URL */}
+                              <div className="font-semibold text-xs text-white mb-1 truncate w-full text-left">
+                                {item.website}
+                              </div>
+                              
+                              {/* 状态和创建时间 */}
+                              <div className="flex w-full justify-between items-center mb-1">
+                                {renderStatusBadge(item.generatorStatus)}
+                                {item.created_at && (
+                                  <span className="text-[9px] text-gray-400">
+                                    Created: {new Date(item.created_at).toLocaleDateString([], { month: '2-digit', day: '2-digit' })}
+                                  </span>
+                                )}
+                              </div>
+                              
+                              {/* 任务ID */}
+                              <div className="text-[9px] text-gray-400 mb-1 w-full">
+                                <span>Task ID: <span className="text-gray-300 font-mono">{item.websiteId}</span></span>
+                              </div>
+                              
+                              {/* 开始和结束时间 */}
+                              <div className="flex w-full justify-between items-center text-[9px] text-gray-500 mb-1">
+                                <span>Start: {item.generatedStart ? new Date(item.generatedStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}</span>
+                                <span>End: {item.generatedEnd ? new Date(item.generatedEnd).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}</span>
+                              </div>
+                              
+                              {/* 持续时间 */}
+                              {item.generatedStart && item.generatedEnd && (
+                                <div className="text-[9px] text-cyan-400 font-semibold">
+                                  Duration: {Math.round((new Date(item.generatedEnd) - new Date(item.generatedStart)) / 1000 / 60)} min
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Delete button */}
+                            <button
+                              className="absolute top-1 right-1 bg-red-700/60 hover:bg-red-800/70 text-white rounded-full p-1 shadow transition"
+                              title="Delete"
+                              style={{ width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                              onClick={e => {
+                                e.stopPropagation();
+                                setDeleteConfirm({ open: true, id: item.websiteId });
+                              }}
+                              disabled={deletingId === item.websiteId || isClearingAll}
+                            >
+                              <DeleteOutlined style={{ fontSize: 8 }} />
+                            </button>
+                            
+                            {/* === 修改：调整 Tooltip 的 zIndex === */}
+                            <Tooltip 
+                              title="Restart Task" 
+                              placement="left"
+                              zIndex={1020} // 修改：从 1050 降低到 1020
+                            >
+                              <button
+                                className="absolute top-1 right-6 bg-gradient-to-r from-orange-600 to-yellow-600 hover:from-orange-500 hover:to-yellow-500 text-white rounded-full p-1 shadow-lg transition-all duration-200 border border-orange-400/50 hover:border-orange-300"
+                                title="Restart Task"
+                                style={{ 
+                                  width: 16, 
+                                  height: 16, 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  justifyContent: 'center',
+                                  boxShadow: '0 2px 8px rgba(251, 146, 60, 0.4)' // 橙色阴影
+                                }}
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setRetryConfirm({ open: true, website: item.website });
+                                }}
+                                disabled={deletingId === item.websiteId || isClearingAll}
+                              >
+                                <ReloadOutlined style={{ fontSize: 8 }} />
+                              </button>
+                            </Tooltip>
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
+              </div>
+            </div>
+          }
+          open={!!selectedItem}
+          onCancel={handleModalClose}
+          footer={null}
+          width="90vw"
+          destroyOnClose
+          maskClosable={true}
+          centered
+          closeIcon={<CloseOutlined style={{ color: '#fff', fontSize: 20 }} />}
+          zIndex={1000} // 修改：从 10000 降低到 1000
+          styles={{
+            mask: {
+              backdropFilter: 'blur(8px)',
+              backgroundColor: 'rgba(0, 0, 0, 0.75)',
+              pointerEvents: 'auto',
+            },
+            wrapper: {
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              pointerEvents: 'auto',
+              zIndex: 1000, // 修改：从 10000 降低到 1000
+            },
+            header: {
+              backgroundColor: 'rgba(15, 23, 42, 0.85)',
+              borderBottom: '1px solid rgba(51, 65, 85, 0.6)',
+              padding: '12px 20px',
+              backdropFilter: 'blur(5px)',
+            },
+            body: {
+              padding: 0,
+              background: 'linear-gradient(180deg, rgba(15, 23, 42, 0.9) 0%, rgba(3, 7, 18, 0.95) 100%)',
+              height: '75vh',
+              maxHeight: '75vh',
+              overflow: 'hidden',
+              display: 'flex',
+              pointerEvents: 'auto',
+            },
+            content: {
+              padding: 0,
+              boxShadow: '0 15px 40px rgba(0, 0, 0, 0.4)',
+              backgroundColor: 'transparent',
+              maxHeight: '90vh',
+              pointerEvents: 'auto',
+            },
+          }}
+        >
+          {/* 修改：添加对空任务状态的处理 */}
+          {selectedItem?.isEmpty ? (
+            <div className="flex h-[75vh] items-center justify-center w-full">
+              <div className="text-center">
+                <div className="text-6xl mb-4">📋</div>
+                <h3 className="text-xl font-semibold mb-2 text-slate-300">No Tasks Available</h3>
+                <p className="text-gray-400 mb-4">You haven't created any tasks yet.</p>
+                <button
+                  onClick={handleModalClose}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 font-medium"
+                >
+                  Create Your First Task
+                </button>
+              </div>
+            </div>
+          ) : resultLoading ? (
+            <div className="flex h-[80vh] items-center justify-center w-full">
+              <Spin size="large" />
+            </div>
+          ) : resultDetail && Array.isArray(resultDetail.data) && resultDetail.data.length > 0 ? (
+            <>
+              {/* 主内容区域 - 现在在左边 */}
+              <div className="w-[73%] flex flex-col bg-black/40 overflow-hidden p-1 flex-shrink-0">
+                {(() => {
+                  const previewItem = resultDetail.data.find(i => i.resultId === selectedPreviewId);
+                  if (!previewItem) {
+                    if (resultDetail.data.length > 0) {
+                      setSelectedPreviewId(resultDetail.data[0].resultId);
+                      return <div className="flex items-center justify-center h-full"><Spin/></div>;
+                    }
+                    return (
+                      <div className="flex items-center justify-center h-full text-slate-500 text-lg">
+                        No pages available for preview.
+                      </div>
+                    );
+                  }
+                  const isPublished = previewItem.deploymentStatus === 'publish' && previewItem.siteUrl && previewItem.slug;
+                  const previewUrl = isPublished
+                    ? `${previewItem.siteUrl.replace(/\/$/, '')}/${previewItem.slug}`
+                    : `https://preview.websitelm.site/en/${previewItem.resultId}`;
+
+                  return (
+                    <div className="w-full h-full bg-slate-950 rounded-lg shadow-inner flex flex-col border border-slate-800/70 overflow-hidden">
+                      {/* --- 新增：标签栏 --- */}
+                      <div className="flex items-end bg-slate-900/80 border-b border-slate-700/60 px-2 pt-1.5 flex-shrink-0 overflow-x-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent">
+                        {resultDetail.data.map((item, idx) => (
+                          <button
+                            key={item.resultId}
+                            onClick={() => setSelectedPreviewId(item.resultId)}
+                            className={`
+                              px-3 py-1.5 text-xs font-medium rounded-t-md mr-1 transition duration-200 ease-in-out border-t border-l border-r flex items-center gap-1.5 whitespace-nowrap
+                              ${selectedPreviewId === item.resultId
+                                ? 'bg-slate-800/90 border-slate-700/70 text-cyan-300 shadow-inner' // Active tab style
+                                : 'bg-slate-950/70 border-transparent text-slate-400 hover:bg-slate-800/50 hover:text-slate-200' // Inactive tab style
+                              }
+                            `}
+                            title={`View Page ${idx + 1} (ID: ${item.resultId})`}
+                          >
+                            {/* 可以加个小图标 */}
+                            {/* <FileTextOutlined /> */}
+                            Page {idx + 1}
+                          </button>
+                        ))}
+                        {/* Optional: Add a small spacer or "+" button if needed */}
+                        <div className="flex-grow border-b border-slate-700/60 h-[1px] self-end"></div> {/* Fills remaining space */}
+                      </div>
+                      {/* --- 结束新增：标签栏 --- */}
+
+                      {/* Header Bar (地址栏和按钮) */}
+                      {/* --- 修改：背景色和边框，使其与新标签栏协调 --- */}
+                      <div className="flex items-center justify-between px-3 py-1.5 bg-slate-800/90 border-b border-slate-700/50 flex-shrink-0 backdrop-blur-sm">
+                        {/* --- 内容保持不变 --- */}
+                        <div className="flex items-center flex-1 min-w-0 mr-4">
+                          {/* Traffic Lights */}
+                          <div className="flex space-x-1.5 mr-3">
+                            <div className="w-2.5 h-2.5 rounded-full bg-red-500 opacity-80"></div>
+                            <div className="w-2.5 h-2.5 rounded-full bg-yellow-500 opacity-80"></div>
+                            <div className="w-2.5 h-2.5 rounded-full bg-green-500 opacity-80"></div>
+                          </div>
+                          {/* URL Display (现在会根据 selectedPreviewId 自动更新) */}
+                          <div className="flex-1 bg-slate-900/70 text-slate-300 text-[11px] px-2 py-1 rounded border border-slate-700 truncate shadow-inner">
+                            {previewUrl}
+                          </div>
+                        </div>
+                        {/* Action Buttons (现在会根据 selectedPreviewId 自动更新 currentItem) */}
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                        <button
+                            onClick={() => { if (previewUrl) window.open(previewUrl, '_blank'); }}
+                            className={`
+                              px-2 py-1 rounded text-xs font-semibold text-white shadow-sm transition duration-200 flex items-center gap-1
+                              bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500
+                              border border-cyan-500/50 hover:border-cyan-400
+                              disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-600 disabled:to-gray-700
+                              shadow-cyan-500/50 hover:shadow-cyan-400/60 shadow-lg hover:shadow-xl
+                              animate-pulse hover:animate-none
+                              ring-2 ring-cyan-500/30 hover:ring-cyan-400/50
+                              relative overflow-hidden
+                              before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent
+                              before:translate-x-[-100%] hover:before:translate-x-[100%] before:transition-transform before:duration-700
+                            `}
+                            title="Preview Page in New Tab"
+                            disabled={!selectedPreviewId || resultLoading || !previewUrl}
+                          >
+                            <ExportOutlined /> Preview In New Tab
+                          </button>
+                          <button
+                            onClick={() => { 
+                              if (selectedPreviewId) {
+                                // 修改：直接使用 /page-edit 路径，不包含语言参数
+                                window.open(`/page-edit/${selectedPreviewId}`, '_blank');
+                              }
+                            }}
+                            className={`
+                              px-2 py-1 rounded text-xs font-semibold text-white shadow-sm transition duration-200 flex items-center gap-1
+                              bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500
+                              border border-purple-500/50 hover:border-purple-400
+                              disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-600 disabled:to-gray-700
+                            `}
+                            title="Edit This Page"
+                            disabled={!selectedPreviewId || resultLoading}
+                          >
+                            <EditOutlined /> Edit This Page
+                          </button>
+                          <button
+                          onClick={() => {
+                            console.log('Delete button clicked, selectedPreviewId:', selectedPreviewId);
+                            if (selectedPreviewId) {
+                              console.log('Opening delete page confirmation modal');
+                              setDeletePageConfirm({ open: true, resultId: selectedPreviewId });
+                            } else {
+                              console.log('No selectedPreviewId, button should be disabled');
                             }
                           }}
-                          className="px-2 py-1 rounded text-xs font-semibold text-white shadow-sm transition duration-200 inline-flex items-center gap-1 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-500 hover:to-pink-500 border border-red-500/50 hover:border-red-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-600 disabled:to-gray-700"
-                          title="Unpublish this page"
-                          disabled={!selectedPreviewId || resultLoading}
-                        >
-                          <CloseOutlined /> Unpublish
-                        </button>
+                            className={`
+                              px-2 py-1 rounded text-xs font-semibold text-white shadow-sm transition duration-200 flex items-center gap-1
+                              bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600
+                              border border-red-500/50 hover:border-red-400
+                              disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-600 disabled:to-gray-700
+                            `}
+                            title="Delete This Page"
+                            disabled={!selectedPreviewId || resultLoading}
+                          >
+                            <DeleteOutlined /> Delete This Page
+                          </button>
+                        </div>
+                      </div>
+                      {/* Iframe Preview */}
+                      <div className="flex-1 overflow-hidden bg-slate-900">
+                        <iframe
+                          key={selectedPreviewId}
+                          src={previewUrl}
+                          title="Preview"
+                          className="w-full h-full border-none"
+                          sandbox="allow-scripts allow-same-origin"
+                          onError={(e) => console.error("Iframe loading error:", e)}
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Right Sidebar - Task Details (移到右边) */}
+              <div className="w-[27%] p-4 flex flex-col gap-4 overflow-y-auto border-l border-slate-700/40 bg-slate-950/50 backdrop-blur-md scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-800/50 text-xs flex-shrink-0">
+                {/* === 修改：将标题移到这里 === */}
+                <div className="flex justify-between items-center pb-2 border-b border-slate-700/60">
+                  <div className="text-base font-semibold text-cyan-300 tracking-wide">
+                    Page Publishing Guide
+                  </div>
+                </div>
+
+                {/* Step 1: Set Up Your Publish Domain */}
+                <div className="bg-slate-900/60 rounded-lg p-3 border border-slate-700/50">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center">1</div>
+                    <div className="text-sm font-semibold text-blue-400">Set Up Your Publish Domain</div>
+                  </div>
+                  <div className="text-xs text-slate-300 mb-3">
+                    Configure your domain settings to enable publishing. This is required before you can publish any pages.
+                  </div>
+                  <button
+                    onClick={() => setIsPublishSettingsModalVisible(true)}
+                    className="w-full px-3 py-2 rounded text-xs font-semibold text-white shadow-sm transition duration-200 inline-flex items-center justify-center gap-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border border-blue-500/50 hover:border-blue-400"
+                    title="Configure your domain settings"
+                    disabled={!selectedPreviewId || resultLoading}
+                  >
+                    <SettingOutlined /> Configure Domain Settings
+                  </button>
+                </div>
+
+                {/* Step 2: Choose Deploy Mode & Publish */}
+                <div className="bg-slate-900/60 rounded-lg p-3 border border-slate-700/50">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-6 h-6 rounded-full bg-orange-600 text-white text-xs font-bold flex items-center justify-center">2</div>
+                    <div className="text-sm font-semibold text-orange-400">Choose Deploy Mode & Publish</div>
+                  </div>
+                  
+                  {/* Current Status */}
+                  <div className="mb-3">
+                    <div className="text-xs text-slate-400 mb-1">Current Status:</div>
+                    {currentItem.deploymentStatus === 'publish' ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-900/50 text-green-300 rounded text-xs font-semibold">
+                        <CheckCircleOutlined /> Published
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 bg-slate-700/50 text-slate-400 rounded text-xs">
+                        <ClockCircleOutlined /> Not Published
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Deploy Mode Selection */}
+                  <div className="mb-3">
+                    <div className="text-xs text-slate-400 mb-2">Deploy Mode:</div>
+                    <Radio.Group
+                      value={deployMode}
+                      onChange={(e) => setDeployMode(e.target.value)}
+                      className="publish-mode-radio-group"
+                      size="small"
+                    >
+                      <Radio.Button value="subdomain">Subdomain</Radio.Button>
+                      <Radio.Button value="subfolder">Subfolder</Radio.Button>
+                    </Radio.Group>
+                  </div>
+
+                  {/* Slug Configuration */}
+                  <div className="mb-3">
+                    <div className="text-xs text-slate-400 mb-1">Page Slug:</div>
+                    {slugEditing ? (
+                      <div className="w-full">
+                        <textarea
+                          value={slugInput}
+                          onChange={(e) => setSlugInput(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                          className="w-full px-2 py-1 text-xs bg-slate-800 border border-slate-600 rounded text-slate-200 focus:border-cyan-500 focus:outline-none resize-none"
+                          placeholder="enter-slug-here"
+                          disabled={slugSaving}
+                          rows={2}
+                        />
+                        <div className="flex items-center gap-1 mt-2">
+                          <button
+                            onClick={handleSaveSlug}
+                            disabled={slugSaving || !slugInput.trim()}
+                            className="px-2 py-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white text-xs rounded transition-colors duration-200 flex items-center gap-1"
+                          >
+                            {slugSaving ? <Spin size="small" /> : '✓'} Save
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSlugEditing(false);
+                              setSlugInput(currentItem?.slug || '');
+                            }}
+                            disabled={slugSaving}
+                            className="px-2 py-1 bg-gray-600 hover:bg-gray-700 text-white text-xs rounded transition-colors duration-200 flex items-center gap-1"
+                          >
+                            ✕ Cancel
+                          </button>
+                        </div>
                       </div>
                     ) : (
-                      <div className="flex flex-col gap-2 items-start">
-                        <span className="text-slate-400 text-xs">Not Published</span>
-                        <button
-                          onClick={() => setIsPublishSettingsModalVisible(true)}
-                          className="px-2 py-1 rounded text-xs font-semibold text-white shadow-sm transition duration-200 inline-flex items-center gap-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 border border-blue-500/50 hover:border-blue-400 disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-600 disabled:to-gray-700"
-                          title="Bind with your domain"
-                          disabled={!selectedPreviewId || resultLoading}
-                        >
-                          <LinkOutlined /> Bind With Your Domain
-                        </button>
+                      <div className="w-full">
+                        <div className="flex items-center gap-2">
+                          <code className="flex-1 text-xs bg-slate-800 px-2 py-1 rounded text-green-300 font-mono break-all">
+                            {currentItem?.slug || 'no-slug'}
+                          </code>
+                          <button
+                            onClick={() => setSlugEditing(true)}
+                            className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors duration-200 flex items-center gap-1"
+                            title="Edit slug"
+                          >
+                            <EditOutlined />
+                          </button>
+                        </div>
                       </div>
+                    )}
+                  </div>
+
+                  {/* Subfolder Path (only for subfolder mode) */}
+                  {deployMode === 'subfolder' && (
+                    <div className="mb-3">
+                      <div className="text-xs text-slate-400 mb-1">Subfolder Path:</div>
+                      <div className="flex items-center rounded border border-slate-600 bg-slate-800 focus-within:border-cyan-500">
+                        <span className="pl-2 pr-1 text-gray-400 text-xs">{rootDomain || 'domain.com'}/</span>
+                        <input
+                          type="text"
+                          value={subfolderPath}
+                          onChange={(e) => {
+                            const sanitized = e.target.value.toLowerCase().replace(/[^a-z0-9\/\-]/g, '');
+                            setSubfolderPath(sanitized);
+                          }}
+                          className="flex-grow bg-transparent border-none placeholder-gray-500 focus:ring-0 px-1 py-1 text-white text-xs"
+                          placeholder="alternative"
+                          disabled={publishingToUrl === 'subfolder-publishing'}
+                        />
+                        <span className="px-1 text-gray-400 text-xs">/</span>
+                      </div>
+                      <div className="text-xxs text-slate-400 mt-1">
+                        Example: alt, alternative, alter
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Domain Selection (only for subdomain mode and when published) */}
+                  {deployMode === 'subdomain' && currentItem.deploymentStatus === 'publish' && currentItem.siteUrl && (
+                    <div className="mb-3">
+                      <div className="text-xs text-slate-400 mb-1">Selected Subdomain:</div>
+                      {domainEditing ? (
+                        <div className="w-full">
+                          {domainsLoading ? (
+                            <div className="flex items-center justify-center py-2">
+                              <Spin size="small" />
+                              <span className="ml-2 text-xs text-slate-400">Loading subdomains...</span>
+                            </div>
+                          ) : availableDomains.length > 0 ? (
+                            <>
+                              <select
+                                value={selectedDomainInput}
+                                onChange={(e) => setSelectedDomainInput(e.target.value)}
+                                className="w-full px-2 py-1 text-xs bg-slate-800 border border-slate-600 rounded text-slate-200 focus:border-cyan-500 focus:outline-none"
+                                disabled={publishingToUrl === 'updating-domain'}
+                              >
+                                {availableDomains.map(domain => (
+                                  <option key={domain} value={domain}>{domain}</option>
+                                ))}
+                              </select>
+                              <div className="flex items-center gap-1 mt-2">
+                                <button
+                                  onClick={handleSaveDomainSelection}
+                                  disabled={publishingToUrl === 'updating-domain' || !selectedDomainInput}
+                                  className="px-2 py-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white text-xs rounded transition-colors duration-200 flex items-center gap-1"
+                                >
+                                  {publishingToUrl === 'updating-domain' ? <Spin size="small" /> : '✓'} Save
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setDomainEditing(false);
+                                    const domain = currentItem.siteUrl.replace(/^https?:\/\//, '');
+                                    setSelectedDomainInput(domain);
+                                  }}
+                                  disabled={publishingToUrl === 'updating-domain'}
+                                  className="px-2 py-1 bg-gray-600 hover:bg-gray-700 text-white text-xs rounded transition-colors duration-200 flex items-center gap-1"
+                                >
+                                  ✕ Cancel
+                                </button>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="text-xs text-slate-500 py-2">
+                              No verified domains available
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="w-full">
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 text-xs bg-slate-800 px-2 py-1 rounded text-green-300 font-mono break-all">
+                              {currentItem.siteUrl.replace(/^https?:\/\//, '')}
+                            </div>
+                            <button
+                              onClick={handleStartDomainEditing}
+                              className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors duration-200 flex items-center gap-1"
+                              title="Change subdomain"
+                            >
+                              <EditOutlined />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Publish/Unpublish Actions */}
+                  <div className="space-y-2">
+                    {currentItem.deploymentStatus === 'publish' ? (
+                      <button
+                        onClick={() => setUnpublishConfirm({ open: true, resultId: selectedPreviewId })}
+                        disabled={publishingToUrl === 'subfolder-unpublishing' || publishingToUrl === 'unpublishing'}
+                        className="w-full px-3 py-2 rounded text-xs font-semibold text-white shadow-sm transition duration-200 inline-flex items-center justify-center gap-1 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 border border-red-500/50 hover:border-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {(publishingToUrl === 'subfolder-unpublishing' || publishingToUrl === 'unpublishing') ? <Spin size="small" /> : <DeleteOutlined />} 
+                        Unpublish Page
+                      </button>
+                    ) : (
+                      <>
+                        {deployMode === 'subfolder' ? (
+                          // === 修改：统一 subfolder 模式的发布按钮样式 ===
+                          <button
+                            onClick={handlePublishToSubfolder}
+                            disabled={publishingToUrl === 'subfolder-publishing' || !slugInput.trim() || !subfolderPath.trim() || !rootDomain}
+                            className="w-full px-3 py-2 rounded text-xs font-semibold text-white shadow-sm transition duration-200 inline-flex items-center justify-center gap-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 border border-green-500/50 hover:border-green-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {publishingToUrl === 'subfolder-publishing' ? <Spin size="small" /> : <ExportOutlined />} 
+                            Publish to Subfolder
+                          </button>
+                        ) : (
+                          // === 修改：统一 subdomain 模式的发布按钮样式和布局 ===
+                          domainsLoading ? (
+                            <div className="flex items-center justify-center py-2">
+                              <Spin size="small" />
+                              <span className="ml-2 text-xs text-slate-400">Loading subdomains...</span>
+                            </div>
+                          ) : availableDomains.length > 0 ? (
+                            <div className="space-y-2">
+                              <div className="text-xs text-slate-400 mb-2">Choose subdomain to publish:</div>
+                              {availableDomains.map(domain => (
+                                <button
+                                  key={domain}
+                                  onClick={() => handlePublishToDomain(domain)}
+                                  disabled={publishingToUrl === domain || !slugInput.trim()}
+                                  className="w-full px-3 py-2 rounded text-xs font-semibold text-white shadow-sm transition duration-200 inline-flex items-center justify-center gap-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-500 hover:to-emerald-500 border border-green-500/50 hover:border-green-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  title={`Publish to ${domain}`}
+                                >
+                                  {publishingToUrl === domain ? (
+                                    <>
+                                      <Spin size="small" />
+                                      Publishing...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <ExportOutlined />
+                                      Publish to {domain}
+                                    </>
+                                  )}
+                                </button>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-xs text-slate-500 py-2 text-center">
+                              No verified subdomains available.<br />
+                              Please configure your domain first.
+                            </div>
+                          )
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
 
-                <div className="flex-1 flex flex-col bg-black/40 overflow-hidden p-1">
-                  {(() => {
-                    const previewItem = resultDetail.data.find(i => i.resultId === selectedPreviewId);
-                    if (!previewItem) {
-                      if (resultDetail.data.length > 0) {
-                        setSelectedPreviewId(resultDetail.data[0].resultId);
-                        return <div className="flex items-center justify-center h-full"><Spin/></div>;
-                      }
-                      return (
-                        <div className="flex items-center justify-center h-full text-slate-500 text-lg">
-                          No pages available for preview.
-                        </div>
-                      );
-                    }
-                    const isPublished = previewItem.deploymentStatus === 'publish' && previewItem.siteUrl && previewItem.slug;
-                    const previewUrl = isPublished
-                      ? `${previewItem.siteUrl.replace(/\/$/, '')}/${previewItem.slug}`
-                      : `https://preview.websitelm.site/en/${previewItem.resultId}`;
-
-                    return (
-                      <div className="w-full h-full bg-slate-950 rounded-lg shadow-inner flex flex-col border border-slate-800/70 overflow-hidden">
-                        {/* --- 新增：标签栏 --- */}
-                        <div className="flex items-end bg-slate-900/80 border-b border-slate-700/60 px-2 pt-1.5 flex-shrink-0 overflow-x-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent">
-                          {resultDetail.data.map((item, idx) => (
-                            <button
-                              key={item.resultId}
-                              onClick={() => setSelectedPreviewId(item.resultId)}
-                              className={`
-                                px-3 py-1.5 text-xs font-medium rounded-t-md mr-1 transition duration-200 ease-in-out border-t border-l border-r flex items-center gap-1.5 whitespace-nowrap
-                                ${selectedPreviewId === item.resultId
-                                  ? 'bg-slate-800/90 border-slate-700/70 text-cyan-300 shadow-inner' // Active tab style
-                                  : 'bg-slate-950/70 border-transparent text-slate-400 hover:bg-slate-800/50 hover:text-slate-200' // Inactive tab style
-                                }
-                              `}
-                              title={`View Page ${idx + 1} (ID: ${item.resultId})`}
-                            >
-                              {/* 可以加个小图标 */}
-                              {/* <FileTextOutlined /> */}
-                              Page {idx + 1}
-                            </button>
-                          ))}
-                          {/* Optional: Add a small spacer or "+" button if needed */}
-                          <div className="flex-grow border-b border-slate-700/60 h-[1px] self-end"></div> {/* Fills remaining space */}
-                        </div>
-                        {/* --- 结束新增：标签栏 --- */}
-
-                        {/* Header Bar (地址栏和按钮) */}
-                        {/* --- 修改：背景色和边框，使其与新标签栏协调 --- */}
-                        <div className="flex items-center justify-between px-3 py-1.5 bg-slate-800/90 border-b border-slate-700/50 flex-shrink-0 backdrop-blur-sm">
-                          {/* --- 内容保持不变 --- */}
-                          <div className="flex items-center flex-1 min-w-0 mr-4">
-                            {/* Traffic Lights */}
-                            <div className="flex space-x-1.5 mr-3">
-                              <div className="w-2.5 h-2.5 rounded-full bg-red-500 opacity-80"></div>
-                              <div className="w-2.5 h-2.5 rounded-full bg-yellow-500 opacity-80"></div>
-                              <div className="w-2.5 h-2.5 rounded-full bg-green-500 opacity-80"></div>
-                            </div>
-                            {/* URL Display (现在会根据 selectedPreviewId 自动更新) */}
-                            <div className="flex-1 bg-slate-900/70 text-slate-300 text-[11px] px-2 py-1 rounded border border-slate-700 truncate shadow-inner">
-                              {previewUrl}
-                            </div>
-                          </div>
-                          {/* Action Buttons (现在会根据 selectedPreviewId 自动更新 currentItem) */}
-                          <div className="flex items-center gap-2 flex-shrink-0">
-                          <button
-                              onClick={() => { if (previewUrl) window.open(previewUrl, '_blank'); }}
-                              className={`
-                                px-2 py-1 rounded text-xs font-semibold text-white shadow-sm transition duration-200 flex items-center gap-1
-                                bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500
-                                border border-cyan-500/50 hover:border-cyan-400
-                                disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-600 disabled:to-gray-700
-                                shadow-cyan-500/50 hover:shadow-cyan-400/60 shadow-lg hover:shadow-xl
-                                animate-pulse hover:animate-none
-                                ring-2 ring-cyan-500/30 hover:ring-cyan-400/50
-                                relative overflow-hidden
-                                before:absolute before:inset-0 before:bg-gradient-to-r before:from-transparent before:via-white/20 before:to-transparent
-                                before:translate-x-[-100%] hover:before:translate-x-[100%] before:transition-transform before:duration-700
-                              `}
-                              title="Preview Page in New Tab"
-                              disabled={!selectedPreviewId || resultLoading || !previewUrl}
-                            >
-                              <ExportOutlined /> Preview This Page In New Tab
-                            </button>
-                            <button
-                              onClick={() => { 
-                                if (selectedPreviewId) {
-                                  // 修改：直接使用 /page-edit 路径，不包含语言参数
-                                  window.open(`/page-edit/${selectedPreviewId}`, '_blank');
-                                }
-                              }}
-                              className={`
-                                px-2 py-1 rounded text-xs font-semibold text-white shadow-sm transition duration-200 flex items-center gap-1
-                                bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500
-                                border border-purple-500/50 hover:border-purple-400
-                                disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-600 disabled:to-gray-700
-                              `}
-                              title="Edit This Page"
-                              disabled={!selectedPreviewId || resultLoading}
-                            >
-                              <EditOutlined /> Edit
-                            </button>
-                            <button
-                              onClick={() => setIsPublishSettingsModalVisible(true)}
-                              className={`
-                                px-2 py-1 rounded text-xs font-semibold text-white shadow-sm transition duration-200 flex items-center gap-1
-                                bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500
-                                border border-blue-500/50 hover:border-blue-400
-                                disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-600 disabled:to-gray-700
-                              `}
-                              title="Bind with your domain"
-                              disabled={!selectedPreviewId || resultLoading}
-                            >
-                              <LinkOutlined /> Bind With Your Domain
-                            </button>
-                            <button
-                            onClick={() => {
-                              console.log('Delete button clicked, selectedPreviewId:', selectedPreviewId);
-                              if (selectedPreviewId) {
-                                console.log('Opening delete page confirmation modal');
-                                setDeletePageConfirm({ open: true, resultId: selectedPreviewId });
-                              } else {
-                                console.log('No selectedPreviewId, button should be disabled');
-                              }
-                            }}
-                              className={`
-                                px-2 py-1 rounded text-xs font-semibold text-white shadow-sm transition duration-200 flex items-center gap-1
-                                bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600
-                                border border-red-500/50 hover:border-red-400
-                                disabled:opacity-50 disabled:cursor-not-allowed disabled:from-gray-600 disabled:to-gray-700
-                              `}
-                              title="Delete This Page"
-                              disabled={!selectedPreviewId || resultLoading}
-                            >
-                              <DeleteOutlined /> Delete Page
-                            </button>
-                          </div>
-                        </div>
-                        {/* Iframe Preview (key 确保在 selectedPreviewId 变化时刷新) */}
-                        <div className="flex-1 overflow-hidden bg-slate-900">
-                          <iframe
-                            key={selectedPreviewId} // Re-render iframe when ID changes
-                            src={previewUrl}
-                            title="Preview"
-                            className="w-full h-full border-none"
-                            sandbox="allow-scripts allow-same-origin"
-                            onError={(e) => console.error("Iframe loading error:", e)}
-                          />
+                {/* Step 3: View Published Page */}
+                <div className="bg-slate-900/60 rounded-lg p-3 border border-slate-700/50">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="w-6 h-6 rounded-full bg-green-600 text-white text-xs font-bold flex items-center justify-center">3</div>
+                    <div className="text-sm font-semibold text-green-400">View Page Through Published URL</div>
+                  </div>
+                  
+                  {currentItem.deploymentStatus === 'publish' && currentItem.siteUrl && currentItem.slug ? (
+                    <div>
+                      <div className="text-xs text-slate-300 mb-3">
+                        Your page is now live and accessible to the public. Only published pages can be indexed by Google and other search engines.
+                      </div>
+                      
+                      {/* Published URL Display */}
+                      <div className="mb-3">
+                        <div className="text-xs text-slate-400 mb-1">Published URL:</div>
+                        <div className="bg-slate-800 rounded p-2 border border-slate-600">
+                          <a
+                            href={
+                              deployMode === 'subdomain' 
+                                ? `${currentItem.siteUrl?.replace(/\/$/, '')}/${currentItem.slug}`
+                                : deployMode === 'subfolder' && rootDomain && subfolderPath
+                                  ? `https://${rootDomain}/${subfolderPath}/${currentItem.slug || slugInput}`
+                                  : currentItem.siteUrl 
+                                    ? `${currentItem.siteUrl.replace(/\/$/, '')}/${currentItem.slug}`
+                                    : '#'
+                            }
+                            className="text-cyan-300 hover:text-cyan-200 transition text-xs break-all underline"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {deployMode === 'subdomain' 
+                              ? `${currentItem.siteUrl?.replace(/\/$/, '')}/${currentItem.slug}`
+                              : deployMode === 'subfolder' && rootDomain && subfolderPath
+                                ? `https://${rootDomain}/${subfolderPath}/${currentItem.slug || slugInput}`
+                                : currentItem.siteUrl 
+                                  ? `${currentItem.siteUrl.replace(/\/$/, '')}/${currentItem.slug}`
+                                  : 'Preview URL'
+                            }
+                          </a>
                         </div>
                       </div>
-                    );
-                  })()}
+
+                      {/* SEO Notice */}
+                      <div className="bg-green-900/30 border border-green-700/50 rounded p-2">
+                        <div className="flex items-start gap-2">
+                          <CheckCircleOutlined className="text-green-400 text-xs mt-0.5 flex-shrink-0" />
+                          <div className="text-xs text-green-300">
+                            <div className="font-semibold mb-1">SEO Ready</div>
+                            <div className="text-green-200">
+                              This page is now publicly accessible and can be indexed by Google and other search engines for better visibility.
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="text-xs text-slate-400 mb-3">
+                        Your page is currently in preview mode. Publish it to make it accessible to the public and search engines.
+                      </div>
+                      
+                      {/* Preview URL Display */}
+                      <div className="mb-3">
+                        <div className="text-xs text-slate-400 mb-1">Preview URL:</div>
+                        <div className="bg-slate-800 rounded p-2 border border-slate-600">
+                          <a
+                            href={`https://preview.websitelm.site/en/${selectedPreviewId}`}
+                            className="text-slate-300 hover:text-slate-200 transition text-xs break-all underline"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            https://preview.websitelm.site/en/{selectedPreviewId}
+                          </a>
+                        </div>
+                      </div>
+
+                      {/* SEO Warning */}
+                      <div className="bg-yellow-900/30 border border-yellow-700/50 rounded p-2">
+                        <div className="flex items-start gap-2">
+                          <WarningOutlined className="text-yellow-400 text-xs mt-0.5 flex-shrink-0" />
+                          <div className="text-xs text-yellow-300">
+                            <div className="font-semibold mb-1">Not SEO Indexed</div>
+                            <div className="text-yellow-200">
+                              Preview pages are not indexed by search engines. Publish your page to enable Google indexing and improve search visibility.
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </>
-            ) : (
-              <div className="flex h-[80vh] items-center justify-center text-slate-500 w-full"> {/* Ensure error takes full width */}
-                {resultDetail?.error || 'No data available for this task.'}
               </div>
+            </>
+          ) : (
+            <div className="flex h-[80vh] items-center justify-center text-slate-500 w-full">
+              {selectedItem?.generatorStatus === 'processing' ? (
+                <div className="flex flex-col items-center gap-4">
+                  <div className="text-lg text-slate-400">
+                    Task is currently running, click here to recover task progress
+                  </div>
+                  <button
+                    onClick={() => {
+                      // 触发recover模式，参考layout的实现
+                      const currentUrl = new URL(window.location);
+                      currentUrl.searchParams.set('taskId', selectedItem.websiteId);
+                      currentUrl.searchParams.set('status', 'processing');
+                      
+                      // 更新URL并刷新页面以触发recover模式
+                      window.location.href = currentUrl.toString();
+                    }}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200 font-medium"
+                  >
+                    Recover Task Progress
+                  </button>
+                </div>
+              ) : (
+                resultDetail?.error || 'No data available for this task.'
+              )}
+            </div>
+          )}
+        </Modal>
+      {/* === 新增：渲染 PublishSettingsModal === */}
+      {isPublishSettingsModalVisible && currentItem && currentCustomerId && (
+        <PublishSettingsModal
+          open={isPublishSettingsModalVisible}
+          onClose={() => setIsPublishSettingsModalVisible(false)}
+          apiClient={apiClient}
+          messageApi={messageApi}
+          currentItem={currentItem} // 传递当前选中的页面项
+          currentCustomerId={currentCustomerId} // 传递 Customer ID
+        />
+      )}
+      {/* Unpublish 确认弹窗 */}
+      <Modal
+        open={unpublishConfirm.open}
+        onCancel={() => setUnpublishConfirm({ open: false, resultId: null })}
+        footer={[
+          <Button
+            key="unpublish"
+            type="primary"
+            danger
+            onClick={() => {
+              if (deployMode === 'subfolder') {
+                handleUnpublishFromSubfolder();
+              } else {
+                handleUnpublish();
+              }
+              setUnpublishConfirm({ open: false, resultId: null });
+            }}
+            loading={publishingToUrl === 'subfolder-unpublishing' || publishingToUrl === 'unpublishing'}
+          >
+            Unpublish
+          </Button>,
+          <Button 
+            key="cancel" 
+            onClick={() => setUnpublishConfirm({ open: false, resultId: null })} 
+            className="ant-btn-modal-cancel-dark"
+          >
+            Cancel
+          </Button>
+        ]}
+        centered
+        title={null}
+        zIndex={1050}
+        styles={confirmationModalStyles}
+      >
+        <div className="flex flex-col items-center justify-center py-6">
+          <ExclamationCircleOutlined style={{ fontSize: 40, color: '#f87171' }} />
+          <div className="mt-4 text-lg font-semibold text-red-400">Confirm Unpublish</div>
+          <div className="mt-2 text-slate-300 text-center">
+            Are you sure you want to unpublish this page?
+            {currentItem?.siteUrl && currentItem?.slug && (
+              <>
+                <br />
+                <span className="text-sm text-gray-400">
+                  The page will no longer be accessible at: {currentItem.siteUrl}/{currentItem.slug}
+                </span>
+              </>
             )}
-          </Modal>
-        )}
-        {/* === 新增：渲染 PublishSettingsModal === */}
-        {isPublishSettingsModalVisible && currentItem && currentCustomerId && (
-          <PublishSettingsModal
-            open={isPublishSettingsModalVisible}
-            onClose={() => setIsPublishSettingsModalVisible(false)}
-            apiClient={apiClient}
-            messageApi={messageApi}
-            currentItem={currentItem} // 传递当前选中的页面项
-            currentCustomerId={currentCustomerId} // 传递 Customer ID
-            onPublishSuccess={handlePublishSuccess} // 传递发布成功回调
-            onDomainChange={handleDomainChange} // 传递域名变更回调
-          />
-        )}
-      </div>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

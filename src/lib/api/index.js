@@ -395,9 +395,16 @@ const updateSubfolders = async (subfolders) => {
 };
 
 // 新增：获取 Vercel 项目域名信息
-const getVercelDomainInfo = async (projectId) => {
+const getVercelDomainInfo = async (projectId, options = {}) => {
   try {
-    const response = await vercelApiClient.get(`/v9/projects/${projectId}/domains`);
+    const { limit = 100, since, until } = options;
+    const params = { limit };
+    
+    if (since) params.since = since;
+    if (until) params.until = until;
+    
+    const queryString = new URLSearchParams(params).toString();
+    const response = await vercelApiClient.get(`/v9/projects/${projectId}/domains?${queryString}`);
     return response.data;
   } catch (error) {
     console.error('Failed to get Vercel domain info:', error);

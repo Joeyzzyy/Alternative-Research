@@ -6,7 +6,6 @@ import apiClient from '../../../lib/api/index.js';
 import { EventSourcePolyfill } from 'event-source-polyfill';
 import MessageHandler from '../../../utils/MessageHandler';
 import BrandAssetsModal from './brand-assets';
-import HistoryCardList from './result-preview.js';
 
 const TAG_FILTERS = {
   '\\[URL_GET\\]': '',  
@@ -2323,44 +2322,12 @@ const ResearchToolRecover = ({ websiteId }) => {
                }}>
 
             <div className={`relative z-10 w-full flex flex-row gap-6 h-[calc(100vh-140px)] px-4 text-sm`}>
-              {/* === 新增：左侧侧边栏，内含 HistoryCardList === */}
-              {isSidebarOpen && (
-                <div
-                  ref={sidebarRef}
-                  className="fixed top-[120px] left-4 z-50 w-80 bg-slate-900/90 backdrop-blur-md rounded-xl shadow-xl border border-slate-700/50 flex flex-col transition-all duration-300 ease-in-out overflow-visible max-h-[80vh]"
-                  style={{ minHeight: '300px' }}
-                >
-                  <div className="flex-1 overflow-y-auto transition-opacity duration-200 opacity-100 h-full">
-                    <HistoryCardList />
-                  </div>
-                </div>
-              )}
               <div className={`${isBrowserSidebarOpen ? 'w-1/2 relative flex flex-col' : 'w-[95%] relative flex flex-col'}`}>
                 <div className="h-12 px-4 border-b border-gray-300/20 flex-shrink-0 flex items-center relative">
                   <div className="flex items-center flex-shrink-0">
                     <img src="/images/alternatively-logo.png" alt="AltPage.ai" className="w-5 h-5 mr-1.5" />
                     <h2 className="text-sm font-semibold text-gray-100">Copilot</h2>
                   </div>
-                  {/* === 新增：历史侧边栏展开/收起按钮 === */}
-                  <button
-                    onClick={() => setIsSidebarOpen(open => !open)}
-                    className="ml-3 bg-slate-700 hover:bg-slate-600 text-white w-8 h-8 rounded-full flex items-center justify-center transition-colors shadow-md"
-                    title={isSidebarOpen ? "Collapse History" : "Expand History"}
-                    style={{ outline: 'none' }}
-                  >
-                    {isSidebarOpen ? (
-                      // 收起icon
-                      <svg width="16" height="16" fill="none" viewBox="0 0 20 20">
-                        <path d="M5 7l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                      </svg>
-                    ) : (
-                      // 展开icon
-                      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                        <rect x="2" y="7" width="12" height="2" rx="1" fill="currentColor" />
-                        <rect x="2" y="12" width="6" height="2" rx="1" fill="currentColor" />
-                      </svg>
-                    )}
-                  </button>
                   <div className="flex items-center gap-2 flex-shrink-0 ml-auto">
                     <button
                     type="button"
