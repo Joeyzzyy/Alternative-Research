@@ -540,20 +540,6 @@ const PublishSettingsModal = ({
     });
   };
 
-  const dnsColumns = [
-    { title: 'Type', dataIndex: 'type', key: 'type', width: '15%' },
-    { title: 'Name', dataIndex: 'name', key: 'name', width: '30%' },
-    { title: 'Value', dataIndex: 'value', key: 'value', width: '55%', render: (text) => <code className="text-xs break-all">{text}</code> },
-    // 可以添加复制按钮
-    // {
-    //   title: 'Action',
-    //   key: 'action',
-    //   render: (_, record) => (
-    //     <Button icon={<CopyOutlined />} size="small" type="text" onClick={() => copyToClipboard(record.value)} />
-    //   ),
-    // },
-  ];
-
   const handleAddSubdomain = async () => {
     if (!subdomainPrefix.trim()) {
       messageApi.warning('Please enter a subdomain prefix.');
@@ -566,19 +552,13 @@ const PublishSettingsModal = ({
         return;
     }
 
-    // TODO: 考虑添加子域名数量限制检查 (根据 Vercel 计划)
-    // if (subdomains.length >= ...) { ... }
-
     setIsAddingSubdomain(true);
     const fullDomain = `${validPrefix}.${rootDomain}`; // 使用 rootDomain state
     const projectId = VERCEL_PROJECT_ID;
 
-    // 准备 Vercel API 需要的数据载荷
-    // 参考 Vue 代码中的 domainData 结构
     const domainData = {
       name: fullDomain,
       gitBranch: null, // 通常子域名不需要关联 git 分支
-      // projectId: projectId, // Vercel API v9/v10 通常 projectId 在 URL 中，不在 body 里
       redirect: null,
       redirectStatusCode: null
     };
@@ -587,10 +567,6 @@ const PublishSettingsModal = ({
       console.log(`Attempting to add domain: ${fullDomain} to project ${projectId}`);
       console.log('Domain data payload:', domainData);
 
-      // 调用 apiClient 中的方法添加域名
-      // 注意：API 签名可能需要调整，Vercel API projectId 通常在 URL path 中
-      // 例如: POST /v10/projects/{projectId}/domains 或 POST /v9/projects/{projectId}/domains
-      // 确认 apiClient.addVercelDomain 的实现是否正确处理了 projectId
       const response = await apiClient.addVercelDomain(projectId, domainData); // 假设此函数内部处理了正确的 Vercel API 端点
 
       console.log('Add domain response:', response);
@@ -642,7 +618,7 @@ const PublishSettingsModal = ({
           <div className="flex flex-grow items-center rounded border border-slate-600 bg-slate-700 focus-within:border-cyan-500 focus-within:ring-1 focus-within:ring-cyan-500">
             <input
               type="text"
-              placeholder="e.g., blog"
+              placeholder="e.g., alternative"
               value={subdomainPrefix}
               onChange={(e) => setSubdomainPrefix(e.target.value)}
               className="flex-grow bg-transparent border-none placeholder-gray-500 focus:outline-none focus:ring-0 px-3 py-1.5 text-white"
@@ -1114,7 +1090,7 @@ const PublishSettingsModal = ({
                         <div className="flex flex-grow items-center rounded border border-slate-600 bg-slate-700 focus-within:border-cyan-500 focus-within:ring-1 focus-within:ring-cyan-500">
                           <input
                             type="text"
-                            placeholder="blog"
+                            placeholder="alternative"
                             value={subdomainPrefix}
                             onChange={(e) => setSubdomainPrefix(e.target.value)}
                             className="flex-grow bg-transparent border-none placeholder-gray-500 focus:outline-none focus:ring-0 px-2.5 py-1.5 text-white text-xs" 
@@ -1371,7 +1347,7 @@ const PublishSettingsModal = ({
     proxy_set_header X-Forwarded-Proto $scheme;
 }`}
                       </code></pre>
-                      <p className="text-xs text-gray-400 mt-1">Replace <code className="text-xs bg-slate-600 px-1 rounded">your-subdirectory</code> with your chosen subdirectory path (e.g., <code className="text-xs bg-slate-600 px-1 rounded">alternative</code>, <code className="text-xs bg-slate-600 px-1 rounded">blog</code>, etc.).</p>
+                      <p className="text-xs text-gray-400 mt-1">Replace <code className="text-xs bg-slate-600 px-1 rounded">your-subdirectory</code> with your chosen subdirectory path (e.g., <code className="text-xs bg-slate-600 px-1 rounded">alternative</code>, <code className="text-xs bg-slate-600 px-1 rounded">alt</code>, etc.).</p>
 
                       <p><strong>3. Test Config:</strong> Run <code className="text-xs bg-slate-600 px-1 rounded">sudo nginx -t</code>. Check for "syntax is ok".</p>
                       <p><strong>4. Reload Nginx:</strong> Run <code className="text-xs bg-slate-600 px-1 rounded">sudo systemctl reload nginx</code> or <code className="text-xs bg-slate-600 px-1 rounded">sudo service nginx reload</code>.</p>

@@ -1027,7 +1027,7 @@ const HistoryCardList = ({ onClose }) => {
             <div className="flex flex-col gap-2">
               {/* 任务切换栏 */}
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-slate-300 flex-shrink-0">Task List:</span>
+                <span className="text-sm font-medium text-slate-300 flex-shrink-0">Task History:</span>
                 {/* === 新增：刷新和批量删除按钮 === */}
                 {historyList.length > 0 && (
                   <div className="flex items-center gap-1 flex-shrink-0">
