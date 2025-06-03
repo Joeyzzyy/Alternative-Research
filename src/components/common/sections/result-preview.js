@@ -1110,8 +1110,14 @@ const HistoryCardList = ({ onClose }) => {
                               
                               {/* 开始和结束时间 */}
                               <div className="flex w-full justify-between items-center text-[9px] text-gray-500 mb-1">
-                                <span>Start: {item.generatedStart ? new Date(item.generatedStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}</span>
-                                <span>End: {item.generatedEnd ? new Date(item.generatedEnd).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-'}</span>
+                                <span>Start: {item.generatedStart ? (() => {
+                                  const date = new Date(item.generatedStart);
+                                  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+                                })() : '-'}</span>
+                                <span>End: {item.generatedEnd ? (() => {
+                                  const date = new Date(item.generatedEnd);
+                                  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+                                })() : '-'}</span>
                               </div>
                               
                               {/* 持续时间 */}
