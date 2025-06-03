@@ -212,12 +212,6 @@ const HistoryCardList = ({ onClose }) => {
 
   // 点击卡片时，默认选中第一个 resultId
   const handleCardClick = async (item, callback) => {
-    
-    if (item.generatorStatus === 'failed') {
-      setFailedModal({ open: true, id: item.websiteId });
-      return;
-    }
-    
     setSelectedItem(item);
     setResultLoading(true);
     setResultDetail(null);
