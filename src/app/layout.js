@@ -9,6 +9,7 @@ export default async function RootLayout({ children, keywords }) {
   return (
     <html lang="en" className="w-full">
       <head>
+        <meta name="trustpilot-one-time-domain-verification-id" content="3df599c0-fa67-4e2a-8e21-baca7c0313ac"/>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
         <meta name="description" content="AltPage.ai leverages AI technology to identify high-performing alternative pages from competitors, providing actionable insights for digital marketing strategies." />
         <meta name="keywords" content={keywords || "AI competitor analysis, alternative page finder, SEO alternatives, website comparison tool, AI-driven marketing"} />
