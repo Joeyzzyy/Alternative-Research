@@ -17,6 +17,34 @@ const TodoSection = ({ isInHeader = false, onOpenPublishModal, onOpenResultPrevi
     console.trace('Modal state change trace');
   }, [isPublishSettingsModalVisible]);
 
+  // 添加点击外部关闭功能
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (isExpanded && isInHeader) {
+        // 检查点击是否在TodoSection外部
+        const todoElement = event.target.closest('[data-todo-section]');
+        const triggerButton = event.target.closest('[data-todo-trigger]');
+        
+        // 如果点击不在TodoSection内部且不是触发按钮，则关闭
+        if (!todoElement && !triggerButton) {
+          setIsExpanded(false);
+        }
+      }
+    };
+
+    if (isExpanded && isInHeader) {
+      // 延迟添加事件监听器，避免立即触发
+      const timer = setTimeout(() => {
+        document.addEventListener('click', handleClickOutside);
+      }, 100);
+      
+      return () => {
+        clearTimeout(timer);
+        document.removeEventListener('click', handleClickOutside);
+      };
+    }
+  }, [isExpanded, isInHeader]);
+
   const [todoItems, setTodoItems] = useState([
     {
       id: 'task',
@@ -223,9 +251,10 @@ const TodoSection = ({ isInHeader = false, onOpenPublishModal, onOpenResultPrevi
   // 在header中的渲染方式
   if (isInHeader) {
     return (
-      <div className="relative">
-        {/* 折叠状态的按钮 - 在header中显示 */}
+      <div className="relative" data-todo-section>
+        {/* 折叠状态的按钮 - 添加 data-todo-trigger 属性 */}
         <button
+          data-todo-trigger
           onClick={() => setIsExpanded(!isExpanded)}
           className={`
             bg-gradient-to-r from-purple-600/80 to-blue-600/80 text-white px-2 sm:px-3 py-1 sm:py-1.5 rounded-full shadow-lg
@@ -258,7 +287,10 @@ const TodoSection = ({ isInHeader = false, onOpenPublishModal, onOpenResultPrevi
                   </div>
                 </div>
                 <button
-                  onClick={() => setIsExpanded(false)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsExpanded(false);
+                  }}
                   className="text-white/80 hover:text-white transition-colors p-1 rounded-full hover:bg-white/10 touch-manipulation"
                 >
                   <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
